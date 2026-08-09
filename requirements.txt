@@ -1,3 +1,4 @@
 flask==3.0.0
 markdown==3.5.1
 Pillow>=10.0.0
+certifi>=2023.7.22

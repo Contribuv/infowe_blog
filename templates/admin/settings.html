@@ -125,6 +125,13 @@
                        placeholder="如: https://github.com/username">
                 <span class="form-hint">前台"关于我"卡片的 GitHub 链接，留空则不显示</span>
             </div>
+            <div class="form-group">
+                <label>GitHub Token（用于项目同步）</label>
+                <input type="password" name="github_token" class="input-text"
+                       value="{{ config.get('github_token', '') }}"
+                       placeholder="ghp_xxx 或 github_pat_xxx（仅用于同步私有仓库/提升限额）">
+                <span class="form-hint">用于在后台同步 GitHub 项目数据。配置后可访问私有仓库，并将 API 限额从匿名 60/小时 提升到 5000/小时。建议用仅含 <code>repo</code> 只读权限的 Token，留空则用匿名访问。</span>
+            </div>
             <div class="form-hint" style="margin-top: var(--sp-3);">
                 RSS 链接自动生成（/feed.xml）。邮箱、GitHub 会用于前台"关于我"卡片展示。
             </div>

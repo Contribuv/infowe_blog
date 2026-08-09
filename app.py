@@ -13,6 +13,7 @@ import zipfile
 import io
 import urllib.request
 import urllib.error
+import ssl
 
 import math
 from datetime import datetime
@@ -247,6 +248,7 @@ def init_db():
         ('avatar', ''),
         ('github_username', ''),
         ('social_github', ''),
+        ('github_token', ''),
         ('contact_email', ''),
         ('home_title', ''),
         ('home_posts_count', '6'),
@@ -739,27 +741,72 @@ def parse_github_repo(url):
     return f"{owner}/{repo}"
 
 
+# 记录最近一次 GitHub API 失败原因，供同步路由给出精确提示
+last_gh_error = ''
+
+
+def _github_ssl_context():
+    """构造用于访问 GitHub API 的 SSL 上下文。
+
+    优先使用 certifi 提供的 CA 证书包（跨平台稳定，避免服务器缺少
+    系统 CA 时出现的 CERTIFICATE_VERIFY_FAILED）；certifi 不可用时
+    回退到系统默认证书。
+    """
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return ssl.create_default_context()
+
+
 def fetch_github_repo(url):
-    """拉取 GitHub 仓库实时数据，返回 dict 或 None（失败回退）。"""
+    """拉取 GitHub 仓库实时数据，返回 dict 或 None（失败回退）。
+
+    若 settings 中配置了 github_token，则带 Bearer 认证头调用 API，
+    可访问私有仓库且将速率限额从匿名 60/小时 提升到 5000/小时。
+    """
+    global last_gh_error
+    last_gh_error = ''
     slug = parse_github_repo(url)
     if not slug:
+        last_gh_error = '地址无效：不是合法的 GitHub 仓库地址'
         return None
     api = f"https://api.github.com/repos/{slug}"
-    req = urllib.request.Request(api, headers={'User-Agent': 'infowe-Blog', 'Accept': 'application/vnd.github+json'})
+    headers = {'User-Agent': 'infowe-Blog', 'Accept': 'application/vnd.github+json'}
+    token = (app.config.get('github_token') or '').strip()
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    req = urllib.request.Request(api, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=8, context=_github_ssl_context()) as resp:
             data = json.loads(resp.read().decode('utf-8'))
-    except (urllib.error.URLError, urllib.error.HTTPError, ValueError, OSError):
+    except urllib.error.HTTPError as e:
+        code = getattr(e, 'code', 0)
+        if code == 403:
+            last_gh_error = ('GitHub API 请求被拒绝（403）：多为未配置 Token 导致匿名限额(60/小时)耗尽，'
+                             '或仓库为私有且无权限。请在「设置」中填入 GitHub Token。')
+        elif code == 404:
+            last_gh_error = '仓库不存在或无访问权限（404）：请检查地址，或仓库为私有需在「设置」配置 Token。'
+        elif code == 401:
+            last_gh_error = 'GitHub Token 无效或无权限（401）：请检查「设置」中的 Token。'
+        else:
+            last_gh_error = f'GitHub API 返回错误码 {code}'
+        return None
+    except (urllib.error.URLError, ValueError, OSError) as e:
+        last_gh_error = f'网络请求失败：{e}'
         return None
     if not isinstance(data, dict) or 'full_name' not in data:
+        last_gh_error = 'GitHub 返回数据异常'
         return None
     # 抓取全部语言占比（主接口只返回占比最高的单种语言）
     languages = []
     try:
+        lang_headers = {'User-Agent': 'infowe-Blog', 'Accept': 'application/vnd.github+json'}
+        if token:
+            lang_headers['Authorization'] = f'Bearer {token}'
         lang_req = urllib.request.Request(
-            f"https://api.github.com/repos/{slug}/languages",
-            headers={'User-Agent': 'infowe-Blog', 'Accept': 'application/vnd.github+json'})
-        with urllib.request.urlopen(lang_req, timeout=8) as lang_resp:
+            f"https://api.github.com/repos/{slug}/languages", headers=lang_headers)
+        with urllib.request.urlopen(lang_req, timeout=8, context=_github_ssl_context()) as lang_resp:
             lang_data = json.loads(lang_resp.read().decode('utf-8'))
         if isinstance(lang_data, dict) and lang_data:
             total = sum(lang_data.values())
@@ -1474,7 +1521,7 @@ def admin_project_sync(project_id):
         return redirect(url_for('admin_projects'))
     gh = fetch_github_repo(row['url'])
     if not gh:
-        flash('同步失败：无法获取 GitHub 数据（地址无效或已达 API 限额）', 'error')
+        flash('同步失败：' + (last_gh_error or '无法获取 GitHub 数据（地址无效或已达 API 限额）'), 'error')
         return redirect(url_for('admin_projects'))
     db_save_project({
         'url': gh['url'], 'sort_order': request.form.get('sort_order', '0'),
@@ -1787,7 +1834,7 @@ def admin_settings():
     if request.method == 'POST':
         for key in ['blog_name', 'blog_subtitle', 'author', 'author_bio',
                      'about_intro', 'skills', 'avatar', 'github_username',
-                     'social_github', 'contact_email', 'home_title', 'icp_beian', 'police_beian',
+                     'social_github', 'github_token', 'contact_email', 'home_title', 'icp_beian', 'police_beian',
                      'home_posts_count', 'posts_per_page']:
             if key in request.form:
                 save_setting(key, request.form[key])
