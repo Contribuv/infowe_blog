@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 圆角方形背景 -->
+  <rect x="4" y="4" width="56" height="56" rx="14" ry="14" fill="#3a6ea5"/>
+  <!-- 字母 i：顶部圆点 + 竖线 -->
+  <circle cx="32" cy="18" r="5" fill="#ffffff"/>
+  <rect x="28.5" y="27" width="7" height="23" rx="3.5" ry="3.5" fill="#ffffff"/>
+</svg>

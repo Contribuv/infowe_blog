@@ -1,0 +1,99 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}文章管理{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('file-text', 20) | safe }} 文章管理 <span class="badge">{{ total }}</span></h2>
+    <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary">{{ icon('pencil', 16, 'icon-sm') | safe }} 新建文章</a>
+</div>
+
+<!-- 搜索 + 筛选 -->
+<div class="filter-bar">
+    <div class="filter-tabs">
+        <a href="?status=all" class="filter-tag {% if status_filter == 'all' %}active{% endif %}">全部</a>
+        <a href="?status=published" class="filter-tag {% if status_filter == 'published' %}active{% endif %}">已发布</a>
+        <a href="?status=draft" class="filter-tag {% if status_filter == 'draft' %}active{% endif %}">草稿</a>
+    </div>
+    <form class="filter-search" method="GET">
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <input type="text" name="q" class="search-input-sm" placeholder="搜索文章..." value="{{ search_query }}">
+        <button type="submit" class="btn btn-sm">搜索</button>
+    </form>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, msg in messages %}
+<div class="flash-msg flash-{{ category }}">{{ msg }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<!-- 文章表格 -->
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width:35%">标题</th>
+                <th>标签</th>
+                <th>状态</th>
+                <th>日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td data-label="标题">
+                    <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="post-link">
+                        {{ post.title }}
+                        {% if post.is_featured %}<span class="featured-mark" title="精选">{{ icon('star', 14) | safe }}</span>{% endif %}
+                    </a>
+                </td>
+                <td data-label="标签">
+                    <div class="tag-list">
+                        {% for tag in post.tags %}
+                        <span class="tag-chip">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                </td>
+                <td data-label="状态">
+                    {% if post.status == 'published' %}
+                    <span class="badge badge-success">已发布</span>
+                    {% else %}
+                    <span class="badge badge-warning">草稿</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" data-label="日期">{{ post.created_at[:10] }}</td>
+                <td data-label="操作">
+                    <div class="btn-group">
+                        <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="btn btn-sm">编辑</a>
+                        <a href="/post/{{ post.id }}" target="_blank" class="btn btn-sm">查看</a>
+                        <form method="POST" action="{{ url_for('admin_post_delete', post_id=post.id) }}" style="display:inline"
+                              onsubmit="return confirm('确定删除《{{ post.title }}》？此操作不可恢复。')">
+                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-muted text-center">暂无文章，<a href="{{ url_for('admin_post_new') }}">写一篇吧</a></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页 -->
+{% if total_pages > 1 %}
+<nav class="admin-pagination">
+    {% set args = {'status': status_filter} %}
+    {% if search_query %}{% set _ = args.update({'q': search_query}) %}{% endif %}
+    {% if page > 1 %}
+    <a href="{{ url_for('admin_posts', page=page-1, **args) }}" class="page-btn">上一页</a>
+    {% endif %}
+    <span class="page-info">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ url_for('admin_posts', page=page+1, **args) }}" class="page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

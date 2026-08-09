@@ -1,0 +1,216 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}{% if post %}编辑文章{% else %}新建文章{% endif %}{% endblock %}
+{% block admin_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/vditor/index.css') }}">
+{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{% if post %}{{ icon('pencil', 20) | safe }} 编辑文章{% else %}{{ icon('file-text', 20) | safe }} 新建文章{% endif %}</h2>
+    <a href="{{ url_for('admin_posts') }}" class="btn btn-secondary">{{ icon('arrow-left', 16, 'icon-sm') | safe }} 返回列表</a>
+</div>
+
+<form method="POST" class="post-edit-form" id="post-form">
+    <div class="edit-layout">
+        <!-- 左侧：编辑区 -->
+        <div class="edit-main">
+            <div class="form-group">
+                <input type="text" name="title" id="title" class="input-lg"
+                       placeholder="文章标题..." value="{{ post.title if post else '' }}" required>
+            </div>
+            <div class="form-group">
+                <!-- Vditor 挂载点；隐藏 textarea 用于表单提交与初始值 -->
+                <textarea name="content" id="content" style="display:none;">{{ post.content if post else '' }}</textarea>
+                <div id="editor"></div>
+            </div>
+        </div>
+
+        <!-- 右侧：设置面板 -->
+        <aside class="edit-sidebar">
+            <div class="card sidebar-card">
+                <div class="card-header"><h4>发布设置</h4></div>
+                <div class="form-group">
+                    <label>状态</label>
+                    <select name="status" class="input-select">
+                        <option value="published" {% if post and post.status == 'published' %}selected{% endif %}>发布</option>
+                        <option value="draft" {% if post and post.status == 'draft' %}selected{% endif %}>草稿</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="is_featured" value="1" {% if post and post.is_featured %}checked{% endif %}>
+                        设为精选文章
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">{{ icon('save', 16, 'icon-sm') | safe }} 保存文章</button>
+            </div>
+
+            <div class="card sidebar-card">
+                <div class="card-header"><h4>文章信息</h4></div>
+                <div class="form-group">
+                    <label>分类 <span class="req">*</span></label>
+                    <select name="category_id" class="input-select" required
+                            oninvalid="this.setCustomValidity('请选择文章分类')"
+                            onchange="this.setCustomValidity('')">
+                        {% if post %}
+                        <option value="">未分类</option>
+                        {% endif %}
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if (not post and loop.first) or (post and post.category_id == cat.id) %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>自定义 Slug</label>
+                    <input type="text" name="slug" class="input-text"
+                           value="{{ post.slug if post else '' }}"
+                           placeholder="留空则自动生成">
+                </div>
+                <div class="form-group">
+                    <label>标签（逗号分隔）</label>
+                    <input type="text" name="tags" class="input-text" id="tags-input"
+                           value="{{ post.tags|join(', ') if post else '' }}"
+                           placeholder="Python, 教程, Web开发">
+                </div>
+                <div class="form-group">
+                    <label>摘要</label>
+                    <textarea name="excerpt" class="textarea-sm" rows="3"
+                              placeholder="文章简短摘要...">{{ post.excerpt if post else '' }}</textarea>
+                </div>
+            </div>
+
+            <!-- 预览提示 -->
+            <div class="card sidebar-card">
+                <div class="card-header">
+                    <h4>预览与排版</h4>
+                </div>
+                <div class="preview-box">
+                    <p class="text-muted">编辑器为所见即所得模式，顶部工具栏支持上传图片、视频、音频与附件，粘贴图片自动上传。</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+</form>
+{% endblock %}
+
+{% block admin_scripts %}
+<script src="{{ url_for('static', filename='vendor/vditor/index.min.js') }}"></script>
+<script>
+(function () {
+    var textarea = document.getElementById('content');
+    var editorEl = document.getElementById('editor');
+
+    // 当前主题：后台通过 <html data-theme="dark|light"> 控制
+    function currentTheme() {
+        var t = document.documentElement.getAttribute('data-theme');
+        if (t === 'dark') return 'dark';
+        if (t === 'light') return 'classic';
+        // 回退：无属性时按系统偏好
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'classic';
+    }
+
+    // 是否移动端（窄屏）：移动端用即时渲染，桌面端用分屏预览
+    function isMobile() {
+        return window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    // 内容区主题（控制表格/代码块等渲染样式）：dark 跟随 dark，其余用 light
+    function currentContentTheme() {
+        return currentTheme() === 'dark' ? 'dark' : 'light';
+    }
+
+    // 单个文件上传（fetch 到现有后端接口）
+    function uploadOne(endpoint, field, file) {
+        var fd = new FormData();
+        fd.append(field, file);
+        return fetch(endpoint, { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) throw new Error(data.error);
+                return { url: data.url, name: data.name || file.name };
+            });
+    }
+
+    // 根据扩展名分流到不同接口
+    function resolve(file) {
+        var ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (['png','jpg','jpeg','gif','webp','bmp','svg'].indexOf(ext) !== -1)
+            return uploadOne('/admin/upload/image', 'image', file).then(function (d) { return { type: 'image', url: d.url, name: d.name }; });
+        if (['mp4','webm','ogg','mov','avi','mp3','wav','m4a','aac'].indexOf(ext) !== -1)
+            return uploadOne('/admin/upload/media', 'file', file).then(function (d) { return { type: 'media', url: d.url, name: d.name }; });
+        return uploadOne('/admin/upload/file', 'file', file).then(function (d) { return { type: 'file', url: d.url, name: d.name }; });
+    }
+
+    // 构造插入内容（wysiwyg 模式接受 HTML）
+    function buildContent(r) {
+        if (r.type === 'image') return '![](' + r.url + ')';
+        if (r.type === 'media') {
+            if (/\.(mp3|wav|m4a|aac|ogg)$/i.test(r.url)) return '<audio src="' + r.url + '" controls></audio>';
+            return '<video src="' + r.url + '" controls style="max-width:100%"></video>';
+        }
+        return '[' + r.name + '](' + r.url + ')';
+    }
+
+    var vditor = new Vditor('editor', {
+        mode: isMobile() ? 'ir' : 'sv',   // 移动端：即时渲染；桌面端：分屏预览
+        lang: 'zh_CN',
+        cdn: '/static/vendor/vditor',   // Vditor 内部自动拼接 /dist/，最终指向 .../vditor/dist/js/i18n/zh_CN.js 等
+        // 显式声明自定义工具栏回调，规避部分 Vditor 版本内部直接调用未定义 option 抛错
+        customWysiwygToolbar: function () { return []; },
+        customZoom: undefined,
+        theme: currentTheme(),          // 跟随后台主题（工具栏/界面）
+        contentTheme: currentContentTheme(),  // 跟随后台主题（内容区：表格、代码块等）
+        value: textarea.value,
+        cache: { enable: false },
+        height: '100%',
+        placeholder: '在此撰写文章内容，支持图片/视频/音频/附件上传…',
+        toolbarConfig: { pin: true },
+        upload: {
+            accept: 'image/*,video/*,audio/*,.zip,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.py,.js,.json',
+            filename: function (name) { return name.replace(/[^\w\u4e00-\u9fa5\.\-]/g, '_'); },
+            // 纯自定义 handler：自行上传并插入定制内容，避免 Vditor 默认 succMap 插入格式不符
+            handler: function (files) {
+                var list = Array.prototype.slice.call(files);
+                return Promise.all(list.map(resolve)).then(function (results) {
+                    results.forEach(function (r) {
+                        vditor.insertValue('\n' + buildContent(r) + '\n');
+                    });
+                    return { code: 0, data: { errFiles: [], succMap: {} } };
+                }).catch(function (err) {
+                    alert('上传失败：' + (err.message || err));
+                    return { code: 1, msg: err.message || '上传失败', data: { errFiles: list.map(function (f) { return f.name; }), succMap: {} } };
+                });
+            }
+        },
+        after: function () {
+            // 预览操作栏按钮文字默认是英文（Desktop/Tablet/Mobile/Wechat），替换为中文
+            var previewLabels = { 'desktop': '电脑', 'tablet': '平板', 'mobile': '手机/微信' };
+            var actionBar = document.querySelector('#editor .vditor-preview__action');
+            if (actionBar) {
+                actionBar.querySelectorAll('button[data-type]').forEach(function (btn) {
+                    var type = btn.getAttribute('data-type');
+                    if (previewLabels[type]) btn.textContent = previewLabels[type];
+                });
+            }
+
+            // 编辑器就绪：监听后台主题切换，同步 Vditor 主题（界面 + 内容区）
+            var observer = new MutationObserver(function (muts) {
+                muts.forEach(function (m) {
+                    if (m.attributeName === 'data-theme') {
+                        vditor.setTheme(currentTheme(), currentContentTheme());
+                    }
+                });
+            });
+            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        }
+    });
+
+    // 表单提交前把编辑器内容同步到隐藏 textarea
+    var form = document.getElementById('post-form');
+    if (form) {
+        form.addEventListener('submit', function () {
+            textarea.value = vditor.getValue();
+        });
+    }
+})();
+</script>
+{% endblock %}

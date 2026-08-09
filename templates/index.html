@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}{% if home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}{% endblock %}
+{% block content %}
+<!-- Hero 区域 -->
+<section class="hero">
+    <div class="hero-content">
+        <h1 class="hero-title">
+            <span class="typing-text" id="typing-text"></span>
+        </h1>
+        <p class="hero-subtitle">{{ blog_subtitle }}</p>
+        <!-- 搜索框 -->
+        <form class="hero-search" action="/" method="GET">
+            <input type="text" name="q" class="search-input" placeholder="搜索文章..." value="{{ search_query }}" autocomplete="off">
+            <button type="submit" class="search-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+            </button>
+            {% if search_query %}
+            <a href="/" class="search-clear">{{ icon('x', 14) | safe }}</a>
+            {% endif %}
+        </form>
+        <div class="hero-stats">
+            <div class="stat-item">
+                <span class="stat-number" data-target="{{ total }}">0</span>
+                <span class="stat-label">篇文章</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" data-target="{{ all_tags|length }}">0</span>
+                <span class="stat-label">个标签</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" data-target="{{ total_categories }}">0</span>
+                <span class="stat-label">个分类</span>
+            </div>
+        </div>
+    </div>
+    <div class="hero-decoration">
+        <div class="code-rain"></div>
+    </div>
+</section>
+
+<!-- 精选文章 -->
+{% if featured and not current_tag and not search_query %}
+<section class="featured-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            <span class="title-prefix">{{ icon('star', 16) | safe }}</span> 精选推荐
+        </h2>
+    </div>
+    <div class="posts-grid featured-grid">
+        {% for post in featured %}
+        <article class="post-card featured-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+            <div class="card-glow"></div>
+            <span class="featured-badge">精选</span>
+            <div class="card-inner">
+                <div class="card-meta">
+                    <time class="card-date" datetime="{{ post.created_at[:10] }}">
+                        {{ icon('calendar', 14, 'icon-sm') | safe }}
+                        {{ post.created_at[:10] }}
+                    </time>
+                    <span class="card-read-time">
+                        {{ icon('clock', 14, 'icon-sm') | safe }}
+                        {{ post.read_time }} 分钟
+                    </span>
+                </div>
+                <h3 class="card-title">
+                    <a href="/post/{{ post.id }}">{{ post.title }}</a>
+                </h3>
+                <p class="card-excerpt">{{ post.excerpt }}</p>
+                <div class="card-footer">
+                    <div class="card-tags">
+                        {% for tag in post.tags %}
+                        <a href="/?tag={{ tag }}" class="tag">{{ tag }}</a>
+                        {% endfor %}
+                    </div>
+                    <a href="/post/{{ post.id }}" class="read-more">
+                        阅读全文 <span class="arrow">→</span>
+                    </a>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- 文章列表 -->
+<section class="posts-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            {% if current_tag %}
+                <span class="title-prefix">{{ icon('tag', 18) | safe }}</span> {{ current_tag }}
+                <a href="/" class="clear-filter">{{ icon('x', 12) | safe }} 清除筛选</a>
+            {% elif search_query %}
+                <span class="title-prefix">{{ icon('search', 18) | safe }}</span> 搜索: "{{ search_query }}"
+                <a href="/" class="clear-filter">{{ icon('x', 12) | safe }} 清除</a>
+            {% else %}
+                <span class="title-prefix">{{ icon('chevron-right', 18) | safe }}</span> 最新文章
+            {% endif %}
+        </h2>
+        {% if search_query %}
+        <p class="section-subtitle">找到 {{ total }} 篇相关文章</p>
+        {% endif %}
+    </div>
+
+    <div class="posts-grid">
+        {% for post in posts %}
+        {% if not (not current_tag and not search_query and post.is_featured) %}
+        <article class="post-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}">
+            <div class="card-glow"></div>
+            <div class="card-inner">
+                <div class="card-meta">
+                    <time class="card-date" datetime="{{ post.created_at[:10] }}">
+                        {{ icon('calendar', 14, 'icon-sm') | safe }}
+                        {{ post.created_at[:10] }}
+                    </time>
+                    <span class="card-read-time">
+                        {{ icon('clock', 14, 'icon-sm') | safe }}
+                        {{ post.read_time }} 分钟
+                    </span>
+                </div>
+                <h3 class="card-title">
+                    <a href="/post/{{ post.id }}">{{ post.title }}</a>
+                </h3>
+                <p class="card-excerpt">{{ post.excerpt }}</p>
+                <div class="card-footer">
+                    <div class="card-tags">
+                        {% for tag in post.tags %}
+                        <a href="/?tag={{ tag }}" class="tag">{{ tag }}</a>
+                        {% endfor %}
+                    </div>
+                    <a href="/post/{{ post.id }}" class="read-more">
+                        阅读全文 {{ icon('arrow-right', 14) | safe }}
+                    </a>
+                </div>
+            </div>
+        </article>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    {% if not posts %}
+    <div class="empty-state">
+        <div class="empty-icon">{{ icon('inbox', 44) | safe }}</div>
+        <h3>还没有文章</h3>
+        <p>博主正在奋笔疾书中...</p>
+    </div>
+    {% endif %}
+
+    <!-- 更多文章入口 -->
+    {% if not current_tag and not search_query and total > 0 %}
+    <div class="view-all-wrap">
+        <a href="/posts" class="view-all-link">
+            <span>{{ icon('layout-dashboard', 16) | safe }}</span>
+            <span>浏览全部文章</span>
+            <span class="view-all-arrow">{{ icon('arrow-right', 14) | safe }}</span>
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- 分页 -->
+    {% if total_pages > 1 %}
+    <nav class="pagination" aria-label="分页导航">
+        {% set args = {} %}
+        {% if current_tag %}{% set _ = args.update({'tag': current_tag}) %}{% endif %}
+        {% if search_query %}{% set _ = args.update({'q': search_query}) %}{% endif %}
+
+        {% if page > 1 %}
+        <a href="{{ url_for('index', page=page-1, **args) }}" class="page-btn prev-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            上一页
+        </a>
+        {% endif %}
+
+        <div class="page-numbers">
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                    {% if p == page %}
+                    <span class="page-btn active">{{ p }}</span>
+                    {% else %}
+                    <a href="{{ url_for('index', page=p, **args) }}" class="page-btn">{{ p }}</a>
+                    {% endif %}
+                {% elif p == page - 3 or p == page + 3 %}
+                    <span class="page-ellipsis">...</span>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if page < total_pages %}
+        <a href="{{ url_for('index', page=page+1, **args) }}" class="page-btn next-btn">
+            下一页
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}

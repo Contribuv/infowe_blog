@@ -1,0 +1,101 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}仪表盘{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('layout-dashboard', 20) | safe }} 仪表盘</h2>
+</div>
+
+<!-- 统计卡片 -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">{{ icon('file', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.total }}</span>
+            <span class="stat-label">文章总数</span>
+        </div>
+    </div>
+    <div class="stat-card stat-published">
+        <div class="stat-icon">{{ icon('check-circle', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.published }}</span>
+            <span class="stat-label">已发布</span>
+        </div>
+    </div>
+    <div class="stat-card stat-draft">
+        <div class="stat-icon">{{ icon('pencil', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.drafts }}</span>
+            <span class="stat-label">草稿</span>
+        </div>
+    </div>
+    <div class="stat-card stat-extras">
+        <div class="stat-icon">{{ icon('tag', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ all_tags|length }}</span>
+            <span class="stat-label">标签数</span>
+        </div>
+    </div>
+    <div class="stat-card stat-projects">
+        <div class="stat-icon">{{ icon('github', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.projects }}</span>
+            <span class="stat-label">开源项目</span>
+        </div>
+    </div>
+    <div class="stat-card stat-links">
+        <div class="stat-icon">{{ icon('link', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.links }}</span>
+            <span class="stat-label">友情链接</span>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷操作 -->
+<div class="quick-actions">
+    <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary">{{ icon('pencil', 16, 'icon-sm') | safe }} 写新文章</a>
+    <a href="{{ url_for('admin_project_new') }}" class="btn btn-secondary">{{ icon('folder', 16, 'icon-sm') | safe }} 添加项目</a>
+    <a href="{{ url_for('admin_link_new') }}" class="btn btn-secondary">{{ icon('link', 16, 'icon-sm') | safe }} 添加链接</a>
+    <a href="{{ url_for('admin_settings') }}" class="btn btn-secondary">{{ icon('settings', 16, 'icon-sm') | safe }} 博客设置</a>
+</div>
+
+<!-- 最近更新 -->
+<div class="card">
+    <div class="card-header">
+        <h3>最近更新的文章</h3>
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>标题</th>
+                <th>状态</th>
+                <th>更新时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in recent %}
+            <tr>
+                <td data-label="标题">
+                    <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="post-link">{{ post.title }}</a>
+                </td>
+                <td data-label="状态">
+                    {% if post.status == 'published' %}
+                    <span class="badge badge-success">已发布</span>
+                    {% else %}
+                    <span class="badge badge-warning">草稿</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" data-label="更新时间">{{ post.updated_at[:10] }}</td>
+                <td data-label="操作">
+                    <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="btn btn-sm">编辑</a>
+                    <a href="/post/{{ post.id }}" target="_blank" class="btn btn-sm">查看</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-muted text-center">暂无文章</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

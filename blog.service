@@ -1,0 +1,26 @@
+# systemd 服务单元样例（保存为 /etc/systemd/system/blog.service）
+# 启用：systemctl enable --now blog
+
+[Unit]
+Description=infowe.site Flask Blog (gunicorn)
+After=network.target
+
+[Service]
+# ← 改成你的实际项目路径与运行用户
+WorkingDirectory=/path/to/your/project
+User=www-data
+Group=www-data
+
+# 关键：设置强随机 secret_key（务必改掉示例值！）
+Environment=BLOG_SECRET_KEY=CHANGE_THIS_TO_A_LONG_RANDOM_STRING
+Environment=FLASK_DEBUG=0
+Environment=GUNICORN_WORKERS=4
+
+# 用 gunicorn 启动（不要 python app.py，避免误开 debug）
+ExecStart=/usr/bin/env gunicorn -c gunicorn.conf.py app:app
+
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

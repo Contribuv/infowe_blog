@@ -1,0 +1,36 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ── 运行时日志 / 临时文件（不要入库）──
+_server*.log
+_server_err.log
+*.log
+_ck.txt
+_nav_check.txt
+
+# ── 本地会话 / 缓存 ──
+*.session
+.flaskenv
+.env
+
+# ── 数据库与运行时数据（含 blog.db / posts.json，勿入库）──
+*.db
+app.db
+data/
+
+# ── 用户上传附件（运行时生成，勿入库）──
+static/uploads/
+
+# ── 打包 / 进程文件（勿入库）──
+blog.zip
+*.pid
+gunicorn.pid
+
+# ── 编辑器 / 系统 ──
+.DS_Store
+.idea/
+.vscode/

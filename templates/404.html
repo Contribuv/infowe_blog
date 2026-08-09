@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}404{% endblock %}
+{% block content %}
+<section class="error-page">
+    <div class="error-content">
+        <div class="error-code">4<span class="error-glitch">0</span>4</div>
+        <h2 class="error-title">页面未找到</h2>
+        <p class="error-desc">你似乎进入了代码的未知领域...</p>
+        <div class="error-code-block">
+            <pre><code>>>> import page
+>>> page.find("/{{ request.path }}")
+Traceback (most recent call last):
+  File "&lt;stdin&gt;", line 1, in &lt;module&gt;
+<span class="hl-error">PageNotFoundError: 这个页面不存在</span></code></pre>
+        </div>
+        <a href="/" class="error-back-btn">
+            {{ icon('arrow-left', 16, 'icon-sm') | safe }} 返回首页
+        </a>
+    </div>
+</section>
+{% endblock %}

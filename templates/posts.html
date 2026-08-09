@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% from "_macros.html" import breadcrumb %}
+{% block title %}文章{% endblock %}
+{% block content %}
+{{ breadcrumb([{"text":"文章"}]) }}
+<section class="posts-section">
+    <header class="page-header">
+        <h1 class="page-title">
+            <span class="title-prefix">{{ icon('file-text', 20) | safe }}</span> 全部文章
+        </h1>
+        <p class="page-desc">共 {{ total }} 篇文章</p>
+    </header>
+
+    <!-- 筛选栏 -->
+    {% if all_tags or all_years %}
+    <div class="filter-bar posts-filter" id="postsFilter">
+        <!-- 标签行 -->
+        <div class="filter-row">
+            <span class="filter-label">{{ icon('tag', 14) | safe }} 标签</span>
+            <div class="filter-chips" id="tagFilter">
+                <a class="filter-chip {% if not active_tag %}active{% endif %}" href="{{ url_for('posts_page', year=active_year or None) }}">全部</a>
+                {% for t in all_tags %}
+                <a class="filter-chip {% if active_tag == t %}active{% endif %}" href="{{ url_for('posts_page', tag=t if active_tag != t else None, year=active_year or None) }}">{{ t }}</a>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- 年份 + 排序行 -->
+        <div class="filter-row filter-row--sub">
+            <span class="filter-label">{{ icon('calendar', 14) | safe }} 年份</span>
+            <div class="filter-chips filter-chips--years" id="yearFilter">
+                <a class="filter-chip-sm {% if not active_year %}active{% endif %}" href="{{ url_for('posts_page', tag=active_tag or None) }}">全部</a>
+                {% for y in all_years %}
+                <a class="filter-chip-sm {% if active_year == y %}active{% endif %}" href="{{ url_for('posts_page', tag=active_tag or None, year=y if active_year != y else None) }}">{{ y }}</a>
+                {% endfor %}
+            </div>
+            <div class="filter-sort">
+                <select id="sortSelect" class="filter-select">
+                    <option value="new">最新优先</option>
+                    <option value="old">最早优先</option>
+                    <option value="read">阅读时长</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="posts-grid" id="postsGrid">
+            {% for post in posts %}
+            <article class="post-card" data-aos="fade-up"
+                     data-tags="{{ post.tags | join(',') }}"
+                     data-date="{{ post.created_at[:10] }}"
+                     data-read="{{ post.read_time }}">
+                <div class="card-glow"></div>
+                <div class="card-inner">
+                    <div class="card-meta">
+                        <time class="card-date" datetime="{{ post.created_at[:10] }}">
+                            {{ icon('calendar', 14, 'icon-sm') | safe }}
+                            {{ post.created_at[:10] }}
+                        </time>
+                        <span class="card-read-time">
+                            {{ icon('clock', 14, 'icon-sm') | safe }}
+                            {{ post.read_time }} 分钟
+                        </span>
+                        {% if post.category_name %}
+                        <span class="card-category">
+                            {{ icon('folder', 14, 'icon-sm') | safe }} {{ post.category_name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <h3 class="card-title">
+                        <a href="/post/{{ post.id }}">{{ post.title }}</a>
+                    </h3>
+                    <p class="card-excerpt">{{ post.excerpt }}</p>
+                    <div class="card-footer">
+                        <div class="card-tags">
+                            {% for tag in post.tags %}
+                            <a href="/?tag={{ tag }}" class="tag">{{ tag }}</a>
+                            {% endfor %}
+                        </div>
+                        <a href="/post/{{ post.id }}" class="read-more">
+                            阅读全文 {{ icon('arrow-right', 14) | safe }}
+                        </a>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+    </div>
+
+    {% if not posts %}
+    <div class="empty-state">
+        <div class="empty-icon">{{ icon('inbox', 44) | safe }}</div>
+        <h3>还没有文章</h3>
+        <p>博主正在奋笔疾书中...</p>
+    </div>
+    {% endif %}
+
+    <!-- 分页 -->
+    {% if total_pages > 1 %}
+    <nav class="pagination" aria-label="分页导航">
+        {% if page > 1 %}
+        <a href="{{ url_for('posts_page', page=page-1, tag=active_tag or None, year=active_year or None) }}" class="page-btn prev-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            上一页
+        </a>
+        {% endif %}
+
+        <div class="page-numbers">
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                    {% if p == page %}
+                    <span class="page-btn active">{{ p }}</span>
+                    {% else %}
+                    <a href="{{ url_for('posts_page', page=p, tag=active_tag or None, year=active_year or None) }}" class="page-btn">{{ p }}</a>
+                    {% endif %}
+                {% elif p == page - 3 or p == page + 2 %}
+                    <span class="page-ellipsis">...</span>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if page < total_pages %}
+        <a href="{{ url_for('posts_page', page=page+1, tag=active_tag or None, year=active_year or None) }}" class="page-btn next-btn">
+            下一页
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+            </svg>
+        </a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</section>
+
+<script>
+(function () {
+    var grid = document.getElementById('postsGrid');
+    if (!grid) return;
+    var cards = Array.from(grid.querySelectorAll('.post-card'));
+    var sortSel = document.getElementById('sortSelect');
+
+    /* ── 排序（客户端） ── */
+    function applySort() {
+        var mode = sortSel ? sortSel.value : 'new';
+        var cmpMap = {
+            new: function (a, b) { return b.dataset.date.localeCompare(a.dataset.date); },
+            old: function (a, b) { return a.dataset.date.localeCompare(b.dataset.date); },
+            read: function (a, b) { return (parseInt(b.dataset.read) || 0) - (parseInt(a.dataset.read) || 0); }
+        };
+        var cmp = cmpMap[mode] || function () { return 0; };
+        var sorted = Array.from(cards).sort(cmp);
+        sorted.forEach(function (c) { grid.appendChild(c); });
+    }
+
+    if (sortSel) sortSel.addEventListener('change', applySort);
+    applySort();
+
+    /* ── 标签/年份栏移动端折叠 ── */
+    var foldGroups = document.querySelectorAll('.filter-chips');
+    var MOBILE_BREAK = 768;
+    var MOBILE_LIMIT = 5;
+
+    function isMobile() { return window.innerWidth <= MOBILE_BREAK; }
+
+    foldGroups.forEach(function (group) {
+        var chips = Array.from(group.querySelectorAll('.filter-chip'));
+        var expandBtn = null;
+        var isExpanded = false;
+
+        function setupFold() {
+            if (expandBtn) { expandBtn.remove(); expandBtn = null; }
+            isExpanded = false;
+
+            if (!isMobile() || chips.length <= MOBILE_LIMIT) {
+                chips.forEach(function (c) { c.classList.remove('chip-hidden'); });
+                return;
+            }
+
+            expandBtn = document.createElement('button');
+            expandBtn.className = 'filter-expand-btn';
+            expandBtn.type = 'button';
+            expandBtn.textContent = '更多 (' + (chips.length - MOBILE_LIMIT) + ')';
+            expandBtn.setAttribute('aria-expanded', 'false');
+
+            chips.forEach(function (c, i) {
+                c.classList.toggle('chip-hidden', i >= MOBILE_LIMIT);
+            });
+
+            expandBtn.addEventListener('click', function () {
+                isExpanded = !isExpanded;
+                this.setAttribute('aria-expanded', String(isExpanded));
+                this.textContent = isExpanded ? '收起' : '更多 (' + (chips.length - MOBILE_LIMIT) + ')';
+                chips.forEach(function (c, i) {
+                    c.classList.toggle('chip-hidden', i >= MOBILE_LIMIT && !isExpanded);
+                });
+            });
+            group.appendChild(expandBtn);
+        }
+
+        setupFold();
+
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(setupFold, 100);
+        });
+    });
+})();
+</script>
+{% endblock %}
