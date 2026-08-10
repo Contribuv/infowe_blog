@@ -382,6 +382,32 @@ html[data-theme="light"] .login-theme-toggle .icon-moon { display: inline; }
 .sidebar-footer .nav-theme-toggle .theme-icon-light,
 .sidebar-footer .nav-theme-toggle svg { pointer-events: none; }
 .sidebar-footer .nav-theme-toggle:hover { color: var(--sidebar-text-hover); background: var(--bg-hover); }
+.sidebar-version {
+  margin-top: auto;
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.55;
+  user-select: none;
+  letter-spacing: 0.03em;
+  border-top: 1px solid var(--border);
+  text-decoration: none;
+  display: block;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.sidebar-version:hover {
+  opacity: 1;
+  color: var(--primary);
+}
+.sidebar-version .ver-num {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.sidebar-version:hover .ver-num {
+  color: var(--primary);
+}
 
 /* 主内容 */
 .admin-main { flex: 1; padding: var(--sp-6) var(--sp-8); min-width: 0; background: var(--bg); }

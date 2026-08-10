@@ -104,3 +104,11 @@ sudo systemctl restart blog
 - `data/` 目录需存在，`sqlite3.connect` 不会自动创建父目录。
 - 若 `data/posts.json` 存在且数据库为空，首次启动会自动迁移其中的文章。
 - 评论、上传等文件保存在 `static/uploads/` 下。
+
+## 版本更新日志
+
+### v1.0.1
+
+- 后台仪表盘「友情链接」统计修正：仅计入已通过审核（`approved`）的链接，排除已拒绝/待审核项
+- 后台侧边栏底部新增版本号显示（`infowe Blog v1.0.1`），并链接至开源仓库（新窗口打开）
+- GitHub 同步支持 Token 认证 + certifi SSL 校验 + 精确错误提示

@@ -12,7 +12,7 @@
     <script>
     (function(){var t=localStorage.getItem('infowe-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);var m=document.querySelector('meta[name="theme-color"]');if(m&&t==='light')m.setAttribute('content','#f5f5f5');})();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='20260810') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='20260810v5') }}">
     {% block admin_head %}{% endblock %}
 </head>
 <body>
@@ -95,6 +95,7 @@
                     {{ icon('log-out', 20, 'nav-icon') | safe }} 退出登录
                 </a>
             </div>
+            <a class="sidebar-version" href="https://github.com/Contribuv/infowe_blog" target="_blank" rel="noopener noreferrer">infowe Blog <span class="ver-num">v{{ version }}</span></a>
         </aside>
 
         <!-- Main Content -->

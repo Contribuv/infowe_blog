@@ -3,6 +3,10 @@ infowe Blog - Python Flask Backend
 SQLite 数据库驱动，完整前台 + 后台管理
 新增：GitHub 项目页、搜索、分页、友情链接、精选文章
 """
+
+# 应用版本号（后台显示用，修改请同步更新此处）
+VERSION = '1.0.1'
+
 import os
 import re
 import json
@@ -1009,6 +1013,7 @@ def inject_globals():
         'avatar': app.config.get('avatar', ''),
         'all_tags': db_get_all_tags(),
         'links': db_load_links(),
+        'version': VERSION,
     }
 
 
