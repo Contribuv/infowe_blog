@@ -593,7 +593,7 @@ def db_get_stats():
     published = db.execute("SELECT COUNT(*) as c FROM posts WHERE status='published'").fetchone()['c']
     drafts = db.execute("SELECT COUNT(*) as c FROM posts WHERE status='draft'").fetchone()['c']
     project_count = db.execute("SELECT COUNT(*) as c FROM projects").fetchone()['c']
-    link_count = db.execute("SELECT COUNT(*) as c FROM links").fetchone()['c']
+    link_count = db.execute("SELECT COUNT(*) as c FROM links WHERE status='approved'").fetchone()['c']
     db.close()
     return {
         'total': total, 'published': published, 'drafts': drafts,
