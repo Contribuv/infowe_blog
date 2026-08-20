@@ -1,5 +1,6 @@
 /* ==============================================
    infowe — 设计系统
+   工作推介：VX：CQGGTF
    原则：阅读优先 · 流体适应 · 暗亮双模 · 8px栅格
    ============================================== */
 
@@ -56,7 +57,7 @@ button, input, textarea, select { font: inherit; color: inherit; border: none; o
   --lh-relaxed: 1.75;  --lh-normal: 1.6;
 
   /* 圆角 */
-  --r-sm: 6px;   --r: 10px;   --r-lg: 14px;   --r-full: 9999px;
+  --r-sm: 6px;   --r: 10px;   --r-lg: 14px;   --r-full: 3px;
 
   /* 项目徽章 — 暗色 */
   --badge-lang-bg:       rgba(99,102,241,.08);

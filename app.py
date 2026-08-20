@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 
 import os
 import re
@@ -15,6 +15,8 @@ import hashlib
 import shutil
 import zipfile
 import io
+import time
+import tempfile
 import urllib.request
 import urllib.error
 import ssl
@@ -646,6 +648,12 @@ def db_save_post(form_data, post_id=None):
     category_id_raw = form_data.get('category_id', '') or ''
     category_id = int(category_id_raw) if str(category_id_raw).strip().isdigit() else None
 
+    # 发布日期：datetime-local 表单值（YYYY-MM-DDTHH:MM）归一化为 DB 格式；留空则新建时用当前时间、编辑时保持不变
+    created_at = (form_data.get('created_at', '') or '').strip().replace('T', ' ')
+    if created_at and len(created_at) == 16:
+        created_at += ':00'
+    created_at = created_at or None
+
     # slug 唯一化：新建时若冲突则追加 -2/-3... 直到唯一
     if not post_id:
         base = slug
@@ -657,16 +665,19 @@ def db_save_post(form_data, post_id=None):
     if post_id:
         db.execute(
             """UPDATE posts SET title=?, slug=?, content=?, excerpt=?, tags=?,
-               is_featured=?, read_time=?, status=?, category_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+               is_featured=?, read_time=?, status=?, category_id=?,
+               created_at=COALESCE(?, created_at), updated_at=CURRENT_TIMESTAMP WHERE id=?""",
             (form_data.get('title', ''), slug, content, form_data.get('excerpt', ''),
-             tags, is_featured, read_time, form_data.get('status', 'published'), category_id, post_id)
+             tags, is_featured, read_time, form_data.get('status', 'published'), category_id,
+             created_at, post_id)
         )
     else:
         db.execute(
-            """INSERT INTO posts (title, slug, content, excerpt, tags, is_featured, read_time, status, category_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO posts (title, slug, content, excerpt, tags, is_featured, read_time, status, category_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))""",
             (form_data.get('title', ''), slug, content, form_data.get('excerpt', ''),
-             tags, is_featured, read_time, form_data.get('status', 'published'), category_id)
+             tags, is_featured, read_time, form_data.get('status', 'published'), category_id,
+             created_at)
         )
     db.commit()
     db.close()
@@ -995,6 +1006,7 @@ def db_delete_comment(comment_id):
 @app.context_processor
 def inject_globals():
     load_settings()
+    _upgrade_info = check_latest_version() if request.path.startswith('/admin') else None
     return {
         'blog_name': app.config.get('blog_name', 'infowe'),
         'blog_subtitle': app.config.get('blog_subtitle', ''),
@@ -1014,6 +1026,9 @@ def inject_globals():
         'all_tags': db_get_all_tags(),
         'links': db_load_links(),
         'version': VERSION,
+        # 后台页面才检测更新（有缓存，前台不受网络影响）
+        'upgrade_check': _upgrade_info,
+        'upgrade_available': bool(_upgrade_info and _upgrade_info['version'] > parse_version(VERSION)),
     }
 
 
@@ -1403,16 +1418,17 @@ def admin_posts():
 @admin_required
 def admin_post_new():
     categories = db_load_categories()
+    render_kwargs = {'post': None, 'categories': categories, 'all_tags': db_get_all_tags()}
     if request.method == 'POST':
         # 新建文章必须选择分类
         category_id_raw = (request.form.get('category_id') or '').strip()
         if not category_id_raw.isdigit():
             flash('请选择文章分类', 'error')
-            return render_template('admin/post_edit.html', post=None, categories=categories)
+            return render_template('admin/post_edit.html', **render_kwargs)
         db_save_post(request.form)
         flash('文章已创建', 'success')
         return redirect(url_for('admin_posts'))
-    return render_template('admin/post_edit.html', post=None, categories=categories)
+    return render_template('admin/post_edit.html', **render_kwargs)
 
 
 @app.route('/admin/posts/<int:post_id>/edit', methods=['GET', 'POST'])
@@ -1427,7 +1443,8 @@ def admin_post_edit(post_id):
         flash('文章已更新', 'success')
         return redirect(url_for('admin_posts'))
     categories = db_load_categories()
-    return render_template('admin/post_edit.html', post=post, categories=categories)
+    return render_template('admin/post_edit.html', post=post, categories=categories,
+                           all_tags=db_get_all_tags())
 
 
 @app.route('/admin/posts/<int:post_id>/delete', methods=['POST'])
@@ -2078,6 +2095,187 @@ def admin_export_markdown():
     return send_file(buffer, mimetype='application/zip',
                      as_attachment=True,
                      download_name=f'blog_posts_{ts}.zip')
+
+
+# ─────────────── 系统升级 ───────────────
+
+UPGRADE_REPO = 'Contribuv/infowe_blog'
+UPGRADE_RELEASE_URL = f'https://github.com/{UPGRADE_REPO}/releases/latest'
+# 升级时跳过、绝不覆盖的目录/文件（用户数据与运行时数据）
+UPGRADE_SKIP = {
+    'data', 'static/uploads', 'backups', 'posts',
+    '.git', '__pycache__', '.venv', 'venv',
+    '.env', '.flaskenv', 'upgrade.lock', '*.db', '*.session',
+}
+UPGRADE_MAX_BYTES = 200 * 1024 * 1024  # 下载/解压上限 200MB，防异常包
+UPGRADE_CACHE = {}  # 检测结果缓存：{'t': 时间戳, 'ok': 是否成功, 'info': 版本信息}
+
+
+def parse_version(v):
+    """'v1.2.3' / '1.2.3' → (1, 2, 3)；无法解析返回 None。"""
+    m = re.match(r'^v?(\d+)\.(\d+)\.(\d+)', str(v).strip())
+    return tuple(int(x) for x in m.groups()) if m else None
+
+
+def check_latest_version(force=False):
+    """查询 GitHub Releases 最新版本。失败静默返回 None（不阻塞页面），结果缓存。
+    返回 {'tag','version','html_url','body','published_at'} 或 None。"""
+    now = time.time()
+    cached = UPGRADE_CACHE.get('info')
+    ttl = 600 if UPGRADE_CACHE.get('ok') is False else 3600
+    if not force and UPGRADE_CACHE and now - UPGRADE_CACHE.get('t', 0) < ttl:
+        return cached
+    info = None
+    try:
+        req = urllib.request.Request(
+            f'https://api.github.com/repos/{UPGRADE_REPO}/releases/latest',
+            headers={'User-Agent': 'infowe-Blog-updater', 'Accept': 'application/vnd.github+json'})
+        with urllib.request.urlopen(req, timeout=6, context=_github_ssl_context()) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+        tag = (data.get('tag_name') or '').strip().lstrip('v')
+        if tag and parse_version(tag):
+            info = {
+                'tag': tag,
+                'version': parse_version(tag),
+                'html_url': data.get('html_url') or UPGRADE_RELEASE_URL,
+                'body': (data.get('body') or '').strip()[:2000],
+                'published_at': (data.get('published_at') or '')[:10],
+            }
+    except Exception:
+        pass
+    UPGRADE_CACHE['t'] = now
+    UPGRADE_CACHE['ok'] = info is not None
+    UPGRADE_CACHE['info'] = info
+    return info
+
+
+def _upgrade_download(url, dest, max_bytes=None):
+    """流式下载文件到 dest，超过大小上限则中断。"""
+    max_bytes = max_bytes or UPGRADE_MAX_BYTES
+    req = urllib.request.Request(url, headers={'User-Agent': 'infowe-Blog-updater'})
+    with urllib.request.urlopen(req, timeout=120, context=_github_ssl_context()) as resp:
+        with open(dest, 'wb') as f:
+            while True:
+                chunk = resp.read(1 << 16)
+                if not chunk:
+                    break
+                f.write(chunk)
+                if os.path.getsize(dest) > max_bytes:
+                    raise RuntimeError('下载内容超过大小上限，已取消')
+    return dest
+
+
+def _upgrade_apply(tmp_root, tag):
+    """把解压后的新代码覆盖到 BASE_DIR，跳过 UPGRADE_SKIP 中的数据/用户目录。
+    返回替换的文件数。"""
+    def skip(rel):
+        rel = rel.replace('\\', '/')
+        for name in UPGRADE_SKIP:
+            if name in ('*.db', '*.session'):
+                if rel.endswith(name[1:]):
+                    return True
+            elif rel == name or rel.startswith(name + '/'):
+                return True
+        return False
+
+    replaced = 0
+    for dirpath, dirnames, filenames in os.walk(tmp_root):
+        dirnames[:] = [d for d in dirnames if not skip(os.path.relpath(os.path.join(dirpath, d), tmp_root))]
+        for fn in filenames:
+            src = os.path.join(dirpath, fn)
+            rel = os.path.relpath(src, tmp_root)
+            if skip(rel):
+                continue
+            dst = os.path.join(BASE_DIR, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+            replaced += 1
+    return replaced
+
+
+def do_upgrade(tag):
+    """执行升级：数据备份 → 下载 → 解压 → 校验 → 覆盖代码。返回 (成功标志, 消息)。"""
+    lock_path = os.path.join(BASE_DIR, 'upgrade.lock')
+    try:
+        # 原子创建锁，避免并发重复升级
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(fd)
+    except FileExistsError:
+        return False, '升级任务已在进行中，请稍候再试'
+    tmp = tempfile.mkdtemp(prefix='infowe_upgrade_')
+    try:
+        # 1. 数据备份（数据库 + 用户上传）
+        ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        bak_dir = os.path.join(BACKUP_DIR, f'upgrade_{ts}_{tag}')
+        os.makedirs(bak_dir, exist_ok=True)
+        if os.path.isfile(DB_PATH):
+            shutil.copy2(DB_PATH, os.path.join(bak_dir, 'blog.db'))
+        if os.path.isdir(UPLOAD_DIR):
+            shutil.copytree(UPLOAD_DIR, os.path.join(bak_dir, 'uploads'), dirs_exist_ok=True)
+
+        # 2. 下载源码压缩包
+        zip_url = f'https://github.com/{UPGRADE_REPO}/archive/refs/tags/v{tag}.zip'
+        zip_path = _upgrade_download(zip_url, os.path.join(tmp, 'release.zip'))
+
+        # 3. 安全解压（拒绝路径穿越、超限文件）
+        with zipfile.ZipFile(zip_path) as zf:
+            for zi in zf.infolist():
+                target = os.path.normpath(os.path.join(tmp, zi.filename))
+                if not target.startswith(tmp + os.sep):
+                    raise RuntimeError('压缩包内含非法路径，已中止')
+                if zi.is_dir():
+                    continue
+                if zi.file_size > UPGRADE_MAX_BYTES:
+                    raise RuntimeError('压缩包内单个文件过大，已中止')
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with zf.open(zi) as src, open(target, 'wb') as dst:
+                    shutil.copyfileobj(src, dst)
+
+        # 4. 定位代码根目录并校验新版本
+        entries = [d for d in os.listdir(tmp) if os.path.isdir(os.path.join(tmp, d)) and d != 'release.zip']
+        root = os.path.join(tmp, entries[0]) if len(entries) == 1 else tmp
+        if not os.path.isfile(os.path.join(root, 'app.py')):
+            raise RuntimeError('压缩包中未找到 app.py，已中止')
+        src_code = open(os.path.join(root, 'app.py'), encoding='utf-8').read()
+        m = re.search(r"VERSION\s*=\s*['\"]([^'\"]+)['\"]", src_code)
+        new_ver = parse_version(m.group(1)) if m else None
+        cur_ver = parse_version(VERSION)
+        if not new_ver or new_ver <= cur_ver:
+            raise RuntimeError('下载的版本不高于当前版本，已中止')
+
+        # 5. 覆盖代码（跳过数据/用户目录）
+        replaced = _upgrade_apply(root, tag)
+        if replaced == 0:
+            raise RuntimeError('没有可替换的文件，已中止')
+        return True, f'升级成功：代码已从 v{VERSION} 更新为 v{tag}（替换 {replaced} 个文件）。数据已自动备份到 backups/upgrade_{ts}_{tag}，请重启服务生效。'
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+        if os.path.exists(lock_path):
+            os.remove(lock_path)
+
+
+@app.route('/admin/upgrade', methods=['GET', 'POST'])
+@admin_required
+def admin_upgrade():
+    """系统升级页：检测新版本 + 一键备份升级（保留数据）。"""
+    cur_ver = parse_version(VERSION)
+    info = check_latest_version()
+    upgradable = bool(info and cur_ver and info['version'] > cur_ver)
+
+    if request.method == 'POST':
+        if not upgradable:
+            flash('当前已是最新版本，无需升级', 'error')
+            return redirect(url_for('admin_upgrade'))
+        try:
+            ok, msg = do_upgrade(info['tag'])
+        except Exception as e:
+            ok, msg = False, '升级失败：' + str(e)
+        flash(msg, 'success' if ok else 'error')
+        return redirect(url_for('admin_upgrade'))
+    return render_template('admin/upgrade.html', info=info, upgradable=upgradable,
+                           latest_version=(info['tag'] if info else ''),
+                           current_version=VERSION,
+                           release_url=(info['html_url'] if info else UPGRADE_RELEASE_URL))
 
 
 # ─────────────── 启动 ───────────────

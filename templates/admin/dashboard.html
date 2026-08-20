@@ -5,6 +5,17 @@
     <h2>{{ icon('layout-dashboard', 20) | safe }} 仪表盘</h2>
 </div>
 
+{% if upgrade_available and upgrade_check %}
+<div class="upgrade-banner">
+    <div class="upgrade-banner-icon">{{ icon('rocket', 24) | safe }}</div>
+    <div class="upgrade-banner-text">
+        <strong>发现新版本 v{{ upgrade_check.tag }}</strong>
+        <span>当前版本 v{{ version }}，点击前往一键升级（自动备份数据）</span>
+    </div>
+    <a href="{{ url_for('admin_upgrade') }}" class="btn btn-primary">{{ icon('arrow-up-right', 16, 'icon-sm') | safe }} 去升级</a>
+</div>
+{% endif %}
+
 <!-- 统计卡片 -->
 <div class="stats-grid">
     <div class="stat-card">

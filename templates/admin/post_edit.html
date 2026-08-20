@@ -36,6 +36,12 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>发布日期</label>
+                    <input type="datetime-local" name="created_at" id="created_at" class="input-text"
+                           value="{{ post.created_at.replace(' ', 'T')[:16] if post and post.created_at else '' }}">
+                    <small class="form-hint">留空则使用当前日期时间</small>
+                </div>
+                <div class="form-group">
                     <label class="checkbox-label">
                         <input type="checkbox" name="is_featured" value="1" {% if post and post.is_featured %}checked{% endif %}>
                         设为精选文章
@@ -69,7 +75,18 @@
                     <label>标签（逗号分隔）</label>
                     <input type="text" name="tags" class="input-text" id="tags-input"
                            value="{{ post.tags|join(', ') if post else '' }}"
-                           placeholder="Python, 教程, Web开发">
+                           placeholder="Python, 教程, Web开发"
+                           autocomplete="off" list="tags-datalist">
+                    <datalist id="tags-datalist"></datalist>
+                    <div class="tag-suggest" id="tags-suggest">
+                        <div class="tag-suggest-group" id="tags-auto" hidden>
+                            <span class="tag-suggest-label">自动识别</span><span class="tag-chips"></span>
+                        </div>
+                        <div class="tag-suggest-group">
+                            <span class="tag-suggest-label">常用</span><span class="tag-chips" id="tags-common"></span>
+                        </div>
+                    </div>
+                    <small class="form-hint">自动识别与常用标签可直接点击加入，也可手动输入补充</small>
                 </div>
                 <div class="form-group">
                     <label>摘要</label>
@@ -98,6 +115,80 @@
 (function () {
     var textarea = document.getElementById('content');
     var editorEl = document.getElementById('editor');
+    var titleInput = document.getElementById('title');
+
+    // 新建文章默认日期 = 当前本地时间（编辑时已有值则保留）
+    var createdInput = document.getElementById('created_at');
+    if (createdInput && !createdInput.value) {
+        var now = new Date();
+        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        createdInput.value = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+            + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    }
+
+    // —— 标签自动识别与一键加入 ——
+    var ALL_TAGS = {{ all_tags | tojson }};  // {标签名称: 使用次数}
+    var tagsInput = document.getElementById('tags-input');
+    var tagsAuto = document.getElementById('tags-auto');
+    var tagsCommon = document.getElementById('tags-common');
+    var tagsDatalist = document.getElementById('tags-datalist');
+
+    // 输入框 datalist 补全（全部已有标签）
+    Object.keys(ALL_TAGS).forEach(function (t) {
+        var o = document.createElement('option');
+        o.value = t;
+        tagsDatalist.appendChild(o);
+    });
+
+    // 当前输入框中的标签（保留原有顺序）
+    function currentTagNames() {
+        return tagsInput.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+    function hasTag(t) {
+        t = t.toLowerCase();
+        return currentTagNames().some(function (x) { return x.toLowerCase() === t; });
+    }
+    function addTag(t) {
+        if (!t || hasTag(t)) return;
+        var val = tagsInput.value.trim();
+        tagsInput.value = val ? val + ', ' + t : t;
+        renderChips();
+    }
+    // 中文标签按包含匹配；纯英文标签按词边界匹配，避免 "ai" 误中 "main"
+    function isMatch(tag, src) {
+        src = src.toLowerCase();
+        tag = tag.toLowerCase();
+        if (/[\u4e00-\u9fff]/.test(tag)) return src.indexOf(tag) !== -1;
+        return new RegExp('(^|[^a-z0-9])' + tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)').test(src);
+    }
+    function paintChips(box, list) {
+        var wrap = box.querySelector('.tag-chips');
+        if (!wrap) return;
+        wrap.textContent = '';
+        list.forEach(function (t) {
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'tag-chip';
+            b.textContent = t;
+            b.title = '点击添加标签：' + t;
+            b.addEventListener('click', function () { addTag(t); });
+            wrap.appendChild(b);
+        });
+    }
+    // 根据标题+正文内容匹配已有标签 → 自动识别区；全部已有标签按使用次数 → 常用区
+    function renderChips() {
+        if (!tagsInput || !tagsAuto || !tagsCommon) return;
+        var source = tagsInput.value + ' ' +
+            (document.getElementById('title') ? document.getElementById('title').value : '') + ' ' +
+            (typeof vditor !== 'undefined' && vditor ? vditor.getValue() : '');
+        var byFreq = Object.keys(ALL_TAGS).sort(function (a, b) { return ALL_TAGS[b] - ALL_TAGS[a]; });
+        var auto = byFreq.filter(function (t) { return !hasTag(t) && isMatch(t, source); });
+        var common = byFreq.filter(function (t) { return !hasTag(t); }).slice(0, 14);
+        paintChips(tagsAuto, auto);
+        paintChips(tagsCommon, common);
+        tagsAuto.hidden = auto.length === 0;
+        tagsCommon.style.display = common.length ? '' : 'none';
+    }
 
     // 当前主题：后台通过 <html data-theme="dark|light"> 控制
     function currentTheme() {
@@ -163,6 +254,7 @@
         cache: { enable: false },
         height: '100%',
         placeholder: '在此撰写文章内容，支持图片/视频/音频/附件上传…',
+        input: renderChips,   // 内容变化时同步更新标签自动识别
         toolbarConfig: { pin: true },
         upload: {
             accept: 'image/*,video/*,audio/*,.zip,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.py,.js,.json',
@@ -182,6 +274,11 @@
             }
         },
         after: function () {
+            renderChips();  // 编辑器就绪后初始化标签建议
+            // 标题、标签输入变化时同步更新建议
+            if (titleInput) titleInput.addEventListener('input', renderChips);
+            if (tagsInput) tagsInput.addEventListener('input', renderChips);
+
             // 预览操作栏按钮文字默认是英文（Desktop/Tablet/Mobile/Wechat），替换为中文
             var previewLabels = { 'desktop': '电脑', 'tablet': '平板', 'mobile': '手机/微信' };
             var actionBar = document.querySelector('#editor .vditor-preview__action');

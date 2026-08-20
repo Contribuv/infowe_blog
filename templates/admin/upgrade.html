@@ -1,0 +1,83 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}系统升级{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('rocket', 20) | safe }} 系统升级</h2>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for cat, msg in messages %}
+<div class="flash-msg flash-{{ cat }}"><span>{{ msg }}</span><span class="flash-close" onclick="this.parentElement.remove()">{{ icon('x', 14) | safe }}</span></div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">{{ icon('file-text', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">v{{ current_version }}</span>
+            <span class="stat-label">当前版本</span>
+        </div>
+    </div>
+    <div class="stat-card stat-projects">
+        <div class="stat-icon">{{ icon('rocket', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">
+                {% if info %}v{{ latest_version }}{% else %}-{% endif %}
+            </span>
+            <span class="stat-label">最新版本</span>
+        </div>
+    </div>
+</div>
+
+{% if upgradable %}
+<div class="card">
+    <div class="card-header">
+        <h3>{{ icon('check-circle', 18) | safe }} 发现新版本 v{{ latest_version }}
+            <span class="badge badge-available" style="background:rgba(46,155,112,.12);color:var(--success);">可升级</span>
+        </h3>
+    </div>
+    {% if info and info.published_at %}
+    <p class="text-muted">发布于 {{ info.published_at }}</p>
+    {% endif %}
+    {% if info and info.body %}
+    <div class="upgrade-notes">
+        <h4>更新内容</h4>
+        <pre class="upgrade-body">{{ info.body }}</pre>
+    </div>
+    {% endif %}
+    <div class="upgrade-actions">
+        <form method="POST" action="{{ url_for('admin_upgrade') }}"
+              onsubmit="return confirm('升级将自动备份数据（数据库与上传文件），然后用 v{{ latest_version }} 覆盖程序代码（文章、上传、备份目录不受影响）。完成后需重启服务。确定升级吗？')">
+            <button type="submit" class="btn btn-primary">{{ icon('download', 16, 'icon-sm') | safe }} 备份数据并一键升级</button>
+        </form>
+        <a href="{{ release_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">{{ icon('external-link', 16, 'icon-sm') | safe }} 在 GitHub 查看</a>
+    </div>
+</div>
+{% elif info %}
+<div class="card">
+    <div class="card-header"><h3>{{ icon('check-circle', 18) | safe }} 已是最新版本</h3></div>
+    <p class="text-muted">当前 v{{ current_version }} 已是最新版本。</p>
+    <a href="{{ release_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">{{ icon('external-link', 16, 'icon-sm') | safe }} 查看 Releases</a>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-header"><h3>{{ icon('history', 18) | safe }} 未能获取版本信息</h3></div>
+    <p class="text-muted">无法连接 GitHub（可能网络受限或触发了 API 限流）。可稍后刷新重试，或直接访问最新 Releases 页面。</p>
+    <a href="{{ release_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">{{ icon('external-link', 16, 'icon-sm') | safe }} 打开 Releases 页面</a>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header"><h3>升级说明</h3></div>
+    <ul class="upgrade-help">
+        <li><strong>数据安全：</strong>升级前自动备份数据库与上传文件到 <code>backups/upgrade_时间_版本/</code>。文章中、分类、评论、设置等数据保留不变。</li>
+        <li><strong>不覆盖内容：</strong><code>data/</code>、<code>static/uploads/</code>、<code>posts/</code>、<code>backups/</code> 目录不会被新代码覆盖。</li>
+        <li><strong>生效方式：</strong>代码文件替换后需<strong>重启服务</strong>生效（systemd 请执行 <code>systemctl restart blog</code>；本地开发重启 <code>python app.py</code>）。</li>
+        <li><strong>回滚：</strong>如升级后异常，可用备份目录中的 <code>blog.db</code> 与 <code>uploads/</code> 恢复，或重新部署上一版本源码。</li>
+    </ul>
+</div>
+{% endblock %}

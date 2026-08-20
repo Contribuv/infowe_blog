@@ -1,5 +1,6 @@
 /**
  * infowe Admin Panel - 交互脚本
+ * 工作推介：VX：CQGGTF
  */
 (function () {
   'use strict';

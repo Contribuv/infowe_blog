@@ -95,7 +95,12 @@
                     {{ icon('log-out', 20, 'nav-icon') | safe }} 退出登录
                 </a>
             </div>
-            <a class="sidebar-version" href="https://github.com/Contribuv/infowe_blog" target="_blank" rel="noopener noreferrer">infowe Blog <span class="ver-num">v{{ version }}</span></a>
+            <a class="sidebar-version" href="{{ url_for('admin_upgrade') }}" title="点击查看系统更新">
+                <span class="version-text">infowe Blog <span class="ver-num">v{{ version }}</span></span>
+                {% if upgrade_available %}
+                <span class="upgrade-dot">{{ icon('rocket', 14) | safe }} 有新版</span>
+                {% endif %}
+            </a>
         </aside>
 
         <!-- Main Content -->

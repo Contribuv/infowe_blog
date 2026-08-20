@@ -1,5 +1,6 @@
 /* ==============================================
-   infowe Admin — Typecho 风格（简洁 · 浅色 · 紧凑）
+   infowe Admin — 豪子博客 风格（简洁 · 浅色 · 紧凑）
+   工作推介：VX：CQGGTF
    原则：流体填充 · 朴素高效 · 细边框弱阴影
    ============================================== */
 
@@ -503,6 +504,25 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 .textarea-sm { resize: vertical; min-height: 80px; font-family: inherit; }
 .textarea-code { font-family: var(--font-mono); font-size: var(--fz-xs); line-height: 1.7; }
 
+/* 标签自动识别 / 常用标签 chips */
+.tag-suggest { margin-top: var(--sp-2); display: flex; flex-direction: column; gap: var(--sp-2); }
+.tag-suggest-group { display: flex; align-items: flex-start; gap: var(--sp-2); flex-wrap: wrap; }
+.tag-suggest-label {
+  flex: 0 0 auto; margin-top: var(--sp-1);
+  font-size: var(--fz-xs); color: var(--text-tertiary); line-height: 1.5;
+}
+.tag-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.tag-chip {
+  padding: var(--sp-1) var(--sp-3); border: 1px solid var(--border);
+  border-radius: 999px; background: var(--bg); color: var(--text-secondary);
+  font-size: var(--fz-xs); cursor: pointer; line-height: 1.6;
+  transition: all var(--transition);
+}
+.tag-chip:hover {
+  border-color: var(--primary); color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg));
+}
+
 .form-inline { display: flex; align-items: center; gap: var(--sp-3); }
 .checkbox-label {
   display: flex; align-items: center; gap: var(--sp-2);
@@ -677,6 +697,15 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
   align-self: start;
   overflow-y: auto;
   max-height: calc(100vh - var(--sp-6));
+}
+/* 短视口（如 768/720 高笔记本，浏览器占用后剩余高度不足）：
+   侧栏回退为随页面滚动，避免内部裁剪导致内容显示不全 */
+@media (max-height: 760px) and (min-width: 1025px) {
+  .edit-sidebar {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
 }
 
 .editor-area {
@@ -1010,6 +1039,8 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
   /* 变为单列后，右侧面板移到编辑器下方，取消固定 */
   .edit-sidebar { position: static; max-height: none; overflow-y: visible; align-self: auto; }
   .admin-main { padding: var(--sp-6) var(--sp-6); }
+  /* 单列时编辑器给足高度，避免视口矮小时内容显示不全 */
+  #editor { min-height: 420px; }
   /* 设置页在平板及以下回退为单列 */
   .settings-form { grid-template-columns: 1fr; grid-template-areas: "col1" "col2" "actions"; }
 }
@@ -1323,5 +1354,109 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
     background: var(--bg) !important;
     border-color: var(--border) !important;
   }
+}
+
+/* ───── 系统升级 ───── */
+/* 升级页多卡片直接排在 admin-main 下：相邻卡片保持间距（其他页面卡片有容器 gap，不受影响） */
+.admin-main > .card + .card { margin-top: var(--sp-5); }
+/* 升级页卡片内部：文本与按钮保留垂直间距（全局 reset 无 margin，但避免影响含表格的卡片） */
+.admin-main > .card > .text-muted { margin: var(--sp-3) 0; }
+.admin-main > .card > .text-muted + a.btn { margin-top: var(--sp-4); }
+/* 升级页按钮悬停：轻微上浮 + 阴影（覆盖默认按钮 hover 只是变色） */
+.admin-main > .card > a.btn {
+  transition: box-shadow var(--transition), border-color var(--transition), transform var(--transition), color var(--transition), background var(--transition);
+}
+.admin-main > .card > a.btn:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+.upgrade-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--success);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.upgrade-dot svg { width: 12px; height: 12px; }
+
+.upgrade-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-5);
+  border: 1px solid rgba(46, 155, 112, 0.2);
+  border-radius: var(--r);
+  background: linear-gradient(90deg, rgba(46, 155, 112, 0.08), rgba(46, 155, 112, 0.02));
+}
+.upgrade-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(46, 155, 112, 0.12);
+  color: var(--success);
+}
+.upgrade-banner-icon svg { width: 22px; height: 22px; }
+.upgrade-banner-text { flex: 1; min-width: 0; }
+.upgrade-banner-text strong { display: block; font-size: var(--fz-md); color: var(--text); }
+.upgrade-banner-text span { font-size: var(--fz-sm); color: var(--text-secondary); }
+
+.upgrade-notes { margin-top: var(--sp-3); }
+.upgrade-notes h4 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fz-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.upgrade-body {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  font-size: var(--fz-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.upgrade-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.upgrade-help {
+  margin: 0;
+  padding-left: 1.1em;
+  color: var(--text-secondary);
+  font-size: var(--fz-sm);
+  line-height: 1.8;
+}
+.upgrade-help li { margin-bottom: var(--sp-1); }
+.upgrade-help code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--text);
+  font-size: 0.92em;
+}
+.badge-available {
+  margin-left: var(--sp-2);
+  vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+  .upgrade-banner { flex-wrap: wrap; }
+  .upgrade-banner .btn { width: 100%; }
 }
 
