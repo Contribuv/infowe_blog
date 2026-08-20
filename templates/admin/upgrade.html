@@ -4,6 +4,7 @@
 {% block admin_content %}
 <div class="page-header">
     <h2>{{ icon('rocket', 20) | safe }} 系统升级</h2>
+    <a href="{{ url_for('admin_upgrade', force=1) }}" class="btn btn-secondary">{{ icon('history', 14, 'icon-sm') | safe }} 重新检测</a>
 </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}

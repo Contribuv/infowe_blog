@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.0.3'
+VERSION = '1.0.5'
 
 import os
 import re
@@ -2122,7 +2122,8 @@ def check_latest_version(force=False):
     返回 {'tag','version','html_url','body','published_at'} 或 None。"""
     now = time.time()
     cached = UPGRADE_CACHE.get('info')
-    ttl = 600 if UPGRADE_CACHE.get('ok') is False else 3600
+    # 失败缓存 10 分钟防反复打 GitHub；成功缓存 10 分钟（国内服务器访问慢，且避免新版发布后检测延迟）
+    ttl = 600 if UPGRADE_CACHE.get('ok') is False else 600
     if not force and UPGRADE_CACHE and now - UPGRADE_CACHE.get('t', 0) < ttl:
         return cached
     info = None
@@ -2259,7 +2260,8 @@ def do_upgrade(tag):
 def admin_upgrade():
     """系统升级页：检测新版本 + 一键备份升级（保留数据）。"""
     cur_ver = parse_version(VERSION)
-    info = check_latest_version()
+    # ?force=1 强制刷新最新版本检测（跳过缓存）
+    info = check_latest_version(force=(request.args.get('force') == '1'))
     upgradable = bool(info and cur_ver and info['version'] > cur_ver)
 
     if request.method == 'POST':

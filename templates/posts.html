@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import breadcrumb %}
-{% block title %}文章{% endblock %}
+{% block title %}{% if active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
 {% block content %}
 {{ breadcrumb([{"text":"文章"}]) }}
 <section class="posts-section">

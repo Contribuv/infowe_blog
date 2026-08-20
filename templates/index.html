@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{% if home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}{% endblock %}
+{% block title %}{% if current_tag %}{{ current_tag }}{% elif home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}{% endblock %}
 {% block content %}
 <!-- Hero 区域 -->
 <section class="hero">
