@@ -32,7 +32,7 @@ blog/
 ## 环境要求
 
 - Python 3.8+
-- 依赖：`flask`、`markdown`、`Pillow`（详见 `requirements.txt`）
+- 依赖：`flask`、`markdown`、`Pillow`、`pillow-heif`（详见 `requirements.txt`）
 
 ## 快速开始（本地开发）
 
@@ -106,6 +106,11 @@ sudo systemctl restart blog
 - 评论、上传等文件保存在 `static/uploads/` 下。
 
 ## 版本更新日志
+
+### v1.0.6
+
+- 新增 HEIC/HEIF 照片上传支持（iPhone 拍摄照片）：pillow-heif 解码后自动转 JPEG 压缩存储，覆盖文章编辑器与头像上传
+- 修复后台 `/admin/posts/new` 编辑页右侧设置面板在部分分辨率下显示不全的问题：短视口回退阈值由 760px 提升至 900px，覆盖 1366×768 等常见笔记本分辨率
 
 ### v1.0.5
 
