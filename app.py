@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.0.6'
+VERSION = '1.0.7'
 
 import os
 import re
@@ -60,7 +60,8 @@ DB_PATH = os.path.join(BASE_DIR, 'data', 'blog.db')
 POSTS_DIR = os.path.join(BASE_DIR, 'posts')
 DATA_FILE = os.path.join(BASE_DIR, 'data', 'posts.json')
 ICONS_DIR = os.path.join(BASE_DIR, 'static', 'icons')
-UPLOAD_DIR = os.path.join(BASE_DIR, 'static', 'uploads')
+UPLOAD_DIR = os.path.join(BASE_DIR, 'uploads')          # 上传文件根目录（v1.0.6 起位于项目根）
+OLD_UPLOAD_DIR = os.path.join(BASE_DIR, 'static', 'uploads')  # 旧上传目录（v1.0.6 启动时自动迁移）
 # 注意：头像上传不使用 .svg，因为 SVG 可内嵌脚本，在同源下会造成存储型 XSS。
 ALLOWED_IMAGE_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.heic', '.heif'}
 ALLOWED_MEDIA_EXT = {'.mp4', '.webm', '.ogg', '.mov', '.avi'}
@@ -317,6 +318,55 @@ def migrate_from_json(db):
 
 
 init_db()
+
+
+def migrate_uploads():
+    """上传目录迁移（v1.0.6+）：static/uploads → 根目录 uploads/。
+
+    1. 移动旧目录文件到新目录（目标已存在时合并，同名跳过）；
+    2. 将数据库中所有已存储的 /static/uploads/ URL 批量替换为 /uploads/。
+    幂等：旧目录不存在时直接跳过。
+    """
+    old_dir = OLD_UPLOAD_DIR
+    new_dir = UPLOAD_DIR
+    if not os.path.isdir(old_dir):
+        return  # 全新安装或已迁移
+    print('[迁移] 上传目录 static/uploads → uploads')
+    # 1. 文件迁移
+    if os.path.isdir(new_dir):
+        for root, dirs, files in os.walk(old_dir):
+            rel = os.path.relpath(root, old_dir)
+            target_root = os.path.join(new_dir, rel) if rel != '.' else new_dir
+            os.makedirs(target_root, exist_ok=True)
+            for fn in files:
+                src = os.path.join(root, fn)
+                dst = os.path.join(target_root, fn)
+                if not os.path.exists(dst):
+                    shutil.move(src, dst)
+        shutil.rmtree(old_dir, ignore_errors=True)
+    else:
+        shutil.move(old_dir, new_dir)
+    # 2. 数据库 URL 替换：/static/uploads/ → /uploads/
+    db = get_db()
+    tables = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+    changed = 0
+    old_prefix, new_prefix = '/static/uploads/', '/uploads/'
+    for t in tables:
+        cols = [r[1] for r in db.execute('PRAGMA table_info("%s")' % t).fetchall()]
+        for c in cols:
+            cur = db.execute('SELECT "%s" FROM "%s" WHERE instr("%s", ?) > 0' % (c, t, c), (old_prefix,))
+            for row in cur.fetchall():
+                val = row[0]
+                if val and old_prefix in val:
+                    db.execute('UPDATE "%s" SET "%s" = ? WHERE "%s" = ?' % (t, c, c),
+                               (val.replace(old_prefix, new_prefix), val))
+                    changed += 1
+    db.commit()
+    db.close()
+    print(f'[迁移] 已替换 {changed} 处旧上传 URL')
+
+
+migrate_uploads()
 
 # ─────────────── 工具函数 ───────────────
 
@@ -1808,9 +1858,18 @@ def _save_upload(file, allowed_ext):
         elif ext in ('.heic', '.heif'):
             return None, '服务器缺少 HEIC 解码支持（需安装 pillow-heif）'
         else:
+            file.stream.seek(0)
             file.save(os.path.join(target_dir, filename))
-    url = url_for('static', filename='uploads/' + sub + '/' + filename)
+    else:
+        file.save(os.path.join(target_dir, filename))
+    url = url_for('uploaded_file', filename=sub + '/' + filename)
     return url, None
+
+
+# 根目录 /uploads 静态文件服务（v1.0.6 起上传目录移至项目根）
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_DIR, filename)
 
 
 @app.route('/admin/upload/image', methods=['POST'])
@@ -1893,7 +1952,7 @@ def admin_settings():
             db.execute("UPDATE users SET password_hash=? WHERE username=?",
                        (hash_password(new_pwd), session.get('admin_username', 'admin')))
             flash('密码已修改', 'success')
-        # 头像上传 -> 固定存到 static/uploads/avatar/
+        # 头像上传 -> 固定存到 uploads/avatar/（项目根）
         avatar_file = request.files.get('avatar_file') if 'avatar_file' in request.files else None
         if avatar_file and avatar_file.filename:
             ext = os.path.splitext(avatar_file.filename)[1].lower()
@@ -1918,7 +1977,7 @@ def admin_settings():
                     img.save(save_path, 'JPEG', quality=85, optimize=True, progressive=True)
                 else:
                     avatar_file.save(save_path)
-                avatar_url = url_for('static', filename='uploads/avatar/' + filename)
+                avatar_url = url_for('uploaded_file', filename='avatar/' + filename)
                 save_setting('avatar', avatar_url)
                 app.config['avatar'] = avatar_url
                 flash('头像已更新', 'success')
@@ -2114,7 +2173,7 @@ UPGRADE_REPO = 'Contribuv/infowe_blog'
 UPGRADE_RELEASE_URL = f'https://github.com/{UPGRADE_REPO}/releases/latest'
 # 升级时跳过、绝不覆盖的目录/文件（用户数据与运行时数据）
 UPGRADE_SKIP = {
-    'data', 'static/uploads', 'backups', 'posts',
+    'data', 'static/uploads', 'uploads', 'backups', 'posts',
     '.git', '__pycache__', '.venv', 'venv',
     '.env', '.flaskenv', 'upgrade.lock', '*.db', '*.session',
 }

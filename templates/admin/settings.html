@@ -39,7 +39,7 @@
                     <div class="avatar-upload">
                         <input type="file" name="avatar_file" id="avatar_file" accept="image/*" hidden>
                         <label for="avatar_file" class="btn btn-outline btn-sm">选择图片</label>
-                        <span class="form-hint" id="avatar_filename">建议正方形图片，保存到 uploads/avatar/</span>
+                        <span class="form-hint" id="avatar_filename">建议正方形图片，保存到 /uploads/avatar/</span>
                     </div>
                 </div>
             </div>
@@ -180,7 +180,7 @@
   if (_avatarInput) {
     _avatarInput.addEventListener('change', function () {
       var tip = document.getElementById('avatar_filename');
-      tip.textContent = this.files.length ? this.files[0].name : '建议正方形图片，保存到 uploads/avatar/';
+      tip.textContent = this.files.length ? this.files[0].name : '建议正方形图片，保存到 /uploads/avatar/';
       // 即时预览
       if (this.files.length && this.files[0].type.startsWith('image/')) {
         var reader = new FileReader();

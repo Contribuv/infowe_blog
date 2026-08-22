@@ -103,9 +103,15 @@ sudo systemctl restart blog
 
 - `data/` 目录需存在，`sqlite3.connect` 不会自动创建父目录。
 - 若 `data/posts.json` 存在且数据库为空，首次启动会自动迁移其中的文章。
-- 评论、上传等文件保存在 `static/uploads/` 下。
+- 评论、上传等文件保存在根目录 `uploads/` 下。
 
 ## 版本更新日志
+
+### v1.0.7
+
+- **上传目录迁移**：附件存储由 `static/uploads/` 迁至项目根目录 `uploads/`，新增 `/uploads/` 静态路由；服务器升级后启动时自动迁移旧文件并批量替换数据库中已存储的 `/static/uploads/` URL 为 `/uploads/`（幂等，重复启动安全）
+- **修复上传严重 Bug**：修复 `_save_upload` 分支嵌套错误，此前非图片类文件（zip/pdf/mp4 等）上传后不会落盘却返回 URL，产生大量死链
+- 升级保护目录新增根目录 `uploads/`；Nginx 配置样例新增 `/uploads` 静态 location（HTTP/HTTPS 两处）
 
 ### v1.0.6
 

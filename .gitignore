@@ -24,6 +24,7 @@ data/
 
 # ── 用户上传附件（运行时生成，勿入库）──
 static/uploads/
+uploads/
 
 # ── 打包 / 进程文件（勿入库）──
 blog.zip
