@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.0.7'
+VERSION = '1.0.8'
 
 import os
 import re
@@ -32,13 +32,18 @@ try:
     _HAS_PIL = True
 except Exception:
     _HAS_PIL = False
-# pillow-heif：为 Pillow 注册 HEIC/HEIF 解码器（可选依赖，缺失时拒绝 HEIC 上传）
+# pillow-heif：HEIC/HEIF 解码支持（可选依赖）。优先注册 Pillow 解码器；
+# 即使注册失败（如 Pillow 版本兼容问题），仍可用 pillow_heif.open_heif 直接解码。
 try:
     import pillow_heif
-    pillow_heif.register_heif_opener()
     _HAS_HEIF = True
-except Exception:
+    try:
+        pillow_heif.register_heif_opener()
+    except Exception:
+        pass  # 注册失败不影响 open_heif 直解码路径
+except Exception as _heif_err:
     _HAS_HEIF = False
+    print(f'[HEIC] pillow_heif 导入失败：{_heif_err}')
 import werkzeug.security as ws
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -1801,10 +1806,34 @@ def admin_comment_delete(comment_id):
 
 # ─────────────── 附件上传（MD 编辑器集成） ───────────────
 
+def _optimize_heic(stream):
+    """HEIC/HEIF 专用转换：用 pillow_heif.open_heif 直接解码（不依赖 Pillow 插件注册），
+    统一压缩为 JPEG。返回 (data, '.jpg')；失败返回 None。"""
+    if not _HAS_HEIF:
+        return None
+    try:
+        heif = pillow_heif.open_heif(stream)
+        img = heif.to_pillow()
+        if img.mode in ('RGBA', 'P', 'LA'):
+            img = img.convert('RGB')
+        max_side = 1920
+        if max(img.size) > max_side:
+            ratio = max_side / max(img.size)
+            img = img.resize((int(img.size[0] * ratio), int(img.size[1] * ratio)),
+                             Image.LANCZOS)
+        out = io.BytesIO()
+        img.save(out, 'JPEG', quality=82, optimize=True, progressive=True)
+        return out.getvalue(), '.jpg'
+    except Exception:
+        return None
+
+
 def _optimize_image(stream, ext):
     """上传图片压缩：最长边 1920px，JPEG quality 82。返回 (data, new_ext) 或 None 表示跳过。"""
     if not _HAS_PIL:
         return None
+    if ext in ('.heic', '.heif'):
+        return _optimize_heic(stream)
     try:
         img = Image.open(stream)
         img = img.convert('RGB') if img.mode in ('RGBA', 'P', 'LA') else img
@@ -1856,7 +1885,9 @@ def _save_upload(file, allowed_ext):
             with open(os.path.join(target_dir, filename), 'wb') as f:
                 f.write(data)
         elif ext in ('.heic', '.heif'):
-            return None, '服务器缺少 HEIC 解码支持（需安装 pillow-heif）'
+            if not _HAS_HEIF:
+                return None, '服务器缺少 HEIC 解码支持（需安装 pillow-heif）'
+            return None, 'HEIC 图片解码失败：文件可能损坏，或 pillow_heif 与 Pillow 版本不兼容（可升级 Pillow 后重试）'
         else:
             file.stream.seek(0)
             file.save(os.path.join(target_dir, filename))
@@ -1958,7 +1989,7 @@ def admin_settings():
             ext = os.path.splitext(avatar_file.filename)[1].lower()
             if ext not in ALLOWED_IMAGE_EXT:
                 flash('头像格式不支持（仅 png/jpg/jpeg/gif/webp/heic）', 'error')
-            elif ext in ('.heic', '.heif') and not _HAS_HEIF:
+            elif ext in ('.heic', '.heif') and not (_HAS_HEIF and _HAS_PIL):
                 flash('服务器缺少 HEIC 解码支持，无法处理 HEIC 头像', 'error')
             else:
                 avatar_dir = os.path.join(UPLOAD_DIR, 'avatar')
@@ -1968,7 +1999,11 @@ def admin_settings():
                 filename = 'avatar' + saved_ext
                 save_path = os.path.join(avatar_dir, filename)
                 if _HAS_PIL:
-                    img = Image.open(avatar_file.stream).convert('RGB')
+                    if ext in ('.heic', '.heif'):
+                        # HEIC 用 open_heif 直接解码（不依赖 Pillow 插件注册）
+                        img = pillow_heif.open_heif(avatar_file.stream).to_pillow().convert('RGB')
+                    else:
+                        img = Image.open(avatar_file.stream).convert('RGB')
                     # 居中裁剪为正方形
                     w, h = img.size
                     s = min(w, h)

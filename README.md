@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.0.8
+
+- **修复系统升级卡住**：升级包下载改为直连 GitHub 优先、连接失败/超时（60s）后自动降级镜像，避免部分网络环境直连 codeload 长时间挂起；镜像列表可用环境变量 `UPGRADE_MIRRORS` 配置（逗号分隔，设空串则纯直连）
+- **修复 HEIC 上传误报**：`pillow_heif` 解码改为 `open_heif()` 直解码，不再依赖 Pillow 插件注册机制（解决已安装 pillow_heif 仍提示"缺少解码支持"的问题）；错误提示区分"未安装"与"解码失败"两种原因；头像上传同步支持 HEIC
+
 ### v1.0.7
 
 - **上传目录迁移**：附件存储由 `static/uploads/` 迁至项目根目录 `uploads/`，新增 `/uploads/` 静态路由；服务器升级后启动时自动迁移旧文件并批量替换数据库中已存储的 `/static/uploads/` URL 为 `/uploads/`（幂等，重复启动安全）
