@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.0.9
+
+- **修复 iOS 18 HEIC 上传失败**：iPhone（iOS 18 起）拍摄的 HEIC 元数据结构变化，内置 libheif < 1.18.2 的 pillow-heif（如 0.15.0 / libheif 1.17.6）解码时报 `Metadata not correctly assigned to image`。需将 pillow-heif 升级至 ≥ 0.18（内置 libheif ≥ 1.18.1，推荐 0.22.0 / libheif 1.19.7）
+- **HEIC 诊断增强**：启动时打印 pillow_heif / libheif / Pillow 版本；解码失败时错误提示透出真实异常与版本号，便于定位（此前为笼统的"文件可能损坏"提示）
+
 ### v1.0.8
 
 - **修复系统升级卡住**：升级包下载改为直连 GitHub 优先、连接失败/超时（60s）后自动降级镜像，避免部分网络环境直连 codeload 长时间挂起；镜像列表可用环境变量 `UPGRADE_MIRRORS` 配置（逗号分隔，设空串则纯直连）
