@@ -698,13 +698,14 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
   overflow-y: auto;
   max-height: calc(100vh - var(--sp-6));
 }
-/* 短视口（如 768/720 高笔记本，浏览器占用后剩余高度不足）：
+/* 短视口（如 1366×768 全屏后剩余高度不足）：
    侧栏回退为随页面滚动，避免内部裁剪导致内容显示不全 */
-@media (max-height: 760px) and (min-width: 1025px) {
+@media (max-height: 900px) and (min-width: 1025px) {
   .edit-sidebar {
     position: static;
     max-height: none;
     overflow-y: visible;
+    align-self: auto;
   }
 }
 

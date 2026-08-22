@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.0.5'
+VERSION = '1.0.6'
 
 import os
 import re
@@ -32,6 +32,13 @@ try:
     _HAS_PIL = True
 except Exception:
     _HAS_PIL = False
+# pillow-heif：为 Pillow 注册 HEIC/HEIF 解码器（可选依赖，缺失时拒绝 HEIC 上传）
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+    _HAS_HEIF = True
+except Exception:
+    _HAS_HEIF = False
 import werkzeug.security as ws
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -55,7 +62,7 @@ DATA_FILE = os.path.join(BASE_DIR, 'data', 'posts.json')
 ICONS_DIR = os.path.join(BASE_DIR, 'static', 'icons')
 UPLOAD_DIR = os.path.join(BASE_DIR, 'static', 'uploads')
 # 注意：头像上传不使用 .svg，因为 SVG 可内嵌脚本，在同源下会造成存储型 XSS。
-ALLOWED_IMAGE_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'}
+ALLOWED_IMAGE_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.heic', '.heif'}
 ALLOWED_MEDIA_EXT = {'.mp4', '.webm', '.ogg', '.mov', '.avi'}
 ALLOWED_FILE_EXT = {'.zip', '.rar', '.pdf', '.doc', '.docx', '.xls', '.xlsx',
                     '.ppt', '.pptx', '.txt', '.md', '.py', '.js', '.json'}
@@ -1787,7 +1794,7 @@ def _save_upload(file, allowed_ext):
         filename = f'{base}_{counter}{ext}'
         counter += 1
     # 压缩：位图类在保存前压缩（gif 不压缩以保留动画）
-    if ext in ('.png', '.jpg', '.jpeg', '.bmp', '.webp'):
+    if ext in ('.png', '.jpg', '.jpeg', '.bmp', '.webp', '.heic', '.heif'):
         optimized = _optimize_image(file.stream, ext)
         if optimized:
             data, new_ext = optimized
@@ -1798,8 +1805,10 @@ def _save_upload(file, allowed_ext):
                     counter += 1
             with open(os.path.join(target_dir, filename), 'wb') as f:
                 f.write(data)
-    else:
-        file.save(os.path.join(target_dir, filename))
+        elif ext in ('.heic', '.heif'):
+            return None, '服务器缺少 HEIC 解码支持（需安装 pillow-heif）'
+        else:
+            file.save(os.path.join(target_dir, filename))
     url = url_for('static', filename='uploads/' + sub + '/' + filename)
     return url, None
 
@@ -1889,7 +1898,9 @@ def admin_settings():
         if avatar_file and avatar_file.filename:
             ext = os.path.splitext(avatar_file.filename)[1].lower()
             if ext not in ALLOWED_IMAGE_EXT:
-                flash('头像格式不支持（仅 png/jpg/jpeg/gif/webp）', 'error')
+                flash('头像格式不支持（仅 png/jpg/jpeg/gif/webp/heic）', 'error')
+            elif ext in ('.heic', '.heif') and not _HAS_HEIF:
+                flash('服务器缺少 HEIC 解码支持，无法处理 HEIC 头像', 'error')
             else:
                 avatar_dir = os.path.join(UPLOAD_DIR, 'avatar')
                 os.makedirs(avatar_dir, exist_ok=True)

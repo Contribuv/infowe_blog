@@ -224,7 +224,7 @@
     // 根据扩展名分流到不同接口
     function resolve(file) {
         var ext = (file.name.split('.').pop() || '').toLowerCase();
-        if (['png','jpg','jpeg','gif','webp','bmp','svg'].indexOf(ext) !== -1)
+        if (['png','jpg','jpeg','gif','webp','bmp','svg','heic','heif'].indexOf(ext) !== -1)
             return uploadOne('/admin/upload/image', 'image', file).then(function (d) { return { type: 'image', url: d.url, name: d.name }; });
         if (['mp4','webm','ogg','mov','avi','mp3','wav','m4a','aac'].indexOf(ext) !== -1)
             return uploadOne('/admin/upload/media', 'file', file).then(function (d) { return { type: 'media', url: d.url, name: d.name }; });
@@ -257,7 +257,7 @@
         input: renderChips,   // 内容变化时同步更新标签自动识别
         toolbarConfig: { pin: true },
         upload: {
-            accept: 'image/*,video/*,audio/*,.zip,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.py,.js,.json',
+            accept: 'image/*,video/*,audio/*,.heic,.heif,.zip,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.py,.js,.json',
             filename: function (name) { return name.replace(/[^\w\u4e00-\u9fa5\.\-]/g, '_'); },
             // 纯自定义 handler：自行上传并插入定制内容，避免 Vditor 默认 succMap 插入格式不符
             handler: function (files) {
