@@ -2180,6 +2180,14 @@ UPGRADE_SKIP = {
 UPGRADE_MAX_BYTES = 200 * 1024 * 1024  # 下载/解压上限 200MB，防异常包
 UPGRADE_CACHE = {}  # 检测结果缓存：{'t': 时间戳, 'ok': 是否成功, 'info': 版本信息}
 
+# 升级包下载镜像（仅作备用）：默认优先直连 GitHub，连接失败/超时才自动降级到镜像，
+# 避免部分网络环境直连 codeload.github.com 下载源码包长时间卡死。
+# 可用环境变量 UPGRADE_MIRRORS 覆盖（逗号分隔多个镜像，如 'https://ghproxy.net/,https://gh-proxy.com/'），
+# 设空串则纯直连、不使用镜像。
+UPGRADE_MIRRORS = [m.rstrip('/') + '/' for m in
+                   (os.environ.get('UPGRADE_MIRRORS', 'https://ghproxy.net/') or '').split(',') if m.strip()]
+UPGRADE_DOWNLOAD_TIMEOUT = int(os.environ.get('UPGRADE_DOWNLOAD_TIMEOUT', '60'))  # 单次下载超时（秒）
+
 
 def parse_version(v):
     """'v1.2.3' / '1.2.3' → (1, 2, 3)；无法解析返回 None。"""
@@ -2221,19 +2229,38 @@ def check_latest_version(force=False):
 
 
 def _upgrade_download(url, dest, max_bytes=None):
-    """流式下载文件到 dest，超过大小上限则中断。"""
+    """流式下载文件到 dest，超过大小上限则中断。
+
+    优先直连原始 URL；连接失败/超时后自动按 UPGRADE_MIRRORS 列表逐个尝试镜像，
+    全部失败则抛出最后一个错误。"""
     max_bytes = max_bytes or UPGRADE_MAX_BYTES
-    req = urllib.request.Request(url, headers={'User-Agent': 'infowe-Blog-updater'})
-    with urllib.request.urlopen(req, timeout=120, context=_github_ssl_context()) as resp:
-        with open(dest, 'wb') as f:
-            while True:
-                chunk = resp.read(1 << 16)
-                if not chunk:
-                    break
-                f.write(chunk)
-                if os.path.getsize(dest) > max_bytes:
-                    raise RuntimeError('下载内容超过大小上限，已取消')
-    return dest
+
+    def _stream_download(u, target):
+        req = urllib.request.Request(u, headers={'User-Agent': 'infowe-Blog-updater'})
+        with urllib.request.urlopen(req, timeout=UPGRADE_DOWNLOAD_TIMEOUT,
+                                    context=_github_ssl_context()) as resp:
+            with open(target, 'wb') as f:
+                while True:
+                    chunk = resp.read(1 << 16)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    if os.path.getsize(target) > max_bytes:
+                        raise RuntimeError('下载内容超过大小上限，已取消')
+
+    attempts = [url] + [m + url for m in UPGRADE_MIRRORS]
+    last_err = None
+    for i, u in enumerate(attempts):
+        try:
+            _stream_download(u, dest)
+            if i > 0:
+                print(f'[升级] 直连失败，已通过镜像下载：{u}')
+            return dest
+        except Exception as e:
+            last_err = e
+            if os.path.exists(dest):
+                os.remove(dest)
+    raise last_err
 
 
 def _upgrade_apply(tmp_root, tag):
@@ -2284,7 +2311,7 @@ def do_upgrade(tag):
         if os.path.isdir(UPLOAD_DIR):
             shutil.copytree(UPLOAD_DIR, os.path.join(bak_dir, 'uploads'), dirs_exist_ok=True)
 
-        # 2. 下载源码压缩包
+        # 2. 下载源码压缩包（直连优先，失败自动降级镜像）
         zip_url = f'https://github.com/{UPGRADE_REPO}/archive/refs/tags/v{tag}.zip'
         zip_path = _upgrade_download(zip_url, os.path.join(tmp, 'release.zip'))
 
