@@ -41,8 +41,16 @@ try:
         pillow_heif.register_heif_opener()
     except Exception:
         pass  # 注册失败不影响 open_heif 直解码路径
+    _PH_VER = getattr(pillow_heif, '__version__', '?')
+    try:
+        _LIBHEIF_VER = pillow_heif.libheif_info().get('version', '?')
+    except Exception:
+        _LIBHEIF_VER = '?'
+    print(f'[HEIC] pillow_heif {_PH_VER} (libheif {_LIBHEIF_VER}) / Pillow {getattr(Image, "__version__", "?")}')
 except Exception as _heif_err:
     _HAS_HEIF = False
+    _PH_VER = '?'
+    _LIBHEIF_VER = '?'
     print(f'[HEIC] pillow_heif 导入失败：{_heif_err}')
 import werkzeug.security as ws
 from werkzeug.utils import secure_filename
@@ -1828,7 +1836,8 @@ def _optimize_heic(stream):
         img.save(out, 'JPEG', quality=82, optimize=True, progressive=True)
         return out.getvalue(), '.jpg'
     except Exception as e:
-        return None, f'HEIC 解码失败：{e}'
+        pv = getattr(Image, '__version__', '?')
+        return None, f'HEIC 解码失败：{e}（pillow_heif {_PH_VER} / libheif {_LIBHEIF_VER} / Pillow {pv}，可尝试升级：pip install -U pillow-heif Pillow）'
 
 
 def _optimize_image(stream, ext):
