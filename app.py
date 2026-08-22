@@ -28,7 +28,7 @@ from functools import wraps
 import markdown
 # Pillow 用于上传图片压缩（可选依赖，缺失时跳过压缩）
 try:
-    from PIL import Image
+    from PIL import Image, ImageOps
     _HAS_PIL = True
 except Exception:
     _HAS_PIL = False
@@ -1808,14 +1808,17 @@ def admin_comment_delete(comment_id):
 
 def _optimize_heic(stream):
     """HEIC/HEIF 专用转换：用 pillow_heif.open_heif 直接解码（不依赖 Pillow 插件注册），
-    统一压缩为 JPEG。返回 (data, '.jpg')；失败返回 None。"""
+    统一压缩为 JPEG。返回 (data, '.jpg')；失败返回 (None, 错误信息)。"""
     if not _HAS_HEIF:
-        return None
+        return None, '服务器缺少 HEIC 解码支持（需安装 pillow-heif）'
     try:
+        stream.seek(0)
         heif = pillow_heif.open_heif(stream)
         img = heif.to_pillow()
         if img.mode in ('RGBA', 'P', 'LA'):
             img = img.convert('RGB')
+        # iPhone 等拍摄的照片常带 EXIF 方向信息，解码后按方向修正，避免横竖颠倒
+        img = ImageOps.exif_transpose(img)
         max_side = 1920
         if max(img.size) > max_side:
             ratio = max_side / max(img.size)
@@ -1824,16 +1827,18 @@ def _optimize_heic(stream):
         out = io.BytesIO()
         img.save(out, 'JPEG', quality=82, optimize=True, progressive=True)
         return out.getvalue(), '.jpg'
-    except Exception:
-        return None
+    except Exception as e:
+        return None, f'HEIC 解码失败：{e}'
 
 
 def _optimize_image(stream, ext):
-    """上传图片压缩：最长边 1920px，JPEG quality 82。返回 (data, new_ext) 或 None 表示跳过。"""
+    """上传图片压缩：最长边 1920px，JPEG quality 82。
+    返回 (data, new_ext, err)；data 为 None 时 err 为失败原因（非 HEIC 图片恒为 None）。"""
     if not _HAS_PIL:
-        return None
+        return None, None, None
     if ext in ('.heic', '.heif'):
-        return _optimize_heic(stream)
+        data, err = _optimize_heic(stream)
+        return data, '.jpg' if data else None, err
     try:
         img = Image.open(stream)
         img = img.convert('RGB') if img.mode in ('RGBA', 'P', 'LA') else img
@@ -1845,11 +1850,11 @@ def _optimize_image(stream, ext):
         out = io.BytesIO()
         if ext in ('.png', '.bmp') and img.mode == 'RGBA':
             img.save(out, 'PNG', optimize=True)
-            return out.getvalue(), ext
+            return out.getvalue(), ext, None
         img.save(out, 'JPEG', quality=82, optimize=True, progressive=True)
-        return out.getvalue(), '.jpg'
+        return out.getvalue(), '.jpg', None
     except Exception:
-        return None
+        return None, None, None
 
 
 def _save_upload(file, allowed_ext):
@@ -1874,9 +1879,8 @@ def _save_upload(file, allowed_ext):
         counter += 1
     # 压缩：位图类在保存前压缩（gif 不压缩以保留动画）
     if ext in ('.png', '.jpg', '.jpeg', '.bmp', '.webp', '.heic', '.heif'):
-        optimized = _optimize_image(file.stream, ext)
-        if optimized:
-            data, new_ext = optimized
+        data, new_ext, err = _optimize_image(file.stream, ext)
+        if data:
             if new_ext != ext:
                 filename = base + new_ext
                 while os.path.exists(os.path.join(target_dir, filename)):
@@ -1885,9 +1889,8 @@ def _save_upload(file, allowed_ext):
             with open(os.path.join(target_dir, filename), 'wb') as f:
                 f.write(data)
         elif ext in ('.heic', '.heif'):
-            if not _HAS_HEIF:
-                return None, '服务器缺少 HEIC 解码支持（需安装 pillow-heif）'
-            return None, 'HEIC 图片解码失败：文件可能损坏，或 pillow_heif 与 Pillow 版本不兼容（可升级 Pillow 后重试）'
+            # err 由 _optimize_heic 提供（含真实异常信息）
+            return None, err or 'HEIC 图片解码失败'
         else:
             file.stream.seek(0)
             file.save(os.path.join(target_dir, filename))
