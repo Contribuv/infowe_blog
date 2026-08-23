@@ -19,7 +19,7 @@
     </script>
     <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', t='20260808') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', t='v' ~ version) }}">
     <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
     <!-- 社交分享：Open Graph + Twitter Card -->
     <meta property="og:site_name" content="{{ blog_name }}">
@@ -135,6 +135,6 @@
     {% if request.path.startswith('/post/') %}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
     {% endif %}
-    <script src="{{ url_for('static', filename='js/main.js', t='20260808') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/main.js', t='v' ~ version) }}" defer></script>
 </body>
 </html>

@@ -12,7 +12,7 @@
     <script>
     (function(){var t=localStorage.getItem('infowe-theme');document.documentElement.setAttribute('data-theme',t==='light'||t==='dark'?t:'dark');var m=document.querySelector('meta[name="theme-color"]');if(m&&t==='light')m.setAttribute('content','#f5f5f5');})();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='20260810') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='v' ~ version) }}">
 </head>
 <body class="login-page">
     <!-- 粒子特效背景（与首页同款） -->

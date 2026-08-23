@@ -1361,16 +1361,23 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 }
 
 /* ───── 系统升级 ───── */
-/* 升级页多卡片直接排在 admin-main 下：相邻卡片保持间距（其他页面卡片有容器 gap，不受影响） */
-.admin-main > .card + .card { margin-top: var(--sp-5); }
+/* 升级页多卡片直接排在 admin-main 下：相邻卡片保持间距（其他页面卡片有容器 gap，不受影响）。
+   注意：JS 检测结果包在 #upgrade-result 容器内，该容器内的卡片及它与下方静态卡片之间也需保留间距。 */
+.admin-main > #upgrade-result > .card { margin-top: var(--sp-5); }
+.admin-main > .card + .card,
+.admin-main > #upgrade-result + .card { margin-top: var(--sp-5); }
 /* 升级页卡片内部：文本与按钮保留垂直间距（全局 reset 无 margin，但避免影响含表格的卡片） */
-.admin-main > .card > .text-muted { margin: var(--sp-3) 0; }
-.admin-main > .card > .text-muted + a.btn { margin-top: var(--sp-4); }
+.admin-main > .card > .text-muted,
+.admin-main > #upgrade-result > .card > .text-muted { margin: var(--sp-3) 0; }
+.admin-main > .card > .text-muted + a.btn,
+.admin-main > #upgrade-result > .card > .text-muted { margin-top: var(--sp-4); }
 /* 升级页按钮悬停：轻微上浮 + 阴影（覆盖默认按钮 hover 只是变色） */
-.admin-main > .card > a.btn {
+.admin-main > .card > a.btn,
+.admin-main > #upgrade-result > .card > a.btn {
   transition: box-shadow var(--transition), border-color var(--transition), transform var(--transition), color var(--transition), background var(--transition);
 }
-.admin-main > .card > a.btn:hover {
+.admin-main > .card > a.btn:hover,
+.admin-main > #upgrade-result > .card > a.btn:hover {
   box-shadow: var(--shadow);
   transform: translateY(-1px);
 }
@@ -1437,7 +1444,6 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-3);
-  margin-top: var(--sp-4);
 }
 .upgrade-help {
   margin: 0;
