@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.1.1'
+VERSION = '1.1.2'
 
 import os
 import re
@@ -2267,6 +2267,7 @@ UPGRADE_SKIP = {
     '.env', '.flaskenv', 'upgrade.lock', '*.db', '*.session',
 }
 UPGRADE_MAX_BYTES = 200 * 1024 * 1024  # 下载/解压上限 200MB，防异常包
+UPGRADE_LOCK_TTL = 600  # 升级锁超时（秒）：超过视为上次升级异常中断，自动清理后允许重试
 UPGRADE_CACHE = {}  # 检测结果缓存：{'t': 时间戳, 'ok': 是否成功, 'info': 版本信息}
 
 # 升级包下载镜像（仅作备用）：默认优先直连 GitHub，连接失败/超时才自动降级到镜像，
@@ -2384,8 +2385,15 @@ def do_upgrade(tag):
     """执行升级：数据备份 → 下载 → 解压 → 校验 → 覆盖代码。返回 (成功标志, 消息)。"""
     lock_path = os.path.join(BASE_DIR, 'upgrade.lock')
     try:
+        # 过期锁（上次升级异常中断残留）自动清理，避免永久卡"升级进行中"
+        if os.path.exists(lock_path) and time.time() - os.path.getmtime(lock_path) > UPGRADE_LOCK_TTL:
+            try:
+                os.remove(lock_path)
+            except OSError:
+                pass
         # 原子创建锁，避免并发重复升级
         fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(int(time.time())).encode('utf-8'))
         os.close(fd)
     except FileExistsError:
         return False, '升级任务已在进行中，请稍候再试'
