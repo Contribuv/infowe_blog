@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.1.0'
+VERSION = '1.1.1'
 
 import os
 import re
@@ -685,10 +685,18 @@ def _toc_slugify(value, separator):
     return re.sub(r'-+', separator, value).strip(separator)
 
 
+def normalize_auto_links(content):
+    """把 Markdown 自动链接 <https://...> 规范化为标准链接 [URL](URL)。
+    Vditor 编辑往返会丢弃 <URL> 写法，标准链接则稳定不丢。"""
+    return re.sub(r'<(https?://[^>\s]+)>', r'[\1](\1)', content)
+
+
 def render_post_content(content):
     if not content:
         return ''
     content = re.sub(r'^---.*?---\s*', '', content, flags=re.DOTALL)
+    # 兜底：历史数据中的自动链接 <URL> 规范化为标准链接（避免 Vditor 编辑往返丢失）
+    content = normalize_auto_links(content)
     # Markdown 任务列表 [ ] / [x] -> 带样式的勾选符号
     content = content.replace('[x]', '<i class="ck ck-done">☑</i> ').replace('[ ]', '<i class="ck ck-todo">☐</i> ')
     html = markdown.markdown(
@@ -734,6 +742,8 @@ def db_save_post(form_data, post_id=None):
     slug = re.sub(r'-+', '-', slug).strip('-') or 'untitled'
 
     content = form_data.get('content', '')
+    # 自动链接 <https://...> 规范化为标准链接 [URL](URL)，避免 Vditor 编辑往返时丢失
+    content = normalize_auto_links(content)
     read_time = max(1, len(content.split()) // 200) if content else 3
     is_featured = 1 if form_data.get('is_featured') == '1' else 0
     category_id_raw = form_data.get('category_id', '') or ''
@@ -1542,6 +1552,9 @@ def admin_post_edit(post_id):
         flash('文章已更新', 'success')
         return redirect(url_for('admin_posts'))
     categories = db_load_categories()
+    # 加载编辑页时把自动链接 <URL> 规范化为标准链接，避免 Vditor 往返丢弃
+    if post and post.get('content'):
+        post['content'] = normalize_auto_links(post['content'])
     return render_template('admin/post_edit.html', post=post, categories=categories,
                            all_tags=db_get_all_tags())
 
