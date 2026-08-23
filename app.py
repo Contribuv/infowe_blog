@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.0.9'
+VERSION = '1.1.0'
 
 import os
 import re
@@ -653,8 +653,9 @@ def db_load_home_posts(limit=6):
 
 
 def db_get_all_tags():
+    """获取所有文章的标签集合（含草稿，去重，按频率排序）"""
     db = get_db()
-    rows = db.execute("SELECT tags FROM posts WHERE status='published'").fetchall()
+    rows = db.execute("SELECT tags FROM posts").fetchall()
     db.close()
     tag_counts = {}
     for r in rows:
@@ -677,13 +678,23 @@ def db_get_stats():
     }
 
 
+def _toc_slugify(value, separator):
+    """自定义 slugify：保留中文，用于生成与 Markdown 锚点链接一致的标题 ID。"""
+    value = value.lower().strip()
+    value = re.sub(r'[^\w\u4e00-\u9fff]+', separator, value)
+    return re.sub(r'-+', separator, value).strip(separator)
+
+
 def render_post_content(content):
     if not content:
         return ''
     content = re.sub(r'^---.*?---\s*', '', content, flags=re.DOTALL)
+    # Markdown 任务列表 [ ] / [x] -> 带样式的勾选符号
+    content = content.replace('[x]', '<i class="ck ck-done">☑</i> ').replace('[ ]', '<i class="ck ck-todo">☐</i> ')
     html = markdown.markdown(
         content,
-        extensions=['fenced_code', 'tables', 'nl2br', 'sane_lists']
+        extensions=['fenced_code', 'tables', 'nl2br', 'sane_lists', 'toc'],
+        extension_configs={'toc': {'slugify': _toc_slugify}}
     )
     # 图片性能优化：懒加载 + 异步解码 + 自动填充空 alt（消除 CLS）
     def _img_repl(m):
@@ -701,22 +712,40 @@ def render_post_content(content):
         tag = re.sub(r'\s+alt="[^"]*"', '', tag)
         return tag.replace('<img', f'<img loading="lazy" decoding="async" alt="{alt_text}"', 1)
     html = re.sub(r'<img\b[^>]*>', _img_repl, html)
+    # 超链接新窗口打开，但页内锚点（href 以 # 开头）除外
+    def _a_repl(m):
+        tag = m.group(0)
+        if re.search(r'href="#', tag):
+            return tag  # 页内定位锚点，当前窗口跳转
+        if 'target=' in tag:
+            return tag
+        return tag.replace('<a', '<a target="_blank" rel="noopener"', 1)
+    html = re.sub(r'<a\b[^>]*>', _a_repl, html)
     return html
 
 
 def db_save_post(form_data, post_id=None):
     db = get_db()
     tags = json.dumps([t.strip() for t in form_data.get('tags', '').split(',') if t.strip()], ensure_ascii=False)
-    slug = form_data.get('slug', '')
+    slug = form_data.get('slug', '').strip()
     if not slug:
-        slug = re.sub(r'[^\w\-]', '-', form_data.get('title', 'untitled').lower())[:60]
-    slug = slug.strip('-')
+        # 仅保留 ASCII 字母数字和连字符，剔除中文等非 ASCII 字符
+        slug = re.sub(r'[^a-zA-Z0-9\-]', '-', form_data.get('title', 'untitled').lower())[:60]
+    slug = re.sub(r'-+', '-', slug).strip('-') or 'untitled'
 
     content = form_data.get('content', '')
     read_time = max(1, len(content.split()) // 200) if content else 3
     is_featured = 1 if form_data.get('is_featured') == '1' else 0
     category_id_raw = form_data.get('category_id', '') or ''
     category_id = int(category_id_raw) if str(category_id_raw).strip().isdigit() else None
+
+    # 摘要：留空则从正文自动截取前 200 字符（去除 HTML/Markdown 标记）
+    excerpt = (form_data.get('excerpt', '') or '').strip()
+    if not excerpt and content:
+        plain = re.sub(r'<[^>]+>', '', content)      # 去 HTML 标签
+        plain = re.sub(r'[#*`\[\]()!>|~-]', '', plain)  # 去 Markdown 符号
+        plain = re.sub(r'\s+', ' ', plain).strip()
+        excerpt = plain[:200] if len(plain) > 200 else plain
 
     # 发布日期：datetime-local 表单值（YYYY-MM-DDTHH:MM）归一化为 DB 格式；留空则新建时用当前时间、编辑时保持不变
     created_at = (form_data.get('created_at', '') or '').strip().replace('T', ' ')
@@ -737,7 +766,7 @@ def db_save_post(form_data, post_id=None):
             """UPDATE posts SET title=?, slug=?, content=?, excerpt=?, tags=?,
                is_featured=?, read_time=?, status=?, category_id=?,
                created_at=COALESCE(?, created_at), updated_at=CURRENT_TIMESTAMP WHERE id=?""",
-            (form_data.get('title', ''), slug, content, form_data.get('excerpt', ''),
+            (form_data.get('title', ''), slug, content, excerpt,
              tags, is_featured, read_time, form_data.get('status', 'published'), category_id,
              created_at, post_id)
         )
@@ -745,7 +774,7 @@ def db_save_post(form_data, post_id=None):
         db.execute(
             """INSERT INTO posts (title, slug, content, excerpt, tags, is_featured, read_time, status, category_id, created_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))""",
-            (form_data.get('title', ''), slug, content, form_data.get('excerpt', ''),
+            (form_data.get('title', ''), slug, content, excerpt,
              tags, is_featured, read_time, form_data.get('status', 'published'), category_id,
              created_at)
         )

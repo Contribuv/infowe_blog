@@ -1,0 +1,2 @@
+# 统一换行符：所有文本文件按 LF 规范化存储，避免 Windows/Linux 间换行差异刷屏
+* text=auto eol=lf

@@ -489,6 +489,11 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 .form-group small, .form-hint {
   font-size: var(--fz-xs); color: var(--text-tertiary); margin-top: var(--sp-1);
 }
+.btn-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-size: var(--fz-xs); color: var(--primary); text-decoration: underline;
+}
+.btn-link:hover { opacity: .8; }
 
 .input-text, .textarea-sm, select.input-text {
   width: 100%; padding: var(--sp-3) var(--sp-4); border-radius: var(--r);
@@ -691,21 +696,19 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 .edit-main > .form-group:last-of-type { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .edit-sidebar {
   display: flex; flex-direction: column; gap: var(--sp-5);
-  /* 桌面端：页面滚动时右侧设置面板固定（编辑页无全局顶栏，top 仅留小间距） */
+  /* 内容不超视口时粘性跟随（JS 检测后启用）；超高时回退随页面滚动，任何分辨率都不裁剪 */
   position: sticky;
   top: var(--sp-4);
   align-self: start;
-  overflow-y: auto;
-  max-height: calc(100vh - var(--sp-6));
 }
-/* 短视口（如 1366×768 全屏后剩余高度不足）：
-   侧栏回退为随页面滚动，避免内部裁剪导致内容显示不全 */
+/* JS 检测到侧栏内容超出视口时：取消固定，改为随页面滚动，彻底避免显示不全 */
+.edit-sidebar.not-sticky {
+  position: static;
+}
+/* 纯 CSS 兜底：矮视口下直接回退随页面滚动（JS 未加载时也有效） */
 @media (max-height: 900px) and (min-width: 1025px) {
   .edit-sidebar {
     position: static;
-    max-height: none;
-    overflow-y: visible;
-    align-self: auto;
   }
 }
 
@@ -1037,8 +1040,8 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
    ============================================== */
 @media (max-width: 1024px) {
   .edit-layout { grid-template-columns: 1fr; }
-  /* 变为单列后，右侧面板移到编辑器下方，取消固定 */
-  .edit-sidebar { position: static; max-height: none; overflow-y: visible; align-self: auto; }
+  /* 变为单列后，右侧面板移到编辑器下方，随页面滚动 */
+  .edit-sidebar { position: static; }
   .admin-main { padding: var(--sp-6) var(--sp-6); }
   /* 单列时编辑器给足高度，避免视口矮小时内容显示不全 */
   #editor { min-height: 420px; }

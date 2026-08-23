@@ -67,9 +67,10 @@
                 </div>
                 <div class="form-group">
                     <label>自定义 Slug</label>
-                    <input type="text" name="slug" class="input-text"
+                    <input type="text" name="slug" class="input-text" id="slug-input"
                            value="{{ post.slug if post else '' }}"
                            placeholder="留空则自动生成">
+                    <small class="form-hint" id="slug-preview"></small>
                 </div>
                 <div class="form-group">
                     <label>标签（逗号分隔）</label>
@@ -91,7 +92,9 @@
                 <div class="form-group">
                     <label>摘要</label>
                     <textarea name="excerpt" class="textarea-sm" rows="3"
+                              id="excerpt-input"
                               placeholder="文章简短摘要...">{{ post.excerpt if post else '' }}</textarea>
+                    <small class="form-hint"><button type="button" class="btn-link" id="excerpt-auto-btn">从正文自动获取</button></small>
                 </div>
             </div>
 
@@ -117,6 +120,18 @@
     var editorEl = document.getElementById('editor');
     var titleInput = document.getElementById('title');
 
+    // —— 侧栏自适应：内容不超视口则粘性跟随；超出视口则随页面滚动，任何分辨率都不裁剪 ——
+    var editSidebar = document.querySelector('.edit-sidebar');
+    if (editSidebar) {
+        function updateSidebarSticky() {
+            // 视口高度减去上下留白（top/bottom 各 16px）
+            var fits = editSidebar.scrollHeight <= window.innerHeight - 32;
+            editSidebar.classList.toggle('not-sticky', !fits);
+        }
+        updateSidebarSticky();
+        window.addEventListener('resize', updateSidebarSticky);
+    }
+
     // 新建文章默认日期 = 当前本地时间（编辑时已有值则保留）
     var createdInput = document.getElementById('created_at');
     if (createdInput && !createdInput.value) {
@@ -126,12 +141,56 @@
             + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
     }
 
-    // —— 标签自动识别与一键加入 ——
+    // -- 标签自动识别与一键加入 --
     var ALL_TAGS = {{ all_tags | tojson }};  // {标签名称: 使用次数}
     var tagsInput = document.getElementById('tags-input');
     var tagsAuto = document.getElementById('tags-auto');
     var tagsCommon = document.getElementById('tags-common');
     var tagsDatalist = document.getElementById('tags-datalist');
+
+    // -- Slug 实时预览：标题输入时自动生成 slug 预览 --
+    var slugInput = document.getElementById('slug-input');
+    var slugPreview = document.getElementById('slug-preview');
+    function autoSlug(title) {
+        return (title || '').toLowerCase()
+            .replace(/[^a-zA-Z0-9\u4e00-\u9fff]+/g, '-')  // 非字母数字中文 -> 连字符
+            .replace(/[\u4e00-\u9fff]+/g, '')               // 去除中文（URL 不宜含中文）
+            .replace(/-+/g, '-')                             // 合并连续连字符
+            .replace(/^-|-$/g, '')                           // 去首尾连字符
+            .slice(0, 60);
+    }
+    function updateSlugPreview() {
+        if (!slugInput || !slugPreview) return;
+        if (slugInput.value.trim()) {
+            slugPreview.textContent = '当前 Slug：' + slugInput.value.trim();
+        } else {
+            var preview = autoSlug(titleInput ? titleInput.value : '');
+            slugPreview.textContent = preview ? '自动生成：' + preview : '留空将根据标题自动生成';
+        }
+    }
+    if (titleInput) titleInput.addEventListener('input', updateSlugPreview);
+    if (slugInput) slugInput.addEventListener('input', updateSlugPreview);
+    updateSlugPreview();
+
+    // -- 摘要自动获取：从正文提取纯文本前 200 字符 --
+    var excerptInput = document.getElementById('excerpt-input');
+    var excerptBtn = document.getElementById('excerpt-auto-btn');
+    if (excerptBtn) {
+        excerptBtn.addEventListener('click', function () {
+            var raw = '';
+            if (typeof vditor !== 'undefined' && vditor) raw = vditor.getValue();
+            if (!raw) return;
+            var plain = raw.replace(/<[^>]+>/g, '')            // 去 HTML 标签
+                           .replace(/[#*`\[\]()!>|~-]/g, '')    // 去 Markdown 符号
+                           .replace(/\s+/g, ' ')
+                           .trim();
+            if (plain) {
+                excerptInput.value = plain.slice(0, 200);
+            } else {
+                alert('未能从正文提取有效文字内容');
+            }
+        });
+    }
 
     // 输入框 datalist 补全（全部已有标签）
     Object.keys(ALL_TAGS).forEach(function (t) {
@@ -175,7 +234,20 @@
             wrap.appendChild(b);
         });
     }
-    // 根据标题+正文内容匹配已有标签 → 自动识别区；全部已有标签按使用次数 → 常用区
+    // 英文常见停用词（不当作标签候选）
+    var STOP_WORDS = new Set(('the,and,for,with,that,this,from,are,was,were,has,have,had,not,your,you,our,its,how,why,when,where,what,which,who,can,could,would,should,will,shall,may,might,must,all,any,each,every,some,such,only,just,also,very,other,over,into,than,then,them,they,their,these,those,about,because,been,before,being,between,both,but,does,doing,down,during,more,most,off,once,out,own,same,too,under,until,up,via,while,again,against,https,http,www,com,html,json,api,url,get,post,true,false,null,use,using,used,uses,like,need,needs,make,makeup,can').split(','));
+    // 从正文提取出现较多的英文术语（≥3 字符、非停用词、非纯数字）→ 候选标签
+    function extractEnglishTerms(src) {
+        var words = src.toLowerCase().match(/[a-z][a-z0-9-]{2,}/g) || [];
+        var count = {};
+        words.forEach(function (w) {
+            var t = w.replace(/^-+|-+$/g, '');
+            if (t.length < 3 || STOP_WORDS.has(t) || /^\d+$/.test(t)) return;
+            count[t] = (count[t] || 0) + 1;
+        });
+        return Object.keys(count).sort(function (a, b) { return count[b] - count[a]; });
+    }
+    // 根据标题+正文内容匹配已有标签 + 提取正文英文术语 → 自动识别区；全部已有标签按使用次数 → 常用区
     function renderChips() {
         if (!tagsInput || !tagsAuto || !tagsCommon) return;
         var source = tagsInput.value + ' ' +
@@ -183,7 +255,12 @@
             (typeof vditor !== 'undefined' && vditor ? vditor.getValue() : '');
         var byFreq = Object.keys(ALL_TAGS).sort(function (a, b) { return ALL_TAGS[b] - ALL_TAGS[a]; });
         var auto = byFreq.filter(function (t) { return !hasTag(t) && isMatch(t, source); });
-        var common = byFreq.filter(function (t) { return !hasTag(t); }).slice(0, 14);
+        // 正文中高频英文术语也加入自动识别（去重、去已选）
+        extractEnglishTerms(source).forEach(function (t) {
+            if (auto.indexOf(t) === -1 && !hasTag(t)) auto.push(t);
+        });
+        auto = auto.slice(0, 20);
+        var common = byFreq.filter(function (t) { return !hasTag(t); }).slice(0, 20);
         paintChips(tagsAuto, auto);
         paintChips(tagsCommon, common);
         tagsAuto.hidden = auto.length === 0;

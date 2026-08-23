@@ -35,7 +35,7 @@
         <aside class="login-aside">
             <div class="login-aside-inner">
                 <div class="login-logo">
-                    <span class="logo-text">豪子的博客</span>
+                    <span class="logo-text">{% if home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}</span>
                 </div>
                 <h1 class="login-aside-title"> hey，<br>欢迎<span class="accent">回来</span></h1>
                 <p class="login-aside-desc">
@@ -55,7 +55,7 @@
             <div class="login-card">
                 <div class="login-brand">
                     <div class="brand">
-                        <span class="logo-bracket">&lt;</span><span class="logo-text">infowe.site</span><span class="logo-bracket">/&gt;</span>
+                        <span class="logo-bracket">&lt;</span><span class="logo-text">{{ blog_name }}</span><span class="logo-bracket">/&gt;</span>
                     </div>
                     <div class="subtitle">欢迎回来，请登录管理后台</div>
                 </div>
