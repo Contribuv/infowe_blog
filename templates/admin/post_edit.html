@@ -247,6 +247,19 @@
         });
         return Object.keys(count).sort(function (a, b) { return count[b] - count[a]; });
     }
+    // 自动添加开关：仅在标签框为空且尚未自动添加过时执行一次，避免用户手动编辑后被覆盖
+    var autoAdded = false;
+    // 自动将词频最高的 5-7 个候选标签填入输入框（数量随机取 5-7，选词按词频优先）；返回是否执行了自动添加
+    function autoAddTags(autoList) {
+        if (autoAdded || !tagsInput) return false;
+        if (tagsInput.value.trim()) { autoAdded = true; return false; }
+        if (!autoList || !autoList.length) return false;
+        var n = Math.min(5 + Math.floor(Math.random() * 3), autoList.length);
+        tagsInput.value = autoList.slice(0, n).join(', ');
+        autoAdded = true;
+        renderChips();  // 刷新建议区，已自动添加的标签不再显示
+        return true;
+    }
     // 根据标题+正文内容匹配已有标签 + 提取正文英文术语 → 自动识别区；全部已有标签按使用次数 → 常用区
     function renderChips() {
         if (!tagsInput || !tagsAuto || !tagsCommon) return;
@@ -255,11 +268,16 @@
             (typeof vditor !== 'undefined' && vditor ? vditor.getValue() : '');
         var byFreq = Object.keys(ALL_TAGS).sort(function (a, b) { return ALL_TAGS[b] - ALL_TAGS[a]; });
         var auto = byFreq.filter(function (t) { return !hasTag(t) && isMatch(t, source); });
-        // 正文中高频英文术语也加入自动识别（去重、去已选）
+        // 正文中高频英文术语也加入自动识别（按小写去重、去已选，避免 Python/python 大小写重复）
+        var seen = {};
+        auto.forEach(function (t) { seen[t.toLowerCase()] = 1; });
         extractEnglishTerms(source).forEach(function (t) {
-            if (auto.indexOf(t) === -1 && !hasTag(t)) auto.push(t);
+            var k = t.toLowerCase();
+            if (!seen[k] && !hasTag(t)) { seen[k] = 1; auto.push(t); }
         });
         auto = auto.slice(0, 20);
+        // 标签为空时自动填入 5-7 个候选；若已自动填充，渲染已由内部递归完成，直接结束避免旧列表覆盖
+        if (autoAddTags(auto)) return;
         var common = byFreq.filter(function (t) { return !hasTag(t); }).slice(0, 20);
         paintChips(tagsAuto, auto);
         paintChips(tagsCommon, common);
