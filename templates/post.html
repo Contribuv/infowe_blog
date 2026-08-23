@@ -18,7 +18,11 @@
         <div class="post-header-meta">
             <div class="post-meta-row">
                 <time datetime="{{ post.created_at[:10] }}">{{ icon('calendar', 14, 'icon-sm') | safe }} {{ post.created_at[:10] }}</time>
+                {% if post.category_name %}
+                <span>{{ icon('folder', 14, 'icon-sm') | safe }} {{ post.category_name }}</span>
+                {% endif %}
                 <span>{{ icon('clock', 14, 'icon-sm') | safe }} {{ post.read_time }} 分钟阅读</span>
+                <span>{{ icon('eye', 14, 'icon-sm') | safe }} {{ post.views }} 次浏览</span>
             </div>
         </div>
         <h1 class="post-title">{{ post.title }}</h1>
@@ -226,6 +230,31 @@ function copyUrl() {
         else if (e.key === 'ArrowLeft') show(current - 1);
         else if (e.key === 'ArrowRight') show(current + 1);
     });
+})();
+</script>
+
+<script>
+// 浏览计数：页面可见且停留满 5 秒才上报一次（秒开秒关、切后台不计）；同一会话内刷新不重复计数
+(function () {
+    var postId = {{ post.id }};
+    var minMs = 5000;
+    var key = 'post_viewed_' + postId;
+    if (sessionStorage.getItem(key)) return;   // 本会话已计过（含刷新），直接跳过
+    var acc = 0;
+    var timer = setInterval(function () {
+        if (document.hidden) return;           // 切到后台/其他标签页时不计时
+        acc += 1000;
+        if (acc >= minMs) {
+            clearInterval(timer);
+            sessionStorage.setItem(key, '1');  // 先标记再上报，避免重复触发
+            var url = '/post/' + postId + '/view';
+            try {
+                fetch(url, { method: 'POST', keepalive: true });   // keepalive：页面关闭也能完成上报
+            } catch (e) {
+                if (navigator.sendBeacon) navigator.sendBeacon(url);
+            }
+        }
+    }, 1000);
 })();
 </script>
 {% endblock %}

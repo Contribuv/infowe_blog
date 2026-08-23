@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.1.6'
+VERSION = '1.1.7'
 
 import os
 import re
@@ -144,6 +144,7 @@ def init_db():
             tags TEXT DEFAULT '[]',
             cover TEXT DEFAULT '',
             read_time INTEGER DEFAULT 3,
+            views INTEGER DEFAULT 0,
             status TEXT DEFAULT 'published',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -218,6 +219,12 @@ def init_db():
     except sqlite3.OperationalError:
         db.execute("ALTER TABLE posts ADD COLUMN is_featured INTEGER DEFAULT 0")
         print('[迁移] 添加列: posts.is_featured')
+
+    try:
+        db.execute("SELECT views FROM posts LIMIT 1")
+    except sqlite3.OperationalError:
+        db.execute("ALTER TABLE posts ADD COLUMN views INTEGER DEFAULT 0")
+        print('[迁移] 添加列: posts.views')
 
     try:
         db.execute("SELECT category_id FROM posts LIMIT 1")
@@ -1158,6 +1165,12 @@ def index():
         featured = [p for p in posts if p['is_featured']]
         total = len(posts)
 
+    # 附加分类名称
+    categories = {c['id']: c['name'] for c in db_load_categories()}
+    for p in posts:
+        cid = p.get('category_id')
+        p['category_name'] = categories.get(cid, '') if cid else ''
+
     return render_template('index.html',
                            posts=posts, current_tag=tag, search_query=search,
                            page=1, total_pages=1, total=total,
@@ -1193,6 +1206,13 @@ def post_detail(post_id):
     post = db_get_post_by_id(post_id)
     if not post:
         abort(404)
+    # 附加分类名称
+    cid = post.get('category_id')
+    if cid:
+        cat = db_get_category(cid)
+        post['category_name'] = cat['name'] if cat else ''
+    else:
+        post['category_name'] = ''
     content_html = render_post_content(post['content'])
     related = db_get_related_posts(post['id'], post['tags'])
     comments_enabled = str(app.config.get('comments_enabled', '1')) in ('1', 'on', 'true', 'yes')
@@ -1217,6 +1237,28 @@ def post_detail(post_id):
                            related=related, comments=comments,
                            prev_post=prev_post, next_post=next_post,
                            comments_enabled=comments_enabled)
+
+
+# 浏览计数去重：同一 IP 对同一文章在窗口期内只计一次（兜底防刷新/多端刷次数）
+_VIEW_COOLDOWN = {}
+_VIEW_COOLDOWN_WINDOW = 60  # 秒
+
+
+@app.route('/post/<int:post_id>/view', methods=['POST'])
+def post_view(post_id):
+    """浏览计数：由前端在页面停留满阈值后上报（sendBeacon），秒开秒关不计数。"""
+    ip = request.remote_addr
+    key = (ip, post_id)
+    now = time.time()
+    last = _VIEW_COOLDOWN.get(key, 0)
+    if now - last < _VIEW_COOLDOWN_WINDOW:
+        return ('', 204)
+    _VIEW_COOLDOWN[key] = now
+    db = get_db()
+    db.execute("UPDATE posts SET views = views + 1 WHERE id = ?", (post_id,))
+    db.commit()
+    db.close()
+    return ('', 204)
 
 
 @app.route('/post/<int:post_id>/comment', methods=['POST'])

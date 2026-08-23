@@ -63,6 +63,11 @@
                         {{ icon('clock', 14, 'icon-sm') | safe }}
                         {{ post.read_time }} 分钟
                     </span>
+                    {% if post.category_name %}
+                    <span class="card-category">
+                        {{ icon('folder', 14, 'icon-sm') | safe }} {{ post.category_name }}
+                    </span>
+                    {% endif %}
                 </div>
                 <h3 class="card-title">
                     <a href="/post/{{ post.id }}">{{ post.title }}</a>
@@ -119,6 +124,11 @@
                         {{ icon('clock', 14, 'icon-sm') | safe }}
                         {{ post.read_time }} 分钟
                     </span>
+                    {% if post.category_name %}
+                    <span class="card-category">
+                        {{ icon('folder', 14, 'icon-sm') | safe }} {{ post.category_name }}
+                    </span>
+                    {% endif %}
                 </div>
                 <h3 class="card-title">
                     <a href="/post/{{ post.id }}">{{ post.title }}</a>

@@ -1262,6 +1262,7 @@ body {
 
 /* ——— 文章卡片补充 ——— */
 .card-read-time { display: inline-flex; align-items: center; gap: 4px; color: var(--text-tertiary); }
+.card-category { display: inline-flex; align-items: center; gap: 4px; color: var(--text-tertiary); }
 
 /* ——— 文章详情页补充 ——— */
 .post-header-meta { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-bottom: var(--sp-4); align-items: center; line-height: 1; }
