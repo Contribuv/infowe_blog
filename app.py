@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.1.2'
+VERSION = '1.1.3'
 
 import os
 import re
@@ -1115,7 +1115,8 @@ def db_delete_comment(comment_id):
 @app.context_processor
 def inject_globals():
     load_settings()
-    _upgrade_info = check_latest_version() if request.path.startswith('/admin') else None
+    # 仅读取缓存结果，绝不主动发起网络请求（避免后台页面因 GitHub 检测卡住）
+    _upgrade_info = UPGRADE_CACHE.get('info') if request.path.startswith('/admin') else None
     return {
         'blog_name': app.config.get('blog_name', 'infowe'),
         'blog_subtitle': app.config.get('blog_subtitle', ''),
@@ -2452,13 +2453,13 @@ def do_upgrade(tag):
 @app.route('/admin/upgrade', methods=['GET', 'POST'])
 @admin_required
 def admin_upgrade():
-    """系统升级页：检测新版本 + 一键备份升级（保留数据）。"""
+    """系统升级页：页面立即渲染，版本检测由前端异步请求 /admin/upgrade/check 完成，避免网络卡顿阻塞页面。"""
     cur_ver = parse_version(VERSION)
-    # ?force=1 强制刷新最新版本检测（跳过缓存）
-    info = check_latest_version(force=(request.args.get('force') == '1'))
-    upgradable = bool(info and cur_ver and info['version'] > cur_ver)
 
     if request.method == 'POST':
+        # 升级动作仍需要最新版本信息，超时放宽到前端可感知
+        info = check_latest_version(force=True)
+        upgradable = bool(info and cur_ver and info['version'] > cur_ver)
         if not upgradable:
             flash('当前已是最新版本，无需升级', 'error')
             return redirect(url_for('admin_upgrade'))
@@ -2468,10 +2469,28 @@ def admin_upgrade():
             ok, msg = False, '升级失败：' + str(e)
         flash(msg, 'success' if ok else 'error')
         return redirect(url_for('admin_upgrade'))
-    return render_template('admin/upgrade.html', info=info, upgradable=upgradable,
-                           latest_version=(info['tag'] if info else ''),
+    return render_template('admin/upgrade.html',
                            current_version=VERSION,
-                           release_url=(info['html_url'] if info else UPGRADE_RELEASE_URL))
+                           info=None, upgradable=False)
+
+
+@app.route('/admin/upgrade/check')
+@admin_required
+def admin_upgrade_check():
+    """异步版本检测接口：返回 JSON，前端据此渲染升级卡片。force=1 跳过缓存。"""
+    cur_ver = parse_version(VERSION)
+    info = check_latest_version(force=(request.args.get('force') == '1'))
+    upgradable = bool(info and cur_ver and info['version'] > cur_ver)
+    return jsonify({
+        'ok': info is not None,
+        'current_version': VERSION,
+        'latest_version': (info['tag'] if info else ''),
+        'tag': (info['tag'] if info else ''),
+        'upgradable': upgradable,
+        'published_at': (info['published_at'] if info else ''),
+        'body': (info['body'] if info else ''),
+        'release_url': (info['html_url'] if info else UPGRADE_RELEASE_URL),
+    })
 
 
 # ─────────────── 启动 ───────────────
