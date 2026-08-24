@@ -107,6 +107,14 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.1.8
+
+- **CDN 全部本地化**：`base.html` 中 cdnjs 的 highlight.js CSS/JS 引用替换为本地 `static/vendor/highlight.js/`，外网依赖归零
+- **代码高亮库瘦身**：highlight.js 从 11.7.0 完整包（明文 1MB / gzip 301KB）降级到 10.7.3 common 版（明文 135KB / gzip 42KB），**文章页首屏体积减负 ~86%**。11.x 自 11.0 起 common 构建仅提供 ESM 模块，10.7.3 是最后一个带 UMD common 单文件的版本；API 与 atom-one-dark 主题完全兼容，含博客常用的 37 种语言
+- **Nginx 性能优化文档**（`DEPLOY_BT.md` 新增 7.5 节）：补齐 gzip_types 全类型（CSS/JS/字体/SVG）、`/static` 与 `/uploads` 加 `Cache-Control: public, max-age=2592000, immutable`、可选 Brotli 压缩、Cloudflare 等 CDN 边缘缓存规则
+- **JS 加载优化**：高亮 `hljs.highlightAll()` 改用 `requestIdleCallback`（timeout 1.5s），长文章首帧主线程不再被高亮阻塞
+- **无障碍/省 CPU**：粒子背景监听 `prefers-reduced-motion: reduce`，开启系统级减少动效时跳过粒子动画，桌面端持续省电
+
 ### v1.1.7
 
 - **文章浏览计数**：文章详情页显示「N 次浏览」。精准统计：页面可见且累计停留满 5 秒才计一次（秒开秒关、切后台不计）；同一会话刷新不重复计数（sessionStorage）；服务端对同一 IP 同一文章 60 秒窗口兜底防刷

@@ -12,7 +12,10 @@
   const canvas = document.getElementById('particle-canvas');
   const cursorGlow = document.getElementById('cursor-glow');
 
-  if (canvas) {
+  // 尊重系统「减少动效」设置：直接跳过粒子动画（省 CPU，且无障碍友好）
+  const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (canvas && !REDUCED_MOTION) {
     const ctx = canvas.getContext('2d');
     let w, h, particles = [];
     const PARTICLE_COUNT = 35;  // 80 → 35
@@ -390,10 +393,14 @@
   }
 
   /* ============================================
-     13. 代码高亮
+     13. 代码高亮（空闲时执行，避免长文章高亮抢占首帧主线程）
      ============================================ */
   if (typeof hljs !== 'undefined') {
-    hljs.highlightAll();
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(function () { hljs.highlightAll(); }, { timeout: 1500 });
+    } else {
+      setTimeout(function () { hljs.highlightAll(); }, 0);
+    }
   }
 
   /* ============================================

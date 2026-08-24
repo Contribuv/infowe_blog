@@ -33,7 +33,7 @@
     <meta name="twitter:description" content="{% block tw_description %}{{ blog_subtitle }}{% endblock %}">
     <meta name="twitter:image" content="{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
     {% if request.path.startswith('/post/') %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/highlight.js/styles/atom-one-dark.min.css', t='v' ~ version) }}" media="print" onload="this.media='all'">
     {% endif %}
 </head>
 <body>
@@ -133,7 +133,7 @@
     </button>
 
     {% if request.path.startswith('/post/') %}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+    <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
     {% endif %}
     <script src="{{ url_for('static', filename='js/main.js', t='v' ~ version) }}" defer></script>
 </body>

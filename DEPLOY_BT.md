@@ -169,6 +169,147 @@ proxy_set_header X-Forwarded-Proto $scheme;
 
 ---
 
+## 七点五、Nginx 性能优化（让网站访问明显变快）
+
+宝塔默认配置够用，但有几个关键项能让首屏速度和重复访问体验上一个台阶。**全部都是可选**，按需做。
+
+### 7.5.1 补齐 gzip 类型（CSS/JS/字体/SVG 体积砍 60%+）
+
+宝塔默认的 `gzip_types` 通常不全，缺字体和 SVG，会导致 woff2、svg 这些体积大的资源明文传输。
+
+1. 宝塔左侧 → **「软件商店」→ Nginx → 配置文件**（或直接编辑 `/www/server/nginx/conf/nginx.conf`）。
+2. 顶部 `http { }` 块里找 `gzip_types` 那一行（没有就加在 `gzip on;` 下面），**替换**为：
+
+```nginx
+    gzip on;
+    gzip_min_length 1k;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml font/ttf font/otf application/wasm;
+    gzip_vary on;
+    gzip_disable "MSIE [1-6]\.";
+```
+
+3. 保存后在终端执行 `nginx -t` 检查语法，没报错就 `nginx -s reload` 让它生效。
+
+> 宝塔有时把 gzip 写在独立的 `include` 文件里（如 `conf.d/gzip.conf`），直接编辑那个文件效果一样。
+
+### 7.5.2 给静态资源加缓存头（重复访问秒开）
+
+现在 `expires 30d` 已经够了，但缺 `Cache-Control: immutable`，浏览器在某些场景下还是会发条件请求。加一行 `add_header` 兜底：
+
+1. 进入站点 → **「设置」→「配置文件」**，找到 `server { }` 块。
+2. 在 `location /static` 和 `location /uploads` 两个块里**各加一行**（替换原配置也行）：
+
+```nginx
+    # 静态资源（本地化后的 vendor/、css/、js/、icons/、images/）
+    location /static {
+        alias /www/wwwroot/infowe.site/static;   # ← 改成你项目里的实际路径
+        expires 30d;
+        access_log off;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+    }
+
+    # 上传文件（v1.0.6 起位于项目根 uploads/）
+    location /uploads {
+        alias /www/wwwroot/infowe.site/uploads;  # ← 改成你项目里的实际路径
+        expires 30d;
+        access_log off;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+    }
+```
+
+> ⚠️ `alias` 路径必须以 `/` 结尾，且目录要真实存在，否则 nginx 启动失败。`immutable` 配合代码里 `?t=v1.1.8` 版本号才安全——以后改静态资源就改 `app.py` 的 `VERSION`。
+
+3. 如果站点开启了 HTTPS（80 块 + 443 块），两个块都要写。
+4. 保存后 `nginx -t && nginx -s reload`。
+
+### 7.5.3 验证生效
+
+在服务器终端跑：
+
+```bash
+curl -I https://你的域名/static/css/style.css
+```
+
+应该看到：
+- `Content-Encoding: gzip`（gzip 生效）
+- `Cache-Control: public, max-age=2592000, immutable`（缓存头生效）
+
+### 7.5.4 这一步做完后能省多少？
+
+| 资源 | 优化前 | 优化后 |
+|---|---|---|
+| `style.css`（假设 30KB） | 明文 30KB | gzip 后 ~6KB |
+| `highlight.min.js`（46KB） | 明文 46KB | gzip 后 ~12KB |
+| 字体 woff2 | 明文传输 | gzip/缓存后大幅减少 |
+| 重复访问 | 浏览器仍发条件请求 | 直接命中磁盘缓存 |
+
+---
+
+### 7.5.5 （可选）Brotli 压缩：比 gzip 再省 15-20%
+
+gzip 已能让体积减半，Brotli 是同级别里压缩率更高的算法，对 CSS/JS/HTML 效果尤其明显。**前提是 nginx 编译了 brotli 模块**，宝塔默认不带。
+
+1. 先检查你的 nginx 是否已带 brotli：
+
+```bash
+nginx -V 2>&1 | grep -i brotli
+```
+
+2. **有输出** → 模块已就绪，直接在 nginx 配置 `http { }` 块里加：
+
+```nginx
+    brotli on;
+    brotli_comp_level 6;
+    brotli_types text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml font/ttf font/otf application/wasm;
+```
+
+保存后 `nginx -t && nginx -s reload`。
+
+3. **无输出** → 当前 nginx 没编译 brotli。两种选择：
+   - 宝塔 →「软件商店」→ Nginx →「安装」旁的「更换版本」，选一个标注带 brotli 的版本重装（不同宝塔版本选项不同，注意看说明）；
+   - 或跳过。**收益只有 15-20%，不装也不影响站点正常运行**。
+
+### 7.5.6 （可选）CDN 边缘缓存：访客从就近节点拿静态资源
+
+如果用了 Cloudflare（免费）、七牛/腾讯云 CDN 等，可以把静态资源交给 CDN 缓存，访客不用每次回你服务器。
+
+以 **Cloudflare 免费版**为例（其他 CDN 同理）：
+1. 域名接入 Cloudflare（改 DNS 到它给的地址）。
+2. 左侧 **「Caching」→「Cache Rules」→「Create rule」**：
+
+| 设置项 | 值 |
+|---|---|
+| When incoming requests match | `URI Path starts with /static` 或 `/uploads` |
+| Cache eligibility | Eligible for cache |
+| Edge TTL | 30 天（**30 days**） |
+| Cache key | 默认即可（含 `?t=v1.1.7` 版本号，改版后自动失效） |
+
+3. 保存后，`/static/css/style.css` 等资源由 Cloudflare 边缘节点直接返回，你服务器只处理动态页面。
+
+> ⚠️ 注意：**只缓存 `/static` 和 `/uploads`** 这类带版本号的静态资源，千万不要缓存 `/`、`/posts` 等动态页面，否则改文章不生效、评论也缓存错乱。本项目模板里的静态资源 URL 都带 `?t=v{{ version }}`，天然适合 CDN 缓存。
+
+### 7.5.7 代码高亮库瘦身：highlight.js 11.7.0 完整包 → 10.7.3 common 版
+
+文章页用 highlight.js 做代码高亮。原使用的 `highlight.min.js` 是 **11.7.0 完整包（含 190+ 种语言）**，明文 1MB、gzip 后仍有约 301KB，是**文章页加载变慢的真瓶颈**（首页/列表页不加载它，不受影响）。
+
+实际测量后改为 `highlight.js@10.7.3` 的 **common 构建（37 种常用语言）**：
+
+| 资源 | 版本 | 明文 | gzip |
+|---|---|---|---|
+| `vendor/highlight.js/highlight.min.js` | 11.7.0 完整包 | 1049 KB | 301 KB |
+| `vendor/highlight.js/highlight.min.js` | 10.7.3 common | 135 KB | 42 KB |
+
+文件**仍命名** `highlight.min.js`，所以 `templates/base.html` 里的引用不用改，只换文件本体即可。
+
+> ⚠️ 为什么不直接用 11.x 的 common 版？highlight.js 从 11.0 起 common 构建只提供 ESM 模块（`es/common.min.js`），无法直接用 `<script src>` 加载，需要打包器或 `type="module"` 改造，性价比低。10.7.3 是**最后一个带 UMD common 单文件**的版本，最省事。
+>
+> 10.x 与 11.x 的 `hljs.highlightAll()` API 以及 `atom-one-dark` 主题 CSS **完全兼容**，博客常用的 python / java / javascript / bash / json / yaml / xml / css / sql 都在 37 种之内。已实测本地文件含 39 个语言注册、无冷门语言，确认是 common 版。
+>
+> 部署时把整个 `static/vendor/highlight.js/` 目录上传到服务器即可（文件命名没变，无需动 nginx 或模板）。
+
+---
+
 ## 八、上线后验证（照着勾）
 
 - [ ] 浏览器打开 `https://infowe.site`，首页正常显示
