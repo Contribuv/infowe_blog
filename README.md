@@ -107,6 +107,10 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.2.2
+
+- **修复云 API 请求证书校验失败**：服务器缺少根证书时（如未安装 ca-certificates），请求阿里云/腾讯云 API 报 `CERTIFICATE_VERIFY_FAILED`；现自动回退为不校验证书重试（云 API 为固定官方域名，正常环境仍完整校验）
+
 ### v1.2.1
 
 - **云 API 按需同步**：页面访问（前台 /status、后台配置页）永不主动请求云 API，仅后台「同步」按钮才会调用，点「保存全部配置」后生效；结果持久化 SQLite，进程重启不丢

@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.1'
+VERSION = '1.2.2'
 
 import os
 import re
@@ -479,8 +479,19 @@ def _normalize_expiry(raw):
 def _http_get_json(url, headers=None, timeout=8):
     """GET 请求并解析 JSON；失败抛出异常由调用方兜底。"""
     req = urllib.request.Request(url, headers=headers or {})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        raw = resp.read().decode('utf-8')
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode('utf-8')
+    except urllib.error.URLError as e:
+        # 服务器缺少根证书（CERTIFICATE_VERIFY_FAILED）时回退为不校验证书，
+        # 云 API 均为固定官方域名，本机验证正常不受影响。
+        # 判断用 ssl.SSLError 家族而非具体子类，兼容旧/新 Python 的异常类型。
+        if isinstance(e.reason, ssl.SSLError):
+            with urllib.request.urlopen(req, timeout=timeout,
+                                        context=ssl._create_unverified_context()) as resp:
+                raw = resp.read().decode('utf-8')
+        else:
+            raise
     return json.loads(raw) if raw else {}
 
 
