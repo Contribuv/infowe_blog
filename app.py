@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.1.9'
+VERSION = '1.2.1'
 
 import os
 import re
@@ -22,7 +22,13 @@ import urllib.error
 import ssl
 
 import math
-from datetime import datetime
+import socket
+import base64
+import hmac
+import uuid
+import threading
+import urllib.parse
+from datetime import datetime, timezone
 from functools import wraps
 
 import markdown
@@ -211,6 +217,17 @@ def init_db():
             sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS service_checks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            service_id TEXT NOT NULL,
+            checked_at REAL NOT NULL,
+            ok INTEGER NOT NULL DEFAULT 0,
+            latency_ms INTEGER DEFAULT 0,
+            cert_days INTEGER DEFAULT -1,
+            detail TEXT DEFAULT ''
+        );
+        CREATE INDEX IF NOT EXISTS idx_service_checks ON service_checks (service_id, checked_at);
     ''')
 
     # 兼容旧数据库：添加新列（如果不存在）
@@ -290,6 +307,17 @@ def init_db():
         ('comments_enabled', '1'),
         ('icp_beian', ''),
         ('police_beian', ''),
+        # ── 服务时效 / Server Status 配置 ──
+        ('aliyun_access_key', ''),
+        ('aliyun_access_secret', ''),
+        ('aliyun_region', 'cn-hangzhou'),
+        ('aliyun_instance_id', ''),
+        ('tencent_secret_id', ''),
+        ('tencent_secret_key', ''),
+        ('tencent_domain', ''),
+        ('expiry_aliyun', ''),       # 手动兜底：阿里云到期日期 YYYY-MM-DD
+        ('expiry_tencent', ''),      # 手动兜底：腾讯云域名到期日期 YYYY-MM-DD
+        ('monitor_services', '[]'),  # 监控的 HTTP/HTTPS 服务列表 JSON
     ]
     for k, v in defaults:
         db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
@@ -396,6 +424,455 @@ def load_settings():
     for row in rows:
         app.config[row['key']] = row['value']
     db.close()
+
+
+# ─────────────── 服务时效 / Server Status ───────────────
+# 云资源到期时间查询（阿里云轻量 / 腾讯云域名）+ HTTP(S) 服务可达性监控。
+# - 云到期时间：密钥签名调用 OpenAPI，失败自动回退后台手动填写的到期日。
+# - 服务监控：守护线程每 5 分钟轮询，结果写入 service_checks 表，前台读聚合。
+
+def _parse_monitor_services():
+    """解析 settings 中 monitor_services 的 JSON，返回非空 URL 的服务字典列表。"""
+    raw = app.config.get('monitor_services', '[]')
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return [s for s in data if isinstance(s, dict) and s.get('url')]
+    except (ValueError, TypeError):
+        pass
+    return []
+
+
+def _normalize_expiry(raw):
+    """将云 API / 手动输入的到期时间归一为 YYYY-MM-DD，失败返回 None。
+    支持：YYYY-MM-DD / YYYY-MM-DD HH:MM:SS / ISO8601（含 Z、+08:00 等时区、
+    可带毫秒）/ 纯数字时间戳（秒或毫秒）。"""
+    if not raw:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    # 纯数字时间戳（秒或毫秒）
+    if s.lstrip('-').isdigit():
+        ts = int(s)
+        if ts > 1e12:
+            ts //= 1000
+        try:
+            return datetime.fromtimestamp(ts, timezone.utc).date().isoformat()
+        except Exception:
+            return None
+    # 带时区 / 毫秒的 ISO8601（含结尾 Z）；保留原时区下的日期，
+    # 不转 UTC，避免跨时区日期差一天（Z 值日期与字符串截断行为一致）
+    try:
+        dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+        return dt.date().isoformat()
+    except ValueError:
+        pass
+    for fmt in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'):
+        try:
+            return datetime.strptime(s, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def _http_get_json(url, headers=None, timeout=8):
+    """GET 请求并解析 JSON；失败抛出异常由调用方兜底。"""
+    req = urllib.request.Request(url, headers=headers or {})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        raw = resp.read().decode('utf-8')
+    return json.loads(raw) if raw else {}
+
+
+def _rfc3986(s):
+    """阿里云 RPC 签名使用的 RFC3986 编码：字母数字与 -_.~ 不编码，其余百分号大写。"""
+    return urllib.parse.quote(str(s), safe='-_.~')
+
+
+def _aliyun_expiry():
+    """查询阿里云轻量应用服务器到期时间（RPC 风格 HMAC-SHA1 签名，ListInstances）。
+    返回 (日期 YYYY-MM-DD 或 None, 错误说明或 None)。"""
+    ak = (app.config.get('aliyun_access_key') or '').strip()
+    sk = (app.config.get('aliyun_access_secret') or '').strip()
+    region = (app.config.get('aliyun_region') or 'cn-hangzhou').strip() or 'cn-hangzhou'
+    if not ak or not sk:
+        return None, '未配置阿里云 AccessKey'
+
+    def _do_request(_params):
+        """RPC 签名并发送 GET 请求，返回解析后的 JSON。"""
+        canonical = '&'.join('%s=%s' % (k, _rfc3986(_params[k])) for k in sorted(_params))
+        string_to_sign = 'GET&%2F&' + _rfc3986(canonical)
+        signature = base64.b64encode(
+            hmac.new((sk + '&').encode('utf-8'), string_to_sign.encode('utf-8'),
+                     hashlib.sha1).digest()).decode('utf-8')
+        _params['Signature'] = signature
+        # 阿里云 endpoint 为带地域的 {产品}.{region}.aliyuncs.com（swas / ecs 通用）
+        url = 'https://%s/?' % (host_fmt % region) + urllib.parse.urlencode(_params)
+        return _http_get_json(url)
+
+    params = {
+        'AccessKeyId': ak,
+        'Format': 'JSON',
+        'RegionId': region,
+        'SignatureMethod': 'HMAC-SHA1',
+        'SignatureNonce': str(uuid.uuid4()),
+        'SignatureVersion': '1.0',
+        'Timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'PageSize': '100',
+    }
+    # 服务器类型：swas=轻量应用服务器 / ecs=云服务器 ECS，二者 API 属不同产品
+    srv_type = (app.config.get('aliyun_server_type') or 'swas').strip().lower()
+    if srv_type == 'ecs':
+        # ECS：DescribeInstances，endpoint ecs.{region}.aliyuncs.com，
+        # JSON 返回结构为 data.Instances.Instance[]
+        params['Action'] = 'DescribeInstances'
+        params['Version'] = '2014-05-26'
+        host_fmt = 'ecs.%s.aliyuncs.com'
+        instances_of = lambda d: (d.get('Instances') or {}).get('Instance') or []
+    else:
+        # 轻量应用服务器：ListInstances，endpoint swas.{region}.aliyuncs.com
+        params['Action'] = 'ListInstances'
+        params['Version'] = '2020-06-01'
+        host_fmt = 'swas.%s.aliyuncs.com'
+        instances_of = lambda d: d.get('Instances') or []
+    instance_id = (app.config.get('aliyun_instance_id') or '').strip()
+    if instance_id:
+        params['InstanceIds'] = json.dumps([instance_id])
+    try:
+        data = _do_request(params)
+    except urllib.error.HTTPError as e:
+        return None, 'HTTP %d' % e.code
+    except Exception as e:
+        return None, '请求阿里云 API 失败（%s）' % str(e)[:100]
+    if 'Code' in data:
+        return None, '%s: %s' % (data.get('Code'), data.get('Message', ''))
+    instances = instances_of(data)
+    # 按 InstanceIds 过滤未命中时，去掉过滤条件全量重查一次（可能是实例 ID 填写有误）
+    if not instances and instance_id:
+        try:
+            alt = dict(params)
+            alt.pop('InstanceIds', None)
+            alt['SignatureNonce'] = str(uuid.uuid4())
+            alt['Timestamp'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+            data = _do_request(alt)
+            if 'Code' not in data:
+                instances = instances_of(data)
+        except Exception:
+            instances = []
+    if not instances:
+        return None, '当前地域 %s 未查询到%s实例，请检查地域（RegionId）或实例 ID 配置' % (
+            region, '轻量' if srv_type != 'ecs' else 'ECS')
+    charge = 'PrePaid'
+    for inst in instances:
+        # ECS 实例计费方式：PrePaid=包年包月 / PostPaid=按量付费
+        charge = inst.get('InstanceChargeType') or charge
+        expiry = _normalize_expiry(inst.get('ExpiredTime'))
+        if expiry:
+            return expiry, None
+    if srv_type == 'ecs':
+        if charge == 'PostPaid':
+            return None, '查询到 ECS 实例，但为按量付费（PostPaid）实例，无到期时间；' \
+                          '到期提醒仅适用于包年包月实例'
+        # 包年包月但解析失败：附带第一个实例的原始到期时间值，便于排查格式问题
+        detail = ''
+        if instances:
+            inst = instances[0]
+            detail = '（ExpiredTime 原始值: %r；InstanceId: %s；计费: %s）' % (
+                inst.get('ExpiredTime'), inst.get('InstanceId', '?'), charge)
+        return None, '实例未返回到期时间（ExpiredTime 字段）' + detail
+    return None, '实例未返回到期时间（ExpiredTime 字段）'
+
+
+def _tencent_expiry():
+    """查询腾讯云域名到期时间（TC3-HMAC-SHA256 签名，DescribeDomainBaseInfo）。
+    返回 (日期 YYYY-MM-DD 或 None, 错误说明或 None)。"""
+    sid = (app.config.get('tencent_secret_id') or '').strip()
+    sk = (app.config.get('tencent_secret_key') or '').strip()
+    domain = (app.config.get('tencent_domain') or '').strip()
+    if not sid or not sk:
+        return None, '未配置腾讯云 SecretId/SecretKey'
+    if not domain:
+        return None, '请在后台填写腾讯云域名（如 example.com）'
+    host = 'domain.tencentcloudapi.com'
+    service = 'domain'
+    ts = int(time.time())
+    date = datetime.fromtimestamp(ts, timezone.utc).strftime('%Y-%m-%d')
+    # GET 请求：业务参数 Domain 放 query 并参与签名；请求体为空串
+    canonical_query = 'Domain=%s' % urllib.parse.quote(domain, safe='')
+    payload = ''
+    hashed_payload = hashlib.sha256(payload.encode('utf-8')).hexdigest()
+    canonical_headers = 'content-type:application/x-www-form-urlencoded\nhost:%s\n' % host
+    signed_headers = 'content-type;host'
+    canonical_request = 'GET\n/\n%s\n%s\n%s\n%s' % (
+        canonical_query, canonical_headers, signed_headers, hashed_payload)
+    string_to_sign = 'TC3-HMAC-SHA256\n%d\n%s/%s/tc3_request\n%s' % (
+        ts, date, service,
+        hashlib.sha256(canonical_request.encode('utf-8')).hexdigest())
+    # 重要：TC3 第一层签名密钥必须加 'TC3' 前缀（腾讯云官方 SDK 同款算法），
+    # 否则真实密钥必报 AuthFailure.SignatureFailure
+    secret_date = hmac.new(('TC3' + sk).encode('utf-8'), date.encode('utf-8'),
+                           hashlib.sha256).digest()
+    secret_service = hmac.new(secret_date, service.encode('utf-8'), hashlib.sha256).digest()
+    secret_signing = hmac.new(secret_service, b'tc3_request', hashlib.sha256).digest()
+    signature = hmac.new(secret_signing, string_to_sign.encode('utf-8'),
+                         hashlib.sha256).hexdigest()
+    authorization = ('TC3-HMAC-SHA256 Credential=%s/%s/%s/tc3_request, '
+                     'SignedHeaders=%s, Signature=%s') % (
+        sid, date, service, signed_headers, signature)
+    headers = {
+        'Authorization': authorization,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Host': host,
+        'X-TC-Action': 'DescribeDomainBaseInfo',
+        'X-TC-Timestamp': str(ts),
+        'X-TC-Version': '2018-08-08',
+    }
+    try:
+        data = _http_get_json('https://%s/?%s' % (host, canonical_query), headers=headers)
+    except urllib.error.HTTPError as e:
+        return None, 'HTTP %d' % e.code
+    except Exception as e:
+        return None, '请求腾讯云 API 失败（%s）' % str(e)[:100]
+    if data.get('Response', {}).get('Error'):
+        err = data['Response']['Error']
+        code = err.get('Code', '')
+        msg = err.get('Message', '')
+        if code == 'AuthFailure.SignatureFailure':
+            return None, '签名校验失败：请确认 SecretId 与 SecretKey 为同一对密钥'
+        return None, '%s: %s' % (code, msg)
+    info = data.get('Response', {}).get('DomainInfo') or {}
+    expiry = _normalize_expiry(info.get('ExpirationDate'))
+    if not expiry:
+        return None, '未查询到域名到期时间（ExpirationDate 原始值: %r）' % (
+            info.get('ExpirationDate'),)
+    return expiry, None
+
+
+# 云 API 到期时间缓存：页面访问（/status、/api/status、后台）只读
+# 内存缓存 + 持久化的测试结果，绝不主动请求云 API；仅后台「测试连接」
+# 按钮（force=True）才真正调用云 API 并持久化成功结果。
+EXPIRY_CACHE = {'ts': 0, 'data': None}
+EXPIRY_CACHE_TTL = 3600
+
+
+def _fmt_ts(ts):
+    """unix 秒 -> 'YYYY-MM-DD HH:MM'，用于提示上次「测试连接」的时间。"""
+    try:
+        return datetime.fromtimestamp(int(ts)).strftime('%Y-%m-%d %H:%M')
+    except (ValueError, TypeError, OSError):
+        return ts or ''
+
+
+def get_expiry_info(force=False):
+    """聚合云资源到期信息（含持久化的 API 测试结果与手动兜底）。
+    页面访问只读内存缓存与持久化结果；仅 force=True（后台「测试连接」）
+    才重新查询云 API 并持久化成功结果。"""
+    now = time.time()
+    if (not force and EXPIRY_CACHE['data'] is not None
+            and now - EXPIRY_CACHE['ts'] < EXPIRY_CACHE_TTL):
+        return EXPIRY_CACHE['data']
+    result = {}
+    aliyun_type = (app.config.get('aliyun_server_type') or 'swas').strip().lower()
+    fetchers = {'aliyun': _aliyun_expiry, 'tencent': _tencent_expiry}
+    for key, label in (
+        ('aliyun', '阿里云 ECS 服务器' if aliyun_type == 'ecs' else '阿里云轻量服务器'),
+        ('tencent', '腾讯云域名'),
+    ):
+        expiry, source, note = None, 'manual', '手动填写'
+        if force:
+            # 仅后台「测试连接」触发时真正调用云 API；失败保留错误提示
+            try:
+                api_date, err = fetchers[key]()
+                if api_date:
+                    expiry, source, note = api_date, 'api', 'API 自动同步'
+                else:
+                    note = err or '未查询到到期时间'
+            except Exception as e:
+                note = 'API 查询异常：%s' % e
+        else:
+            # 页面访问：只读上次「测试连接」持久化的结果（进程重启也不丢）
+            api_date = _normalize_expiry(app.config.get('%s_expiry_api' % key) or '')
+            if api_date:
+                expiry, source = api_date, 'api'
+                ts_val = (app.config.get('%s_expiry_api_ts' % key) or '').strip()
+                note = 'API 同步（测试于 %s）' % _fmt_ts(ts_val) if ts_val else 'API 自动同步'
+            if not expiry:
+                manual = (app.config.get('expiry_%s' % key) or '').strip()
+                if manual and _normalize_expiry(manual):
+                    expiry, source, note = _normalize_expiry(manual), 'manual', '手动填写'
+                else:
+                    note = '未配置'
+        days, status = None, 'none'
+        if expiry:
+            try:
+                d = datetime.strptime(expiry, '%Y-%m-%d').date()
+                days = (d - datetime.now().date()).days
+                status = 'ok' if days > 30 else ('warn' if days > 0 else 'expired')
+            except ValueError:
+                pass
+        result[key] = {
+            'label': label, 'expiry': expiry, 'days': days,
+            'status': status, 'source': source, 'note': note,
+            'server_type': ('云服务器 ECS' if aliyun_type == 'ecs'
+                            else '轻量应用服务器') if key == 'aliyun' else None,
+        }
+    EXPIRY_CACHE['ts'] = now
+    EXPIRY_CACHE['data'] = result
+    return result
+
+
+# ── HTTP(S) 服务探测 ──
+
+MONITOR_INTERVAL = 300  # 探测间隔（秒）：5 分钟
+MONITOR_LOCK = threading.Lock()
+
+
+def _ssl_cert_days(hostname, port=443, timeout=5):
+    """直连获取 SSL 证书剩余天数，失败返回 -1。"""
+    if not hostname:
+        return -1
+    try:
+        ctx = ssl.create_default_context()
+        with socket.create_connection((hostname, port), timeout=timeout) as sock:
+            with ctx.wrap_socket(sock, server_hostname=hostname) as tls:
+                cert = tls.getpeercert()
+        not_after = cert.get('notAfter')
+        if not not_after:
+            return -1
+        exp = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
+        return (exp - datetime.utcnow()).days
+    except Exception:
+        return -1
+
+
+def probe_url(url, timeout=5):
+    """探测单个 URL：返回 (ok, latency_ms, cert_days, detail)。"""
+    url = (url or '').strip()
+    if not url.startswith(('http://', 'https://')):
+        return False, 0, -1, 'URL 格式错误'
+    try:
+        p = urllib.parse.urlparse(url)
+        hostname = p.hostname
+    except Exception:
+        return False, 0, -1, 'URL 解析失败'
+    start = time.time()
+    cert_days = -1
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'infowe-status/1.0'})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                code = resp.getcode()
+        except urllib.error.HTTPError as e:
+            code = e.code
+        latency = int((time.time() - start) * 1000)
+        if p.scheme == 'https':
+            cert_days = _ssl_cert_days(hostname)
+        ok = 200 <= code < 400
+        return ok, latency, cert_days, 'HTTP %d' % code
+    except Exception as e:
+        latency = int((time.time() - start) * 1000)
+        return False, latency, -1, str(e)[:120]
+
+
+def probe_all_services(force=False):
+    """轮询全部监控服务并写入 service_checks。
+    默认按 MONITOR_INTERVAL 窗口去重；force=True 时立即重探。"""
+    services = _parse_monitor_services()
+    if not services:
+        return {}
+    with MONITOR_LOCK:
+        now = time.time()
+        db = get_db()
+        results = {}
+        for svc in services:
+            name = (svc.get('name') or svc.get('url') or '').strip()
+            url = (svc.get('url') or '').strip()
+            if not name or not url:
+                continue
+            if not force:
+                row = db.execute(
+                    "SELECT checked_at FROM service_checks WHERE service_id=? "
+                    "ORDER BY checked_at DESC LIMIT 1", (name,)).fetchone()
+                if row and now - row['checked_at'] < MONITOR_INTERVAL:
+                    continue
+            ok, latency, cert_days, detail = probe_url(url)
+            db.execute(
+                "INSERT INTO service_checks (service_id, checked_at, ok, latency_ms, cert_days, detail) "
+                "VALUES (?,?,?,?,?,?)",
+                (name, now, 1 if ok else 0, latency, cert_days, detail))
+            results[name] = {
+                'name': name, 'url': url, 'ok': ok,
+                'latency_ms': latency, 'cert_days': cert_days, 'detail': detail,
+            }
+        for name in results:
+            db.execute(
+                "DELETE FROM service_checks WHERE service_id=? AND id NOT IN "
+                "(SELECT id FROM service_checks WHERE service_id=? ORDER BY id DESC LIMIT 2000)",
+                (name, name))
+        db.commit()
+        db.close()
+    return results
+
+
+def get_services_status():
+    """读取各服务最新探测结果 + 近 24h 可用率，供前台 /api/status 使用。"""
+    services = _parse_monitor_services()
+    if not services:
+        return []
+    db = get_db()
+    items = []
+    day_ago = time.time() - 86400
+    for svc in services:
+        name = (svc.get('name') or svc.get('url') or '').strip()
+        url = (svc.get('url') or '').strip()
+        if not name or not url:
+            continue
+        row = db.execute(
+            "SELECT ok, latency_ms, cert_days, detail, checked_at FROM service_checks "
+            "WHERE service_id=? ORDER BY checked_at DESC LIMIT 1", (name,)).fetchone()
+        stat = db.execute(
+            "SELECT COUNT(*) AS total, SUM(ok) AS ok_count FROM service_checks "
+            "WHERE service_id=? AND checked_at>=?", (name, day_ago)).fetchone()
+        total = stat['total'] or 0
+        ok_count = stat['ok_count'] or 0
+        uptime = round(ok_count * 100.0 / total, 1) if total else None
+        if row:
+            items.append({
+                'name': name, 'url': url,
+                'ok': bool(row['ok']), 'latency_ms': row['latency_ms'],
+                'cert_days': row['cert_days'], 'detail': row['detail'],
+                'checked_at': row['checked_at'], 'uptime': uptime,
+            })
+        else:
+            items.append({
+                'name': name, 'url': url, 'ok': None,
+                'latency_ms': None, 'cert_days': None, 'detail': '尚未探测',
+                'checked_at': None, 'uptime': uptime,
+            })
+    db.close()
+    return items
+
+
+def _monitor_loop():
+    """守护线程主循环：每 MONITOR_INTERVAL 秒轮询一次。"""
+    while True:
+        try:
+            probe_all_services()
+        except Exception as e:
+            print('[Status] 探测线程异常：%s' % e)
+        time.sleep(MONITOR_INTERVAL)
+
+
+def _start_monitor_thread():
+    t = threading.Thread(target=_monitor_loop, name='status-monitor', daemon=True)
+    t.start()
+    print('[Status] 服务监控线程已启动（每 %d 秒轮询）' % MONITOR_INTERVAL)
+
+
+# 仅在真正的服务进程启动探测线程（gunicorn worker / flask 非 reloader 主进程），
+# 避免 debug reloader 下主进程与子进程重复启动。
+if os.environ.get('WERKZEUG_RUN_MAIN') or not app.debug:
+    _start_monitor_thread()
 
 
 def save_setting(key, value):
@@ -1304,6 +1781,23 @@ def about():
                            author=author, github=github, timeline=timeline)
 
 
+@app.route('/status')
+def status_page():
+    """前台服务状态页（Sever Status）。SSR 首批数据 + JS 轮询 /api/status。"""
+    return render_template('status.html', expiry=get_expiry_info(),
+                           services=get_services_status())
+
+
+@app.route('/api/status')
+def api_status():
+    """公开 JSON：云资源到期信息 + 各服务最新探测与可用率（不含任何密钥）。"""
+    return jsonify({
+        'expiry': get_expiry_info(),
+        'services': get_services_status(),
+        'generated_at': int(time.time()),
+    })
+
+
 # GitHub 语言调色板（名称 -> 颜色），未知语言回退灰色
 LANGUAGE_COLORS = {
     'JavaScript': '#f1e05a', 'TypeScript': '#3178c6', 'Python': '#3572A5',
@@ -2044,6 +2538,68 @@ def _avatar_file_exists():
     if not rel:
         return False
     return os.path.exists(os.path.join(BASE_DIR, 'static', rel))
+
+
+@app.route('/admin/status', methods=['GET', 'POST'])
+@admin_required
+def admin_status():
+    """后台「服务时效」：云资源到期配置 + HTTP(S) 服务监控列表管理。"""
+    if request.method == 'POST':
+        save_setting('aliyun_access_key', request.form.get('aliyun_access_key', '').strip())
+        save_setting('aliyun_server_type', request.form.get('aliyun_server_type', '').strip() or 'swas')
+        save_setting('aliyun_access_secret', request.form.get('aliyun_access_secret', '').strip())
+        save_setting('aliyun_region', request.form.get('aliyun_region', '').strip() or 'cn-hangzhou')
+        save_setting('aliyun_instance_id', request.form.get('aliyun_instance_id', '').strip())
+        save_setting('tencent_secret_id', request.form.get('tencent_secret_id', '').strip())
+        save_setting('tencent_secret_key', request.form.get('tencent_secret_key', '').strip())
+        save_setting('tencent_domain', request.form.get('tencent_domain', '').strip())
+        save_setting('expiry_aliyun', request.form.get('expiry_aliyun', '').strip())
+        save_setting('expiry_tencent', request.form.get('expiry_tencent', '').strip())
+        # 云 API 同步结果（仅当后台点过「同步」且未手动修改时才带入，非空才持久化）
+        for key in ('aliyun', 'tencent'):
+            api_val = request.form.get('%s_expiry_api' % key, '').strip()
+            if api_val:
+                save_setting('%s_expiry_api' % key, api_val)
+                save_setting('%s_expiry_api_ts' % key, str(int(time.time())))
+        # 监控服务列表：name[] / url[] 同名数组，按顺序配对
+        names = request.form.getlist('svc_name')
+        urls = request.form.getlist('svc_url')
+        services = []
+        for n, u in zip(names, urls):
+            n = (n or '').strip()
+            u = (u or '').strip()
+            if n and u:
+                services.append({'name': n, 'url': u})
+        save_setting('monitor_services', json.dumps(services, ensure_ascii=False))
+        # 保存后立即探测一次，避免前台要等下一次 5 分钟轮询才有数据
+        try:
+            probe_all_services(force=True)
+        except Exception:
+            pass
+        flash('服务时效配置已保存', 'success')
+        return redirect(url_for('admin_status'))
+    return render_template('admin/status.html',
+                           expiry=get_expiry_info(),
+                           services=_parse_monitor_services(),
+                           status_items=get_services_status())
+
+
+@app.route('/admin/status/probe', methods=['POST'])
+@admin_required
+def admin_status_probe():
+    """立即重探全部监控服务，返回最新结果 JSON（后台「立即探测」）。"""
+    probe_all_services(force=True)
+    return jsonify({'ok': True, 'services': get_services_status()})
+
+
+@app.route('/admin/status/test-cloud', methods=['POST'])
+@admin_required
+def admin_status_test_cloud():
+    """同步云 API 到期时间：强制重新查询，结果仅返回页面预览，不落库。
+    页面访问（/status、/api/status、后台页面）只读持久化结果，
+    不会主动请求云 API；只有点击「同步」才调用，点「保存全部配置」后持久化。"""
+    result = get_expiry_info(force=True)
+    return jsonify({'ok': True, 'expiry': result})
 
 
 @app.route('/admin/settings', methods=['GET', 'POST'])

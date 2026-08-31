@@ -75,6 +75,9 @@
                 <a href="/about" class="nav-link {% if request.path == '/about' %}active{% endif %}">
                     {{ icon('at-sign', 18, 'nav-icon') | safe }} 关于
                 </a>
+                <a href="/status" class="nav-link {% if request.path == '/status' %}active{% endif %}">
+                    {{ icon('rocket', 18, 'nav-icon') | safe }} 状态
+                </a>
                 <a href="/admin" class="nav-link {% if request.path.startswith('/admin') %}active{% endif %}">
                     {{ icon('pencil', 18, 'nav-icon') | safe }} 写作
                 </a>
@@ -136,5 +139,6 @@
     <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
     {% endif %}
     <script src="{{ url_for('static', filename='js/main.js', t='v' ~ version) }}" defer></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

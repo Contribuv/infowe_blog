@@ -80,6 +80,9 @@
                     <a href="{{ url_for('admin_export') }}" class="nav-item {% if request.path == '/admin/export' %}active{% endif %}">
                         {{ icon('database', 20, 'nav-icon') | safe }} 数据管理
                     </a>
+                    <a href="{{ url_for('admin_status') }}" class="nav-item {% if request.path.startswith('/admin/status') %}active{% endif %}">
+                        {{ icon('zap', 20, 'nav-icon') | safe }} 服务时效
+                    </a>
                 </div>
             </nav>
             <div class="sidebar-footer">

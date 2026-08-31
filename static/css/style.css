@@ -1484,3 +1484,111 @@ body {
     word-break: break-word;
   }
 }
+
+/* ============================================
+   状态页（/status）
+   ============================================ */
+.status-page {
+  margin: 0 auto; padding: var(--sp-4) var(--sp-6) var(--sp-8);
+}
+.status-page .page-subtitle { color: var(--text-secondary); font-size: var(--fz-sm); margin-bottom: var(--sp-2); }
+.status-section { margin-bottom: var(--sp-8); }
+.status-section .card-heading { margin-bottom: var(--sp-5); }
+
+/* 状态色：卡点 / 徽章 / 指示灯共用 */
+.st-ok    { --st-color: var(--accent-green); }
+.st-warn  { --st-color: #d97706; }
+.st-expired,
+.st-down  { --st-color: var(--accent-warm); }
+.st-none  { --st-color: var(--text-tertiary); }
+
+/* ——— 云资源到期列表 ——— */
+.expiry-label { font-weight: 600; font-size: var(--fz-sm); }
+.expiry-date { font-family: var(--font-mono); }
+.st-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 10px;
+  border-radius: var(--r-full); white-space: nowrap;
+}
+.st-badge-ok     { color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 14%, transparent); }
+.st-badge-warn   { color: #d97706;             background: rgba(217, 119, 6, 0.13); }
+.st-badge-expired{ color: var(--accent-warm);  background: color-mix(in srgb, var(--accent-warm) 14%, transparent); }
+.st-badge-none   { color: var(--text-tertiary); background: color-mix(in srgb, var(--text-tertiary) 14%, transparent); }
+
+/* ——— 在线服务列表 ——— */
+.svc-count { font-size: var(--fz-xs); font-weight: 500; color: var(--text-tertiary); margin-left: auto; }
+.svc-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.svc-row {
+  display: flex; align-items: center; gap: var(--sp-4);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5);
+  transition: all var(--transition);
+}
+.svc-row:hover { border-color: var(--border-strong); }
+
+/* 状态指示灯：在线呼吸灯 + 涟漪 */
+.svc-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  background: var(--st-color, var(--text-tertiary)); position: relative;
+}
+.svc-dot.st-ok { animation: st-breathe 2s ease-in-out infinite; }
+.svc-dot.st-ok::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent-green) 45%, transparent);
+  animation: st-ping 2s ease-out infinite;
+}
+@keyframes st-breathe {
+  0%, 100% { opacity: 1;    box-shadow: 0 0 4px  color-mix(in srgb, var(--accent-green) 55%, transparent); }
+  50%      { opacity: 0.55; box-shadow: 0 0 12px color-mix(in srgb, var(--accent-green) 80%, transparent); }
+}
+@keyframes st-ping {
+  0%   { transform: scale(0.7); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.svc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.svc-name { font-weight: 600; font-size: var(--fz-sm); }
+
+.svc-metrics { display: flex; gap: var(--sp-2); flex-shrink: 0; }
+.svc-metric {
+  font-size: var(--fz-xs); color: var(--text-secondary);
+  padding: 2px 8px; border: 1px solid var(--border);
+  border-radius: var(--r-sm); background: var(--bg-raised); white-space: nowrap;
+}
+.svc-metric[data-field="latency"]::before { content: '延迟 '; color: var(--text-tertiary); }
+.svc-metric[data-field="cert"]::before    { content: 'SSL ';   color: var(--text-tertiary); }
+.svc-metric[data-field="uptime"]::before  { content: '可用率 '; color: var(--text-tertiary); }
+.svc-metric[data-field="expiry"]::before  { content: '到期 ';  color: var(--text-tertiary); }
+.svc-metric[data-field="status"]::before  { content: '状态 ';  color: var(--text-tertiary); }
+
+/* —— 到期临近视觉提醒：警示条 + 指标着色 —— */
+.expiry-row.st-warn    { border-left-color: #d97706; }
+.expiry-row.st-expired { border-left-color: var(--accent-warm); }
+.expiry-row.st-warn .svc-metric[data-field="expiry"],
+.expiry-row.st-warn .svc-metric[data-field="status"] {
+  color: #d97706; border-color: rgba(217, 119, 6, 0.45); background: rgba(217, 119, 6, 0.08);
+}
+.expiry-row.st-expired .svc-metric[data-field="expiry"],
+.expiry-row.st-expired .svc-metric[data-field="status"] {
+  color: var(--accent-warm); border-color: rgba(255, 145, 77, 0.45); background: rgba(255, 145, 77, 0.08);
+}
+
+.status-hint { margin-top: var(--sp-4); font-size: var(--fz-xs); color: var(--text-tertiary); text-align: center; }
+
+/* ——— 空状态 ——— */
+.svc-empty {
+  text-align: center; padding: var(--sp-10) var(--sp-6);
+  background: var(--bg-surface); border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg); color: var(--text-tertiary);
+}
+.svc-empty svg { margin-bottom: var(--sp-2); }
+.svc-empty p { margin-bottom: var(--sp-1); }
+.svc-empty-sub { font-size: var(--fz-xs); }
+
+/* 移动端 */
+@media (max-width: 768px) {
+  .status-page { padding: var(--sp-4) var(--sp-4) var(--sp-8); }
+  .svc-row { flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
+  .svc-metrics { width: 100%; flex-wrap: wrap; }
+  .svc-checked { width: auto; text-align: left; }
+}
