@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.2'
+VERSION = '1.2.3'
 
 import os
 import re
@@ -476,22 +476,26 @@ def _normalize_expiry(raw):
     return None
 
 
+def _open_url(req, timeout):
+    """urlopen 封装：证书校验失败时回退为不校验（兼容无根证书环境）。
+
+    云 API 与监控目标均为固定/自配域名，第一次始终走完整校验证书，
+    仅在校验失败时回退，正常环境不受影响。
+    """
+    try:
+        return urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.URLError as e:
+        if isinstance(e.reason, ssl.SSLError):
+            return urllib.request.urlopen(req, timeout=timeout,
+                                          context=ssl._create_unverified_context())
+        raise
+
+
 def _http_get_json(url, headers=None, timeout=8):
     """GET 请求并解析 JSON；失败抛出异常由调用方兜底。"""
     req = urllib.request.Request(url, headers=headers or {})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read().decode('utf-8')
-    except urllib.error.URLError as e:
-        # 服务器缺少根证书（CERTIFICATE_VERIFY_FAILED）时回退为不校验证书，
-        # 云 API 均为固定官方域名，本机验证正常不受影响。
-        # 判断用 ssl.SSLError 家族而非具体子类，兼容旧/新 Python 的异常类型。
-        if isinstance(e.reason, ssl.SSLError):
-            with urllib.request.urlopen(req, timeout=timeout,
-                                        context=ssl._create_unverified_context()) as resp:
-                raw = resp.read().decode('utf-8')
-        else:
-            raise
+    with _open_url(req, timeout) as resp:
+        raw = resp.read().decode('utf-8')
     return json.loads(raw) if raw else {}
 
 
@@ -742,18 +746,20 @@ def _ssl_cert_days(hostname, port=443, timeout=5):
     """直连获取 SSL 证书剩余天数，失败返回 -1。"""
     if not hostname:
         return -1
-    try:
-        ctx = ssl.create_default_context()
-        with socket.create_connection((hostname, port), timeout=timeout) as sock:
-            with ctx.wrap_socket(sock, server_hostname=hostname) as tls:
-                cert = tls.getpeercert()
-        not_after = cert.get('notAfter')
-        if not not_after:
-            return -1
-        exp = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
-        return (exp - datetime.utcnow()).days
-    except Exception:
-        return -1
+    # 默认校验证书；无根证书环境回退为仅取证书信息（不校验证书）
+    for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+        try:
+            with socket.create_connection((hostname, port), timeout=timeout) as sock:
+                with ctx.wrap_socket(sock, server_hostname=hostname) as tls:
+                    cert = tls.getpeercert()
+                    not_after = cert.get('notAfter')
+                    if not not_after:
+                        return -1
+                    exp = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
+                    return (exp - datetime.utcnow()).days
+        except Exception:
+            continue
+    return -1
 
 
 def probe_url(url, timeout=5):
@@ -771,7 +777,7 @@ def probe_url(url, timeout=5):
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'infowe-status/1.0'})
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with _open_url(req, timeout) as resp:
                 code = resp.getcode()
         except urllib.error.HTTPError as e:
             code = e.code

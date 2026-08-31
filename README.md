@@ -107,6 +107,10 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.2.3
+
+- **修复 HTTP(S) 服务监控证书校验失败**：探测目标与 SSL 证书天数读取在无根证书环境同样报 `CERTIFICATE_VERIFY_FAILED`，现已与云 API 同步支持证书校验失败自动回退；统一封装 `_open_url` 复用
+
 ### v1.2.2
 
 - **修复云 API 请求证书校验失败**：服务器缺少根证书时（如未安装 ca-certificates），请求阿里云/腾讯云 API 报 `CERTIFICATE_VERIFY_FAILED`；现自动回退为不校验证书重试（云 API 为固定官方域名，正常环境仍完整校验）
