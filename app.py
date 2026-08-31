@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.3'
+VERSION = '1.2.4'
 
 import os
 import re
@@ -28,6 +28,8 @@ import hmac
 import uuid
 import threading
 import urllib.parse
+import email.utils
+import ipaddress
 from datetime import datetime, timezone
 from functools import wraps
 
@@ -476,18 +478,21 @@ def _normalize_expiry(raw):
     return None
 
 
-def _open_url(req, timeout):
-    """urlopen 封装：证书校验失败时回退为不校验（兼容无根证书环境）。
+_NO_PROXY_OPENER = None
 
-    云 API 与监控目标均为固定/自配域名，第一次始终走完整校验证书，
-    仅在校验失败时回退，正常环境不受影响。
-    """
+
+def _open_url(req, timeout):
+    """urlopen 封装：① 禁用系统代理直连（云 API/监控目标为国内直连域名，
+    避免系统代理残留导致 WinError 10061）；② 证书校验失败时回退不校验。"""
+    global _NO_PROXY_OPENER
+    if _NO_PROXY_OPENER is None:
+        _NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
-        return urllib.request.urlopen(req, timeout=timeout)
+        return _NO_PROXY_OPENER.open(req, timeout=timeout)
     except urllib.error.URLError as e:
         if isinstance(e.reason, ssl.SSLError):
-            return urllib.request.urlopen(req, timeout=timeout,
-                                          context=ssl._create_unverified_context())
+            return _NO_PROXY_OPENER.open(req, timeout=timeout,
+                                         context=ssl._create_unverified_context())
         raise
 
 
@@ -742,9 +747,22 @@ MONITOR_INTERVAL = 300  # 探测间隔（秒）：5 分钟
 MONITOR_LOCK = threading.Lock()
 
 
+def _is_private_target(hostname):
+    """本机/回环/私网/IP 字面量目标判定：这些地址没有 443 可握手取证书，
+    跳过避免空等超时（如监控 http://127.0.0.1:5000 时连 :443 直接被拒）。"""
+    h = (hostname or '').strip().lower()
+    if not h or h == 'localhost' or h == '::1':
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+        return ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_reserved
+    except ValueError:
+        return False  # 域名，可尝试握手
+
+
 def _ssl_cert_days(hostname, port=443, timeout=5):
     """直连获取 SSL 证书剩余天数，失败返回 -1。"""
-    if not hostname:
+    if not hostname or _is_private_target(hostname):
         return -1
     # 默认校验证书；无根证书环境回退为仅取证书信息（不校验证书）
     for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
@@ -755,8 +773,11 @@ def _ssl_cert_days(hostname, port=443, timeout=5):
                     not_after = cert.get('notAfter')
                     if not not_after:
                         return -1
-                    exp = datetime.strptime(not_after, '%b %d %H:%M:%S %Y %Z')
-                    return (exp - datetime.utcnow()).days
+                    # 用 email 标准解析（兼容 GMT 等时区名），避免 strptime %Z 在 3.12+ 解析失败
+                    exp = email.utils.parsedate_to_datetime(not_after)
+                    if exp is None:
+                        return -1
+                    return (exp - datetime.now(timezone.utc)).days
         except Exception:
             continue
     return -1
@@ -782,8 +803,9 @@ def probe_url(url, timeout=5):
         except urllib.error.HTTPError as e:
             code = e.code
         latency = int((time.time() - start) * 1000)
-        if p.scheme == 'https':
-            cert_days = _ssl_cert_days(hostname)
+        # http/https 目标统一尝试取证书天数：http 站点通常 301 到 https，443 往往有证书；
+        # 取不到时 _ssl_cert_days 返回 -1，不影响探测结果
+        cert_days = _ssl_cert_days(hostname)
         ok = 200 <= code < 400
         return ok, latency, cert_days, 'HTTP %d' % code
     except Exception as e:
