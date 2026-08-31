@@ -218,7 +218,7 @@ proxy_set_header X-Forwarded-Proto $scheme;
     }
 ```
 
-> ⚠️ `alias` 路径必须以 `/` 结尾，且目录要真实存在，否则 nginx 启动失败。`immutable` 配合代码里 `?t=v1.1.8` 版本号才安全——以后改静态资源就改 `app.py` 的 `VERSION`。
+> ⚠️ `alias` 路径必须以 `/` 结尾，且目录要真实存在，否则 nginx 启动失败。`immutable` 配合代码里 `?t=v1.1.9` 版本号才安全——以后改静态资源就改 `app.py` 的 `VERSION`。
 
 3. 如果站点开启了 HTTPS（80 块 + 443 块），两个块都要写。
 4. 保存后 `nginx -t && nginx -s reload`。
