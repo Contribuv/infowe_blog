@@ -60,11 +60,11 @@
                 <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
                     {{ icon('home', 18, 'nav-icon') | safe }} 首页
                 </a>
-                <a href="/tags" class="nav-link {% if request.path == '/tags' %}active{% endif %}">
-                    {{ icon('tag', 18, 'nav-icon') | safe }} 标签
-                </a>
                 <a href="/posts" class="nav-link {% if request.path == '/posts' %}active{% endif %}">
                     {{ icon('file-text', 18, 'nav-icon') | safe }} 文章
+                </a>
+                <a href="/tags" class="nav-link {% if request.path == '/tags' %}active{% endif %}">
+                    {{ icon('tag', 18, 'nav-icon') | safe }} 标签
                 </a>
                 <a href="/projects" class="nav-link {% if request.path == '/projects' %}active{% endif %}">
                     {{ icon('star', 18, 'nav-icon') | safe }} 项目
