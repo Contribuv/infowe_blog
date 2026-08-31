@@ -107,6 +107,10 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.2.5
+
+- **急修：云 API 同步与 HTTP(S) 监控全部不可用**：v1.2.4 禁代理直连时误用 `OpenerDirector.open(context=...)`（该参数仅顶层 `urlopen` 支持），证书校验失败回退分支必抛 `TypeError`，导致同步、探测整套链路报错；已改为用 `HTTPSHandler(context=...)` 单独构造不校验证书的 opener，证书回退链路恢复正常
+
 ### v1.2.4
 
 - **云 API 禁系统代理直连**：同步阿里云 / 腾讯云数据不再受系统代理残留影响（曾导致 `WinError 10061 连接被拒`），国内直连域名稳定出网

@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.4'
+VERSION = '1.2.5'
 
 import os
 import re
@@ -479,20 +479,29 @@ def _normalize_expiry(raw):
 
 
 _NO_PROXY_OPENER = None
+_NO_VERIFY_OPENER = None
 
 
 def _open_url(req, timeout):
     """urlopen 封装：① 禁用系统代理直连（云 API/监控目标为国内直连域名，
-    避免系统代理残留导致 WinError 10061）；② 证书校验失败时回退不校验。"""
-    global _NO_PROXY_OPENER
+    避免系统代理残留导致 WinError 10061）；② 证书校验失败时回退为不校验。
+
+    注意：OpenerDirector.open() 不接受 context 参数，不校验证书须用
+    HTTPSHandler(context=...) 单独构造 opener（顶层 urlopen 才有 context）。
+    """
+    global _NO_PROXY_OPENER, _NO_VERIFY_OPENER
     if _NO_PROXY_OPENER is None:
         _NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
         return _NO_PROXY_OPENER.open(req, timeout=timeout)
     except urllib.error.URLError as e:
         if isinstance(e.reason, ssl.SSLError):
-            return _NO_PROXY_OPENER.open(req, timeout=timeout,
-                                         context=ssl._create_unverified_context())
+            if _NO_VERIFY_OPENER is None:
+                _NO_VERIFY_OPENER = urllib.request.build_opener(
+                    urllib.request.ProxyHandler({}),
+                    urllib.request.HTTPSHandler(
+                        context=ssl._create_unverified_context()))
+            return _NO_VERIFY_OPENER.open(req, timeout=timeout)
         raise
 
 
