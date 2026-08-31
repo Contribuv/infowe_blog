@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.8'
+VERSION = '1.2.9'
 
 import os
 import re
@@ -814,15 +814,135 @@ def _cert_matches_hostname(cert, hostname):
         return False
 
 
+_SSL_DEFAULT_CTX = None  # 默认校验证书上下文（缓存，自动补齐系统 CA bundle）
+
+
+def _default_ssl_context():
+    """默认校验证书上下文；服务器缺少系统根证书（如精简系统/宝塔编译版 Python）时，
+    自动探测常见 CA bundle 路径补齐，使证书校验分支可用（getpeercert() 才能返回完整字典）。"""
+    global _SSL_DEFAULT_CTX
+    if _SSL_DEFAULT_CTX is not None:
+        return _SSL_DEFAULT_CTX
+    ctx = ssl.create_default_context()
+    try:
+        # 已有可信根则直接用；否则逐一尝试常见 CA bundle
+        if not ctx.get_ca_certs():
+            import os
+            for cafile in ('/etc/pki/tls/certs/ca-bundle.crt',
+                           '/etc/ssl/certs/ca-certificates.crt',
+                           '/etc/ssl/cert.pem',
+                           '/etc/ssl/ca-bundle.pem',
+                           '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem',
+                           '/usr/local/share/certs/ca-root-nss.crt',
+                           '/etc/pki/tls/cacert.pem'):
+                if os.path.exists(cafile):
+                    try:
+                        ctx.load_verify_locations(cafile=cafile)
+                        break
+                    except Exception:
+                        continue
+    except Exception:
+        pass
+    _SSL_DEFAULT_CTX = ctx
+    return ctx
+
+
+def _tlv_next(data, off):
+    """读取一个 ASN.1 TLV：返回 (tag, value_bytes, next_off)。
+    仅处理短/长长度编码的 BER 结构（证书 DER 内足够）。"""
+    tag = data[off]
+    p = off + 1
+    ln = data[p]
+    p += 1
+    if ln & 0x80:
+        n = ln & 0x7f
+        ln = int.from_bytes(data[p:p + n], 'big')
+        p += n
+    return tag, data[p:p + ln], p + ln
+
+
+def _der_fields(seq):
+    """把 SEQUENCE 内容解析为 [(tag, value), ...] 字段列表。"""
+    fields = []
+    off = 0
+    while off < len(seq):
+        tag, val, off = _tlv_next(seq, off)
+        fields.append((tag, val))
+    return fields
+
+
+def _der_not_after(der):
+    """极简 ASN.1 解析：从证书 DER 提取 notAfter 为 datetime（UTC）。
+    仅用于系统无根证书、CERT_NONE 握手时 getpeercert() 返回空 dict 的兜底场景。
+    证书结构：Certificate{tbsCertificate{version[0]?, serial, sigalg, issuer,
+    validity{notBefore, notAfter}, subject, ...}, sigalg, sig}"""
+    try:
+        _, cert_val, _ = _tlv_next(der, 0)       # Certificate SEQUENCE
+        _, tbs_val, _ = _tlv_next(cert_val, 0)   # tbsCertificate SEQUENCE
+        fields = _der_fields(tbs_val)
+        idx = 1 if fields and fields[0][0] == 0xa0 else 0
+        if len(fields) < idx + 4 or fields[idx + 3][0] != 0x30:
+            return None
+        times = _der_fields(fields[idx + 3][1])
+        if len(times) < 2:
+            return None
+        tag, raw = times[1]
+        s = raw.decode('ascii', 'replace')
+        if tag == 0x17 and len(s) >= 12:  # UTCTime: YYMMDDHHMMSSZ（YY>=50 为 19xx）
+            yy = int(s[0:2]) + (2000 if int(s[0:2]) < 50 else 1900)
+            return datetime(yy, int(s[2:4]), int(s[4:6]), int(s[6:8]), int(s[8:10]), int(s[10:12]), tzinfo=timezone.utc)
+        if tag == 0x18 and len(s) >= 14:  # GeneralizedTime: YYYYMMDDHHMMSSZ
+            return datetime(int(s[0:4]), int(s[4:6]), int(s[6:8]), int(s[8:10]), int(s[10:12]), int(s[12:14]), tzinfo=timezone.utc)
+    except Exception:
+        pass
+    return None
+
+
+def _der_cert_names(der):
+    """从证书 DER 提取 subject 的 commonName 列表（小写，去尾点）。
+    用于未验证 + getpeercert() 空 dict 场景下的域名匹配，防止环回回退误取本机其他站点证书。"""
+    try:
+        _, cert_val, _ = _tlv_next(der, 0)       # Certificate SEQUENCE
+        _, tbs_val, _ = _tlv_next(cert_val, 0)   # tbsCertificate SEQUENCE
+        fields = _der_fields(tbs_val)
+        idx = 1 if fields and fields[0][0] == 0xa0 else 0
+        if len(fields) < idx + 5 or fields[idx + 4][0] != 0x30:
+            return []
+        names = []
+        for tag, rdn_set in _der_fields(fields[idx + 4][1]):
+            if tag != 0x31:  # SET OF RDN
+                continue
+            for _, atv in _der_fields(rdn_set):  # atv 已是 AttributeTypeAndValue 的 SEQUENCE 内容
+                oid = None
+                value = None
+                for ktag, kval in _der_fields(atv):
+                    if ktag == 0x06:
+                        oid = kval
+                    elif ktag in (0x0c, 0x13, 0x14, 0x16, 0x1b, 0x1e):  # 各种字符串类型
+                        value = kval.decode('utf-8', 'replace')
+                if oid == bytes([0x55, 0x04, 0x03]) and value:  # 2.5.4.3 commonName
+                    names.append(value.lower().rstrip('.'))
+        return names
+    except Exception:
+        return []
+
+
 def _ssl_cert_days(hostname, port=443, timeout=5):
     """直连获取 SSL 证书剩余天数，失败返回 -1 并附原因。
     返回 (cert_days, err)，err 为 None 表示成功。
 
-    反代环境排障：服务器用 https 反代 http://127.0.0.1:5000 且监控自己公网域名时，
-    域名常解析到本机公网 IP，本机回连自己公网 IP（hairpin）会被云 VPC 直接丢弃 →
-    直连超时拿不到证书。因此直连失败后追加 127.0.0.1:port 环回握手，
-    TLS SNI 仍用公网域名，由本机 Nginx 按 SNI 返回对应站点证书（环回流量永不丢包）。
-    环回回退仅接受「证书确实匹配该域名」的结果，防止误取本机其他站点证书。"""
+    服务器实际根因（v1.2.8 detail 定位）：服务器缺少系统 CA 根证书 →
+    create_default_context() 校验必然失败（unable to get local issuer certificate）；
+    回退 unverified 后 Python 在 CERT_NONE 模式下 getpeercert() 返回空 dict →
+    既无 notAfter 也无 SAN，最终 -1。v1.2.9 修复：
+    ① 默认上下文自动补齐常见系统 CA bundle，让校验分支可用；
+    ② unverified 分支改为从 getpeercert(binary_form=True) 的 DER 极简解析
+       notAfter 与 subject CN（不依赖任何私有 API），无根证书也能拿到证书天数。
+
+    反代环境：服务器 https 反代 http://127.0.0.1:5000 并监控自己公网域名时，
+    hairpin 自连会被云 VPC 丢弃 → 直连失败后追加 127.0.0.1:port 环回握手，
+    TLS SNI 仍用公网域名，由本机 Nginx 按 SNI 返回对应证书；环回结果同样校验
+    证书匹配该域名，防误取本机其他站点证书。"""
     if not hostname or _is_private_target(hostname):
         return -1, '私网/IP 目标不可直连取证'
     # 直连公网域名 → 失败后环回取证书（仅在域名目标下追加环回候选）
@@ -830,26 +950,37 @@ def _ssl_cert_days(hostname, port=443, timeout=5):
     if not _is_private_target(hostname):
         candidates.append(('127.0.0.1', port))
     errs = []
-    # 默认校验证书；无根证书环境回退为仅取证书信息（不校验证书）
+    # 默认校验证书（自动补齐 CA bundle）；失败回退为仅取证书信息（不校验证书）
     for target, pp in candidates:
-        for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+        for ctx in (_default_ssl_context(), ssl._create_unverified_context()):
             try:
                 with socket.create_connection((target, pp), timeout=timeout) as sock:
                     with ctx.wrap_socket(sock, server_hostname=hostname) as tls:
                         cert = tls.getpeercert()
-                        not_after = cert.get('notAfter')
+                        not_after = cert.get('notAfter') if cert else None
+                        der = None
+                        # 未验证模式下 getpeercert() 可能返回空 dict → 用 DER 兜底解析
                         if not not_after:
-                            errs.append('%s:%s 证书无 notAfter' % (target, pp))
-                            continue
-                        # 未验证模式下确认证书确实属于该域名，防误取
-                        if ctx.verify_mode == ssl.CERT_NONE and not _cert_matches_hostname(cert, hostname):
-                            errs.append('%s:%s 证书不匹配 %s（未验证回退）' % (target, pp, hostname))
-                            continue
-                        # 用 email 标准解析（兼容 GMT 等时区名），避免 strptime %Z 在 3.12+ 解析失败
-                        exp = email.utils.parsedate_to_datetime(not_after)
-                        if exp is None:
-                            errs.append('%s:%s notAfter 解析失败: %s' % (target, pp, not_after))
-                            continue
+                            der = tls.getpeercert(binary_form=True) or None
+                            exp = _der_not_after(der) if der else None
+                            if exp is None:
+                                errs.append('%s:%s 证书无 notAfter / DER 解析失败' % (target, pp))
+                                continue
+                        else:
+                            # 用 email 标准解析（兼容 GMT 等时区名），避免 strptime %Z 在 3.12+ 解析失败
+                            exp = email.utils.parsedate_to_datetime(not_after)
+                            if exp is None:
+                                errs.append('%s:%s notAfter 解析失败: %s' % (target, pp, not_after))
+                                continue
+                        # 未验证模式下确认证书确实属于该域名，防误取本机其他站点证书
+                        if ctx.verify_mode == ssl.CERT_NONE:
+                            if cert:
+                                matched = _cert_matches_hostname(cert, hostname)
+                            else:
+                                matched = any(_hostname_match(n, hostname) for n in (_der_cert_names(der) if der else []))
+                            if not matched:
+                                errs.append('%s:%s 证书不匹配 %s（未验证回退）' % (target, pp, hostname))
+                                continue
                         return (exp - datetime.now(timezone.utc)).days, None
             except Exception as e:
                 errs.append('%s:%s %s: %s' % (target, pp, type(e).__name__, str(e)[:80]))
