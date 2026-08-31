@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.5'
+VERSION = '1.2.6'
 
 import os
 import re
@@ -433,13 +433,29 @@ def load_settings():
 # - 云到期时间：密钥签名调用 OpenAPI，失败自动回退后台手动填写的到期日。
 # - 服务监控：守护线程每 5 分钟轮询，结果写入 service_checks 表，前台读聚合。
 
+def _clean_monitor_url(url):
+    """清洗监控 URL：去首尾空白与反引号（用户常误粘 markdown 反引号）。"""
+    if not url:
+        return ''
+    s = str(url).strip()
+    if s.startswith('`') and s.endswith('`') and len(s) >= 2:
+        s = s[1:-1].strip()
+    return s
+
+
 def _parse_monitor_services():
-    """解析 settings 中 monitor_services 的 JSON，返回非空 URL 的服务字典列表。"""
+    """解析 settings 中 monitor_services 的 JSON，返回非空 URL 的服务字典列表（URL 已清洗）。"""
     raw = app.config.get('monitor_services', '[]')
     try:
         data = json.loads(raw)
         if isinstance(data, list):
-            return [s for s in data if isinstance(s, dict) and s.get('url')]
+            out = []
+            for s in data:
+                if isinstance(s, dict):
+                    u = _clean_monitor_url(s.get('url') or '')
+                    if u:
+                        out.append({'name': (s.get('name') or u).strip() or u, 'url': u})
+            return out
     except (ValueError, TypeError):
         pass
     return []
@@ -794,7 +810,7 @@ def _ssl_cert_days(hostname, port=443, timeout=5):
 
 def probe_url(url, timeout=5):
     """探测单个 URL：返回 (ok, latency_ms, cert_days, detail)。"""
-    url = (url or '').strip()
+    url = _clean_monitor_url(url)
     if not url.startswith(('http://', 'https://')):
         return False, 0, -1, 'URL 格式错误'
     try:
@@ -2615,7 +2631,7 @@ def admin_status():
         services = []
         for n, u in zip(names, urls):
             n = (n or '').strip()
-            u = (u or '').strip()
+            u = _clean_monitor_url(u)
             if n and u:
                 services.append({'name': n, 'url': u})
         save_setting('monitor_services', json.dumps(services, ensure_ascii=False))
