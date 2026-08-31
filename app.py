@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.6'
+VERSION = '1.2.7'
 
 import os
 import re
@@ -816,6 +816,8 @@ def probe_url(url, timeout=5):
     try:
         p = urllib.parse.urlparse(url)
         hostname = p.hostname
+        # 按 URL 实际端口取证书：如 https://nas.infowe.site:5001/ 的证书在 5001，不能默认连 443
+        port = p.port or 443
     except Exception:
         return False, 0, -1, 'URL 解析失败'
     start = time.time()
@@ -830,7 +832,7 @@ def probe_url(url, timeout=5):
         latency = int((time.time() - start) * 1000)
         # http/https 目标统一尝试取证书天数：http 站点通常 301 到 https，443 往往有证书；
         # 取不到时 _ssl_cert_days 返回 -1，不影响探测结果
-        cert_days = _ssl_cert_days(hostname)
+        cert_days = _ssl_cert_days(hostname, port)
         ok = 200 <= code < 400
         return ok, latency, cert_days, 'HTTP %d' % code
     except Exception as e:
