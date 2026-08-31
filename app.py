@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.7'
+VERSION = '1.2.8'
 
 import os
 import re
@@ -785,27 +785,77 @@ def _is_private_target(hostname):
         return False  # 域名，可尝试握手
 
 
+def _hostname_match(pattern, hn):
+    """通配符主机名匹配：pattern 支持 *.example.com 形式。"""
+    if pattern == hn:
+        return True
+    if pattern.startswith('*.'):
+        suffix = pattern[1:]
+        return bool(hn.endswith(suffix) and hn[:-len(suffix)])
+    return False
+
+
+def _cert_matches_hostname(cert, hostname):
+    """校验证书 SAN/CN 是否匹配目标域名（未验证模式下防误取其他站点证书）。"""
+    try:
+        if not cert:
+            return False
+        hn = (hostname or '').lower().rstrip('.')
+        names = []
+        for typ, val in cert.get('subjectAltName', ()) or ():
+            if typ == 'DNS':
+                names.append(val.lower().rstrip('.'))
+        for item in cert.get('subject', ()) or ():
+            for k, v in item:
+                if k == 'commonName':
+                    names.append(v.lower().rstrip('.'))
+        return any(_hostname_match(p, hn) for p in names)
+    except Exception:
+        return False
+
+
 def _ssl_cert_days(hostname, port=443, timeout=5):
-    """直连获取 SSL 证书剩余天数，失败返回 -1。"""
+    """直连获取 SSL 证书剩余天数，失败返回 -1 并附原因。
+    返回 (cert_days, err)，err 为 None 表示成功。
+
+    反代环境排障：服务器用 https 反代 http://127.0.0.1:5000 且监控自己公网域名时，
+    域名常解析到本机公网 IP，本机回连自己公网 IP（hairpin）会被云 VPC 直接丢弃 →
+    直连超时拿不到证书。因此直连失败后追加 127.0.0.1:port 环回握手，
+    TLS SNI 仍用公网域名，由本机 Nginx 按 SNI 返回对应站点证书（环回流量永不丢包）。
+    环回回退仅接受「证书确实匹配该域名」的结果，防止误取本机其他站点证书。"""
     if not hostname or _is_private_target(hostname):
-        return -1
+        return -1, '私网/IP 目标不可直连取证'
+    # 直连公网域名 → 失败后环回取证书（仅在域名目标下追加环回候选）
+    candidates = [(hostname, port)]
+    if not _is_private_target(hostname):
+        candidates.append(('127.0.0.1', port))
+    errs = []
     # 默认校验证书；无根证书环境回退为仅取证书信息（不校验证书）
-    for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
-        try:
-            with socket.create_connection((hostname, port), timeout=timeout) as sock:
-                with ctx.wrap_socket(sock, server_hostname=hostname) as tls:
-                    cert = tls.getpeercert()
-                    not_after = cert.get('notAfter')
-                    if not not_after:
-                        return -1
-                    # 用 email 标准解析（兼容 GMT 等时区名），避免 strptime %Z 在 3.12+ 解析失败
-                    exp = email.utils.parsedate_to_datetime(not_after)
-                    if exp is None:
-                        return -1
-                    return (exp - datetime.now(timezone.utc)).days
-        except Exception:
-            continue
-    return -1
+    for target, pp in candidates:
+        for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+            try:
+                with socket.create_connection((target, pp), timeout=timeout) as sock:
+                    with ctx.wrap_socket(sock, server_hostname=hostname) as tls:
+                        cert = tls.getpeercert()
+                        not_after = cert.get('notAfter')
+                        if not not_after:
+                            errs.append('%s:%s 证书无 notAfter' % (target, pp))
+                            continue
+                        # 未验证模式下确认证书确实属于该域名，防误取
+                        if ctx.verify_mode == ssl.CERT_NONE and not _cert_matches_hostname(cert, hostname):
+                            errs.append('%s:%s 证书不匹配 %s（未验证回退）' % (target, pp, hostname))
+                            continue
+                        # 用 email 标准解析（兼容 GMT 等时区名），避免 strptime %Z 在 3.12+ 解析失败
+                        exp = email.utils.parsedate_to_datetime(not_after)
+                        if exp is None:
+                            errs.append('%s:%s notAfter 解析失败: %s' % (target, pp, not_after))
+                            continue
+                        return (exp - datetime.now(timezone.utc)).days, None
+            except Exception as e:
+                errs.append('%s:%s %s: %s' % (target, pp, type(e).__name__, str(e)[:80]))
+                continue
+    # 去重保序，太长截断
+    return -1, '; '.join(dict.fromkeys(errs))[:220] or '未知原因'
 
 
 def probe_url(url, timeout=5):
@@ -831,9 +881,11 @@ def probe_url(url, timeout=5):
             code = e.code
         latency = int((time.time() - start) * 1000)
         # http/https 目标统一尝试取证书天数：http 站点通常 301 到 https，443 往往有证书；
-        # 取不到时 _ssl_cert_days 返回 -1，不影响探测结果
-        cert_days = _ssl_cert_days(hostname, port)
+        # 取不到时 cert_days=-1，不影响探测结果，原因挂在 detail 上便于排查
+        cert_days, cert_err = _ssl_cert_days(hostname, port)
         ok = 200 <= code < 400
+        if cert_days < 0 and cert_err:
+            return ok, latency, cert_days, 'HTTP %d | SSL:%s' % (code, cert_err)
         return ok, latency, cert_days, 'HTTP %d' % code
     except Exception as e:
         latency = int((time.time() - start) * 1000)
