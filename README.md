@@ -26,7 +26,7 @@ blog/
 ├── data/                   # 数据库与数据（blog.db、posts.json）
 ├── posts/                  # Markdown 文章源文件
 ├── static/                 # 静态资源（CSS / JS / 图片）
-└── templates/              # Jinja2 模板
+└── templates/              # Jinja2 模板（default 为内置默认主题，新主题放独立子目录）
 ```
 
 ## 环境要求
@@ -106,6 +106,17 @@ sudo systemctl restart blog
 - 评论、上传等文件保存在根目录 `uploads/` 下。
 
 ## 版本更新日志
+
+### v1.3.0
+
+- **多主题系统**：前台支持多套主题，后台「博客设置 → 外观与主题」卡片式一键切换，选择后**立即生效，无需重启服务**。主题为「样式 + 模板」两级：`theme.css` 可覆盖默认样式（推荐用 CSS 变量换肤），同名模板可整体重排页面（例如用 `posts.html` 覆盖默认文章列表页）
+- **主题目录结构变更**：内置默认主题迁移至 `templates/default/`（原 `templates/` 下所有模板整体移入）；新主题放在 `templates/<主题名>/` 文件夹即可被后台自动识别。单个主题文件夹可选内容：
+  - `info.json`：主题元数据（`name` 展示名 / `author` / `description` / `version`）
+  - `theme.css`：覆盖默认样式，推荐用 `:root` CSS 变量换肤（见 `static/css/style.css` 的变量定义）
+  - 同名模板：整体覆盖默认页面结构（如 `index.html`、`posts.html`）
+  - `preview.png`：后台选择卡片上的主题预览图（可选，缺省显示主题色球）
+- **主题机制细节**：模板按「活动主题 → default」两级回退，主题模板优先；切换主题或手动改库后模板缓存自动同步，无需重启；`theme_static` 路由带扩展名白名单与目录穿越防护；`TEMPLATES_AUTO_RELOAD` 已开启，主题文件改动免重启生效
+- 随包附带示例主题 `templates/example/`（暖橙配色，纯 theme.css 变量换肤），可复制该目录作为开发新主题的起点。主题开发教程详见 [DEPLOY.md](./DEPLOY.md)
 
 ### v1.2.10
 

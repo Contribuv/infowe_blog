@@ -20,6 +20,10 @@
     <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', t='v' ~ version) }}">
+    {% if active_theme != 'default' and theme_has_css %}
+    <!-- 主题样式：在默认样式之后加载，可覆盖 CSS 变量或任意样式 -->
+    <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/theme.css', t='v' ~ version) }}">
+    {% endif %}
     <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
     <!-- 社交分享：Open Graph + Twitter Card -->
     <meta property="og:site_name" content="{{ blog_name }}">

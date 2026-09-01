@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.2.10'
+VERSION = '1.3.0'
 
 import os
 import re
@@ -64,8 +64,116 @@ import werkzeug.security as ws
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, render_template, abort, request, redirect, url_for, session, flash, jsonify, send_from_directory, send_file
+from jinja2 import FileSystemLoader
 
-app = Flask(__name__)
+
+# ─────────────── 主题系统（v1.3.0）───────────────
+# 主题放在 templates/<主题名>/ 下（每个主题一个文件夹，与模板同级）：
+#   info.json        （可选）{name, author, description, version}
+#   theme.css        （可选）样式覆盖，前台在默认样式之后加载
+#   同名模板         （可选）覆盖默认主题的页面结构（如 base.html、index.html）
+#   preview.png      （可选）后台主题列表预览图
+# 默认主题为 templates/default/（系统内置）。
+# 后台「博客设置 → 外观与主题」选择后立即生效（无需重启）。
+# 开发新主题：复制 templates/default/ 为模板底稿，放入自定义 theme.css / 模板即可。
+# 注意：BASE_DIR 在下方才定义，这里用 __file__ 自行推导模板根目录。
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+DEFAULT_THEME_NAME = 'default'
+
+
+def list_themes():
+    """扫描 templates/ 下的主题文件夹，返回 [{key,name,author,description,version,has_preview}]。
+    default 为内置主题（templates/default）。"""
+    themes = [{'key': 'default', 'name': '系统默认', 'author': 'infowe',
+               'description': '内置样式与模板', 'version': VERSION, 'has_preview': False}]
+    if not os.path.isdir(TEMPLATE_DIR):
+        return themes
+    for name in sorted(os.listdir(TEMPLATE_DIR)):
+        d = os.path.join(TEMPLATE_DIR, name)
+        if not os.path.isdir(d) or name.startswith('.') or name == DEFAULT_THEME_NAME:
+            continue
+        info = {}
+        infof = os.path.join(d, 'info.json')
+        if os.path.isfile(infof):
+            try:
+                with open(infof, encoding='utf-8') as f:
+                    info = json.load(f)
+            except Exception:
+                info = {}
+        themes.append({
+            'key': name,
+            'name': info.get('name') or name,
+            'author': info.get('author', ''),
+            'description': info.get('description', ''),
+            'version': info.get('version', ''),
+            'has_preview': os.path.isfile(os.path.join(d, 'preview.png')),
+        })
+    return themes
+
+
+def _active_theme_key():
+    """当前启用的主题 key（default 表示内置主题）。"""
+    return app.config.get('active_theme') or 'default'
+
+
+_LAST_THEME_KEY = [None]
+
+
+def _sync_theme_cache():
+    """主题变化时清空 Jinja 模板缓存，保证同名模板（如 index.html）切换后立即重载。
+    任何方式（后台选择、手动改库、导入设置）改变主题都会在下一请求生效。"""
+    key = _active_theme_key()
+    if _LAST_THEME_KEY[0] != key:
+        _LAST_THEME_KEY[0] = key
+        try:
+            app.jinja_env.cache.clear()
+        except Exception:
+            pass
+
+
+def _theme_has_css(key=None):
+    """当前启用主题是否提供 theme.css（前台默认样式之后的追加覆盖）。"""
+    key = key or _active_theme_key()
+    if key == DEFAULT_THEME_NAME:
+        return False
+    return os.path.isfile(os.path.join(TEMPLATE_DIR, key, 'theme.css'))
+
+
+class ThemeLoader(FileSystemLoader):
+    """主题模板加载器：优先从当前启用主题的文件夹加载同名模板，
+    未命中时回退默认主题模板（templates/default），实现“主题可整体覆盖页面结构”。"""
+
+    def __init__(self, flask_app):
+        self._flask_app = flask_app
+        FileSystemLoader.__init__(self, '')
+
+    def get_source(self, environment, template):
+        base = os.path.join(self._flask_app.root_path,
+                            self._flask_app.template_folder or 'templates')
+        theme = self._flask_app.config.get('active_theme') or 'default'
+        paths = []
+        tp = os.path.join(base, theme)
+        # 活动主题目录优先（default 主题直接命中默认目录，无需重复加入）
+        if theme != DEFAULT_THEME_NAME and os.path.isdir(tp):
+            paths.append(tp)
+        paths.append(os.path.join(base, DEFAULT_THEME_NAME))
+        self.searchpath = paths
+        return FileSystemLoader.get_source(self, environment, template)
+
+
+class ThemedFlask(Flask):
+    """启用主题模板覆盖的 Flask 应用：模板查找顺序 = 主题模板 → 默认主题模板。
+    注：Flask 3.x 通过 jinja_loader property 取得模板加载器（create_jinja_loader
+    已不再被调用），因此这里直接覆写该 property。"""
+
+    @property
+    def jinja_loader(self):
+        return ThemeLoader(self)
+
+
+app = ThemedFlask(__name__)
+# 模板按文件 mtime 自动重载：后台切换主题无需重启，生产环境同样生效
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 # secret_key 优先从环境变量读取（部署时务必设置 BLOG_SECRET_KEY），
 # 避免源码中硬编码导致 session 被伪造。fallback 仅在本地开发时使用。
 app.secret_key = os.environ.get('BLOG_SECRET_KEY', 'infowe-blog-secret-key-2024')
@@ -423,8 +531,13 @@ migrate_uploads()
 def load_settings():
     db = get_db()
     rows = db.execute("SELECT key, value FROM settings").fetchall()
+    keys = set()
     for row in rows:
         app.config[row['key']] = row['value']
+        keys.add(row['key'])
+    # 主题设置已从库中移除时回退内置默认主题，避免残留旧值导致无法还原
+    if 'active_theme' not in keys:
+        app.config.pop('active_theme', None)
     db.close()
 
 
@@ -1845,6 +1958,28 @@ def db_delete_comment(comment_id):
 
 # ─────────────── 全局上下文 ───────────────
 
+@app.route('/themes/<path:filename>')
+def theme_static(filename):
+    """主题静态资源（theme.css、preview.png 等），从 templates/ 主题文件夹发送。
+    仅允许静态资源扩展名，且不允许访问 default 内置主题内部。"""
+    if filename.startswith(DEFAULT_THEME_NAME + '/'):
+        abort(404)
+    if not filename.lower().endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif',
+                                      '.webp', '.svg', '.ico', '.woff', '.woff2',
+                                      '.ttf', '.otf')):
+        abort(404)
+    return send_from_directory(TEMPLATE_DIR, filename)
+
+
+@app.before_request
+def _before_theme_sync():
+    """每次请求最早阶段：加载最新设置并同步主题变化的模板缓存。
+    放在 before_request 是因为 context_processor 在模板加载之后才执行，
+    那时清缓存已来不及（本请求会命中旧主题的模板）。"""
+    load_settings()
+    _sync_theme_cache()
+
+
 @app.context_processor
 def inject_globals():
     load_settings()
@@ -1869,6 +2004,10 @@ def inject_globals():
         'all_tags': db_get_all_tags(),
         'links': db_load_links(),
         'version': VERSION,
+        # 主题系统：当前启用主题 + 全部可选主题 + 当前主题是否带 theme.css
+        'active_theme': _active_theme_key(),
+        'themes': list_themes(),
+        'theme_has_css': _theme_has_css(),
         # 后台页面才检测更新（有缓存，前台不受网络影响）
         'upgrade_check': _upgrade_info,
         'upgrade_available': bool(_upgrade_info and _upgrade_info['version'] > parse_version(VERSION)),
@@ -2867,6 +3006,21 @@ def admin_settings():
         save_setting('comments_enabled', comments_on)
         app.config['comments_enabled'] = comments_on
 
+        # 主题切换：仅允许 list_themes() 中存在的 key，切换后清空 Jinja 模板缓存立即生效
+        new_theme = request.form.get('active_theme', '')
+        if new_theme:
+            valid_keys = {t['key'] for t in list_themes()}
+            if new_theme in valid_keys:
+                save_setting('active_theme', new_theme)
+                app.config['active_theme'] = new_theme
+                try:
+                    app.jinja_env.cache.clear()
+                except Exception:
+                    pass
+                flash('主题已切换为：' + new_theme, 'success')
+            else:
+                flash('无效的主题：' + new_theme, 'error')
+
         db = get_db()
         cur_user = session.get('admin_username', 'admin')
         # 修改管理员账号名
@@ -2925,7 +3079,9 @@ def admin_settings():
     return render_template('admin/settings.html',
                            admin_username=session.get('admin_username', 'admin'),
                            admin_avatar=app.config.get('avatar', ''),
-                           avatar_exists=_avatar_file_exists())
+                           avatar_exists=_avatar_file_exists(),
+                           themes=list_themes(),
+                           active_theme=_active_theme_key())
 
 
 # ─────────────── 数据导出与备份 ───────────────

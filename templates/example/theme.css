@@ -1,0 +1,76 @@
+/* ==============================================
+   示例主题「暖橙」— 仅覆盖设计令牌实现整站换肤
+   加载时机：默认 style.css 之后（后台选择后前台自动应用）
+   覆盖原理：改写 :root 上的 CSS 变量（颜色/阴影等），
+   无需触碰任何组件样式；亮色模式单独用
+   [data-theme="light"] 段落覆盖（用户切换亮/暗时依旧生效）。
+   ============================================== */
+
+/* —— 暗色模式（默认跟随系统）—— */
+:root {
+  --bg:             #221a12;
+  --bg-raised:      #2f2417;
+  --bg-surface:     #3a2c1c;
+  --bg-hover:       #453420;
+  --text:           #f6efdf;
+  --text-secondary: #cbb79a;
+  --text-tertiary:  #947f5e;
+  --accent:        #e8853d;
+  --accent-soft:   #d97706;
+  --accent-warm:   #e0586e;
+  --accent-green:  #3eb489;
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-strong:  rgba(255, 255, 255, 0.14);
+  --code-bg:        rgba(0, 0, 0, 0.35);
+
+  /* 项目徽章（暖色系） */
+  --badge-lang-bg:         rgba(232, 133, 61, 0.08);
+  --badge-lang-color:      #e8853d;
+  --badge-star-bg:         rgba(217, 119, 6, 0.10);
+  --badge-star-color:      #f59e0b;
+  --badge-featured-bg:     rgba(239, 68, 68, 0.08);
+  --badge-featured-color:  #dc2626;
+  --badge-custom-bg:       rgba(217, 119, 6, 0.14);
+  --badge-custom-color:    #f59e0b;
+  --badge-custom-border:   rgba(217, 119, 6, 0.30);
+
+  /* 圆角：改用更圆润的造型 */
+  --r-sm: 8px;
+  --r:    14px;
+  --r-lg: 20px;
+}
+
+/* —— 亮色模式（用户手动切换）—— */
+[data-theme="light"] {
+  --bg:             #faf3e8;
+  --bg-raised:      #ffffff;
+  --bg-surface:     #fffaf2;
+  --bg-hover:       #f3ead9;
+  --text:           #4a3720;
+  --text-secondary: #8a7252;
+  --text-tertiary:  #b8a184;
+  --accent:        #d97b2f;
+  --accent-soft:   #b45309;
+  --accent-warm:   #dc5a6b;
+  --accent-green:  #2f9d75;
+  --border:         rgba(120, 90, 40, 0.12);
+  --border-strong:  rgba(120, 90, 40, 0.20);
+  --code-bg:        rgba(120, 90, 40, 0.06);
+  --overlay:        rgba(60, 40, 10, 0.4);
+
+  --badge-lang-bg:         rgba(217, 123, 47, 0.12);
+  --badge-lang-color:      #c25e1a;
+  --badge-star-bg:         rgba(217, 119, 6, 0.12);
+  --badge-star-color:      #c26a09;
+  --badge-featured-bg:     rgba(220, 38, 38, 0.08);
+  --badge-featured-color:  #dc2626;
+  --badge-custom-bg:       rgba(217, 119, 6, 0.12);
+  --badge-custom-color:    #c26a09;
+  --badge-custom-border:   rgba(217, 119, 6, 0.25);
+}
+
+/* —— 品牌点缀：主页 Hero 的渐变强调 —— */
+.home-hero .hero-badge,
+.brand-mark {
+  background: linear-gradient(135deg, #e8853d, #d97706) !important;
+}

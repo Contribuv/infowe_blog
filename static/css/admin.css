@@ -1470,3 +1470,81 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
   .upgrade-banner .btn { width: 100%; }
 }
 
+/* ——— 外观与主题：主题卡片网格（后台设置） ——— */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+.theme-item {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.theme-item:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
+  transform: translateY(-2px);
+}
+.theme-item.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.theme-preview {
+  height: 110px;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.theme-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.theme-preview-empty {
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.theme-info {
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.theme-name {
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.theme-badge {
+  font-size: var(--fz-xs);
+  font-weight: 500;
+  color: #fff;
+  background: var(--primary);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.theme-author {
+  font-size: var(--fz-sm);
+  color: var(--text-secondary);
+}
+.theme-desc {
+  font-size: var(--fz-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
