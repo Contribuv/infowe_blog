@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% from "_macros.html" import breadcrumb %}
+{% block title %}开源项目{% endblock %}
+{% block content %}
+{{ breadcrumb([{"text":"项目"}]) }}
+<section class="projects-page">
+    <header class="page-header">
+        <h1 class="page-title">
+            <span class="title-prefix">{{ icon('braces', 20) | safe }}</span> 开源项目
+        </h1>
+        <p class="page-desc">我创建和维护的开源项目，涵盖 {{ languages|length }} 种编程语言</p>
+    </header>
+
+    {% if projects %}
+    <!-- 语言统计（可点击筛选） -->
+    <div class="lang-stats">
+        <span class="lang-badge lang-badge-all is-active" data-lang="__all__">全部 <span class="lang-count">{{ projects|length }}</span></span>
+        {% for lang, count in languages.items() %}
+        <span class="lang-badge" data-lang="{{ lang }}">{{ lang }} <span class="lang-count">{{ count }}</span></span>
+        {% endfor %}
+    </div>
+
+    <!-- 项目列表 -->
+    <div class="projects-grid">
+        {% for project in projects %}
+        <article class="project-card" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 80 }}" data-langs="{{ project.lang_names }}">
+            <!-- 顶部 meta：Stars / 语言数量 / 精选 -->
+            <div class="project-meta">
+                <span class="project-meta-item" title="Stars">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    {{ project.stars }}
+                </span>
+                <span class="project-meta-item" title="开发语言">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    {{ (project.lang_list | length) if project.lang_list else (1 if project.language else 0) }} 种
+                </span>
+                {% if project.featured %}
+                <span class="project-featured">精选</span>
+                {% endif %}
+            </div>
+
+            <!-- 标题 -->
+            <h2 class="project-title-row">
+                <svg class="project-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                {% if project.url %}
+                <a href="{{ project.url }}" target="_blank" rel="noopener" class="project-name">{{ project.name }}</a>
+                {% else %}
+                <span class="project-name">{{ project.name }}</span>
+                {% endif %}
+            </h2>
+
+            <!-- 描述 -->
+            {% if project.description %}
+            <p class="project-desc">{{ project.description }}</p>
+            {% endif %}
+
+            <!-- 底部：开发语言 + 查看项目 -->
+            <div class="project-bottom">
+                <div class="project-badges">
+                    {% set langs = project.lang_list if project.lang_list else [] %}
+                    {% if langs %}
+                    {% for l in langs %}
+                    <span class="project-lang">
+                        <span class="lang-dot" style="--lang-color: {{ l[2] }};"></span>
+                        {{ l[0] }} <span class="lang-pct">{{ l[1] }}%</span>
+                    </span>
+                    {% endfor %}
+                    {% elif project.language %}
+                    <span class="project-lang">
+                        <span class="lang-dot" style="--lang-color: {{ lang_color(project.language) }};"></span>
+                        {{ project.language }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% if project.url %}
+                <a href="{{ project.url }}" target="_blank" rel="noopener" class="project-link-btn">
+                    查看项目 {{ icon('arrow-right', 14) | safe }}
+                </a>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+        </div>
+        <h3>暂无项目</h3>
+        <p>开源项目正在整理中，敬请期待...</p>
+    </div>
+    {% endif %}
+</section>
+<script>
+(function () {
+  var badges = document.querySelectorAll('.lang-stats .lang-badge');
+  var cards = document.querySelectorAll('.projects-grid .project-card');
+  if (!badges.length || !cards.length) return;
+  function applyFilter(lang) {
+    badges.forEach(function (b) {
+      b.classList.toggle('is-active', b.getAttribute('data-lang') === lang);
+    });
+    cards.forEach(function (c) {
+      var langs = (c.getAttribute('data-langs') || '').split(',').filter(Boolean);
+      var show = lang === '__all__' || langs.indexOf(lang) !== -1;
+      c.style.display = show ? '' : 'none';
+    });
+  }
+  badges.forEach(function (b) {
+    b.addEventListener('click', function () {
+      applyFilter(b.getAttribute('data-lang'));
+    });
+  });
+})();
+</script>
+{% endblock %}

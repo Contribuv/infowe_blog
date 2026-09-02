@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}博客历程{% endblock %}
+{% block admin_content %}
+
+<div class="page-header">
+    <h2>{{ icon('git-commit', 20) | safe }} 博客历程 <span class="badge">{{ items|length }}</span></h2>
+    <a href="{{ url_for('admin_timeline_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加历程</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, msg in messages %}
+<div class="flash-msg flash-{{ category }}">{{ msg }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+{% if items %}
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th style="width:8%">排序</th>
+                <th style="width:15%">日期</th>
+                <th style="width:52%">内容</th>
+                <th style="width:25%">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for it in items %}
+            <tr>
+                <td data-label="排序">{{ it.sort_order }}</td>
+                <td data-label="日期"><strong>{{ it.date }}</strong></td>
+                <td class="desc-cell" data-label="内容">{{ it.content[:80] }}</td>
+                <td data-label="操作">
+                    <div class="btn-group">
+                        <a href="{{ url_for('admin_timeline_edit', item_id=it.id) }}" class="btn btn-sm">编辑</a>
+                        <form method="POST" action="{{ url_for('admin_timeline_delete', item_id=it.id) }}"
+                              style="display:inline" onsubmit="return confirm('确定删除这条历程？')">
+                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>暂无历程，点击右上角添加</p>
+</div>
+{% endif %}
+
+{% endblock %}

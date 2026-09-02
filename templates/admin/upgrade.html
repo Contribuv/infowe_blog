@@ -1,0 +1,127 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}系统升级{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('rocket', 20) | safe }} 系统升级</h2>
+    <a href="#" id="upgrade-recheck" class="btn btn-secondary">{{ icon('history', 14, 'icon-sm') | safe }} 重新检测</a>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for cat, msg in messages %}
+<div class="flash-msg flash-{{ cat }}"><span>{{ msg }}</span><span class="flash-close" onclick="this.parentElement.remove()">{{ icon('x', 14) | safe }}</span></div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">{{ icon('file-text', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">v{{ current_version }}</span>
+            <span class="stat-label">当前版本</span>
+        </div>
+    </div>
+    <div class="stat-card stat-projects">
+        <div class="stat-icon">{{ icon('rocket', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value" id="upgrade-latest">…</span>
+            <span class="stat-label">最新版本</span>
+        </div>
+    </div>
+</div>
+
+<!-- 版本检测结果：由 JS 异步填充 -->
+<div id="upgrade-result"></div>
+
+<div class="card">
+    <div class="card-header"><h3>升级说明</h3></div>
+    <ul class="upgrade-help">
+        <li><strong>数据安全：</strong>升级前自动备份数据库与上传文件到 <code>backups/upgrade_时间_版本/</code>。文章中、分类、评论、设置等数据保留不变。</li>
+        <li><strong>不覆盖内容：</strong><code>data/</code>、<code>uploads/</code>、<code>posts/</code>、<code>backups/</code> 目录不会被新代码覆盖。</li>
+        <li><strong>生效方式：</strong>代码文件替换后需<strong>重启服务</strong>生效（systemd 请执行 <code>systemctl restart blog</code>；本地开发重启 <code>python app.py</code>）。</li>
+        <li><strong>回滚：</strong>如升级后异常，可用备份目录中的 <code>blog.db</code> 与 <code>uploads/</code> 恢复，或重新部署上一版本源码。</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    var resultBox = document.getElementById('upgrade-result');
+    var latestBox = document.getElementById('upgrade-latest');
+    var recheckBtn = document.getElementById('upgrade-recheck');
+
+    // 内联 SVG 图标（与后端 icon() 一致）
+    function svgIcon(name, size) {
+        var paths = {
+            'check-circle': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path>',
+            'history': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path>',
+            'external-link': '<path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>',
+            'download': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>'
+        };
+        var p = paths[name] || paths['history'];
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+    }
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function render(d) {
+        latestBox.textContent = d.ok && d.latest_version ? 'v' + d.latest_version : '-';
+        if (!d.ok) {
+            resultBox.innerHTML =
+                '<div class="card">' +
+                '<div class="card-header"><h3>' + svgIcon('history', 18) + ' 未能获取版本信息</h3></div>' +
+                '<p class="text-muted">无法连接 GitHub（可能网络受限或触发了 API 限流）。可稍后重试，或直接访问最新 Releases 页面。</p>' +
+                '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 打开 Releases 页面</a>' +
+                '</div>';
+            return;
+        }
+        if (d.upgradable) {
+            var notes = '';
+            if (d.published_at) notes += '<p class="text-muted">发布于 ' + esc(d.published_at) + '</p>';
+            if (d.body) notes += '<div class="upgrade-notes"><h4>更新内容</h4><pre class="upgrade-body">' + esc(d.body) + '</pre></div>';
+            resultBox.innerHTML =
+                '<div class="card">' +
+                '<div class="card-header"><h3>' + svgIcon('check-circle', 18) + ' 发现新版本 v' + esc(d.latest_version) +
+                ' <span class="badge badge-available" style="background:rgba(46,155,112,.12);color:var(--success);">可升级</span></h3></div>' +
+                notes +
+                '<div class="upgrade-actions">' +
+                '<form method="POST" action="{{ url_for("admin_upgrade") }}" onsubmit="return confirm(\'升级将自动备份数据（数据库与上传文件），然后用 v' + esc(d.latest_version) + ' 覆盖程序代码（文章、上传、备份目录不受影响）。完成后需重启服务。确定升级吗？\')">' +
+                '<button type="submit" class="btn btn-primary">' + svgIcon('download', 16, 'icon-sm') + ' 备份数据并一键升级</button></form>' +
+                '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 在 GitHub 查看</a>' +
+                '</div></div>';
+        } else {
+            resultBox.innerHTML =
+                '<div class="card">' +
+                '<div class="card-header"><h3>' + svgIcon('check-circle', 18) + ' 已是最新版本</h3></div>' +
+                '<p class="text-muted">当前 v' + esc(d.current_version) + ' 已是最新版本。</p>' +
+                '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 查看 Releases</a>' +
+                '</div>';
+        }
+    }
+
+    function check(force) {
+        latestBox.textContent = '…';
+        resultBox.innerHTML =
+            '<div class="card"><div class="card-header"><h3>' + svgIcon('history', 18) + ' 正在检测新版本…</h3></div>' +
+            '<p class="text-muted">正在连接 GitHub 查询最新版本，请稍候。</p></div>';
+        fetch('{{ url_for("admin_upgrade_check") }}' + (force ? '?force=1' : ''))
+            .then(function (r) { return r.json(); })
+            .then(render)
+            .catch(function () {
+                render({ ok: false, release_url: 'https://github.com/Contribuv/infowe_blog/releases/latest' });
+            });
+    }
+
+    recheckBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        check(true);
+    });
+    check(false);
+})();
+</script>
+{% endblock %}

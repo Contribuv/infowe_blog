@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}友情链接{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">友情链接</h1>
+    <p class="tech-page-desc">共 {{ links|length }} 个友链 · <a href="/links/apply">申请友链</a></p>
+</div>
+
+{% if links %}
+<div class="tech-links">
+    <div class="tech-links-grid">
+        {% for link in links %}
+        <a href="{{ link.url }}" target="_blank" rel="noopener" class="tech-link-card">
+            {% if link.avatar %}
+            <img class="tech-link-avatar" src="{{ link.avatar }}" alt="{{ link.name }}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <span class="tech-link-avatar" style="display: none;">{{ link.name[0] | upper }}</span>
+            {% else %}
+            <span class="tech-link-avatar">{{ link.name[0] | upper }}</span>
+            {% endif %}
+            <span class="tech-link-info">
+                <span class="tech-link-name">{{ link.name }}</span>
+                {% if link.description %}<span class="tech-link-desc">{{ link.description }}</span>{% endif %}
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="tech-empty">
+    <div class="tech-empty-icon">🔗</div>
+    <h3>暂无友链</h3>
+    <p><a href="/links/apply">申请成为第一个友链</a></p>
+</div>
+{% endif %}
+{% endblock %}

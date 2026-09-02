@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_macros.html" import breadcrumb %}
+{% block title %}标签{% endblock %}
+{% block content %}
+{{ breadcrumb([{"text":"标签"}]) }}
+<section class="tags-page">
+    <header class="page-header">
+        <h1 class="page-title">
+            <span class="title-prefix">{{ icon('tag', 20) | safe }}</span> 文章标签
+        </h1>
+        <p class="page-desc">共 {{ all_tags|length }} 个标签，点击查看相关文章</p>
+    </header>
+
+    {% if all_tags %}
+    <div class="tags-cloud">
+        {% for tag, count in all_tags.items() %}
+        <a href="/?tag={{ tag }}" class="tag-cloud-item" data-aos="zoom-in" data-aos-delay="{{ loop.index0 * 40 }}">
+            <span class="tag-name"># {{ tag }}</span>
+            <span class="tag-count">{{ count }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">{{ icon('tag', 44) | safe }}</div>
+        <h3>暂无标签</h3>
+        <p>发表文章后，标签会自动出现在这里</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ post.title }}{% endblock %}
+{% block tw_title %}{{ post.title }}{% endblock %}
+{% block og_description %}{{ (post.excerpt or blog_subtitle) }}{% endblock %}
+{% block tw_description %}{{ (post.excerpt or blog_subtitle) }}{% endblock %}
+{% block og_url %}{{ request.url }}{% endblock %}
+{% block og_image %}{% if post.cover %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block tw_image %}{% if post.cover %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block content %}
+<article>
+    <!-- 文章头部 -->
+    <header class="tech-post-header">
+        <h1 class="tech-post-title-lg">{{ post.title }}</h1>
+        <div class="tech-post-meta-lg">
+            <time datetime="{{ post.created_at[:10] }}">{{ post.created_at[:10] }}</time>
+            {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
+            <span>{{ post.read_time }} 分钟阅读</span>
+            <span>{{ post.views }} 次浏览</span>
+        </div>
+        <div class="tech-post-tags-lg">
+            {% for tag in post.tags %}
+            <a href="/?tag={{ tag }}" class="tech-tag">{{ tag }}</a>
+            {% endfor %}
+        </div>
+    </header>
+
+    <!-- 目录下拉（有标题时显示） -->
+    {% if toc %}
+    <details class="tech-toc">
+        <summary class="tech-toc-summary">目录</summary>
+        <div class="tech-toc-body">{{ toc | safe }}</div>
+    </details>
+    {% endif %}
+
+    <!-- 文章内容 -->
+    <div class="tech-post-body">
+        {{ content | safe }}
+    </div>
+
+    <!-- 文章底部 -->
+    <footer class="tech-post-footer">
+        <div style="display: flex; gap: 10px;">
+            <button class="tech-btn" onclick="copyUrl()" data-title="{{ post.title }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                分享
+            </button>
+            <button class="tech-btn" onclick="history.back()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                返回
+            </button>
+        </div>
+        <span class="tech-license">本文采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener">CC BY-NC-SA 4.0</a> 许可协议</span>
+    </footer>
+</article>
+
+<!-- 上一篇 / 下一篇 -->
+{% if prev_post or next_post %}
+<nav class="tech-post-pager" aria-label="文章导航">
+    {% if prev_post %}
+    <a href="/post/{{ prev_post.id }}" class="tech-pager-link">
+        <span class="tech-pager-dir">← 上一篇</span>
+        <span class="tech-pager-title">{{ prev_post.title }}</span>
+    </a>
+    {% else %}
+    <span class="tech-pager-link tech-pager-empty"></span>
+    {% endif %}
+    {% if next_post %}
+    <a href="/post/{{ next_post.id }}" class="tech-pager-link tech-pager-next">
+        <span class="tech-pager-dir">下一篇 →</span>
+        <span class="tech-pager-title">{{ next_post.title }}</span>
+    </a>
+    {% else %}
+    <span class="tech-pager-link tech-pager-empty"></span>
+    {% endif %}
+</nav>
+{% endif %}
+
+<!-- 相关文章 -->
+{% if related %}
+<section class="tech-related">
+    <h2 class="tech-related-title">相关推荐</h2>
+    <ul class="tech-related-list">
+        {% for rp in related %}
+        <li class="tech-related-item">
+            <a href="/post/{{ rp.id }}">{{ rp.title }}</a>
+            <div class="tech-related-meta">{{ rp.created_at[:10] }} · {{ rp.read_time }} 分钟</div>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+{% endif %}
+
+<!-- 评论区（后台关闭评论时整块不显示） -->
+{% if comments_enabled %}
+<section class="tech-comments">
+    <h2 class="tech-comments-title">评论 ({{ comments|length }})</h2>
+
+    {% if comments %}
+    <div>
+        {% for c in comments %}
+        <div class="tech-comment-item">
+            <div class="tech-comment-avatar">{{ c.author[0] | upper }}</div>
+            <div class="tech-comment-body">
+                <div class="tech-comment-head">
+                    <span class="tech-comment-author">{{ c.author }}</span>
+                    <time class="tech-comment-time">{{ c.created_at[:16] }}</time>
+                </div>
+                <p class="tech-comment-content">{{ c.content }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="tech-comments-empty">还没有评论，来抢沙发吧~</p>
+    {% endif %}
+
+    <form class="tech-comment-form" method="POST" action="/post/{{ post.id }}/comment">
+        <input type="text" name="author" class="tech-input" placeholder="昵称（选填）" maxlength="30">
+        <textarea name="content" class="tech-textarea" placeholder="写下你的想法..." maxlength="2000" required></textarea>
+        <button type="submit" class="tech-btn tech-btn-primary">提交评论</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* 分享：支持 Web Share API 的环境（移动端/微信 iOS/抖音等）调起系统分享，否则复制标题+URL */
+function copyUrl() {
+    var btn = document.querySelector('.tech-post-footer .tech-btn');
+    var title = (btn && btn.dataset.title) ? btn.dataset.title : document.title;
+    var url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(function () {});
+        return;
+    }
+    var text = title + '\n' + url;
+    navigator.clipboard.writeText(text).then(function () {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '已复制';
+        setTimeout(function () { btn.innerHTML = orig; }, 2000);
+    });
+}
+
+(function () {
+    'use strict';
+    var content = document.querySelector('.tech-post-body');
+    if (!content) return;
+
+    /* 1. 视频 / iframe 包 16:9 容器 */
+    content.querySelectorAll('video, iframe').forEach(function (el) {
+        if (el.parentElement && el.parentElement.classList.contains('media-wrap')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'media-wrap';
+        el.parentNode.insertBefore(wrap, el);
+        wrap.appendChild(el);
+    });
+
+    /* 2. 代码块：包容器 + 复制按钮 + 高亮（highlight.min.js 为 defer，DOMContentLoaded 时已就绪） */
+    document.addEventListener('DOMContentLoaded', function () {
+        content.querySelectorAll('pre').forEach(function (pre) {
+            var wrap = document.createElement('div');
+            wrap.className = 'code-wrap';
+            pre.parentNode.insertBefore(wrap, pre);
+            wrap.appendChild(pre);
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'code-copy';
+            btn.textContent = '复制';
+            btn.setAttribute('aria-label', '复制代码');
+            wrap.appendChild(btn);
+            btn.addEventListener('click', function () {
+                var code = pre.querySelector('code');
+                var text = code ? code.innerText : pre.innerText;
+                navigator.clipboard.writeText(text).then(function () {
+                    btn.textContent = '已复制';
+                    setTimeout(function () { btn.textContent = '复制'; }, 2000);
+                });
+            });
+        });
+        if (window.hljs) {
+            content.querySelectorAll('pre code').forEach(function (block) {
+                hljs.highlightElement(block);
+            });
+        }
+    });
+})();
+
+/* 浏览计数：页面可见且停留满 5 秒才上报一次；同一会话内刷新不重复计数 */
+(function () {
+    var postId = {{ post.id }};
+    var minMs = 5000;
+    var key = 'post_viewed_' + postId;
+    if (sessionStorage.getItem(key)) return;
+    var acc = 0;
+    var timer = setInterval(function () {
+        if (document.hidden) return;
+        acc += 1000;
+        if (acc >= minMs) {
+            clearInterval(timer);
+            sessionStorage.setItem(key, '1');
+            var url = '/post/' + postId + '/view';
+            try {
+                fetch(url, { method: 'POST', keepalive: true });
+            } catch (e) {
+                if (navigator.sendBeacon) navigator.sendBeacon(url);
+            }
+        }
+    }, 1000);
+})();
+</script>
+{% endblock %}

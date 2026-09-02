@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}{% if item %}编辑历程{% else %}添加历程{% endif %}{% endblock %}
+{% block admin_content %}
+<h2>{% if item %}编辑历程{% else %}添加博客历程{% endif %}</h2>
+
+<form method="POST" class="edit-form">
+    <div class="form-group">
+        <label>日期 <span class="required">*</span></label>
+        <input type="text" name="date" value="{{ item.date if item else '' }}" required class="form-input" placeholder="如: 2026.07">
+    </div>
+    <div class="form-group">
+        <label>内容 <span class="required">*</span></label>
+        <textarea name="content" rows="3" required class="form-input" placeholder="如: infowe 正式上线，发布第一篇文章">{{ item.content if item else '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label>排序（数字越小越靠前）</label>
+        <input type="number" name="sort_order" value="{{ item.sort_order if item else 0 }}" class="form-input" min="0">
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <a href="{{ url_for('admin_timeline') }}" class="btn btn-cancel">取消</a>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% from "_macros.html" import breadcrumb %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ post.title }}{% endblock %}
+{% block tw_title %}{{ post.title }}{% endblock %}
+{% block og_description %}{{ (post.summary or blog_subtitle) }}{% endblock %}
+{% block tw_description %}{{ (post.summary or blog_subtitle) }}{% endblock %}
+{% block og_url %}{{ request.url }}{% endblock %}
+{% if post.cover %}{% block og_image %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% endblock %}{% endif %}
+{% if post.cover %}{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% endblock %}{% endif %}
+{% block content %}
+<div class="post-page{% if not comments_enabled %} comments-off{% endif %}">
+{{ breadcrumb([{"url":"/posts","text":"文章"},{"text":post.title,"title":post.title}]) }}
+<article class="post-detail">
+    <!-- 文章头部 -->
+    <header class="post-header">
+        <div class="post-header-meta">
+            <div class="post-meta-row">
+                <time datetime="{{ post.created_at[:10] }}">{{ icon('calendar', 14, 'icon-sm') | safe }} {{ post.created_at[:10] }}</time>
+                {% if post.category_name %}
+                <span>{{ icon('folder', 14, 'icon-sm') | safe }} {{ post.category_name }}</span>
+                {% endif %}
+                <span>{{ icon('clock', 14, 'icon-sm') | safe }} {{ post.read_time }} 分钟阅读</span>
+                <span>{{ icon('eye', 14, 'icon-sm') | safe }} {{ post.views }} 次浏览</span>
+            </div>
+        </div>
+        <h1 class="post-title">{{ post.title }}</h1>
+        <div class="post-tags-row">
+            {% for tag in post.tags %}
+            <a href="/?tag={{ tag }}" class="tag tag-large">{{ tag }}</a>
+            {% endfor %}
+        </div>
+    </header>
+
+    <!-- 目录下拉（有标题时显示） -->
+    {% if toc %}
+    <details class="post-toc">
+        <summary class="post-toc-summary">目录</summary>
+        <div class="post-toc-body">{{ toc | safe }}</div>
+    </details>
+    {% endif %}
+
+    <!-- 文章内容 -->
+    <div class="post-content markdown-body post-card">
+        {{ content | safe }}
+    </div>
+
+    <!-- 文章底部 -->
+    <footer class="post-footer">
+        <div class="post-footer-actions">
+            <button class="share-btn" onclick="copyUrl()" title="复制链接" data-title="{{ post.title }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                分享文章
+            </button>
+            <button class="share-btn" onclick="history.back()" title="返回">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                返回
+            </button>
+        </div>
+        <div class="post-license">
+            <p>本文采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议</p>
+        </div>
+    </footer>
+</article>
+
+<!-- 上一篇 / 下一篇 -->
+{% if prev_post or next_post %}
+<nav class="post-pager" aria-label="文章导航">
+    {% if prev_post %}
+    <a href="/post/{{ prev_post.id }}" class="pager-link pager-prev">
+        <span class="pager-dir">{{ icon('arrow-left', 14, 'icon-sm') | safe }} 上一篇</span>
+        <span class="pager-title">{{ prev_post.title }}</span>
+    </a>
+    {% else %}
+    <span class="pager-link pager-empty"></span>
+    {% endif %}
+    {% if next_post %}
+    <a href="/post/{{ next_post.id }}" class="pager-link pager-next">
+        <span class="pager-dir">下一篇 {{ icon('arrow-right', 14, 'icon-sm') | safe }}</span>
+        <span class="pager-title">{{ next_post.title }}</span>
+    </a>
+    {% else %}
+    <span class="pager-link pager-empty"></span>
+    {% endif %}
+</nav>
+{% endif %}
+
+<!-- 图片 Lightbox 浮窗 -->
+<div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="lightbox-close" id="lbClose" aria-label="关闭">&times;</button>
+    <button class="lightbox-nav lightbox-prev" id="lbPrev" aria-label="上一张">&#8249;</button>
+    <img class="lightbox-img" id="lbImg" src="" alt="">
+    <button class="lightbox-nav lightbox-next" id="lbNext" aria-label="下一张">&#8250;</button>
+    <span class="lightbox-count" id="lbCount"></span>
+</div>
+
+<!-- 相关文章 -->
+{% if related %}
+<section class="related-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            {{ icon('arrow-up-right', 18) | safe }} 相关推荐
+        </h2>
+    </div>
+    <div class="posts-grid related-grid">
+        {% for rp in related %}
+        <article class="post-card" data-aos="fade-up">
+            <div class="card-glow"></div>
+            <div class="card-inner">
+                <div class="card-meta">
+                    <time class="card-date">{{ rp.created_at[:10] }}</time>
+                    <span class="card-read-time">{{ rp.read_time }} 分钟</span>
+                </div>
+                <h3 class="card-title">
+                    <a href="/post/{{ rp.id }}">{{ rp.title }}</a>
+                </h3>
+                <p class="card-excerpt">{{ rp.excerpt }}</p>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- 评论区 -->
+{% if comments_enabled %}
+<section class="comments-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            {{ icon('message-circle', 18) | safe }} 评论 ({{ comments|length }})
+        </h2>
+    </div>
+
+    {% if comments %}
+    <div class="comments-list">
+        {% for c in comments %}
+        <div class="comment-item">
+            <div class="comment-avatar">{{ c.author[0] | upper }}</div>
+            <div class="comment-body">
+                <div class="comment-header">
+                    <span class="comment-author">{{ c.author }}</span>
+                    <time class="comment-time">{{ c.created_at[:16] }}</time>
+                </div>
+                <p class="comment-content">{{ c.content }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="comments-empty">
+        <p>还没有评论，来抢沙发吧~</p>
+    </div>
+    {% endif %}
+
+    <!-- 评论表单 -->
+    <form class="comment-form" method="POST" action="/post/{{ post.id }}/comment">
+        <div class="comment-form-row">
+            <input type="text" name="author" class="comment-input" placeholder="昵称（选填）" maxlength="30">
+        </div>
+        <div class="comment-form-row">
+            <textarea name="content" class="comment-textarea" placeholder="写下你的想法..." maxlength="2000" required></textarea>
+        </div>
+        <div class="comment-form-actions">
+            <button type="submit" class="comment-submit-btn">提交评论</button>
+        </div>
+    </form>
+</section>
+{% else %}
+<section class="comments-section comments-closed">
+    <div class="comments-empty">
+        <p>{{ icon('lock', 18) | safe }} 评论功能已关闭</p>
+    </div>
+</section>
+{% endif %}
+</div><!-- /.post-page -->
+
+<script>
+function copyUrl() {
+    const btn = document.querySelectorAll('.share-btn')[0];
+    const title = (btn && btn.dataset.title) ? btn.dataset.title : document.title;
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(() => {});
+        return;
+    }
+    const text = title + '\n' + url;
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 已复制';
+        setTimeout(() => btn.innerHTML = orig, 2000);
+    });
+}
+
+(function () {
+    const content = document.querySelector('.post-content');
+    if (!content) return;
+
+    /* 1. 视频/iframe 包 16:9 容器 */
+    content.querySelectorAll('video, iframe').forEach(el => {
+        if (el.parentElement && el.parentElement.classList.contains('media-wrap')) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'media-wrap';
+        el.parentNode.insertBefore(wrap, el);
+        wrap.appendChild(el);
+    });
+
+    /* 1.5 代码块复制按钮（包 .code-wrap 容器，按钮固定右上角不随代码滚动） */
+    content.querySelectorAll('pre').forEach(pre => {
+        const wrap = document.createElement('div');
+        wrap.className = 'code-wrap';
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'code-copy';
+        btn.textContent = '复制';
+        btn.setAttribute('aria-label', '复制代码');
+        wrap.appendChild(btn);
+        btn.addEventListener('click', () => {
+            const code = pre.querySelector('code');
+            const text = code ? code.innerText : pre.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = '已复制';
+                setTimeout(() => btn.textContent = '复制', 2000);
+            });
+        });
+    });
+
+    /* 2. 图片 Lightbox */
+    const imgs = Array.from(content.querySelectorAll('img'));
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lbImg');
+    const lbCount = document.getElementById('lbCount');
+    let current = 0;
+
+    function show(i) {
+        current = (i + imgs.length) % imgs.length;
+        lbImg.src = imgs[current].src;
+        lbImg.alt = imgs[current].alt || '';
+        lbCount.textContent = (imgs.length > 1) ? (current + 1) + ' / ' + imgs.length : '';
+    }
+    function open(i) {
+        show(i);
+        lb.classList.add('open');
+        lb.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+    function close() {
+        lb.classList.remove('open');
+        lb.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    imgs.forEach((img, i) => {
+        img.addEventListener('click', (e) => { e.preventDefault(); open(i); });
+    });
+    document.getElementById('lbClose').addEventListener('click', close);
+    document.getElementById('lbPrev').addEventListener('click', () => show(current - 1));
+    document.getElementById('lbNext').addEventListener('click', () => show(current + 1));
+    lb.addEventListener('click', (e) => { if (e.target === lb) close(); });
+    document.addEventListener('keydown', (e) => {
+        if (!lb.classList.contains('open')) return;
+        if (e.key === 'Escape') close();
+        else if (e.key === 'ArrowLeft') show(current - 1);
+        else if (e.key === 'ArrowRight') show(current + 1);
+    });
+})();
+</script>
+
+<script>
+// 浏览计数：页面可见且停留满 5 秒才上报一次（秒开秒关、切后台不计）；同一会话内刷新不重复计数
+(function () {
+    var postId = {{ post.id }};
+    var minMs = 5000;
+    var key = 'post_viewed_' + postId;
+    if (sessionStorage.getItem(key)) return;   // 本会话已计过（含刷新），直接跳过
+    var acc = 0;
+    var timer = setInterval(function () {
+        if (document.hidden) return;           // 切到后台/其他标签页时不计时
+        acc += 1000;
+        if (acc >= minMs) {
+            clearInterval(timer);
+            sessionStorage.setItem(key, '1');  // 先标记再上报，避免重复触发
+            var url = '/post/' + postId + '/view';
+            try {
+                fetch(url, { method: 'POST', keepalive: true });   // keepalive：页面关闭也能完成上报
+            } catch (e) {
+                if (navigator.sendBeacon) navigator.sendBeacon(url);
+            }
+        }
+    }, 1000);
+})();
+</script>
+{% endblock %}

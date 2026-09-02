@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}外观与主题{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>主题管理</h2>
+    <span class="page-desc">选择一套主题应用到前台，保存后立即生效，无需重启服务。
+        当前使用：<strong>{{ active_theme }}</strong></span>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for cat, msg in messages %}
+<div class="flash-msg flash-{{ cat }}"><span>{{ msg }}</span><span class="flash-close" onclick="this.parentElement.remove()">{{ icon('x', 14) | safe }}</span></div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<form method="POST" class="themes-page">
+    <div class="theme-grid theme-grid-lg">
+        {% for t in themes %}
+        <label class="theme-item{{ ' active' if t.key == active_theme }}">
+            <input type="radio" name="active_theme" value="{{ t.key }}"
+                   {{ 'checked' if t.key == active_theme else '' }} hidden>
+            <span class="theme-preview">
+                {% if t.has_preview %}
+                <img src="{{ url_for('theme_static', filename=t.key ~ '/preview.png') }}" alt="{{ t.name }} 预览" loading="lazy">
+                {% else %}
+                <span class="theme-preview-empty">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
+                </span>
+                {% endif %}
+            </span>
+            <span class="theme-info">
+                <span class="theme-name">{{ t.name }}
+                    {% if t.key == active_theme %}<span class="theme-badge">使用中</span>{% endif %}
+                </span>
+                {% if t.author %}<span class="theme-author">作者：{{ t.author }}</span>{% endif %}
+                {% if t.version %}<span class="theme-author">版本：v{{ t.version }}</span>{% endif %}
+                {% if t.description %}<span class="theme-desc">{{ t.description }}</span>{% endif %}
+            </span>
+        </label>
+        {% else %}
+        <div class="card"><div class="card-header"><h3>未找到主题</h3></div>
+            <p>在 <code>templates/</code> 下创建主题文件夹后，刷新本页即可看到。</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="themes-actions">
+        <button type="submit" class="btn btn-primary">应用所选主题</button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">返回面板</a>
+    </div>
+
+    <div class="card themes-help">
+        <div class="card-header"><h3>如何制作 / 安装新主题</h3></div>
+        <p class="themes-help-tip">
+            在项目 <code>templates/</code> 下新建一个文件夹（如 <code>templates/mytheme/</code>），上传以下文件即可，保存后本页自动识别：
+        </p>
+        <ul class="themes-help-list">
+            <li><code>theme.css</code> —— 覆盖默认配色。推荐改写 <code>static/css/style.css</code> 中定义的 CSS 变量（如 <code>--accent</code>、<code>--bg</code>）实现一键换肤；</li>
+            <li>同名模板 —— 整体重排页面结构。如 <code>index.html</code>、<code>posts.html</code>，优先级高于默认主题；</li>
+            <li><code>info.json</code>（可选）—— 元数据：<code>{"name": "主题名", "author": "作者", "description": "简介", "version": "1.0.0"}</code>；</li>
+            <li><code>preview.png</code>（可选）—— 本页展示的主题预览图（缺省显示调色板图标）。</li>
+        </ul>
+        <p class="themes-help-tip">复制 <code>templates/default/</code> 作为底稿是最快的上手方式。修改模板 / theme.css 后无需重启，刷新前台即可看到效果。</p>
+    </div>
+</form>
+{% endblock %}

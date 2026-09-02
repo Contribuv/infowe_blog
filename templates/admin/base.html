@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block admin_title %}管理后台{% endblock %} - {{ blog_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <!-- 浏览器 chrome 颜色（默认暗色，JS 按需修正） -->
+    <meta name="theme-color" content="#0f1117">
+    <!-- 防白屏闪烁：关键内联样式 + 同步设置 data-theme + 修正 theme-color -->
+    <style>html{background:#f5f5f5}html[data-theme="dark"]{background:#0f1117}</style>
+    <script>
+    (function(){var t=localStorage.getItem('infowe-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);var m=document.querySelector('meta[name="theme-color"]');if(m&&t==='light')m.setAttribute('content','#f5f5f5');})();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='v' ~ version ~ '-sel') }}">
+    {% block admin_head %}{% endblock %}
+</head>
+<body>
+    <!-- 移动端顶部栏 -->
+    <header class="admin-topbar">
+        <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="打开菜单">
+            <span class="hamburger"></span>
+        </button>
+        <a href="{{ url_for('admin_dashboard') }}" class="topbar-brand">
+            <span class="brand-bracket">&lt;</span>{{ blog_name }}<span class="brand-bracket">/&gt;</span>
+        </a>
+        <button type="button" id="admin-theme-toggle" class="topbar-theme" aria-label="切换主题">
+            <span class="theme-icon-dark">{{ icon('moon', 20) | safe }}</span>
+            <span class="theme-icon-light">{{ icon('sun', 20) | safe }}</span>
+        </button>
+        <a href="{{ url_for('admin_logout') }}" class="topbar-logout" aria-label="退出登录">{{ icon('log-out', 20) | safe }}</a>
+    </header>
+
+    <!-- 遮罩 -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="admin-layout">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-brand">
+                <a href="/" class="brand-link">
+                    <span class="brand-bracket">&lt;</span>{{ blog_name }}<span class="brand-bracket">/&gt;</span>
+                </a>
+                <span class="brand-badge">Admin</span>
+                <button type="button" class="sidebar-close" id="sidebarClose" aria-label="关闭菜单">{{ icon('x', 22) | safe }}</button>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-group">
+                    <span class="nav-group-title">内容运营</span>
+                    <a href="{{ url_for('admin_dashboard') }}" class="nav-item {% if request.path == '/admin/dashboard' %}active{% endif %}">
+                        {{ icon('layout-dashboard', 20, 'nav-icon') | safe }} 博客面板
+                    </a>
+                    <a href="{{ url_for('admin_posts') }}" class="nav-item {% if request.path.startswith('/admin/posts') %}active{% endif %}">
+                        {{ icon('file-text', 20, 'nav-icon') | safe }} 文章管理
+                    </a>
+                    <a href="{{ url_for('admin_categories') }}" class="nav-item {% if request.path.startswith('/admin/categories') %}active{% endif %}">
+                        {{ icon('tag', 20, 'nav-icon') | safe }} 文章分类
+                    </a>
+                    <a href="{{ url_for('admin_comments') }}" class="nav-item {% if request.path == '/admin/comments' %}active{% endif %}">
+                        {{ icon('message-circle', 20, 'nav-icon') | safe }} 评论管理
+                    </a>
+                </div>
+                <div class="nav-group">
+                    <span class="nav-group-title">站点模块</span>
+                    <a href="{{ url_for('admin_projects') }}" class="nav-item {% if request.path.startswith('/admin/projects') %}active{% endif %}">
+                        {{ icon('folder', 20, 'nav-icon') | safe }} 项目管理
+                    </a>
+                    <a href="{{ url_for('admin_links') }}" class="nav-item {% if request.path.startswith('/admin/links') %}active{% endif %}">
+                        {{ icon('link', 20, 'nav-icon') | safe }} 友情链接
+                    </a>
+                    <a href="{{ url_for('admin_timeline') }}" class="nav-item {% if request.path.startswith('/admin/timeline') %}active{% endif %}">
+                        {{ icon('calendar', 20, 'nav-icon') | safe }} 博客历程
+                    </a>
+                </div>
+                <div class="nav-group">
+                    <span class="nav-group-title">系统</span>
+                    <a href="{{ url_for('admin_settings') }}" class="nav-item {% if request.path == '/admin/settings' %}active{% endif %}">
+                        {{ icon('settings', 20, 'nav-icon') | safe }} 博客设置
+                    </a>
+                    <a href="{{ url_for('admin_themes') }}" class="nav-item {% if request.path.startswith('/admin/themes') %}active{% endif %}">
+                        {{ icon('palette', 20, 'nav-icon') | safe }} 主题管理
+                    </a>
+                    <a href="{{ url_for('admin_export') }}" class="nav-item {% if request.path == '/admin/export' %}active{% endif %}">
+                        {{ icon('database', 20, 'nav-icon') | safe }} 数据管理
+                    </a>
+                    <a href="{{ url_for('admin_status') }}" class="nav-item {% if request.path.startswith('/admin/status') %}active{% endif %}">
+                        {{ icon('zap', 20, 'nav-icon') | safe }} 服务时效
+                    </a>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/" class="nav-item">
+                    {{ icon('home', 20, 'nav-icon') | safe }} 返回首页
+                </a>
+                <button type="button" id="sidebar-theme-toggle" class="nav-item nav-theme-toggle" aria-label="切换主题">
+                    <span class="nav-icon theme-icon-dark">{{ icon('moon', 20, 'nav-icon') | safe }}</span>
+                    <span class="nav-icon theme-icon-light">{{ icon('sun', 20, 'nav-icon') | safe }}</span>
+                    <span class="nav-theme-label">切换颜色</span>
+                </button>
+                <a href="{{ url_for('admin_logout') }}" class="nav-item nav-danger">
+                    {{ icon('log-out', 20, 'nav-icon') | safe }} 退出登录
+                </a>
+            </div>
+            <a class="sidebar-version" href="{{ url_for('admin_upgrade') }}" title="点击查看系统更新">
+                <span class="version-text">infowe Blog <span class="ver-num">v{{ version }}</span></span>
+                {% if upgrade_available %}
+                <span class="upgrade-dot">{{ icon('rocket', 14) | safe }} 有新版</span>
+                {% endif %}
+            </a>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            {% block admin_content %}{% endblock %}
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin.js', t='v' ~ version) }}"></script>
+    {% block admin_scripts %}{% endblock %}
+</body>
+</html>

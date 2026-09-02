@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ '编辑分类' if category else '新建分类' }}{% endblock %}
+
+{% block admin_content %}
+<div class="admin-content">
+  <div class="content-header">
+    <h1 class="content-title">{{ '编辑分类' if category else '新建分类' }}</h1>
+    <a href="{{ url_for('admin_categories') }}" class="btn btn-secondary">返回列表</a>
+  </div>
+
+  <div class="admin-card">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash-msg flash-{{ category }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="post-form">
+      <div class="form-row">
+        <label class="form-label" for="name">分类名称 <span class="req">*</span></label>
+        <input type="text" id="name" name="name" class="input-lg"
+               value="{{ category.name if category else '' }}" placeholder="如：技术随笔" required>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label" for="slug">Slug（留空自动生成）</label>
+        <input type="text" id="slug" name="slug" class="input-lg"
+               value="{{ category.slug if category else '' }}" placeholder="如：tech-notes">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label" for="sort_order">排序（数字越小越靠前）</label>
+        <input type="number" id="sort_order" name="sort_order" class="input-lg"
+               value="{{ category.sort_order if category else 0 }}">
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <a href="{{ url_for('admin_categories') }}" class="btn btn-secondary">取消</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

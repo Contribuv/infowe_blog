@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% from "_macros.html" import breadcrumb %}
+{% block title %}关于{% endblock %}
+{% block content %}
+{{ breadcrumb([{"text":"关于"}]) }}
+<section class="about-page">
+    <header class="page-header">
+        <h1 class="page-title">
+            <span class="title-prefix">{{ icon('at-sign', 20) | safe }}</span> 关于我
+        </h1>
+    </header>
+
+    <div class="about-grid">
+        <!-- 个人信息卡片 -->
+        <div class="about-card profile-card" data-aos="fade-right">
+            <div class="profile-avatar">
+                {% if config.get('avatar') %}
+                <img class="avatar-img" src="{{ config.get('avatar') }}" alt="{{ author }} 的头像">
+                {% else %}
+                <div class="avatar-placeholder">
+                    {{ icon('code', 32) | safe }}
+                </div>
+                {% endif %}
+            </div>
+            <h2 class="profile-name">{{ author }}</h2>
+            <p class="profile-bio">{{ author_bio.replace('\n', '<br>') | safe }}</p>
+            <div class="profile-social">
+                {% if social_github %}
+                <a href="{{ social_github }}" target="_blank" rel="noopener" class="social-link">GitHub</a>
+                {% endif %}
+                {% if contact_email %}
+                <a href="mailto:{{ contact_email }}" class="social-link">Email</a>
+                {% endif %}
+                <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener" class="social-link">RSS</a>
+            </div>
+        </div>
+
+        <!-- 技能卡片 -->
+        <div class="about-card skills-card" data-aos="fade-left">
+            <h2 class="card-heading">
+                <span class="heading-icon">{{ icon('zap', 18) | safe }}</span> 技术栈
+            </h2>
+            <div class="skills-grid">
+                {% for skill in skills %}
+                <div class="skill-tag" style="--sl: {{ skill.level }}%">
+                    <span class="skill-tag-name">{{ skill.name }}</span>
+                    <span class="skill-tag-level">{{ skill.level }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 博客介绍 -->
+        <div class="about-card intro-card" data-aos="fade-up">
+            <h2 class="card-heading">
+                <span class="heading-icon">{{ icon('file-text', 18) | safe }}</span> 关于这个网站
+            </h2>
+            <div class="intro-content">
+                {% if about_intro %}
+                <div class="intro-rich">{{ about_intro | safe }}</div>
+                {% else %}
+                <p>infowe 是一个专注于 Python 生态的独立技术博客</p>
+                <p>博客使用 <strong>Flask</strong> 构建，文章以 <strong>Markdown</strong> 编写。</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 时间线 -->
+        <div class="about-card timeline-card" data-aos="fade-up">
+            <h2 class="card-heading">
+                <span class="heading-icon">{{ icon('history', 18) | safe }}</span> 网站历程
+            </h2>
+            <div class="timeline">
+                {% for ev in timeline %}
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content">
+                        <span class="timeline-date">{{ ev.date }}</span>
+                        <p>{{ ev.content }}</p>
+                    </div>
+                </div>
+                {% else %}
+                <p class="timeline-empty">暂无历程记录</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

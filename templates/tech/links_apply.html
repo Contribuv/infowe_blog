@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}申请友链{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">申请友链</h1>
+    <p class="tech-page-desc">交换友链，一起成长。请先添加本站链接，再提交申请。</p>
+</div>
+
+<div class="tech-form">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="tech-flash tech-flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/links/apply">
+        <div class="tech-form-row">
+            <input type="text" name="name" class="tech-input" placeholder="网站名称 *" maxlength="50" required>
+            <input type="url" name="url" class="tech-input" placeholder="网站地址 https:// *" maxlength="200" required>
+        </div>
+        <input type="url" name="avatar" class="tech-input" placeholder="头像地址（选填）" maxlength="500">
+        <input type="email" name="email" class="tech-input" placeholder="联系邮箱（选填）" maxlength="100">
+        <textarea name="description" class="tech-textarea" placeholder="一句话介绍你的网站（选填）" maxlength="200"></textarea>
+        <button type="submit" class="tech-btn tech-btn-primary">提交申请</button>
+    </form>
+</div>
+{% endblock %}

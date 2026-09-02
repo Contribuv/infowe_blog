@@ -1,0 +1,203 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}博客设置{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>博客设置</h2>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for cat, msg in messages %}
+<div class="flash-msg flash-{{ cat }}"><span>{{ msg }}</span><span class="flash-close" onclick="this.parentElement.remove()">{{ icon('x', 14) | safe }}</span></div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<form method="POST" enctype="multipart/form-data" class="settings-form">
+    <div class="settings-col">
+        <!-- 管理员：账号 + 头像 + 密码 -->
+        <div class="card">
+            <div class="card-header"><h3>管理员</h3></div>
+            <div class="form-group">
+                <label>账号名</label>
+                <input type="text" name="admin_username" class="input-text"
+                       value="{{ admin_username }}" placeholder="登录用户名" autocomplete="username">
+                <span class="form-hint">修改后将自动更新当前登录会话。</span>
+            </div>
+            <div class="form-group">
+                <label>头像</label>
+                <div class="avatar-edit">
+                    <div class="avatar-preview">
+                        {% if admin_avatar and avatar_exists %}
+                        <img src="{{ admin_avatar }}" alt="头像" id="avatar_img">
+                        {% else %}
+                        <span class="avatar-preview-empty">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span class="avatar-hint">未设置头像</span>
+                        {% endif %}
+                    </div>
+                    <div class="avatar-upload">
+                        <input type="file" name="avatar_file" id="avatar_file" accept="image/*" hidden>
+                        <label for="avatar_file" class="btn btn-outline btn-sm">选择图片</label>
+                        <span class="form-hint" id="avatar_filename">建议正方形图片，保存到 /uploads/avatar/</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" name="new_password" class="input-text"
+                       placeholder="留空表示不修改，至少6位字符" minlength="6" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label>联系邮箱</label>
+                <input type="email" name="contact_email" class="input-text"
+                       value="{{ config.get('contact_email', '') }}"
+                       placeholder="如: hello@yourdomain.com">
+            </div>
+        </div>
+
+        <!-- 站点信息：前台展示配置 -->
+        <div class="card">
+            <div class="card-header"><h3>站点信息</h3></div>
+            <div class="form-group">
+                <label>博客名称</label>
+                <input type="text" name="blog_name" class="input-text"
+                       value="{{ blog_name }}" placeholder="你的博客名称">
+            </div>
+            <div class="form-group">
+                <label>副标题</label>
+                <input type="text" name="blog_subtitle" class="input-text"
+                       value="{{ blog_subtitle }}" placeholder="一句话描述你的博客">
+            </div>
+            <div class="form-group">
+                <label>首页标题（留空则用站点名）</label>
+                <input type="text" name="home_title" class="input-text"
+                       value="{{ home_title }}" placeholder="如：用 Flask 手搓的极简博客">
+            </div>
+            <div class="form-group">
+                <label>首页最多显示文章数</label>
+                <input type="number" name="home_posts_count" class="input-text"
+                       value="{{ home_posts_count if home_posts_count is defined else '6' }}" min="1" max="50">
+                <span class="form-hint">精选文章排在前面，其余按最新文章补足，总数不超过该值。</span>
+            </div>
+            <div class="form-group">
+                <label>文章列表每页条数</label>
+                <input type="number" name="posts_per_page" class="input-text"
+                       value="{{ posts_per_page if posts_per_page is defined else '20' }}" min="1" max="100">
+                <span class="form-hint">前台「文章」列表页每页显示的文章数量，超过则分页（默认 20）。</span>
+            </div>
+            <div class="form-group">
+                <label>评论功能</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="comments_enabled" value="1"{{ ' checked' if comments_enabled|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后前台文章页显示评论区；关闭后前台不显示且提交评论将被拦截。</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-col">
+        <!-- 博主资料：个人介绍 + 社交 -->
+        <div class="card">
+            <div class="card-header"><h3>博主资料</h3></div>
+            <div class="form-group">
+                <label>博主名称</label>
+                <input type="text" name="author" class="input-text"
+                       value="{{ author }}" placeholder="你的名字">
+            </div>
+            <div class="form-group">
+                <label>博主简介</label>
+                <textarea name="author_bio" class="textarea-sm" rows="3" placeholder="简短的自我介绍">{{ author_bio }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>GitHub 用户名</label>
+                <input type="text" name="github_username" class="input-text"
+                       value="{{ config.get('github_username', '') }}"
+                       placeholder="如: torvalds">
+            </div>
+            <div class="form-group">
+                <label>GitHub 主页</label>
+                <input type="text" name="social_github" class="input-text"
+                       value="{{ config.get('social_github', '') }}"
+                       placeholder="如: https://github.com/username">
+                <span class="form-hint">前台"关于我"卡片的 GitHub 链接，留空则不显示</span>
+            </div>
+            <div class="form-group">
+                <label>GitHub Token（用于项目同步）</label>
+                <input type="password" name="github_token" class="input-text"
+                       value="{{ config.get('github_token', '') }}"
+                       placeholder="ghp_xxx 或 github_pat_xxx（仅用于同步私有仓库/提升限额）">
+                <span class="form-hint">用于在后台同步 GitHub 项目数据。配置后可访问私有仓库，并将 API 限额从匿名 60/小时 提升到 5000/小时。建议用仅含 <code>repo</code> 只读权限的 Token，留空则用匿名访问。</span>
+            </div>
+            <div class="form-hint" style="margin-top: var(--sp-3);">
+                RSS 链接自动生成（/feed.xml）。邮箱、GitHub 会用于前台"关于我"卡片展示。
+            </div>
+        </div>
+
+        <!-- 关于页面 + 备案信息 -->
+        <div class="card">
+            <div class="card-header"><h3>关于页面</h3></div>
+            <div class="form-group">
+                <label>博客介绍</label>
+                <textarea name="about_intro" class="textarea-sm" rows="4" placeholder="关于这个博客和你">{{ about_intro }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>技能列表</label>
+                <textarea name="skills" class="textarea-sm textarea-code" rows="6"
+                          placeholder='[{"name":"Python","level":95},{"name":"Flask","level":85}]'>{{ skills }}</textarea>
+                <span class="form-hint">JSON 格式，每项包含 name 和 level (0-100)</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3>备案信息</h3></div>
+            <div class="form-group">
+                <label>ICP 备案号（工信部）</label>
+                <input type="text" name="icp_beian" class="input-text"
+                       value="{{ config.get('icp_beian', '') }}"
+                       placeholder="如: 京ICP备2024000000号-1">
+            </div>
+            <div class="form-group">
+                <label>公安备案号</label>
+                <input type="text" name="police_beian" class="input-text"
+                       value="{{ config.get('police_beian', '') }}"
+                       placeholder="如: 京公网安备11010802000000号">
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">保存所有设置</button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">取消</a>
+    </div>
+</form>
+
+<script>
+  var _avatarInput = document.getElementById('avatar_file');
+  if (_avatarInput) {
+    _avatarInput.addEventListener('change', function () {
+      var tip = document.getElementById('avatar_filename');
+      tip.textContent = this.files.length ? this.files[0].name : '建议正方形图片，保存到 /uploads/avatar/';
+      // 即时预览
+      if (this.files.length && this.files[0].type.startsWith('image/')) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var prev = document.querySelector('.avatar-preview');
+          // 如果当前是空占位符，替换为 img
+          var empty = prev.querySelector('.avatar-preview-empty');
+          if (empty) {
+            empty.outerHTML = '<img src="' + e.target.result + '" alt="头像预览" id="avatar_img">';
+          } else {
+            var img = document.getElementById('avatar_img');
+            if (img) img.src = e.target.result;
+          }
+        };
+        reader.readAsDataURL(this.files[0]);
+      }
+    });
+  }
+</script>
+{% endblock %}
