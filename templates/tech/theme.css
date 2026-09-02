@@ -120,6 +120,13 @@ img { max-width: 100%; }
 }
 .tech-logo:hover { color: var(--accent); }
 .tech-logo:hover .tech-logo-bracket { color: var(--hl-title); }
+.tech-logo-blink {
+  animation: tech-blink 1.2s steps(2, start) infinite;
+}
+@keyframes tech-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 .tech-nav-links { display: flex; gap: 2px; }
 .tech-nav-link {
   padding: 8px 12px; font-size: 15px; color: var(--text-secondary);
@@ -127,7 +134,7 @@ img { max-width: 100%; }
 }
 .tech-nav-link:hover { color: var(--text); background: var(--bg-subtle); }
 .tech-nav-link.active { color: var(--accent); font-weight: 600; }
-.tech-nav-actions { display: flex; align-items: center; gap: 4px; margin-right: -10px; }
+.tech-nav-actions { display: flex; align-items: center; gap: 4px; }
 
 .tech-icon-btn {
   width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
@@ -655,9 +662,9 @@ img { max-width: 100%; }
 .tech-lang-link:hover { color: var(--accent); }
 .tech-lang-link.is-active { color: var(--accent); font-weight: 600; }
 .tech-project-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
-}
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
 .tech-project-card {
   display: flex; flex-direction: column; gap: 8px;
   padding: 18px 20px; min-width: 0;

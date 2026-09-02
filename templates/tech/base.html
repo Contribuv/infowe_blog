@@ -43,8 +43,7 @@
     <nav class="tech-nav" aria-label="主导航">
         <div class="tech-shell">
             <div class="tech-nav-inner">
-                <a href="/" class="tech-logo"><span class="tech-logo-bracket">&lt;</span>{{ blog_name }}<span class="tech-logo-bracket">/&gt;</span></a>
-                <div class="tech-nav-links">
+                <a href="/" class="tech-logo"><span class="tech-logo-bracket">&lt;</span>{{ blog_name }}<span class="tech-logo-bracket tech-logo-blink">/&gt;</span></a><div class="tech-nav-links">
                     <a href="/" class="tech-nav-link {% if request.path == '/' %}active{% endif %}">首页</a>
                     <a href="/posts" class="tech-nav-link {% if request.path == '/posts' %}active{% endif %}">文章</a>
                     <a href="/tags" class="tech-nav-link {% if request.path == '/tags' %}active{% endif %}">标签</a>
