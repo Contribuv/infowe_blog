@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}{% if current_tag %}{{ current_tag }}{% elif home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}{% endblock %}
+
+{% block content %}
+<!-- 玻璃 Hero 横幅：打字机宣言 + 搜索 + 统计 -->
+<section class="sg-hero sg-glass sg-reveal sg-hover-shine">
+    <span class="sg-hero-eyebrow">拾光 · 一个人的书房</span>
+    <h1 class="sg-hero-title">
+        <span class="sg-type" id="sg-type" aria-hidden="true"></span>
+        <span class="sg-caret" aria-hidden="true"></span>
+    </h1>
+    <p class="sg-hero-sub">{{ blog_subtitle }}</p>
+    <form class="sg-hero-search" action="/" method="GET" role="search">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="在这间书房里翻找点什么…" autocomplete="off">
+        {% if search_query %}
+        <button type="button" class="sg-search-clear" aria-label="清除搜索">{{ icon('x', 16) | safe }}</button>
+        {% endif %}
+        <button type="submit" class="sg-search-btn">{{ icon('search', 15) | safe }} 搜索</button>
+    </form>
+    <div class="sg-hero-stats">
+        <div class="sg-stat">
+            <span class="sg-stat-num" data-count="{{ total }}" data-suffix="">{{ total }}</span>
+            <span class="sg-stat-label">篇时光</span>
+        </div>
+        <div class="sg-stat">
+            <span class="sg-stat-num" data-count="{{ all_tags|length }}" data-suffix="">{{ all_tags|length }}</span>
+            <span class="sg-stat-label">枚便签</span>
+        </div>
+        <div class="sg-stat">
+            <span class="sg-stat-num" data-count="{{ total_categories }}" data-suffix="">{{ total_categories }}</span>
+            <span class="sg-stat-label">个分类</span>
+        </div>
+    </div>
+</section>
+
+<div class="sg-wrap">
+    <!-- 杂志式左右分栏 -->
+    <div class="sg-mag">
+        <div class="sg-mag-main">
+            <!-- 筛选状态提示 -->
+            {% if current_tag or search_query %}
+            <div class="sg-filters sg-glass sg-reveal">
+                <div class="sg-filter-row">
+                    {% if current_tag %}
+                    <span class="sg-filter-label">{{ icon('tag', 14, 'sg-ic') | safe }}</span>
+                    <span class="sg-filter-notice" style="margin:0">「{{ current_tag }}」便签下的 {{ total }} 页时光</span>
+                    <a class="sg-chip sg-filter-clear" href="/">{{ icon('x', 12) | safe }} 清除筛选</a>
+                    {% elif search_query %}
+                    <span class="sg-filter-label">{{ icon('search', 14, 'sg-ic') | safe }}</span>
+                    <span class="sg-filter-notice" style="margin:0">共找到 {{ total }} 篇关于「{{ search_query }}」的时光</span>
+                    <a class="sg-chip sg-filter-clear" href="/">{{ icon('x', 12) | safe }} 清除搜索</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if posts or featured %}
+                {% set lead = featured[0] if featured else posts[0] %}
+                {% if not current_tag and not search_query and lead %}
+                <!-- 头条大卡 -->
+                <article class="sg-lead sg-glass sg-reveal sg-hover-shine">
+                    {% if lead.is_featured %}
+                    <span class="sg-featured-badge">{{ icon('star', 12) | safe }} 精选</span>
+                    {% endif %}
+                    <div class="sg-lead-date">
+                        <span class="d">{{ lead.created_at[8:10] }}</span>
+                        <span class="m">{{ lead.created_at[5:7] }} 月</span>
+                    </div>
+                    <div class="sg-lead-body">
+                        <div class="sg-tag-row">
+                            {% for tag in lead.tags %}
+                            <a class="sg-tag" href="/?tag={{ tag }}">{{ tag }}</a>
+                            {% endfor %}
+                        </div>
+                        <h2 class="sg-lead-title"><a href="/post/{{ lead.id }}">{{ lead.title }}</a></h2>
+                        <p class="sg-lead-excerpt">{{ lead.excerpt }}</p>
+                        <div class="sg-lead-meta">
+                            <span>{{ icon('calendar', 13) | safe }} {{ lead.created_at[:10] }}</span>
+                            <span>{{ icon('clock', 13) | safe }} {{ lead.read_time }} 分钟</span>
+                            {% if lead.category_name %}
+                            <span>{{ icon('folder', 13) | safe }} {{ lead.category_name }}</span>
+                            {% endif %}
+                        </div>
+                        <a href="/post/{{ lead.id }}" class="sg-lead-more">
+                            翻开这一页 <span class="sg-arrow">{{ icon('arrow-right', 14) | safe }}</span>
+                        </a>
+                    </div>
+                </article>
+                {% endif %}
+
+                <!-- 报条式文章行 -->
+                <div class="sg-stream">
+                    {% if featured %}
+                        {% for post in featured[1:] %}
+                        {% include "_includes/_row.html" %}
+                        {% endfor %}
+                    {% endif %}
+                    {% for post in posts %}
+                    {% include "_includes/_row.html" %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- 空状态 -->
+                <div class="sg-empty sg-glass sg-reveal">
+                    <div class="sg-empty-icon">{{ icon('inbox', 40) | safe }}</div>
+                    <h3>书房还空着</h3>
+                    <p>笔还没落下，故事正在路上…</p>
+                    <a class="sg-btn" style="margin-top:10px" href="/admin">先去写一篇</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- 右侧纸片侧栏 -->
+        <aside class="sg-side">
+            <div class="sg-side-card sg-glass sg-reveal">
+                <h3 class="sg-side-title">{{ icon('at-sign', 16, 'sg-ic') | safe }} 书房主人</h3>
+                <div class="sg-mini-about">
+                    {% if avatar %}
+                    <img class="avatar-img" src="{{ avatar }}" alt="{{ author }}" loading="lazy">
+                    {% else %}
+                    <div class="sg-mini-avatar">{{ (author or '拾')[0] }}</div>
+                    {% endif %}
+                    <div>
+                        <p class="sg-mini-name">{{ author }}</p>
+                        <p class="sg-mini-bio">{{ author_bio }}</p>
+                    </div>
+                </div>
+                <div class="sg-mini-links">
+                    <a class="sg-mini-social" href="/about">{{ icon('arrow-right', 12) | safe }} 走近我</a>
+                    <a class="sg-mini-social" href="/nostalgia">{{ icon('history', 12) | safe }} 时光机</a>
+                </div>
+            </div>
+
+            <div class="sg-side-card sg-glass sg-reveal">
+                <h3 class="sg-side-title">{{ icon('tag', 16, 'sg-ic') | safe }} 便签墙</h3>
+                <div class="sg-mini-tags">
+                    {% for tag, count in (all_tags|dictsort(by='value', reverse=true))[:10] %}
+                    <a href="/?tag={{ tag }}" class="sg-tag">{{ tag }}<span class="sg-tag-count">{{ count }}</span></a>
+                    {% endfor %}
+                </div>
+                {% if all_tags|length > 10 %}
+                <a class="sg-mini-more" href="/tags">全部 {{ all_tags|length }} 枚便签 →</a>
+                {% endif %}
+            </div>
+
+            {% if links %}
+            <div class="sg-side-card sg-glass sg-reveal">
+                <h3 class="sg-side-title">{{ icon('link', 16, 'sg-ic') | safe }} 好友书架</h3>
+                <div class="sg-mini-friend">
+                    {% for link in links %}
+                    <a href="{{ link.url }}" target="_blank" rel="noopener">
+                        {{ icon('external-link', 13) | safe }} {{ link.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+                <a class="sg-mini-more" href="/links">全部友链 →</a>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 首页统计数字初始为 0，交由主题脚本从 0 数到目标值
+    (function () {
+        var nums = document.querySelectorAll('.sg-stat-num[data-count]');
+        nums.forEach(function (el) {
+            var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+            if (el.textContent !== String(target)) el.textContent = '0';
+        });
+    })();
+</script>
+{% endblock %}

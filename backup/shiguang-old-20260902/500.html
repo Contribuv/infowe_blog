@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}500{% endblock %}
+{% block content %}
+<section class="sg-error">
+    <div class="sg-error-card sg-glass">
+        <div class="sg-error-code">500</div>
+        <h2 class="sg-error-title">服务器打了个盹</h2>
+        <p class="sg-error-desc">
+            程序刚才卡了一下壳，多半是 Tea 喝少了。
+            错误我已经记在日志里，回头揪出来训一顿。
+        </p>
+        <div class="sg-error-path">Internal Server Error</div>
+        <div class="sg-error-actions">
+            <a href="/" class="sg-btn sg-btn-primary">{{ icon('arrow-left', 15) | safe }} 回书房</a>
+            {% if request.path.startswith('/admin') %}
+            <a href="/admin" class="sg-btn">{{ icon('layout-dashboard', 15) | safe }} 回后台</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

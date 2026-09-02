@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- 主题初始化：无闪烁跟随系统，用户手动切换后以 localStorage 优先 -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('infowe-theme');
+          if (saved === 'light' || saved === 'dark') {
+            document.documentElement.setAttribute('data-theme', saved);
+          } else {
+            var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/theme.css', t='v' ~ version) }}">
+    <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
+    <!-- 社交分享：Open Graph + Twitter Card -->
+    <meta property="og:site_name" content="{{ blog_name }}">
+    <meta property="og:title" content="{% block og_title %}{{ blog_name }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ blog_subtitle }}{% endblock %}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ request.url }}{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% block tw_title %}{{ blog_name }}{% endblock %}">
+    <meta name="twitter:description" content="{% block tw_description %}{{ blog_subtitle }}{% endblock %}">
+    <meta name="twitter:image" content="{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
+    {% if request.path.startswith('/post/') %}
+    <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
+    {% endif %}
+</head>
+<body>
+    <a href="#main-content" class="skip-link">跳到主要内容</a>
+
+    <!-- 导航 -->
+    <nav class="tech-nav" aria-label="主导航">
+        <div class="tech-shell">
+            <div class="tech-nav-inner">
+                <a href="/" class="tech-logo"><span class="tech-logo-bracket">&lt;</span>{{ blog_name }}<span class="tech-logo-bracket">/&gt;</span></a>
+                <div class="tech-nav-links">
+                    <a href="/" class="tech-nav-link {% if request.path == '/' %}active{% endif %}">首页</a>
+                    <a href="/posts" class="tech-nav-link {% if request.path == '/posts' %}active{% endif %}">文章</a>
+                    <a href="/tags" class="tech-nav-link {% if request.path == '/tags' %}active{% endif %}">标签</a>
+                    <a href="/projects" class="tech-nav-link {% if request.path == '/projects' %}active{% endif %}">项目</a>
+                    <a href="/links" class="tech-nav-link {% if request.path == '/links' %}active{% endif %}">友链</a>
+                    <a href="/about" class="tech-nav-link {% if request.path == '/about' %}active{% endif %}">关于</a>
+                    <a href="/status" class="tech-nav-link {% if request.path == '/status' %}active{% endif %}">状态</a>
+                    <a href="/admin" class="tech-nav-link {% if request.path.startswith('/admin') %}active{% endif %}">写作</a>
+                </div>
+                <div class="tech-nav-actions">
+                    <button class="tech-icon-btn" id="theme-toggle" aria-label="切换主题">
+                        <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </button>
+                    <button class="tech-icon-btn tech-burger" id="tech-burger" aria-label="打开菜单">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 移动端抽屉 -->
+    <div class="tech-drawer-overlay" id="tech-drawer-overlay"></div>
+    <aside class="tech-drawer" id="tech-drawer" aria-label="移动端菜单">
+        <div class="tech-drawer-head">
+            <span class="tech-drawer-title">{{ blog_name }}</span>
+            <button class="tech-drawer-close" id="tech-drawer-close" aria-label="关闭菜单">&times;</button>
+        </div>
+        <a href="/" class="tech-drawer-link {% if request.path == '/' %}active{% endif %}">首页</a>
+        <a href="/posts" class="tech-drawer-link {% if request.path == '/posts' %}active{% endif %}">文章</a>
+        <a href="/tags" class="tech-drawer-link {% if request.path == '/tags' %}active{% endif %}">标签</a>
+        <a href="/projects" class="tech-drawer-link {% if request.path == '/projects' %}active{% endif %}">项目</a>
+        <a href="/links" class="tech-drawer-link {% if request.path == '/links' %}active{% endif %}">友链</a>
+        <a href="/about" class="tech-drawer-link {% if request.path == '/about' %}active{% endif %}">关于</a>
+        <a href="/status" class="tech-drawer-link {% if request.path == '/status' %}active{% endif %}">状态</a>
+        <a href="/admin" class="tech-drawer-link {% if request.path.startswith('/admin') %}active{% endif %}">写作</a>
+    </aside>
+
+    <!-- 主内容 -->
+    <main class="tech-main" id="main-content">
+        <div class="tech-shell">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="tech-footer">
+        <div class="tech-shell">
+            <div class="tech-footer-inner">
+                <p class="tech-footer-copy">&copy; {{ now_year }} {{ blog_name }} · Powered by Flask</p>
+                <div class="tech-footer-links">
+                    <a href="/projects">开源项目</a>
+                    <a href="/links">友情链接</a>
+                    <a href="/about">关于我</a>
+                    <a href="/feed.xml">RSS</a>
+                </div>
+                {% if icp_beian or police_beian %}
+                <div class="tech-footer-beian">
+                    {% if icp_beian %}
+                    <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">{{ icp_beian }}</a>
+                    {% endif %}
+                    {% if police_beian %}
+                    <a href="https://beian.mps.gov.cn" target="_blank" rel="noopener">{{ police_beian }}</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </footer>
+
+    <!-- 回到顶部 -->
+    <button class="tech-top" id="tech-top" aria-label="回到顶部">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+
+    <script src="{{ url_for('theme_static', filename='tech/theme.js', t='v' ~ version) }}" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

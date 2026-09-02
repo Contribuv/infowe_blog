@@ -12,7 +12,7 @@
     <script>
     (function(){var t=localStorage.getItem('infowe-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);var m=document.querySelector('meta[name="theme-color"]');if(m&&t==='light')m.setAttribute('content','#f5f5f5');})();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='v' ~ version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='v' ~ version ~ '-sel') }}">
     {% block admin_head %}{% endblock %}
 </head>
 <body>
@@ -77,6 +77,9 @@
                     <a href="{{ url_for('admin_settings') }}" class="nav-item {% if request.path == '/admin/settings' %}active{% endif %}">
                         {{ icon('settings', 20, 'nav-icon') | safe }} 博客设置
                     </a>
+                    <a href="{{ url_for('admin_themes') }}" class="nav-item {% if request.path.startswith('/admin/themes') %}active{% endif %}">
+                        {{ icon('palette', 20, 'nav-icon') | safe }} 主题管理
+                    </a>
                     <a href="{{ url_for('admin_export') }}" class="nav-item {% if request.path == '/admin/export' %}active{% endif %}">
                         {{ icon('database', 20, 'nav-icon') | safe }} 数据管理
                     </a>
@@ -92,7 +95,7 @@
                 <button type="button" id="sidebar-theme-toggle" class="nav-item nav-theme-toggle" aria-label="切换主题">
                     <span class="nav-icon theme-icon-dark">{{ icon('moon', 20, 'nav-icon') | safe }}</span>
                     <span class="nav-icon theme-icon-light">{{ icon('sun', 20, 'nav-icon') | safe }}</span>
-                    <span class="nav-theme-label">切换主题</span>
+                    <span class="nav-theme-label">切换颜色</span>
                 </button>
                 <a href="{{ url_for('admin_logout') }}" class="nav-item nav-danger">
                     {{ icon('log-out', 20, 'nav-icon') | safe }} 退出登录

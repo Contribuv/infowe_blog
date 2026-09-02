@@ -97,42 +97,6 @@
                 </label>
             </div>
         </div>
-
-        <!-- 外观与主题：前台主题选择 -->
-        <div class="card">
-            <div class="card-header"><h3>外观与主题</h3></div>
-            <div class="theme-grid">
-                {% for t in themes %}
-                <label class="theme-item{{ ' active' if t.key == active_theme }}">
-                    <input type="radio" name="active_theme" value="{{ t.key }}"
-                           {{ 'checked' if t.key == active_theme else '' }} hidden>
-                    <span class="theme-preview">
-                        {% if t.has_preview %}
-                        <img src="{{ url_for('theme_static', filename=t.key ~ '/preview.png') }}" alt="{{ t.name }} 预览" loading="lazy">
-                        {% else %}
-                        <span class="theme-preview-empty">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"></circle><circle cx="17.5" cy="10.5" r=".5"></circle><circle cx="8.5" cy="7.5" r=".5"></circle><circle cx="6.5" cy="12.5" r=".5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path></svg>
-                        </span>
-                        {% endif %}
-                    </span>
-                    <span class="theme-info">
-                        <span class="theme-name">{{ t.name }}
-                            {% if t.key == active_theme %}<span class="theme-badge">使用中</span>{% endif %}
-                        </span>
-                        {% if t.author %}<span class="theme-author">{{ t.author }}</span>{% endif %}
-                        {% if t.description %}<span class="theme-desc">{{ t.description }}</span>{% endif %}
-                    </span>
-                </label>
-                {% endfor %}
-            </div>
-            <div class="form-hint" style="margin-top: var(--sp-3);">
-                主题文件位于 <code>templates/&lt;主题名&gt;/</code>：复制 <code>templates/default/</code> 为底稿，
-                加入 <code>theme.css</code>（覆盖默认配色，可改写 CSS 变量如 --accent、--bg）或同名模板
-                （整体重排页面结构）即为新主题；<code>info.json</code> 可选填
-                {name, author, description, version}，<code>preview.png</code> 可选做展示预览图。
-                点击卡片选中，保存后立即生效（无需重启）。
-            </div>
-        </div>
     </div>
 
     <div class="settings-col">

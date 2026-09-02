@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}标签{% endblock %}
+{% block og_description %}文章标签目录 · {{ post_total }} 篇时光{% endblock %}
+{% block content %}
+<section class="sg-tagsheet">
+    <header class="sg-page-head">
+        <h1 class="sg-page-title">{{ icon('tag', 26, 'sg-ic') | safe }} 标签抽屉</h1>
+        <p class="sg-page-desc">
+            共 {{ tag_groups|length }} 个标签 · {{ post_total }} 篇文章。
+            抽屉有点乱，但翻一翻总能有惊喜。
+        </p>
+    </header>
+
+    {% if tag_groups %}
+    <div class="sg-taggrid">
+        {% for tag, posts in tag_groups %}
+        <details class="sg-tagcard sg-glass sg-reveal" {% if loop.index0 < 3 %}open{% endif %}>
+            <summary>
+                <span class="sg-tag-glyph">#</span>
+                <span class="sg-tag-name">{{ tag }}</span>
+                <span class="sg-tag-count">{{ posts|length }}</span>
+                <span class="sg-chev">{{ icon('chevron-right', 15) | safe }}</span>
+            </summary>
+            <div class="sg-tag-articles">
+                {% for p in posts[:8] %}
+                <div class="sg-tag-post">
+                    <span class="d">{{ p.created_at[:10] }}</span>
+                    <a href="/post/{{ p.id }}">{{ p.title }}</a>
+                </div>
+                {% endfor %}
+                {% if posts|length > 8 %}
+                <div class="sg-tag-post">
+                    <a href="/?tag={{ tag }}">还有 {{ posts|length - 8 }} 篇，去看全部 →</a>
+                </div>
+                {% endif %}
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="sg-empty">
+        <div class="sg-empty-icon">{{ icon('tag', 44) | safe }}</div>
+        <h3>抽屉还空着</h3>
+        <p>写文章的时候顺手打个标签，这里就会热闹起来</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

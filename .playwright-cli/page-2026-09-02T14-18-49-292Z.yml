@@ -1,0 +1,276 @@
+- generic [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e3]:
+    - generic [ref=e5]:
+      - link "infowe.site" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e16]:
+        - button "切换主题" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+        - button "打开菜单" [active] [ref=e207] [cursor=pointer]:
+          - img [ref=e208]
+  - complementary "移动端菜单" [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]: infowe.site
+      - button "关闭菜单" [ref=e23] [cursor=pointer]: ×
+    - link "首页" [ref=e24] [cursor=pointer]:
+      - /url: /
+    - link "文章" [ref=e25] [cursor=pointer]:
+      - /url: /posts
+    - link "标签" [ref=e26] [cursor=pointer]:
+      - /url: /tags
+    - link "项目" [ref=e27] [cursor=pointer]:
+      - /url: /projects
+    - link "友链" [ref=e28] [cursor=pointer]:
+      - /url: /links
+    - link "关于" [ref=e29] [cursor=pointer]:
+      - /url: /about
+    - link "状态" [ref=e30] [cursor=pointer]:
+      - /url: /status
+    - link "写作" [ref=e31] [cursor=pointer]:
+      - /url: /admin
+  - main [ref=e32]:
+    - generic [ref=e33]:
+      - search [ref=e34]:
+        - textbox "搜索文章" [ref=e35]:
+          - /placeholder: 搜索文章...
+        - button "搜索" [ref=e36] [cursor=pointer]
+      - generic [ref=e37]:
+        - heading "豪子的博客" [level=1] [ref=e38]
+        - paragraph [ref=e39]: 共 12 篇文章 · 45 个标签
+      - list [ref=e40]:
+        - listitem [ref=e41]:
+          - generic [ref=e42]:
+            - time [ref=e43]: 2026-08-30
+            - generic [ref=e44]: 生活随笔
+            - generic [ref=e45]: 1 分钟
+          - heading "抖音正在被垂直流量玩死，乘早尽快换赛道！这不是建议是忠告！" [level=3] [ref=e46]:
+            - link "抖音正在被垂直流量玩死，乘早尽快换赛道！这不是建议是忠告！" [ref=e47] [cursor=pointer]:
+              - /url: /post/38
+          - paragraph [ref=e48]: 抖音正在被垂直流量玩死，趁早尽快换赛道！这不是建议是忠告！ 说句扎心的大实话：现在 90% 的抖音创作者，正在被"垂直"两个字活活逼疯。 我身边太多做号的朋友，陷进同一个死循环——死死盯着垂直赛道硬扛，越做选题越枯竭，越拍越心累，更新全靠硬撑，流量却一年比一年拉胯。 更讽刺的是，创作者已经举步维艰，平台的算法还自我感觉良好，觉得这套"垂直逻辑"完美无缺。 今天我不灌鸡汤、不扯玄学，掰开揉碎讲清楚四
+          - generic [ref=e49]:
+            - link "教程" [ref=e50] [cursor=pointer]:
+              - /url: /?tag=教程
+            - link "抖音" [ref=e51] [cursor=pointer]:
+              - /url: /?tag=抖音
+            - link "垂直赛道" [ref=e52] [cursor=pointer]:
+              - /url: /?tag=垂直赛道
+            - link "房产中介" [ref=e53] [cursor=pointer]:
+              - /url: /?tag=房产中介
+            - link "房产自媒体" [ref=e54] [cursor=pointer]:
+              - /url: /?tag=房产自媒体
+        - listitem [ref=e55]:
+          - generic [ref=e56]:
+            - time [ref=e57]: 2026-08-25
+            - generic [ref=e58]: 生活随笔
+            - generic [ref=e59]: 1 分钟
+          - heading "从 Apple Watch S9 换到华为 Fit 5 Pro：我终于不用每天充电了" [level=3] [ref=e60]:
+            - link "从 Apple Watch S9 换到华为 Fit 5 Pro：我终于不用每天充电了" [ref=e61] [cursor=pointer]:
+              - /url: /post/37
+          - paragraph [ref=e62]: 从 Apple Watch S9 换到华为 Fit 5 Pro：一次迟来但正确的取舍 用了快一年的 Apple Watch S9 45mm，前段时间终于下定决心出掉了。1100 块挂闲鱼秒出，转头用国补在本地门店 1347 元拿下一块华为 Fit 5 Pro。算下来，近乎平换。 为什么换？ 原因简单到一句话就能说清：我实在不想每天充电了。 S9 是块好表，屏幕、震动、生态联动都没得挑。但问题是我根
+          - generic [ref=e63]:
+            - link "Apple" [ref=e64] [cursor=pointer]:
+              - /url: /?tag=Apple
+            - link "watch" [ref=e65] [cursor=pointer]:
+              - /url: /?tag=watch
+            - link "fit" [ref=e66] [cursor=pointer]:
+              - /url: /?tag=fit
+            - link "pro" [ref=e67] [cursor=pointer]:
+              - /url: /?tag=pro
+            - link "ecg" [ref=e68] [cursor=pointer]:
+              - /url: /?tag=ecg
+        - listitem [ref=e69]:
+          - generic [ref=e70]:
+            - time [ref=e71]: 2026-08-23
+            - generic [ref=e72]: 技术随笔
+            - generic [ref=e73]: 15 分钟
+          - heading "飞牛 NAS (fnOS) 应用登录认证 & 开放 API 接入手册" [level=3] [ref=e74]:
+            - link "飞牛 NAS (fnOS) 应用登录认证 & 开放 API 接入手册" [ref=e75] [cursor=pointer]:
+              - /url: /post/36
+          - paragraph [ref=e76]: 飞牛 NAS fnOS 应用登录认证 & 开放 API 接入手册 适用对象：想在飞牛 NAS fnOS 上开发第三方应用、并复用「NAS 账号登录态」的开发者 核心能力：统一网关鉴权 + 用户身份 Header + 文件授权 + 页面路由 版本要求：fnOS ≥ 1.2.0401，飞牛 App ≥ 1.34.0 官方文档：https://developer.fnnas.com/docs/guide
+          - generic [ref=e77]:
+            - link "Python" [ref=e78] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Docker" [ref=e79] [cursor=pointer]:
+              - /url: /?tag=Docker
+            - link "trim" [ref=e80] [cursor=pointer]:
+              - /url: /?tag=trim
+            - link "app" [ref=e81] [cursor=pointer]:
+              - /url: /?tag=app
+            - link "const" [ref=e82] [cursor=pointer]:
+              - /url: /?tag=const
+            - link "nas" [ref=e83] [cursor=pointer]:
+              - /url: /?tag=nas
+            - link "user" [ref=e84] [cursor=pointer]:
+              - /url: /?tag=user
+        - listitem [ref=e85]:
+          - generic [ref=e86]:
+            - time [ref=e87]: 2026-08-17
+            - generic [ref=e88]: 生活随笔
+            - generic [ref=e89]: 1 分钟
+          - heading "南川花好月圆，类似第二个洋人街" [level=3] [ref=e90]:
+            - link "南川花好月圆，类似第二个洋人街" [ref=e91] [cursor=pointer]:
+              - /url: /post/35
+          - paragraph [ref=e92]: 好处是凉快，晚上穿短裤有点冷，然后下次去，我想体验一下露营，还从未露营过，不知道什么感觉。 不信，你们看！
+          - generic [ref=e93]:
+            - link "南川" [ref=e94] [cursor=pointer]:
+              - /url: /?tag=南川
+            - link "花好月圆" [ref=e95] [cursor=pointer]:
+              - /url: /?tag=花好月圆
+            - link "洋人街" [ref=e96] [cursor=pointer]:
+              - /url: /?tag=洋人街
+        - listitem [ref=e97]:
+          - generic [ref=e98]:
+            - time [ref=e99]: 2026-08-11
+            - generic [ref=e100]: 程序相关
+            - generic [ref=e101]: 3 分钟
+          - heading "豪子的又一个开源项目，千盈传送发布了，仅上线飞牛nas arm /x86" [level=3] [ref=e102]:
+            - link "豪子的又一个开源项目，千盈传送发布了，仅上线飞牛nas arm /x86" [ref=e103] [cursor=pointer]:
+              - /url: /post/34
+          - paragraph [ref=e104]: "**千盈传送** 是一款部署在飞牛 NAS 上的轻量级文件传送工具，基于 **WebRTC P2P 点对点传输** 技术，让同一局域网（或跨公网）的设备之间可以直接互传文件。 该项目使用go语言单二进制运行，保证稳定的情况下运行"
+          - generic [ref=e105]:
+            - link "千盈传送" [ref=e106] [cursor=pointer]:
+              - /url: /?tag=千盈传送
+            - link "开源" [ref=e107] [cursor=pointer]:
+              - /url: /?tag=开源
+            - link "记录" [ref=e108] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "iPhone" [ref=e109] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "SQLite" [ref=e110] [cursor=pointer]:
+              - /url: /?tag=SQLite
+            - link "技术" [ref=e111] [cursor=pointer]:
+              - /url: /?tag=技术
+        - listitem [ref=e112]:
+          - generic [ref=e113]:
+            - time [ref=e114]: 2026-08-04
+            - generic [ref=e115]: 生活随笔
+            - generic [ref=e116]: 5 分钟
+          - heading "infowe.site：用 Flask + SQLite 手搓一个完整博客系统" [level=3] [ref=e117]:
+            - link "infowe.site：用 Flask + SQLite 手搓一个完整博客系统" [ref=e118] [cursor=pointer]:
+              - /url: /post/6
+          - paragraph [ref=e119]: 从零搭建一个轻量级 Markdown 博客：Flask 后端 + SQLite 数据层 + Jinja2 模板，含完整后台管理、GitHub 项目展示、评论系统、RSS 等。本文全面复盘架构设计、技术选型、核心代码实现与功能测试。
+          - generic [ref=e120]:
+            - link "Python" [ref=e121] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Flask" [ref=e122] [cursor=pointer]:
+              - /url: /?tag=Flask
+            - link "博客" [ref=e123] [cursor=pointer]:
+              - /url: /?tag=博客
+            - link "全栈" [ref=e124] [cursor=pointer]:
+              - /url: /?tag=全栈
+            - link "SQLite" [ref=e125] [cursor=pointer]:
+              - /url: /?tag=SQLite
+            - link "开源" [ref=e126] [cursor=pointer]:
+              - /url: /?tag=开源
+        - listitem [ref=e127]:
+          - generic [ref=e128]:
+            - time [ref=e129]: 2026-07-20
+            - generic [ref=e130]: 技术随笔
+            - generic [ref=e131]: 1 分钟
+          - heading "深入理解 Python 异步编程：从回调到 async/await" [level=3] [ref=e132]:
+            - link "深入理解 Python 异步编程：从回调到 async/await" [ref=e133] [cursor=pointer]:
+              - /url: /post/2
+          - paragraph [ref=e134]: 从最原始的回调函数，到 Future/Promise，再到生成器协程，最终抵达 async/await——本文带你完整走一遍 Python 异步编程的进化史。
+          - generic [ref=e135]:
+            - link "Python" [ref=e136] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "异步" [ref=e137] [cursor=pointer]:
+              - /url: /?tag=异步
+            - link "深入理解" [ref=e138] [cursor=pointer]:
+              - /url: /?tag=深入理解
+        - listitem [ref=e139]:
+          - generic [ref=e140]:
+            - time [ref=e141]: 2026-07-12
+            - generic [ref=e142]: 8 分钟
+          - heading "Django vs FastAPI：2026 年 Python Web 框架怎么选？" [level=3] [ref=e143]:
+            - link "Django vs FastAPI：2026 年 Python Web 框架怎么选？" [ref=e144] [cursor=pointer]:
+              - /url: /post/3
+          - paragraph [ref=e145]: 两者都在各自领域称王，但到底该选谁？本文从性能、生态、开发体验、适用场景四个维度进行全面对比。
+          - generic [ref=e146]:
+            - link "Python" [ref=e147] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Web开发" [ref=e148] [cursor=pointer]:
+              - /url: /?tag=Web开发
+            - link "Django" [ref=e149] [cursor=pointer]:
+              - /url: /?tag=Django
+            - link "FastAPI" [ref=e150] [cursor=pointer]:
+              - /url: /?tag=FastAPI
+        - listitem [ref=e151]:
+          - generic [ref=e152]:
+            - time [ref=e153]: 2026-06-28
+            - generic [ref=e154]: 10 分钟
+          - heading "Python 装饰器的七种进阶用法" [level=3] [ref=e155]:
+            - link "Python 装饰器的七种进阶用法" [ref=e156] [cursor=pointer]:
+              - /url: /post/4
+          - paragraph [ref=e157]: 带参数的装饰器、类装饰器、装饰器堆叠、functools.wraps 的坑... 一文讲透所有进阶用法。
+          - generic [ref=e158]:
+            - link "Python" [ref=e159] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "深入理解" [ref=e160] [cursor=pointer]:
+              - /url: /?tag=深入理解
+            - link "Tips" [ref=e161] [cursor=pointer]:
+              - /url: /?tag=Tips
+        - listitem [ref=e162]:
+          - generic [ref=e163]:
+            - time [ref=e164]: 2026-06-20
+            - generic [ref=e165]: 7 分钟
+          - heading "Docker 容器化 Python 应用的最佳实践" [level=3] [ref=e166]:
+            - link "Docker 容器化 Python 应用的最佳实践" [ref=e167] [cursor=pointer]:
+              - /url: /post/5
+          - paragraph [ref=e168]: 多阶段构建、非 root 运行、健康检查、日志管理——让你的 Python 应用在容器中如鱼得水。
+          - generic [ref=e169]:
+            - link "Python" [ref=e170] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Docker" [ref=e171] [cursor=pointer]:
+              - /url: /?tag=Docker
+            - link "DevOps" [ref=e172] [cursor=pointer]:
+              - /url: /?tag=DevOps
+        - listitem [ref=e173]:
+          - generic [ref=e174]:
+            - time [ref=e175]: 2022-03-02
+            - generic [ref=e176]: 3 分钟
+          - heading "开春了，今天重庆天气真好" [level=3] [ref=e177]:
+            - link "开春了，今天重庆天气真好" [ref=e178] [cursor=pointer]:
+              - /url: /post/33
+          - paragraph [ref=e179]: 去吃饭途中在江边看到这么好看的风景，忍不住拍几张
+          - generic [ref=e180]:
+            - link "记录" [ref=e181] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e182] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "旅游" [ref=e183] [cursor=pointer]:
+              - /url: /?tag=旅游
+        - listitem [ref=e184]:
+          - generic [ref=e185]:
+            - time [ref=e186]: 2022-01-24
+            - generic [ref=e187]: 3 分钟
+          - heading "记录一下typehco转hexo文章以及评论的坑" [level=3] [ref=e188]:
+            - link "记录一下typehco转hexo文章以及评论的坑" [ref=e189] [cursor=pointer]:
+              - /url: /post/32
+          - paragraph [ref=e190]: 因为服务器到期，而且博客长时间都是属于无人打理状态，由于域名没备案卖境外服务器又贵，便宜的又不稳定所以才有了转到HEXO的想法，从想法到实施用了3小时的时间。
+          - generic [ref=e191]:
+            - link "技术" [ref=e192] [cursor=pointer]:
+              - /url: /?tag=技术
+            - link "Hexo" [ref=e193] [cursor=pointer]:
+              - /url: /?tag=Hexo
+            - link "记录" [ref=e194] [cursor=pointer]:
+              - /url: /?tag=记录
+  - contentinfo [ref=e195]:
+    - generic [ref=e197]:
+      - paragraph [ref=e198]: © 2026 infowe.site · Powered by Flask
+      - generic [ref=e199]:
+        - link "开源项目" [ref=e200] [cursor=pointer]:
+          - /url: /projects
+        - link "友情链接" [ref=e201] [cursor=pointer]:
+          - /url: /links
+        - link "关于我" [ref=e202] [cursor=pointer]:
+          - /url: /about
+        - link "RSS" [ref=e203] [cursor=pointer]:
+          - /url: /feed.xml
+      - generic [ref=e204]:
+        - link "渝ICP备2024022518号-1" [ref=e205] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - link "渝公网安备50010802006394号" [ref=e206] [cursor=pointer]:
+          - /url: https://beian.mps.gov.cn

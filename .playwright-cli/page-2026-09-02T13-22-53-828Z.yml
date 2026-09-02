@@ -1,0 +1,205 @@
+- generic [active] [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#sg-main"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "回到首页" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: infowe.site
+      - navigation "主导航" [ref=e8]:
+        - link "首页" [ref=e9] [cursor=pointer]:
+          - /url: /
+        - link "文章" [ref=e10] [cursor=pointer]:
+          - /url: /posts
+        - link "标签" [ref=e11] [cursor=pointer]:
+          - /url: /tags
+        - link "项目" [ref=e12] [cursor=pointer]:
+          - /url: /projects
+        - link "友链" [ref=e13] [cursor=pointer]:
+          - /url: /links
+        - link "关于" [ref=e14] [cursor=pointer]:
+          - /url: /about
+        - link "状态" [ref=e15] [cursor=pointer]:
+          - /url: /status
+      - button "切换明暗主题" [ref=e17] [cursor=pointer]:
+        - img [ref=e19]
+  - main [ref=e25]:
+    - heading "关于" [level=1] [ref=e27]
+    - generic [ref=e28]:
+      - img "豪子" [ref=e30]
+      - generic [ref=e31]:
+        - heading "豪子" [level=2] [ref=e32]
+        - paragraph [ref=e33]:
+          - text: 一名从IT行业转投房地产经纪行业的程序员
+          - text: 目前的工作，就是房产中介，坐标：重庆·南岸
+        - generic [ref=e34]:
+          - link "GitHub" [ref=e35] [cursor=pointer]:
+            - /url: https://github.com/Contribuv
+            - img [ref=e36]
+            - text: GitHub
+          - link "Email" [ref=e39] [cursor=pointer]:
+            - /url: mailto:hao198608@gmail.com
+            - img [ref=e40]
+            - text: Email
+          - link "RSS" [ref=e43] [cursor=pointer]:
+            - /url: /feed.xml
+            - img [ref=e44]
+            - text: RSS
+    - generic [ref=e47]:
+      - generic [ref=e48]:
+        - heading "关于这个网站" [level=2] [ref=e49]
+        - generic [ref=e50]:
+          - text: 网站备案名：六号图文 - 六号自留地；此博客是我用 Python & Flask制作的
+          - text: 1986 年老登 全栈开发者，热爱开源；沉迷于代码美学与系统架构。
+          - text: 相信每一行代码都有它的灵魂；每一个 Bug 都是成长的阶梯。
+      - generic [ref=e51]:
+        - heading "技术栈" [level=2] [ref=e52]
+        - generic [ref=e53]:
+          - generic [ref=e55]:
+            - generic [ref=e56]: Python
+            - generic [ref=e57]: 95%
+          - generic [ref=e61]:
+            - generic [ref=e62]: Flask / Django
+            - generic [ref=e63]: 90%
+          - generic [ref=e67]:
+            - generic [ref=e68]: JavaScript
+            - generic [ref=e69]: 85%
+          - generic [ref=e73]:
+            - generic [ref=e74]: TypeScript
+            - generic [ref=e75]: 80%
+          - generic [ref=e79]:
+            - generic [ref=e80]: PHP
+            - generic [ref=e81]: 95%
+          - generic [ref=e85]:
+            - generic [ref=e86]: ‌.NET‌、F#、Visual Basic
+            - generic [ref=e87]: 96%
+          - generic [ref=e91]:
+            - generic [ref=e92]: C#
+            - generic [ref=e93]: 85%
+          - generic [ref=e97]:
+            - generic [ref=e98]: Rust
+            - generic [ref=e99]: 85%
+          - generic [ref=e103]:
+            - generic [ref=e104]: Docker / K8s
+            - generic [ref=e105]: 75%
+          - generic [ref=e109]:
+            - generic [ref=e110]: PostgreSQL
+            - generic [ref=e111]: 85%
+          - generic [ref=e115]:
+            - generic [ref=e116]: Redis
+            - generic [ref=e117]: 80%
+          - generic [ref=e120]:
+            - generic [ref=e121]: Go
+            - generic [ref=e122]: 88%
+          - generic [ref=e125]:
+            - generic [ref=e126]: Linux
+            - generic [ref=e127]: 88%
+      - generic [ref=e129]:
+        - heading "站点历程" [level=2] [ref=e130]
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - generic [ref=e133]: "2026.07"
+            - paragraph [ref=e134]: infowe.site 正式上线，发布第一篇文章
+          - generic [ref=e135]:
+            - generic [ref=e136]: "2026.06"
+            - paragraph [ref=e137]: 博客开发启动，设计 infowe 赛博朋克主题
+          - generic [ref=e138]:
+            - generic [ref=e139]: "2026.05"
+            - paragraph [ref=e140]: 决定开始写博客，记录技术成长与思考
+          - generic [ref=e141]:
+            - generic [ref=e142]: "2025.12"
+            - paragraph [ref=e143]: 经过不懈努力，顺利拿到PMP证书
+          - generic [ref=e144]:
+            - generic [ref=e145]: "2024.9"
+            - paragraph [ref=e146]: 博客再次启用，采用 Python + SQLite 技术栈运行至今
+          - generic [ref=e147]:
+            - generic [ref=e148]: 2021.04 - 至今
+            - paragraph [ref=e149]: 加入房地产经纪行业
+          - generic [ref=e150]:
+            - generic [ref=e151]: 2008 - 2021
+            - paragraph [ref=e152]: 因工作与生活原因，博客暂停运行，人生黑暗时刻
+          - generic [ref=e153]:
+            - generic [ref=e154]: "2006.6"
+            - paragraph [ref=e155]: 在保留历史数据的前提下，博客改用 PHP 重构
+          - generic [ref=e156]:
+            - generic [ref=e157]: "2004.2"
+            - paragraph [ref=e158]: 拿到某大厂offer，正式开启it牛马人生
+          - generic [ref=e159]:
+            - generic [ref=e160]: "2003.12"
+            - paragraph [ref=e161]: 开发并开源高并发web_chat，并广泛被使用
+          - generic [ref=e162]:
+            - generic [ref=e163]: "2002.4"
+            - paragraph [ref=e164]: 创立个人博客（第一版采用 ASP 搭建）
+          - generic [ref=e165]:
+            - generic [ref=e166]: "1986.8"
+            - paragraph [ref=e167]: 出生，来时的路
+  - contentinfo [ref=e168]:
+    - generic [ref=e169]:
+      - generic [ref=e170]:
+        - generic [ref=e171]:
+          - generic [ref=e172]: infowe.site
+          - paragraph [ref=e173]: 有的人出生就在罗马，有人生来就是牛马
+        - generic [ref=e174]:
+          - link "项目" [ref=e175] [cursor=pointer]:
+            - /url: /projects
+          - link "友链" [ref=e176] [cursor=pointer]:
+            - /url: /links
+          - link "关于" [ref=e177] [cursor=pointer]:
+            - /url: /about
+          - link "状态" [ref=e178] [cursor=pointer]:
+            - /url: /status
+          - link "RSS" [ref=e179] [cursor=pointer]:
+            - /url: /feed.xml
+          - link "写作" [ref=e180] [cursor=pointer]:
+            - /url: /admin
+      - generic [ref=e181]:
+        - generic [ref=e182]: © 2026 infowe.site
+        - generic [ref=e183]:
+          - link "渝ICP备2024022518号-1" [ref=e184] [cursor=pointer]:
+            - /url: https://beian.miit.gov.cn
+          - link "渝公网安备50010802006394号" [ref=e185] [cursor=pointer]:
+            - /url: https://beian.mps.gov.cn
+  - button "回到顶部":
+    - img
+  - generic:
+    - dialog:
+      - generic:
+        - generic: infowe.site
+        - button:
+          - img
+      - link:
+        - /url: /
+        - img
+        - text: 首页
+      - link:
+        - /url: /posts
+        - img
+        - text: 文章
+      - link:
+        - /url: /tags
+        - img
+        - text: 标签
+      - link:
+        - /url: /projects
+        - img
+        - text: 项目
+      - link:
+        - /url: /links
+        - img
+        - text: 友链
+      - link:
+        - /url: /about
+        - img
+        - text: 关于
+      - link:
+        - /url: /status
+        - img
+        - text: 状态
+      - link:
+        - /url: /nostalgia
+        - img
+        - text: 时光
+      - link:
+        - /url: /admin
+        - img
+        - text: 写作

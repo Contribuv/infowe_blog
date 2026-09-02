@@ -1273,6 +1273,50 @@ body {
 .post-tags-row { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin: var(--sp-4) 0 0; }
 .tag-large { padding: var(--sp-1) var(--sp-4); border-radius: var(--r-full); font-size: var(--fz-sm); font-weight: 500; display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border); }
 .post-content.markdown-body { max-width: var(--w-wide); }
+
+/* ——— 文章目录下拉 ——— */
+.post-toc {
+  margin: 0 0 var(--sp-6);
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--bg-surface);
+}
+.post-toc-summary {
+  padding: var(--sp-3) var(--sp-4); font-size: var(--fz-sm); font-weight: 600;
+  cursor: pointer; user-select: none; list-style: none;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.post-toc-summary::-webkit-details-marker { display: none; }
+.post-toc-summary::after {
+  content: ""; width: 8px; height: 8px; flex-shrink: 0;
+  border-right: 2px solid var(--text-tertiary); border-bottom: 2px solid var(--text-tertiary);
+  transform: rotate(45deg); transition: transform var(--transition); margin-top: -4px;
+}
+.post-toc[open] .post-toc-summary::after { transform: rotate(-135deg); margin-top: 4px; }
+.post-toc-body { padding: 0 var(--sp-4) var(--sp-3); max-height: 60vh; overflow-y: auto; }
+.post-toc-body .toc { margin: 0; }
+.post-toc-body ul { list-style: none; margin: 0; padding: 0; }
+.post-toc-body ul ul { padding-left: var(--sp-4); }
+.post-toc-body a {
+  display: block; padding: 3px 0; font-size: var(--fz-sm); line-height: 1.6;
+  color: var(--text-secondary); text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.post-toc-body a:hover { color: var(--accent); }
+
+/* ——— 代码块复制按钮（JS 包 .code-wrap 容器） ——— */
+.code-wrap { position: relative; margin: 0 0 var(--sp-5); }
+.code-wrap pre { margin: 0; }
+.code-copy {
+  position: absolute; top: 8px; right: 8px; z-index: 1;
+  padding: 3px 10px; font-size: 12px; line-height: 1.5;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--bg-surface); color: var(--text-secondary);
+  cursor: pointer; opacity: 0; transition: opacity var(--transition);
+}
+.code-wrap:hover .code-copy, .code-copy:focus { opacity: 1; }
+.code-copy:hover { color: var(--accent); border-color: var(--accent); }
+@media (hover: none) { .code-copy { opacity: 1; } }
+
 .post-footer-actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-6); }
 .share-btn { display: inline-flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-5); border-radius: var(--r); font-size: var(--fz-sm); font-weight: 500; color: var(--text-secondary); border: 1px solid var(--border); background: var(--bg-surface); cursor: pointer; transition: all var(--transition); }
 .share-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--bg-hover); }

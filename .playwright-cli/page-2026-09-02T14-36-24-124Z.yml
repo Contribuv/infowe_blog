@@ -1,0 +1,199 @@
+- generic [active] [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e3]:
+    - generic [ref=e5]:
+      - link "infowe.site" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e7]:
+        - link "首页" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "文章" [ref=e9] [cursor=pointer]:
+          - /url: /posts
+        - link "标签" [ref=e10] [cursor=pointer]:
+          - /url: /tags
+        - link "项目" [ref=e11] [cursor=pointer]:
+          - /url: /projects
+        - link "友链" [ref=e12] [cursor=pointer]:
+          - /url: /links
+        - link "关于" [ref=e13] [cursor=pointer]:
+          - /url: /about
+        - link "状态" [ref=e14] [cursor=pointer]:
+          - /url: /status
+        - link "写作" [ref=e15] [cursor=pointer]:
+          - /url: /admin
+      - button "切换主题" [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+  - main [ref=e20]:
+    - generic [ref=e21]:
+      - article [ref=e22]:
+        - generic [ref=e23]:
+          - heading "深入理解 Python 异步编程：从回调到 async/await" [level=1] [ref=e24]
+          - generic [ref=e25]:
+            - time [ref=e26]: 2026-07-20
+            - generic [ref=e27]: 技术随笔
+            - generic [ref=e28]: 1 分钟阅读
+            - generic [ref=e29]: 4 次浏览
+          - generic [ref=e30]:
+            - link "Python" [ref=e31] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "异步" [ref=e32] [cursor=pointer]:
+              - /url: /?tag=异步
+            - link "深入理解" [ref=e33] [cursor=pointer]:
+              - /url: /?tag=深入理解
+        - generic [ref=e34]:
+          - heading "从同步到异步的进化之路" [level=2] [ref=e35]
+          - paragraph [ref=e36]: Python 的异步编程经历了漫长而痛苦的进化。让我们从头梳理这条路，理解每一步解决了什么问题。
+          - heading "第一阶段：同步阻塞" [level=3] [ref=e37]
+          - code [ref=e39]:
+            - text: import time
+            - generic [ref=e40]: "def fetch_data(url):"
+            - text: "time.sleep(1) # 模拟网络请求 return"
+            - generic [ref=e41]: "f\"Data from {url}\""
+            - generic [ref=e42]: "def main():"
+            - text: "urls = [\"api/1\", \"api/2\", \"api/3\"] results = [fetch_data(url) for url in urls] print(results) # 耗时 3 秒"
+          - paragraph [ref=e43]: 这是最原始的方式 — 一个任务做完才能做下一个。CPU 大量时间花在等待 I/O 上。
+          - heading "第二阶段：多线程" [level=3] [ref=e44]
+          - code [ref=e46]:
+            - text: from concurrent.futures import ThreadPoolExecutor
+            - generic [ref=e47]: "def fetch_data(url):"
+            - text: time.sleep(1) return
+            - generic [ref=e48]: "f\"Data from {url}\""
+            - text: "with ThreadPoolExecutor(max_workers=10) as executor: results = list(executor.map(fetch_data, urls)) # 耗时约 1 秒，但有 GIL 限制"
+          - paragraph [ref=e49]: 多线程解决了并发问题，但 Python 的 GIL 让 CPU 密集型任务无法真正并行，线程切换也有开销。
+          - heading "第三阶段：回调函数（Callback Hell）" [level=3] [ref=e50]
+          - code [ref=e52]:
+            - generic [ref=e53]: "def fetch_data(url, callback):"
+            - generic [ref=e54]: "def on_done():"
+            - text: "result = http_get(url) # 伪代码 callback(result) schedule(on_done)"
+          - paragraph [ref=e55]: 回调解决了同步等待的问题，但导致了著名的"回调地狱"——嵌套的回调让代码难以阅读和维护。
+          - heading "第四阶段：生成器协程（yield from）" [level=3] [ref=e56]
+          - code [ref=e58]:
+            - text: import asyncio @asyncio.coroutine
+            - generic [ref=e59]: "def fetch_data(url):"
+            - text: response = yield from aiohttp_get(url) return response
+          - paragraph [ref=e60]:
+            - text: Python 3.4 引入了
+            - code [ref=e61]: asyncio
+            - text: 和
+            - code [ref=e62]: yield from
+            - text: 语法，用生成器来模拟协程。这是一个巨大的进步，但写法仍然别扭。
+          - heading "第五阶段：async/await（现代方案）" [level=3] [ref=e63]
+          - code [ref=e65]:
+            - text: import asyncio import aiohttp async
+            - generic [ref=e66]: "def fetch_data(session, url):"
+            - text: "async with session.get(url) as response: return await response.json() async"
+            - generic [ref=e67]: "def main():"
+            - text: "async with aiohttp.ClientSession() as session: tasks = [fetch_data(session,"
+            - generic [ref=e68]: "f\"api/{i}\""
+            - text: ) for i in range(10)] results = await asyncio.gather(*tasks) return results asyncio.run(main())
+          - paragraph [ref=e69]: 这才是我们想要的！代码读起来像同步，性能像异步。
+          - heading "关键概念深入" [level=2] [ref=e70]
+          - heading "Event Loop（事件循环）" [level=3] [ref=e71]
+          - paragraph [ref=e72]: 事件循环是 asyncio 的心脏。它在单线程中不断循环，检查哪些协程可以继续执行：
+          - code [ref=e74]:
+            - text: async
+            - generic [ref=e75]: "def task(name, delay):"
+            - text: print(
+            - generic [ref=e76]: "f\"{name} 开始\""
+            - text: ) await asyncio.sleep(delay) print(
+            - generic [ref=e77]: "f\"{name} 完成\""
+            - text: ) return name async
+            - generic [ref=e78]: "def main():"
+            - text: results = await asyncio.gather( task("A", 2), task("B", 1), task("C", 0.5), ) print(
+            - generic [ref=e79]: "f\"结果: {results}\""
+            - text: ") # 输出: # A 开始 # B 开始 # C 开始 # C 完成 # B 完成 # A 完成 # 结果: ['A', 'B', 'C']"
+          - heading "什么时候该用 async？" [level=3] [ref=e80]
+          - table [ref=e81]:
+            - rowgroup [ref=e82]:
+              - row "场景 推荐方案" [ref=e83]:
+                - columnheader "场景" [ref=e84]
+                - columnheader "推荐方案" [ref=e85]
+            - rowgroup [ref=e86]:
+              - row "Web API 大量并发请求 async + aiohttp" [ref=e87]:
+                - cell "Web API 大量并发请求" [ref=e88]
+                - cell "async + aiohttp" [ref=e89]
+              - row "WebSocket 实时通信 async" [ref=e90]:
+                - cell "WebSocket 实时通信" [ref=e91]
+                - cell "async" [ref=e92]
+              - row "CPU 密集型计算 多进程" [ref=e93]:
+                - cell "CPU 密集型计算" [ref=e94]
+                - cell "多进程" [ref=e95]
+              - row "简单 CRUD 脚本 同步即可" [ref=e96]:
+                - cell "简单 CRUD 脚本" [ref=e97]
+                - cell "同步即可" [ref=e98]
+              - row "数据库操作 async（配合 asyncpg 等）" [ref=e99]:
+                - cell "数据库操作" [ref=e100]
+                - cell "async（配合 asyncpg 等）" [ref=e101]
+          - heading "总结" [level=2] [ref=e102]
+          - paragraph [ref=e103]:
+            - text: Python 异步编程从回调到
+            - code [ref=e104]: async/await
+            - text: 的进化，本质上是在
+            - strong [ref=e105]: 可读性
+            - text: 和
+            - strong [ref=e106]: 性能
+            - text: 之间寻找最优解。现在我们拥有的
+            - code [ref=e107]: async/await
+            - text: 语法，几乎完美地平衡了这两者。
+          - paragraph [ref=e108]:
+            - text: 记住：
+            - strong [ref=e109]: "\"IO 密集用 async，CPU 密集用 multiprocessing\""
+            - text: — 这是 Python 并发编程的黄金法则。
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - button "分享" [ref=e112] [cursor=pointer]:
+              - img [ref=e113]
+              - text: 分享
+            - button "返回" [ref=e116] [cursor=pointer]:
+              - img [ref=e117]
+              - text: 返回
+          - generic [ref=e119]:
+            - text: 本文采用
+            - link "CC BY-NC-SA 4.0" [ref=e120] [cursor=pointer]:
+              - /url: https://creativecommons.org/licenses/by-nc-sa/4.0/
+            - text: 许可协议
+      - navigation "文章导航" [ref=e121]:
+        - link "← 上一篇 Django vs FastAPI：2026 年 Python Web 框架怎么选？" [ref=e122] [cursor=pointer]:
+          - /url: /post/3
+          - generic [ref=e123]: ← 上一篇
+          - generic [ref=e124]: Django vs FastAPI：2026 年 Python Web 框架怎么选？
+        - link "下一篇 → infowe.site：用 Flask + SQLite 手搓一个完整博客系统" [ref=e125] [cursor=pointer]:
+          - /url: /post/6
+          - generic [ref=e126]: 下一篇 →
+          - generic [ref=e127]: infowe.site：用 Flask + SQLite 手搓一个完整博客系统
+      - generic [ref=e128]:
+        - heading "相关推荐" [level=2] [ref=e129]
+        - list [ref=e130]:
+          - listitem [ref=e131]:
+            - link "飞牛 NAS (fnOS) 应用登录认证 & 开放 API 接入手册" [ref=e132] [cursor=pointer]:
+              - /url: /post/36
+            - generic [ref=e133]: 2026-08-23 · 15 分钟
+          - listitem [ref=e134]:
+            - link "infowe.site：用 Flask + SQLite 手搓一个完整博客系统" [ref=e135] [cursor=pointer]:
+              - /url: /post/6
+            - generic [ref=e136]: 2026-08-04 · 5 分钟
+          - listitem [ref=e137]:
+            - link "Django vs FastAPI：2026 年 Python Web 框架怎么选？" [ref=e138] [cursor=pointer]:
+              - /url: /post/3
+            - generic [ref=e139]: 2026-07-12 · 8 分钟
+      - generic [ref=e140]:
+        - heading "评论 (0)" [level=2] [ref=e141]
+        - paragraph [ref=e142]: 评论功能已关闭
+  - contentinfo [ref=e143]:
+    - generic [ref=e145]:
+      - paragraph [ref=e146]: © 2026 infowe.site · Powered by Flask
+      - generic [ref=e147]:
+        - link "开源项目" [ref=e148] [cursor=pointer]:
+          - /url: /projects
+        - link "友情链接" [ref=e149] [cursor=pointer]:
+          - /url: /links
+        - link "关于我" [ref=e150] [cursor=pointer]:
+          - /url: /about
+        - link "RSS" [ref=e151] [cursor=pointer]:
+          - /url: /feed.xml
+      - generic [ref=e152]:
+        - link "渝ICP备2024022518号-1" [ref=e153] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - link "渝公网安备50010802006394号" [ref=e154] [cursor=pointer]:
+          - /url: https://beian.mps.gov.cn

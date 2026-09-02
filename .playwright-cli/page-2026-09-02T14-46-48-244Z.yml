@@ -1,0 +1,229 @@
+- generic [active] [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e3]:
+    - generic [ref=e5]:
+      - link "infowe.site" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e7]:
+        - link "首页" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "文章" [ref=e9] [cursor=pointer]:
+          - /url: /posts
+        - link "标签" [ref=e10] [cursor=pointer]:
+          - /url: /tags
+        - link "项目" [ref=e11] [cursor=pointer]:
+          - /url: /projects
+        - link "友链" [ref=e12] [cursor=pointer]:
+          - /url: /links
+        - link "关于" [ref=e13] [cursor=pointer]:
+          - /url: /about
+        - link "状态" [ref=e14] [cursor=pointer]:
+          - /url: /status
+        - link "写作" [ref=e15] [cursor=pointer]:
+          - /url: /admin
+      - button "切换主题" [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+  - main [ref=e20]:
+    - generic [ref=e21]:
+      - generic [ref=e22]:
+        - heading "文章标签" [level=1] [ref=e23]
+        - paragraph [ref=e24]: 共 45 个标签 · 37 篇文章，点击查看相关文章
+      - generic [ref=e25]:
+        - link "# 生活 21" [ref=e26] [cursor=pointer]:
+          - /url: /?tag=生活
+          - text: "# 生活"
+          - generic [ref=e27]: "21"
+        - link "# 记录 18" [ref=e28] [cursor=pointer]:
+          - /url: /?tag=记录
+          - text: "# 记录"
+          - generic [ref=e29]: "18"
+        - link "# iPhone 8" [ref=e30] [cursor=pointer]:
+          - /url: /?tag=iPhone
+          - text: "# iPhone"
+          - generic [ref=e31]: "8"
+        - link "# Python 6" [ref=e32] [cursor=pointer]:
+          - /url: /?tag=Python
+          - text: "# Python"
+          - generic [ref=e33]: "6"
+        - link "# 数码 6" [ref=e34] [cursor=pointer]:
+          - /url: /?tag=数码
+          - text: "# 数码"
+          - generic [ref=e35]: "6"
+        - link "# 旅游 4" [ref=e36] [cursor=pointer]:
+          - /url: /?tag=旅游
+          - text: "# 旅游"
+          - generic [ref=e37]: "4"
+        - link "# 技术 3" [ref=e38] [cursor=pointer]:
+          - /url: /?tag=技术
+          - text: "# 技术"
+          - generic [ref=e39]: "3"
+        - link "# 教程 3" [ref=e40] [cursor=pointer]:
+          - /url: /?tag=教程
+          - text: "# 教程"
+          - generic [ref=e41]: "3"
+        - link "# Apple 2" [ref=e42] [cursor=pointer]:
+          - /url: /?tag=Apple
+          - text: "# Apple"
+          - generic [ref=e43]: "2"
+        - link "# Docker 2" [ref=e44] [cursor=pointer]:
+          - /url: /?tag=Docker
+          - text: "# Docker"
+          - generic [ref=e45]: "2"
+        - link "# SQLite 2" [ref=e46] [cursor=pointer]:
+          - /url: /?tag=SQLite
+          - text: "# SQLite"
+          - generic [ref=e47]: "2"
+        - link "# 开源 2" [ref=e48] [cursor=pointer]:
+          - /url: /?tag=开源
+          - text: "# 开源"
+          - generic [ref=e49]: "2"
+        - link "# 深入理解 2" [ref=e50] [cursor=pointer]:
+          - /url: /?tag=深入理解
+          - text: "# 深入理解"
+          - generic [ref=e51]: "2"
+        - link "# DevOps 1" [ref=e52] [cursor=pointer]:
+          - /url: /?tag=DevOps
+          - text: "# DevOps"
+          - generic [ref=e53]: "1"
+        - link "# Django 1" [ref=e54] [cursor=pointer]:
+          - /url: /?tag=Django
+          - text: "# Django"
+          - generic [ref=e55]: "1"
+        - link "# FastAPI 1" [ref=e56] [cursor=pointer]:
+          - /url: /?tag=FastAPI
+          - text: "# FastAPI"
+          - generic [ref=e57]: "1"
+        - link "# Flask 1" [ref=e58] [cursor=pointer]:
+          - /url: /?tag=Flask
+          - text: "# Flask"
+          - generic [ref=e59]: "1"
+        - link "# Hexo 1" [ref=e60] [cursor=pointer]:
+          - /url: /?tag=Hexo
+          - text: "# Hexo"
+          - generic [ref=e61]: "1"
+        - link "# MacBook 1" [ref=e62] [cursor=pointer]:
+          - /url: /?tag=MacBook
+          - text: "# MacBook"
+          - generic [ref=e63]: "1"
+        - link "# Tips 1" [ref=e64] [cursor=pointer]:
+          - /url: /?tag=Tips
+          - text: "# Tips"
+          - generic [ref=e65]: "1"
+        - link "# Typecho 1" [ref=e66] [cursor=pointer]:
+          - /url: /?tag=Typecho
+          - text: "# Typecho"
+          - generic [ref=e67]: "1"
+        - link "# Web开发 1" [ref=e68] [cursor=pointer]:
+          - /url: /?tag=Web开发
+          - text: "# Web开发"
+          - generic [ref=e69]: "1"
+        - link "# app 1" [ref=e70] [cursor=pointer]:
+          - /url: /?tag=app
+          - text: "# app"
+          - generic [ref=e71]: "1"
+        - link "# const 1" [ref=e72] [cursor=pointer]:
+          - /url: /?tag=const
+          - text: "# const"
+          - generic [ref=e73]: "1"
+        - link "# ecg 1" [ref=e74] [cursor=pointer]:
+          - /url: /?tag=ecg
+          - text: "# ecg"
+          - generic [ref=e75]: "1"
+        - link "# fit 1" [ref=e76] [cursor=pointer]:
+          - /url: /?tag=fit
+          - text: "# fit"
+          - generic [ref=e77]: "1"
+        - link "# nas 1" [ref=e78] [cursor=pointer]:
+          - /url: /?tag=nas
+          - text: "# nas"
+          - generic [ref=e79]: "1"
+        - link "# pro 1" [ref=e80] [cursor=pointer]:
+          - /url: /?tag=pro
+          - text: "# pro"
+          - generic [ref=e81]: "1"
+        - link "# trim 1" [ref=e82] [cursor=pointer]:
+          - /url: /?tag=trim
+          - text: "# trim"
+          - generic [ref=e83]: "1"
+        - link "# user 1" [ref=e84] [cursor=pointer]:
+          - /url: /?tag=user
+          - text: "# user"
+          - generic [ref=e85]: "1"
+        - link "# watch 1" [ref=e86] [cursor=pointer]:
+          - /url: /?tag=watch
+          - text: "# watch"
+          - generic [ref=e87]: "1"
+        - link "# 一加 1" [ref=e88] [cursor=pointer]:
+          - /url: /?tag=一加
+          - text: "# 一加"
+          - generic [ref=e89]: "1"
+        - link "# 全栈 1" [ref=e90] [cursor=pointer]:
+          - /url: /?tag=全栈
+          - text: "# 全栈"
+          - generic [ref=e91]: "1"
+        - link "# 千盈传送 1" [ref=e92] [cursor=pointer]:
+          - /url: /?tag=千盈传送
+          - text: "# 千盈传送"
+          - generic [ref=e93]: "1"
+        - link "# 南川 1" [ref=e94] [cursor=pointer]:
+          - /url: /?tag=南川
+          - text: "# 南川"
+          - generic [ref=e95]: "1"
+        - link "# 博客 1" [ref=e96] [cursor=pointer]:
+          - /url: /?tag=博客
+          - text: "# 博客"
+          - generic [ref=e97]: "1"
+        - link "# 垂直赛道 1" [ref=e98] [cursor=pointer]:
+          - /url: /?tag=垂直赛道
+          - text: "# 垂直赛道"
+          - generic [ref=e99]: "1"
+        - link "# 头昏 1" [ref=e100] [cursor=pointer]:
+          - /url: /?tag=头昏
+          - text: "# 头昏"
+          - generic [ref=e101]: "1"
+        - link "# 异步 1" [ref=e102] [cursor=pointer]:
+          - /url: /?tag=异步
+          - text: "# 异步"
+          - generic [ref=e103]: "1"
+        - link "# 房产中介 1" [ref=e104] [cursor=pointer]:
+          - /url: /?tag=房产中介
+          - text: "# 房产中介"
+          - generic [ref=e105]: "1"
+        - link "# 房产自媒体 1" [ref=e106] [cursor=pointer]:
+          - /url: /?tag=房产自媒体
+          - text: "# 房产自媒体"
+          - generic [ref=e107]: "1"
+        - link "# 抖音 1" [ref=e108] [cursor=pointer]:
+          - /url: /?tag=抖音
+          - text: "# 抖音"
+          - generic [ref=e109]: "1"
+        - link "# 洋人街 1" [ref=e110] [cursor=pointer]:
+          - /url: /?tag=洋人街
+          - text: "# 洋人街"
+          - generic [ref=e111]: "1"
+        - link "# 缓存 1" [ref=e112] [cursor=pointer]:
+          - /url: /?tag=缓存
+          - text: "# 缓存"
+          - generic [ref=e113]: "1"
+        - link "# 花好月圆 1" [ref=e114] [cursor=pointer]:
+          - /url: /?tag=花好月圆
+          - text: "# 花好月圆"
+          - generic [ref=e115]: "1"
+  - contentinfo [ref=e116]:
+    - generic [ref=e118]:
+      - paragraph [ref=e119]: © 2026 infowe.site · Powered by Flask
+      - generic [ref=e120]:
+        - link "开源项目" [ref=e121] [cursor=pointer]:
+          - /url: /projects
+        - link "友情链接" [ref=e122] [cursor=pointer]:
+          - /url: /links
+        - link "关于我" [ref=e123] [cursor=pointer]:
+          - /url: /about
+        - link "RSS" [ref=e124] [cursor=pointer]:
+          - /url: /feed.xml
+      - generic [ref=e125]:
+        - link "渝ICP备2024022518号-1" [ref=e126] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - link "渝公网安备50010802006394号" [ref=e127] [cursor=pointer]:
+          - /url: https://beian.mps.gov.cn

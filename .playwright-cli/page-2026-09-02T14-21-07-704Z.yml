@@ -1,0 +1,50 @@
+- generic [active] [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e3]:
+    - generic [ref=e5]:
+      - link "infowe.site" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e7]:
+        - button "切换主题" [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+        - button "打开菜单" [ref=e12] [cursor=pointer]:
+          - img [ref=e13]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - heading "友情链接" [level=1] [ref=e18]
+        - paragraph [ref=e19]:
+          - text: 共 3 个友链 ·
+          - link "申请友链" [ref=e20] [cursor=pointer]:
+            - /url: /links/apply
+      - generic [ref=e22]:
+        - link "呆 呆小萌的博客 永远年轻，永远热泪盈眶。" [ref=e23] [cursor=pointer]:
+          - /url: https://www.zhaoyingtian.com/
+          - generic [ref=e24]: 呆
+          - generic [ref=e25]: 呆小萌的博客 永远年轻，永远热泪盈眶。
+        - link "万 万物皆可写 各种教程" [ref=e26] [cursor=pointer]:
+          - /url: https://xn--9krq6q.xn--vqqq8jxym.ink/
+          - generic [ref=e27]: 万
+          - generic [ref=e28]: 万物皆可写 各种教程
+        - link "豪子博客 豪子博客 一名从IT行业转投房地产经纪行业的程序员 目前的工作，就是房产中介，坐标：重庆·南岸" [ref=e29] [cursor=pointer]:
+          - /url: https://www.infowe.site
+          - img "豪子博客" [ref=e30]
+          - generic [ref=e31]: 豪子博客 一名从IT行业转投房地产经纪行业的程序员 目前的工作，就是房产中介，坐标：重庆·南岸
+  - contentinfo [ref=e32]:
+    - generic [ref=e34]:
+      - paragraph [ref=e35]: © 2026 infowe.site · Powered by Flask
+      - generic [ref=e36]:
+        - link "开源项目" [ref=e37] [cursor=pointer]:
+          - /url: /projects
+        - link "友情链接" [ref=e38] [cursor=pointer]:
+          - /url: /links
+        - link "关于我" [ref=e39] [cursor=pointer]:
+          - /url: /about
+        - link "RSS" [ref=e40] [cursor=pointer]:
+          - /url: /feed.xml
+      - generic [ref=e41]:
+        - link "渝ICP备2024022518号-1" [ref=e42] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - link "渝公网安备50010802006394号" [ref=e43] [cursor=pointer]:
+          - /url: https://beian.mps.gov.cn

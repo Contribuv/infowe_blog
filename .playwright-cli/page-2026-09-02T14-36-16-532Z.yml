@@ -1,0 +1,61 @@
+- generic [active] [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e3]:
+    - generic [ref=e5]:
+      - link "infowe.site" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e7]:
+        - button "切换主题" [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+        - button "打开菜单" [ref=e11] [cursor=pointer]:
+          - img [ref=e12]
+  - main [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - heading "服务状态" [level=1] [ref=e17]
+        - paragraph [ref=e18]: 云资源到期时间与在线服务可用性一览，数据每 5 分钟自动更新
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - heading "到期时间 云资源" [level=2] [ref=e21]:
+            - text: 到期时间
+            - generic [ref=e22]: 云资源
+          - generic [ref=e23]:
+            - generic [ref=e24]:
+              - generic [ref=e26]: 阿里云 ECS 服务器
+              - generic [ref=e27]:
+                - generic "到期日期" [ref=e28]: 2028-02-23
+                - generic [ref=e29]: 正常
+            - generic [ref=e30]:
+              - generic [ref=e32]: 腾讯云域名
+              - generic [ref=e33]:
+                - generic "到期日期" [ref=e34]: 2034-02-16
+                - generic [ref=e35]: 正常
+        - generic [ref=e36]:
+          - heading "服务状态 1/1 在线" [level=2] [ref=e37]:
+            - text: 服务状态
+            - generic [ref=e38]: 1/1 在线
+          - generic [ref=e40]:
+            - generic [ref=e42]: 豪子博客
+            - generic [ref=e43]:
+              - generic "响应延迟" [ref=e44]: 371 ms
+              - generic "SSL 证书剩余天数" [ref=e45]: 64 天
+              - generic "近 24 小时可用率" [ref=e46]: 100.0%
+          - paragraph
+  - contentinfo [ref=e47]:
+    - generic [ref=e49]:
+      - paragraph [ref=e50]: © 2026 infowe.site · Powered by Flask
+      - generic [ref=e51]:
+        - link "开源项目" [ref=e52] [cursor=pointer]:
+          - /url: /projects
+        - link "友情链接" [ref=e53] [cursor=pointer]:
+          - /url: /links
+        - link "关于我" [ref=e54] [cursor=pointer]:
+          - /url: /about
+        - link "RSS" [ref=e55] [cursor=pointer]:
+          - /url: /feed.xml
+      - generic [ref=e56]:
+        - link "渝ICP备2024022518号-1" [ref=e57] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - link "渝公网安备50010802006394号" [ref=e58] [cursor=pointer]:
+          - /url: https://beian.mps.gov.cn

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}时光与记忆{% endblock %}
+{% block og_description %}奇怪，我的世界为什么一直在下雪，却没有你的足迹{% endblock %}
+{% block content %}
+<section class="sg-nostalgia">
+    <header class="sg-page-head">
+        <h1 class="sg-page-title">{{ icon('history', 26, 'sg-ic') | safe }} 时光与记忆</h1>
+        <p class="sg-page-desc">
+            奇怪，我的世界为什么一直在下雪，却没有你的足迹 ·
+            共 {{ memories|length }} 个记忆
+        </p>
+    </header>
+
+    {% if memories %}
+    <div class="sg-memo-grid">
+        {% for m in memories %}
+        <figure class="sg-memo sg-glass sg-reveal">
+            {% if m.image %}
+            <img class="sg-memo-img" src="{{ m.image }}" alt="{{ m.title or '记忆' }}" loading="lazy">
+            {% endif %}
+            <figcaption class="sg-memo-body">
+                {% if m.title %}<p class="sg-memo-title">{{ m.title }}</p>{% endif %}
+                <p class="sg-memo-text">{{ m.text }}</p>
+                {% if m.date %}<span class="sg-memo-date">{{ icon('calendar', 12) | safe }} {{ m.date }}</span>{% endif %}
+            </figcaption>
+        </figure>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="sg-empty">
+        <div class="sg-empty-icon">{{ icon('history', 44) | safe }}</div>
+        <h3>记忆还是空白</h3>
+        <p>去后台「时光记忆」添一条，别让时光溜走太快</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

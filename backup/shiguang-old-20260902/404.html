@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}404{% endblock %}
+{% block content %}
+<section class="sg-error">
+    <div class="sg-error-card sg-glass">
+        <div class="sg-error-code">404</div>
+        <h2 class="sg-error-title">这页找不到了</h2>
+        <p class="sg-error-desc">
+            这条胡同走到底也没见着门牌号。要么是我搬过家，
+            要么是你抄近路走岔了——别慌，我这人从来不记仇。
+        </p>
+        <div class="sg-error-path">/{{ request.path.lstrip('/') }}</div>
+        <div class="sg-error-actions">
+            <a href="/" class="sg-btn sg-btn-primary">{{ icon('arrow-left', 15) | safe }} 回书房</a>
+            <a href="/posts" class="sg-btn">{{ icon('file-text', 15) | safe }} 看文章</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,18 @@
+<!-- 报条式文章行（首页 & 筛选结果共用） -->
+<article class="sg-row-article sg-glass sg-reveal sg-hover-shine"
+         data-date="{{ post.created_at[:10] }}" data-read="{{ post.read_time }}">
+    <time class="sg-row-date" datetime="{{ post.created_at[:10] }}">{{ post.created_at[:10] }}</time>
+    <div class="sg-row-main">
+        <h3 class="sg-row-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
+        <div class="sg-row-meta">
+            <span>{{ icon('clock', 12) | safe }} {{ post.read_time }} 分钟</span>
+            {% if post.category_name %}
+            <span>{{ icon('folder', 12) | safe }} {{ post.category_name }}</span>
+            {% endif %}
+            {% if post.tags %}
+            <span>{{ icon('tag', 12) | safe }} {{ post.tags|join(' · ') }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <a class="sg-row-go" href="/post/{{ post.id }}" aria-label="阅读 {{ post.title }}">{{ icon('arrow-up-right', 18) | safe }}</a>
+</article>

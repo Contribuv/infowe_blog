@@ -33,6 +33,14 @@
         </div>
     </header>
 
+    <!-- 目录下拉（有标题时显示） -->
+    {% if toc %}
+    <details class="post-toc">
+        <summary class="post-toc-summary">目录</summary>
+        <div class="post-toc-body">{{ toc | safe }}</div>
+    </details>
+    {% endif %}
+
     <!-- 文章内容 -->
     <div class="post-content markdown-body post-card">
         {{ content | safe }}
@@ -171,7 +179,12 @@
 function copyUrl() {
     const btn = document.querySelectorAll('.share-btn')[0];
     const title = (btn && btn.dataset.title) ? btn.dataset.title : document.title;
-    const text = title + '\n' + window.location.href;
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(() => {});
+        return;
+    }
+    const text = title + '\n' + url;
     navigator.clipboard.writeText(text).then(() => {
         const orig = btn.innerHTML;
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 已复制';
@@ -190,6 +203,28 @@ function copyUrl() {
         wrap.className = 'media-wrap';
         el.parentNode.insertBefore(wrap, el);
         wrap.appendChild(el);
+    });
+
+    /* 1.5 代码块复制按钮（包 .code-wrap 容器，按钮固定右上角不随代码滚动） */
+    content.querySelectorAll('pre').forEach(pre => {
+        const wrap = document.createElement('div');
+        wrap.className = 'code-wrap';
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'code-copy';
+        btn.textContent = '复制';
+        btn.setAttribute('aria-label', '复制代码');
+        wrap.appendChild(btn);
+        btn.addEventListener('click', () => {
+            const code = pre.querySelector('code');
+            const text = code ? code.innerText : pre.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = '已复制';
+                setTimeout(() => btn.textContent = '复制', 2000);
+            });
+        });
     });
 
     /* 2. 图片 Lightbox */

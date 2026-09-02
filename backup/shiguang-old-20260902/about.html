@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}关于我{% endblock %}
+{% block og_description %}一个 40 岁单身老男人的自留地{% endblock %}
+{% block content %}
+<section class="sg-about">
+    <!-- 名片：玻璃证件照 -->
+    <div class="sg-idcard sg-glass sg-reveal">
+        <div class="sg-id-avatar">
+            {% if avatar %}
+            <img src="{{ avatar }}" alt="{{ author }} 的头像">
+            {% else %}
+            {{ author[0] | upper if author else '君' }}
+            {% endif %}
+        </div>
+        <div>
+            <h1 class="sg-id-name">{{ author or blog_name }}</h1>
+            {% if author_bio %}
+            <p class="sg-id-bio">{{ author_bio.replace('\n', '<br>') | safe }}</p>
+            {% endif %}
+            <div class="sg-id-social">
+                {% if social_github or github %}
+                <a href="{{ social_github or ('https://github.com/' ~ github) }}" target="_blank" rel="noopener">{{ icon('github', 14) | safe }} GitHub</a>
+                {% endif %}
+                {% if contact_email %}
+                <a href="mailto:{{ contact_email }}">{{ icon('at-sign', 14) | safe }} Email</a>
+                {% endif %}
+                <a href="{{ url_for('rss_feed') }}" target="_blank" rel="noopener">{{ icon('file-text', 14) | safe }} RSS</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="sg-about-grid">
+        <!-- 技术栈 -->
+        <div class="sg-about-card sg-glass sg-reveal">
+            <h2>{{ icon('zap', 18, 'sg-ic') | safe }} 技术栈</h2>
+            {% if skills %}
+            {% for skill in skills %}
+            <div class="sg-skill">
+                <div class="sg-skill-head">
+                    <span>{{ skill.name }}</span>
+                    <span>{{ skill.level }}%</span>
+                </div>
+                <div class="sg-skill-bar">
+                    <div class="sg-skill-fill" data-anim-skill="{{ skill.level }}"></div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="sg-intro-text">技能面板还没配置，后台「设置」里填一下。</p>
+            {% endif %}
+        </div>
+
+        <!-- 关于这个网站 -->
+        <div class="sg-about-card sg-glass sg-reveal">
+            <h2>{{ icon('file-text', 18, 'sg-ic') | safe }} 关于这个网站</h2>
+            {% if about_intro %}
+            <div class="sg-intro-text">{{ about_intro | safe }}</div>
+            {% else %}
+            <div class="sg-intro-text">
+                <p>这里是我的自留地，一个 40 岁单身老男人的深夜书房。</p>
+                <p>白天对着屏幕点头，晚上对着键盘敲字。不焦虑被看见，只求写得开心。</p>
+                <p>博客用 Flask 搭建，文章用 Markdown 写。灯下有一杯茶，就足够了。</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- 网站历程（跨两列） -->
+        <div class="sg-about-card sg-glass sg-reveal" style="grid-column: 1 / -1">
+            <h2>{{ icon('history', 18, 'sg-ic') | safe }} 网站历程</h2>
+            <div class="sg-timeline">
+                {% for ev in timeline %}
+                <div class="sg-timeline-item">
+                    <span class="sg-timeline-date">{{ ev.date }}</span>
+                    <p class="sg-timeline-text">{{ ev.content }}</p>
+                </div>
+                {% else %}
+                <p class="sg-timeline-empty">还没有历程记录——走过的路，都是草稿。</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

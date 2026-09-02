@@ -85,12 +85,14 @@ def list_themes():
     """扫描 templates/ 下的主题文件夹，返回 [{key,name,author,description,version,has_preview}]。
     default 为内置主题（templates/default）。"""
     themes = [{'key': 'default', 'name': '系统默认', 'author': 'infowe',
-               'description': '内置样式与模板', 'version': VERSION, 'has_preview': False}]
+               'description': '内置样式与模板', 'version': VERSION,
+               'has_preview': os.path.isfile(os.path.join(TEMPLATE_DIR, DEFAULT_THEME_NAME, 'preview.png'))}]
     if not os.path.isdir(TEMPLATE_DIR):
         return themes
     for name in sorted(os.listdir(TEMPLATE_DIR)):
         d = os.path.join(TEMPLATE_DIR, name)
-        if not os.path.isdir(d) or name.startswith('.') or name == DEFAULT_THEME_NAME:
+        # 跳过隐藏目录、内置 default 与后台专用目录 admin（非主题）
+        if not os.path.isdir(d) or name.startswith('.') or name == DEFAULT_THEME_NAME or name == 'admin':
             continue
         info = {}
         infof = os.path.join(d, 'info.json')
@@ -114,6 +116,19 @@ def list_themes():
 def _active_theme_key():
     """当前启用的主题 key（default 表示内置主题）。"""
     return app.config.get('active_theme') or 'default'
+
+
+def _theme_asset_ver():
+    """主题静态资源缓存版本：取当前主题 theme.css / theme.js 的最新 mtime。
+    修改样式后 URL 的 ?t= 参数自动变化，强制浏览器重新拉取，避免开发期旧缓存。"""
+    ver = 0
+    tdir = os.path.join(TEMPLATE_DIR, _active_theme_key())
+    for f in ('theme.css', 'theme.js'):
+        try:
+            ver = max(ver, int(os.path.getmtime(os.path.join(tdir, f))))
+        except OSError:
+            pass
+    return ver or 0
 
 
 _LAST_THEME_KEY = [None]
@@ -157,6 +172,8 @@ class ThemeLoader(FileSystemLoader):
         if theme != DEFAULT_THEME_NAME and os.path.isdir(tp):
             paths.append(tp)
         paths.append(os.path.join(base, DEFAULT_THEME_NAME))
+        # 根模板目录兜底：后台 admin/ 等全局模板不归属任何主题
+        paths.append(base)
         self.searchpath = paths
         return FileSystemLoader.get_source(self, environment, template)
 
@@ -316,6 +333,16 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT NOT NULL,
             content TEXT NOT NULL,
+            sort_order INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS memories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL DEFAULT '',
+            text TEXT NOT NULL DEFAULT '',
+            image TEXT NOT NULL DEFAULT '',
+            date TEXT DEFAULT '',
             sort_order INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -1538,18 +1565,23 @@ def normalize_auto_links(content):
 
 
 def render_post_content(content):
+    """渲染 Markdown，返回 (html, toc_html)。toc 为空字符串表示无目录。"""
     if not content:
-        return ''
+        return '', ''
     content = re.sub(r'^---.*?---\s*', '', content, flags=re.DOTALL)
     # 兜底：历史数据中的自动链接 <URL> 规范化为标准链接（避免 Vditor 编辑往返丢失）
     content = normalize_auto_links(content)
     # Markdown 任务列表 [ ] / [x] -> 带样式的勾选符号
     content = content.replace('[x]', '<i class="ck ck-done">☑</i> ').replace('[ ]', '<i class="ck ck-todo">☐</i> ')
-    html = markdown.markdown(
-        content,
-        extensions=['fenced_code', 'tables', 'nl2br', 'sane_lists', 'toc'],
-        extension_configs={'toc': {'slugify': _toc_slugify}}
+    md = markdown.Markdown(
+        extensions=['fenced_code', 'tables', 'nl2br', 'sane_lists', 'toc', 'footnotes', 'attr_list', 'def_list', 'admonition', 'md_in_html'],
+        extension_configs={'toc': {'slugify': _toc_slugify, 'toc_depth': '2-6'}},
+        output_format='html'
     )
+    html = md.convert(content)
+    toc = md.toc
+    if '<li>' not in toc:
+        toc = ''
     # 图片性能优化：懒加载 + 异步解码 + 自动填充空 alt（消除 CLS）
     def _img_repl(m):
         tag = m.group(0)
@@ -1575,7 +1607,7 @@ def render_post_content(content):
             return tag
         return tag.replace('<a', '<a target="_blank" rel="noopener"', 1)
     html = re.sub(r'<a\b[^>]*>', _a_repl, html)
-    return html
+    return html, toc
 
 
 def db_save_post(form_data, post_id=None):
@@ -1961,8 +1993,8 @@ def db_delete_comment(comment_id):
 @app.route('/themes/<path:filename>')
 def theme_static(filename):
     """主题静态资源（theme.css、preview.png 等），从 templates/ 主题文件夹发送。
-    仅允许静态资源扩展名，且不允许访问 default 内置主题内部。"""
-    if filename.startswith(DEFAULT_THEME_NAME + '/'):
+    仅允许静态资源扩展名；default 内置主题仅放行 preview.png（供后台预览）。"""
+    if filename.startswith(DEFAULT_THEME_NAME + '/') and filename != DEFAULT_THEME_NAME + '/preview.png':
         abort(404)
     if not filename.lower().endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif',
                                       '.webp', '.svg', '.ico', '.woff', '.woff2',
@@ -2004,10 +2036,13 @@ def inject_globals():
         'all_tags': db_get_all_tags(),
         'links': db_load_links(),
         'version': VERSION,
+        'now_year': datetime.now().year,
         # 主题系统：当前启用主题 + 全部可选主题 + 当前主题是否带 theme.css
         'active_theme': _active_theme_key(),
         'themes': list_themes(),
         'theme_has_css': _theme_has_css(),
+        # 主题静态资源缓存版本：随 theme.css/theme.js 的 mtime 变化，改样式即可强制浏览器换新
+        'theme_ver': _theme_asset_ver(),
         # 后台页面才检测更新（有缓存，前台不受网络影响）
         'upgrade_check': _upgrade_info,
         'upgrade_available': bool(_upgrade_info and _upgrade_info['version'] > parse_version(VERSION)),
@@ -2028,40 +2063,74 @@ def index():
     else:
         posts = db_load_home_posts(home_count)
         featured = [p for p in posts if p['is_featured']]
-        total = len(posts)
+        _, total = db_load_posts(page=1)
 
     # 附加分类名称
     categories = {c['id']: c['name'] for c in db_load_categories()}
     for p in posts:
         cid = p.get('category_id')
         p['category_name'] = categories.get(cid, '') if cid else ''
+
+    # 首页友链圈（仅正常首页展示）
+    home_links = []
+    if not tag and not search:
+        home_links = db_load_links(status='approved')
 
     return render_template('index.html',
                            posts=posts, current_tag=tag, search_query=search,
                            page=1, total_pages=1, total=total,
                            featured=featured,
+                           links=home_links,
                            total_categories=len(db_load_categories()))
 
 
 @app.route('/posts')
 def posts_page():
-    page = request.args.get('page', 1, type=int)
     tag_filter = request.args.get('tag', '').strip() or None
     year_filter = request.args.get('year', '').strip() or None
     per_page = int(app.config.get('posts_per_page', '20') or 20)
-    posts, total = db_load_posts(status='published', tag=tag_filter, year=year_filter,
-                                  page=page, per_page=per_page)
-    total_pages = max(1, math.ceil(total / per_page))
-    # 附加分类名称
+    # 附加分类名称（供列表展示）
     categories = {c['id']: c['name'] for c in db_load_categories()}
+    all_tags = db_get_all_tags()
+    all_years = db_get_all_years()
+
+    # 归档模式：无任何筛选时，按「置顶 → 年份」分组展示（leelaa 归档质感），同样分页
+    if not tag_filter and not year_filter:
+        page = request.args.get('page', 1, type=int)
+        _, total = db_load_posts(status='published', page=1, per_page=per_page)
+        total_pages = max(1, math.ceil(total / per_page))
+        page = max(1, min(page, total_pages))
+        posts, _ = db_load_posts(status='published', page=page, per_page=per_page)
+        for p in posts:
+            cid = p.get('category_id')
+            p['category_name'] = categories.get(cid, '') if cid else ''
+        pinned = [p for p in posts if p['is_featured']]
+        regular = [p for p in posts if not p['is_featured']]
+        groups = []
+        if pinned:
+            groups.append({'label': '置顶', 'items': pinned})
+        for y in all_years:
+            items = [p for p in regular if (p['created_at'] or '').startswith(y)]
+            if items:
+                groups.append({'label': y, 'items': items})
+        return render_template('posts.html', posts=posts, groups=groups, total=total,
+                               page=page, total_pages=total_pages, filtered=False,
+                               all_tags=all_tags, all_years=all_years,
+                               active_tag='', active_year='')
+
+    # 筛选模式：标签 / 年份过滤 + 分页
+    page = request.args.get('page', 1, type=int)
+    _, total = db_load_posts(status='published', tag=tag_filter, year=year_filter,
+                              page=1, per_page=per_page)
+    total_pages = max(1, math.ceil(total / per_page))
+    page = max(1, min(page, total_pages))
+    posts, _ = db_load_posts(status='published', tag=tag_filter, year=year_filter,
+                              page=page, per_page=per_page)
     for p in posts:
         cid = p.get('category_id')
         p['category_name'] = categories.get(cid, '') if cid else ''
-    # 获取全部标签和年份（不受筛选影响）
-    all_tags = db_get_all_tags()
-    all_years = db_get_all_years()
-    return render_template('posts.html', posts=posts,
-                           page=page, total_pages=total_pages, total=total,
+    return render_template('posts.html', posts=posts, groups=None, total=total,
+                           page=page, total_pages=total_pages, filtered=True,
                            all_tags=all_tags, all_years=all_years,
                            active_tag=tag_filter or '', active_year=year_filter or '')
 
@@ -2078,7 +2147,9 @@ def post_detail(post_id):
         post['category_name'] = cat['name'] if cat else ''
     else:
         post['category_name'] = ''
-    content_html = render_post_content(post['content'])
+    content_html, toc_html = render_post_content(post['content'])
+    # 字数统计（去空白，供 "共 x 字 / 约 x 分钟" 元信息）
+    post['word_count'] = len(re.sub(r'\s', '', post['content']))
     related = db_get_related_posts(post['id'], post['tags'])
     comments_enabled = str(app.config.get('comments_enabled', '1')) in ('1', 'on', 'true', 'yes')
     comments = db_load_comments(post['id']) if comments_enabled else []
@@ -2098,10 +2169,14 @@ def post_detail(post_id):
     prev_post = dict(prev_row) if prev_row else None
     next_post = dict(next_row) if next_row else None
 
-    return render_template('post.html', post=post, content=content_html,
+    # 三栏阅读：左栏展示最近文章索引（用于高亮当前篇）
+    side_posts, _ = db_load_posts(status='published', page=1, per_page=12)
+
+    return render_template('post.html', post=post, content=content_html, toc=toc_html,
                            related=related, comments=comments,
                            prev_post=prev_post, next_post=next_post,
-                           comments_enabled=comments_enabled)
+                           comments_enabled=comments_enabled,
+                           side_posts=side_posts)
 
 
 # 浏览计数去重：同一 IP 对同一文章在窗口期内只计一次（兜底防刷新/多端刷次数）
@@ -2146,7 +2221,18 @@ def post_comment(post_id):
 
 @app.route('/tags')
 def tags():
-    return render_template('tags.html')
+    """标签页：标签云 + 按标签分组的文章列表（对齐 leelaa 标签页结构）。"""
+    posts, total = db_load_posts(status='published', page=1, per_page=99999)
+    categories = {c['id']: c['name'] for c in db_load_categories()}
+    buckets = {}
+    for p in posts:
+        cid = p.get('category_id')
+        p['category_name'] = categories.get(cid, '') if cid else ''
+        for t in p['tags']:
+            buckets.setdefault(t, []).append(p)
+    # 按文章数降序，再按标签名字母序
+    ordered = sorted(buckets.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    return render_template('tags.html', tag_groups=ordered, post_total=total)
 
 
 @app.route('/about')
@@ -2498,7 +2584,7 @@ def admin_post_preview(post_id):
     post = db_get_post_by_id(post_id)
     if not post:
         return jsonify({'html': ''})
-    html = render_post_content(post['content'])
+    html, _ = render_post_content(post['content'])
     return jsonify({'html': html})
 
 
@@ -2506,7 +2592,7 @@ def admin_post_preview(post_id):
 @admin_required
 def admin_preview_content():
     content = request.form.get('content', '')
-    html = render_post_content(content)
+    html, _ = render_post_content(content)
     return jsonify({'html': html})
 
 
@@ -2990,6 +3076,31 @@ def admin_status_test_cloud():
     return jsonify({'ok': True, 'expiry': result})
 
 
+@app.route('/admin/themes', methods=['GET', 'POST'])
+@admin_required
+def admin_themes():
+    """外观与主题：独立页面展示全部主题，卡片选择后保存即切换（v1.3.0）。
+    独立成页而非塞进设置页，是为了放几十个主题时能有更大的卡片网格。"""
+    if request.method == 'POST':
+        new_theme = request.form.get('active_theme', '')
+        valid_keys = {t['key'] for t in list_themes()}
+        if new_theme in valid_keys:
+            save_setting('active_theme', new_theme)
+            app.config['active_theme'] = new_theme
+            _LAST_THEME_KEY[0] = new_theme  # 主动同步标记，避免下个请求再清一次缓存
+            try:
+                app.jinja_env.cache.clear()
+            except Exception:
+                pass
+            flash('主题已切换为：' + new_theme, 'success')
+        else:
+            flash('无效的主题：' + new_theme, 'error')
+        return redirect(url_for('admin_themes'))
+    return render_template('admin/themes.html',
+                           themes=list_themes(),
+                           active_theme=_active_theme_key())
+
+
 @app.route('/admin/settings', methods=['GET', 'POST'])
 @admin_required
 def admin_settings():
@@ -3005,21 +3116,6 @@ def admin_settings():
         comments_on = '1' if request.form.get('comments_enabled') else '0'
         save_setting('comments_enabled', comments_on)
         app.config['comments_enabled'] = comments_on
-
-        # 主题切换：仅允许 list_themes() 中存在的 key，切换后清空 Jinja 模板缓存立即生效
-        new_theme = request.form.get('active_theme', '')
-        if new_theme:
-            valid_keys = {t['key'] for t in list_themes()}
-            if new_theme in valid_keys:
-                save_setting('active_theme', new_theme)
-                app.config['active_theme'] = new_theme
-                try:
-                    app.jinja_env.cache.clear()
-                except Exception:
-                    pass
-                flash('主题已切换为：' + new_theme, 'success')
-            else:
-                flash('无效的主题：' + new_theme, 'error')
 
         db = get_db()
         cur_user = session.get('admin_username', 'admin')
@@ -3079,9 +3175,7 @@ def admin_settings():
     return render_template('admin/settings.html',
                            admin_username=session.get('admin_username', 'admin'),
                            admin_avatar=app.config.get('avatar', ''),
-                           avatar_exists=_avatar_file_exists(),
-                           themes=list_themes(),
-                           active_theme=_active_theme_key())
+                           avatar_exists=_avatar_file_exists())
 
 
 # ─────────────── 数据导出与备份 ───────────────

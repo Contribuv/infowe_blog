@@ -1,0 +1,726 @@
+- generic [active] [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e3]:
+    - generic [ref=e5]:
+      - link "infowe.site" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e7]:
+        - link "首页" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "文章" [ref=e9] [cursor=pointer]:
+          - /url: /posts
+        - link "标签" [ref=e10] [cursor=pointer]:
+          - /url: /tags
+        - link "项目" [ref=e11] [cursor=pointer]:
+          - /url: /projects
+        - link "友链" [ref=e12] [cursor=pointer]:
+          - /url: /links
+        - link "关于" [ref=e13] [cursor=pointer]:
+          - /url: /about
+        - link "状态" [ref=e14] [cursor=pointer]:
+          - /url: /status
+        - link "写作" [ref=e15] [cursor=pointer]:
+          - /url: /admin
+      - button "切换主题" [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - heading "全部文章" [level=1] [ref=e24]
+        - paragraph [ref=e25]: 共 37 篇文章
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]: 标签
+          - generic [ref=e29]:
+            - link "全部" [ref=e30] [cursor=pointer]:
+              - /url: /posts
+            - link "生活" [ref=e31] [cursor=pointer]:
+              - /url: /posts?tag=%E7%94%9F%E6%B4%BB
+            - link "记录" [ref=e32] [cursor=pointer]:
+              - /url: /posts?tag=%E8%AE%B0%E5%BD%95
+            - link "iPhone" [ref=e33] [cursor=pointer]:
+              - /url: /posts?tag=iPhone
+            - link "Python" [ref=e34] [cursor=pointer]:
+              - /url: /posts?tag=Python
+            - link "数码" [ref=e35] [cursor=pointer]:
+              - /url: /posts?tag=%E6%95%B0%E7%A0%81
+            - link "旅游" [ref=e36] [cursor=pointer]:
+              - /url: /posts?tag=%E6%97%85%E6%B8%B8
+            - link "教程" [ref=e37] [cursor=pointer]:
+              - /url: /posts?tag=%E6%95%99%E7%A8%8B
+            - link "技术" [ref=e38] [cursor=pointer]:
+              - /url: /posts?tag=%E6%8A%80%E6%9C%AF
+            - link "深入理解" [ref=e39] [cursor=pointer]:
+              - /url: /posts?tag=%E6%B7%B1%E5%85%A5%E7%90%86%E8%A7%A3
+            - link "Docker" [ref=e40] [cursor=pointer]:
+              - /url: /posts?tag=Docker
+            - link "SQLite" [ref=e41] [cursor=pointer]:
+              - /url: /posts?tag=SQLite
+            - link "开源" [ref=e42] [cursor=pointer]:
+              - /url: /posts?tag=%E5%BC%80%E6%BA%90
+            - link "Apple" [ref=e43] [cursor=pointer]:
+              - /url: /posts?tag=Apple
+            - link "异步" [ref=e44] [cursor=pointer]:
+              - /url: /posts?tag=%E5%BC%82%E6%AD%A5
+            - link "Web开发" [ref=e45] [cursor=pointer]:
+              - /url: /posts?tag=Web%E5%BC%80%E5%8F%91
+            - link "Django" [ref=e46] [cursor=pointer]:
+              - /url: /posts?tag=Django
+            - link "FastAPI" [ref=e47] [cursor=pointer]:
+              - /url: /posts?tag=FastAPI
+            - link "Tips" [ref=e48] [cursor=pointer]:
+              - /url: /posts?tag=Tips
+            - link "DevOps" [ref=e49] [cursor=pointer]:
+              - /url: /posts?tag=DevOps
+            - link "Flask" [ref=e50] [cursor=pointer]:
+              - /url: /posts?tag=Flask
+            - link "博客" [ref=e51] [cursor=pointer]:
+              - /url: /posts?tag=%E5%8D%9A%E5%AE%A2
+            - link "全栈" [ref=e52] [cursor=pointer]:
+              - /url: /posts?tag=%E5%85%A8%E6%A0%88
+            - link "头昏" [ref=e53] [cursor=pointer]:
+              - /url: /posts?tag=%E5%A4%B4%E6%98%8F
+            - link "MacBook" [ref=e54] [cursor=pointer]:
+              - /url: /posts?tag=MacBook
+            - link "Typecho" [ref=e55] [cursor=pointer]:
+              - /url: /posts?tag=Typecho
+            - link "缓存" [ref=e56] [cursor=pointer]:
+              - /url: /posts?tag=%E7%BC%93%E5%AD%98
+            - link "一加" [ref=e57] [cursor=pointer]:
+              - /url: /posts?tag=%E4%B8%80%E5%8A%A0
+            - link "Hexo" [ref=e58] [cursor=pointer]:
+              - /url: /posts?tag=Hexo
+            - link "千盈传送" [ref=e59] [cursor=pointer]:
+              - /url: /posts?tag=%E5%8D%83%E7%9B%88%E4%BC%A0%E9%80%81
+            - link "南川" [ref=e60] [cursor=pointer]:
+              - /url: /posts?tag=%E5%8D%97%E5%B7%9D
+            - link "花好月圆" [ref=e61] [cursor=pointer]:
+              - /url: /posts?tag=%E8%8A%B1%E5%A5%BD%E6%9C%88%E5%9C%86
+            - link "洋人街" [ref=e62] [cursor=pointer]:
+              - /url: /posts?tag=%E6%B4%8B%E4%BA%BA%E8%A1%97
+            - link "trim" [ref=e63] [cursor=pointer]:
+              - /url: /posts?tag=trim
+            - link "app" [ref=e64] [cursor=pointer]:
+              - /url: /posts?tag=app
+            - link "const" [ref=e65] [cursor=pointer]:
+              - /url: /posts?tag=const
+            - link "nas" [ref=e66] [cursor=pointer]:
+              - /url: /posts?tag=nas
+            - link "user" [ref=e67] [cursor=pointer]:
+              - /url: /posts?tag=user
+            - link "watch" [ref=e68] [cursor=pointer]:
+              - /url: /posts?tag=watch
+            - link "fit" [ref=e69] [cursor=pointer]:
+              - /url: /posts?tag=fit
+            - link "pro" [ref=e70] [cursor=pointer]:
+              - /url: /posts?tag=pro
+            - link "ecg" [ref=e71] [cursor=pointer]:
+              - /url: /posts?tag=ecg
+            - link "抖音" [ref=e72] [cursor=pointer]:
+              - /url: /posts?tag=%E6%8A%96%E9%9F%B3
+            - link "垂直赛道" [ref=e73] [cursor=pointer]:
+              - /url: /posts?tag=%E5%9E%82%E7%9B%B4%E8%B5%9B%E9%81%93
+            - link "房产中介" [ref=e74] [cursor=pointer]:
+              - /url: /posts?tag=%E6%88%BF%E4%BA%A7%E4%B8%AD%E4%BB%8B
+            - link "房产自媒体" [ref=e75] [cursor=pointer]:
+              - /url: /posts?tag=%E6%88%BF%E4%BA%A7%E8%87%AA%E5%AA%92%E4%BD%93
+        - generic [ref=e76]:
+          - generic [ref=e77]: 年份
+          - generic [ref=e78]:
+            - link "全部" [ref=e79] [cursor=pointer]:
+              - /url: /posts
+            - link "2026" [ref=e80] [cursor=pointer]:
+              - /url: /posts?year=2026
+            - link "2022" [ref=e81] [cursor=pointer]:
+              - /url: /posts?year=2022
+            - link "2021" [ref=e82] [cursor=pointer]:
+              - /url: /posts?year=2021
+            - link "2020" [ref=e83] [cursor=pointer]:
+              - /url: /posts?year=2020
+            - link "2019" [ref=e84] [cursor=pointer]:
+              - /url: /posts?year=2019
+          - combobox "排序方式" [ref=e86]:
+            - option "最新优先" [selected]
+            - option "最早优先"
+            - option "阅读时长"
+      - list [ref=e87]:
+        - listitem [ref=e88]:
+          - generic [ref=e89]:
+            - time [ref=e90]: 2026-08-30
+            - generic [ref=e91]: 生活随笔
+            - generic [ref=e92]: 1 分钟
+          - heading "抖音正在被垂直流量玩死，乘早尽快换赛道！这不是建议是忠告！" [level=3] [ref=e93]:
+            - link "抖音正在被垂直流量玩死，乘早尽快换赛道！这不是建议是忠告！" [ref=e94] [cursor=pointer]:
+              - /url: /post/38
+          - paragraph [ref=e95]: 抖音正在被垂直流量玩死，趁早尽快换赛道！这不是建议是忠告！ 说句扎心的大实话：现在 90% 的抖音创作者，正在被"垂直"两个字活活逼疯。 我身边太多做号的朋友，陷进同一个死循环——死死盯着垂直赛道硬扛，越做选题越枯竭，越拍越心累，更新全靠硬撑，流量却一年比一年拉胯。 更讽刺的是，创作者已经举步维艰，平台的算法还自我感觉良好，觉得这套"垂直逻辑"完美无缺。 今天我不灌鸡汤、不扯玄学，掰开揉碎讲清楚四
+          - generic [ref=e96]:
+            - link "教程" [ref=e97] [cursor=pointer]:
+              - /url: /?tag=教程
+            - link "抖音" [ref=e98] [cursor=pointer]:
+              - /url: /?tag=抖音
+            - link "垂直赛道" [ref=e99] [cursor=pointer]:
+              - /url: /?tag=垂直赛道
+            - link "房产中介" [ref=e100] [cursor=pointer]:
+              - /url: /?tag=房产中介
+            - link "房产自媒体" [ref=e101] [cursor=pointer]:
+              - /url: /?tag=房产自媒体
+        - listitem [ref=e102]:
+          - generic [ref=e103]:
+            - time [ref=e104]: 2026-08-25
+            - generic [ref=e105]: 生活随笔
+            - generic [ref=e106]: 1 分钟
+          - heading "从 Apple Watch S9 换到华为 Fit 5 Pro：我终于不用每天充电了" [level=3] [ref=e107]:
+            - link "从 Apple Watch S9 换到华为 Fit 5 Pro：我终于不用每天充电了" [ref=e108] [cursor=pointer]:
+              - /url: /post/37
+          - paragraph [ref=e109]: 从 Apple Watch S9 换到华为 Fit 5 Pro：一次迟来但正确的取舍 用了快一年的 Apple Watch S9 45mm，前段时间终于下定决心出掉了。1100 块挂闲鱼秒出，转头用国补在本地门店 1347 元拿下一块华为 Fit 5 Pro。算下来，近乎平换。 为什么换？ 原因简单到一句话就能说清：我实在不想每天充电了。 S9 是块好表，屏幕、震动、生态联动都没得挑。但问题是我根
+          - generic [ref=e110]:
+            - link "Apple" [ref=e111] [cursor=pointer]:
+              - /url: /?tag=Apple
+            - link "watch" [ref=e112] [cursor=pointer]:
+              - /url: /?tag=watch
+            - link "fit" [ref=e113] [cursor=pointer]:
+              - /url: /?tag=fit
+            - link "pro" [ref=e114] [cursor=pointer]:
+              - /url: /?tag=pro
+            - link "ecg" [ref=e115] [cursor=pointer]:
+              - /url: /?tag=ecg
+        - listitem [ref=e116]:
+          - generic [ref=e117]:
+            - time [ref=e118]: 2026-08-23
+            - generic [ref=e119]: 技术随笔
+            - generic [ref=e120]: 15 分钟
+          - heading "飞牛 NAS (fnOS) 应用登录认证 & 开放 API 接入手册" [level=3] [ref=e121]:
+            - link "飞牛 NAS (fnOS) 应用登录认证 & 开放 API 接入手册" [ref=e122] [cursor=pointer]:
+              - /url: /post/36
+          - paragraph [ref=e123]: 飞牛 NAS fnOS 应用登录认证 & 开放 API 接入手册 适用对象：想在飞牛 NAS fnOS 上开发第三方应用、并复用「NAS 账号登录态」的开发者 核心能力：统一网关鉴权 + 用户身份 Header + 文件授权 + 页面路由 版本要求：fnOS ≥ 1.2.0401，飞牛 App ≥ 1.34.0 官方文档：https://developer.fnnas.com/docs/guide
+          - generic [ref=e124]:
+            - link "Python" [ref=e125] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Docker" [ref=e126] [cursor=pointer]:
+              - /url: /?tag=Docker
+            - link "trim" [ref=e127] [cursor=pointer]:
+              - /url: /?tag=trim
+            - link "app" [ref=e128] [cursor=pointer]:
+              - /url: /?tag=app
+            - link "const" [ref=e129] [cursor=pointer]:
+              - /url: /?tag=const
+            - link "nas" [ref=e130] [cursor=pointer]:
+              - /url: /?tag=nas
+            - link "user" [ref=e131] [cursor=pointer]:
+              - /url: /?tag=user
+        - listitem [ref=e132]:
+          - generic [ref=e133]:
+            - time [ref=e134]: 2026-08-17
+            - generic [ref=e135]: 生活随笔
+            - generic [ref=e136]: 1 分钟
+          - heading "南川花好月圆，类似第二个洋人街" [level=3] [ref=e137]:
+            - link "南川花好月圆，类似第二个洋人街" [ref=e138] [cursor=pointer]:
+              - /url: /post/35
+          - paragraph [ref=e139]: 好处是凉快，晚上穿短裤有点冷，然后下次去，我想体验一下露营，还从未露营过，不知道什么感觉。 不信，你们看！
+          - generic [ref=e140]:
+            - link "南川" [ref=e141] [cursor=pointer]:
+              - /url: /?tag=南川
+            - link "花好月圆" [ref=e142] [cursor=pointer]:
+              - /url: /?tag=花好月圆
+            - link "洋人街" [ref=e143] [cursor=pointer]:
+              - /url: /?tag=洋人街
+        - listitem [ref=e144]:
+          - generic [ref=e145]:
+            - time [ref=e146]: 2026-08-11
+            - generic [ref=e147]: 程序相关
+            - generic [ref=e148]: 3 分钟
+          - heading "豪子的又一个开源项目，千盈传送发布了，仅上线飞牛nas arm /x86" [level=3] [ref=e149]:
+            - link "豪子的又一个开源项目，千盈传送发布了，仅上线飞牛nas arm /x86" [ref=e150] [cursor=pointer]:
+              - /url: /post/34
+          - paragraph [ref=e151]: "**千盈传送** 是一款部署在飞牛 NAS 上的轻量级文件传送工具，基于 **WebRTC P2P 点对点传输** 技术，让同一局域网（或跨公网）的设备之间可以直接互传文件。 该项目使用go语言单二进制运行，保证稳定的情况下运行"
+          - generic [ref=e152]:
+            - link "千盈传送" [ref=e153] [cursor=pointer]:
+              - /url: /?tag=千盈传送
+            - link "开源" [ref=e154] [cursor=pointer]:
+              - /url: /?tag=开源
+            - link "记录" [ref=e155] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "iPhone" [ref=e156] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "SQLite" [ref=e157] [cursor=pointer]:
+              - /url: /?tag=SQLite
+            - link "技术" [ref=e158] [cursor=pointer]:
+              - /url: /?tag=技术
+        - listitem [ref=e159]:
+          - generic [ref=e160]:
+            - time [ref=e161]: 2026-08-04
+            - generic [ref=e162]: 生活随笔
+            - generic [ref=e163]: 5 分钟
+          - heading "infowe.site：用 Flask + SQLite 手搓一个完整博客系统" [level=3] [ref=e164]:
+            - link "infowe.site：用 Flask + SQLite 手搓一个完整博客系统" [ref=e165] [cursor=pointer]:
+              - /url: /post/6
+          - paragraph [ref=e166]: 从零搭建一个轻量级 Markdown 博客：Flask 后端 + SQLite 数据层 + Jinja2 模板，含完整后台管理、GitHub 项目展示、评论系统、RSS 等。本文全面复盘架构设计、技术选型、核心代码实现与功能测试。
+          - generic [ref=e167]:
+            - link "Python" [ref=e168] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Flask" [ref=e169] [cursor=pointer]:
+              - /url: /?tag=Flask
+            - link "博客" [ref=e170] [cursor=pointer]:
+              - /url: /?tag=博客
+            - link "全栈" [ref=e171] [cursor=pointer]:
+              - /url: /?tag=全栈
+            - link "SQLite" [ref=e172] [cursor=pointer]:
+              - /url: /?tag=SQLite
+            - link "开源" [ref=e173] [cursor=pointer]:
+              - /url: /?tag=开源
+        - listitem [ref=e174]:
+          - generic [ref=e175]:
+            - time [ref=e176]: 2026-07-20
+            - generic [ref=e177]: 技术随笔
+            - generic [ref=e178]: 1 分钟
+          - heading "深入理解 Python 异步编程：从回调到 async/await" [level=3] [ref=e179]:
+            - link "深入理解 Python 异步编程：从回调到 async/await" [ref=e180] [cursor=pointer]:
+              - /url: /post/2
+          - paragraph [ref=e181]: 从最原始的回调函数，到 Future/Promise，再到生成器协程，最终抵达 async/await——本文带你完整走一遍 Python 异步编程的进化史。
+          - generic [ref=e182]:
+            - link "Python" [ref=e183] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "异步" [ref=e184] [cursor=pointer]:
+              - /url: /?tag=异步
+            - link "深入理解" [ref=e185] [cursor=pointer]:
+              - /url: /?tag=深入理解
+        - listitem [ref=e186]:
+          - generic [ref=e187]:
+            - time [ref=e188]: 2026-07-12
+            - generic [ref=e189]: 8 分钟
+          - heading "Django vs FastAPI：2026 年 Python Web 框架怎么选？" [level=3] [ref=e190]:
+            - link "Django vs FastAPI：2026 年 Python Web 框架怎么选？" [ref=e191] [cursor=pointer]:
+              - /url: /post/3
+          - paragraph [ref=e192]: 两者都在各自领域称王，但到底该选谁？本文从性能、生态、开发体验、适用场景四个维度进行全面对比。
+          - generic [ref=e193]:
+            - link "Python" [ref=e194] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Web开发" [ref=e195] [cursor=pointer]:
+              - /url: /?tag=Web开发
+            - link "Django" [ref=e196] [cursor=pointer]:
+              - /url: /?tag=Django
+            - link "FastAPI" [ref=e197] [cursor=pointer]:
+              - /url: /?tag=FastAPI
+        - listitem [ref=e198]:
+          - generic [ref=e199]:
+            - time [ref=e200]: 2026-06-28
+            - generic [ref=e201]: 10 分钟
+          - heading "Python 装饰器的七种进阶用法" [level=3] [ref=e202]:
+            - link "Python 装饰器的七种进阶用法" [ref=e203] [cursor=pointer]:
+              - /url: /post/4
+          - paragraph [ref=e204]: 带参数的装饰器、类装饰器、装饰器堆叠、functools.wraps 的坑... 一文讲透所有进阶用法。
+          - generic [ref=e205]:
+            - link "Python" [ref=e206] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "深入理解" [ref=e207] [cursor=pointer]:
+              - /url: /?tag=深入理解
+            - link "Tips" [ref=e208] [cursor=pointer]:
+              - /url: /?tag=Tips
+        - listitem [ref=e209]:
+          - generic [ref=e210]:
+            - time [ref=e211]: 2026-06-20
+            - generic [ref=e212]: 7 分钟
+          - heading "Docker 容器化 Python 应用的最佳实践" [level=3] [ref=e213]:
+            - link "Docker 容器化 Python 应用的最佳实践" [ref=e214] [cursor=pointer]:
+              - /url: /post/5
+          - paragraph [ref=e215]: 多阶段构建、非 root 运行、健康检查、日志管理——让你的 Python 应用在容器中如鱼得水。
+          - generic [ref=e216]:
+            - link "Python" [ref=e217] [cursor=pointer]:
+              - /url: /?tag=Python
+            - link "Docker" [ref=e218] [cursor=pointer]:
+              - /url: /?tag=Docker
+            - link "DevOps" [ref=e219] [cursor=pointer]:
+              - /url: /?tag=DevOps
+        - listitem [ref=e220]:
+          - generic [ref=e221]:
+            - time [ref=e222]: 2022-03-02
+            - generic [ref=e223]: 3 分钟
+          - heading "开春了，今天重庆天气真好" [level=3] [ref=e224]:
+            - link "开春了，今天重庆天气真好" [ref=e225] [cursor=pointer]:
+              - /url: /post/33
+          - paragraph [ref=e226]: 去吃饭途中在江边看到这么好看的风景，忍不住拍几张
+          - generic [ref=e227]:
+            - link "记录" [ref=e228] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e229] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "旅游" [ref=e230] [cursor=pointer]:
+              - /url: /?tag=旅游
+        - listitem [ref=e231]:
+          - generic [ref=e232]:
+            - time [ref=e233]: 2022-01-24
+            - generic [ref=e234]: 3 分钟
+          - heading "记录一下typehco转hexo文章以及评论的坑" [level=3] [ref=e235]:
+            - link "记录一下typehco转hexo文章以及评论的坑" [ref=e236] [cursor=pointer]:
+              - /url: /post/32
+          - paragraph [ref=e237]: 因为服务器到期，而且博客长时间都是属于无人打理状态，由于域名没备案卖境外服务器又贵，便宜的又不稳定所以才有了转到HEXO的想法，从想法到实施用了3小时的时间。
+          - generic [ref=e238]:
+            - link "技术" [ref=e239] [cursor=pointer]:
+              - /url: /?tag=技术
+            - link "Hexo" [ref=e240] [cursor=pointer]:
+              - /url: /?tag=Hexo
+            - link "记录" [ref=e241] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e242]:
+          - generic [ref=e243]:
+            - time [ref=e244]: 2022-01-17
+            - generic [ref=e245]: 3 分钟
+          - heading "最近有点负面情绪了，人和人真的不一样" [level=3] [ref=e246]:
+            - link "最近有点负面情绪了，人和人真的不一样" [ref=e247] [cursor=pointer]:
+              - /url: /post/31
+          - paragraph [ref=e248]: 最近是真的带负面情绪了，说不上来具体是怎么样的一种感觉，就只是自己能感受到社会对自己的不公，这世界并非能力者上，感觉更多的是关系者上，是社会生病了，还是说我有问题？
+          - generic [ref=e249]:
+            - link "记录" [ref=e250] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e251] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e252]:
+          - generic [ref=e253]:
+            - time [ref=e254]: 2022-01-16
+            - generic [ref=e255]: 3 分钟
+          - heading "2022开年就感觉好难，第一次感觉赚钱真难" [level=3] [ref=e256]:
+            - link "2022开年就感觉好难，第一次感觉赚钱真难" [ref=e257] [cursor=pointer]:
+              - /url: /post/30
+          - paragraph [ref=e258]: 现在赚钱只有之前的十分之一，感觉每个月都非常吃紧，也不知道这种生活什么时候才是个头啊。
+          - generic [ref=e259]:
+            - link "记录" [ref=e260] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e261] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e262]:
+          - generic [ref=e263]:
+            - time [ref=e264]: 2022-01-13
+            - generic [ref=e265]: 3 分钟
+          - heading "年龄越大,时间过得越快,2022年要结束了 - 新年快乐 - 记录生活" [level=3] [ref=e266]:
+            - link "年龄越大,时间过得越快,2022年要结束了 - 新年快乐 - 记录生活" [ref=e267] [cursor=pointer]:
+              - /url: /post/29
+          - paragraph [ref=e268]: 仿佛新年还在昨天，但事实马上要过春节，并迎接新的一年了。
+          - generic [ref=e269]:
+            - link "记录" [ref=e270] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e271] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e272]:
+          - generic [ref=e273]:
+            - time [ref=e274]: 2021-04-17
+            - generic [ref=e275]: 3 分钟
+          - heading "为什么不推荐购买一加手机？" [level=3] [ref=e276]:
+            - link "为什么不推荐购买一加手机？" [ref=e277] [cursor=pointer]:
+              - /url: /post/28
+          - paragraph [ref=e278]: 从一加第二代产品开始，年年都支持，但是年年都被刘作虎给恶心死了
+          - generic [ref=e279]:
+            - link "数码" [ref=e280] [cursor=pointer]:
+              - /url: /?tag=数码
+            - link "一加" [ref=e281] [cursor=pointer]:
+              - /url: /?tag=一加
+            - link "生活" [ref=e282] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e283]:
+          - generic [ref=e284]:
+            - time [ref=e285]: 2021-02-18
+            - generic [ref=e286]: 3 分钟
+          - heading "开年就想辞职重新找工作，咋整？" [level=3] [ref=e287]:
+            - link "开年就想辞职重新找工作，咋整？" [ref=e288] [cursor=pointer]:
+              - /url: /post/27
+          - paragraph [ref=e289]: 不想做之前的行业了，GS KPI 任务重
+          - generic [ref=e290]:
+            - link "生活" [ref=e291] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "记录" [ref=e292] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e293]:
+          - generic [ref=e294]:
+            - time [ref=e295]: 2021-02-10
+            - generic [ref=e296]: 3 分钟
+          - heading "过年了真的没年味了，不知道是不是只有我有这种感觉" [level=3] [ref=e297]:
+            - link "过年了真的没年味了，不知道是不是只有我有这种感觉" [ref=e298] [cursor=pointer]:
+              - /url: /post/26
+          - paragraph [ref=e299]: 过年了，闲着没事儿更新博客小的时候，盼着过年如今，长大了，不想过年，因为现在的过年，意味着过年要花钱，对于成年人来说是非常痛苦的，当然壕可以忽略不计。
+          - generic [ref=e300]:
+            - link "记录" [ref=e301] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e302] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e303]:
+          - generic [ref=e304]:
+            - time [ref=e305]: 2021-01-11
+            - generic [ref=e306]: 3 分钟
+          - heading "Apple id 您输入错误验证码的次数过多。请稍后再试。解决办法" [level=3] [ref=e307]:
+            - link "Apple id 您输入错误验证码的次数过多。请稍后再试。解决办法" [ref=e308] [cursor=pointer]:
+              - /url: /post/25
+          - paragraph [ref=e309]: 发现苹果的新机激活步骤存在严重问题：
+          - generic [ref=e310]:
+            - link "Apple" [ref=e311] [cursor=pointer]:
+              - /url: /?tag=Apple
+            - link "记录" [ref=e312] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "教程" [ref=e313] [cursor=pointer]:
+              - /url: /?tag=教程
+        - listitem [ref=e314]:
+          - generic [ref=e315]:
+            - time [ref=e316]: 2020-06-08
+            - generic [ref=e317]: 3 分钟
+          - heading "最近睡眠真困难，年纪大了真的老了" [level=3] [ref=e318]:
+            - link "最近睡眠真困难，年纪大了真的老了" [ref=e319] [cursor=pointer]:
+              - /url: /post/24
+          - paragraph [ref=e320]: 最近睡眠真困难，年纪大了真的老了
+          - generic [ref=e321]:
+            - link "记录" [ref=e322] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e323] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e324]:
+          - generic [ref=e325]:
+            - time [ref=e326]: 2020-04-19
+            - generic [ref=e327]: 3 分钟
+          - heading "在家闲得慌，自驾游再次来涠洲岛" [level=3] [ref=e328]:
+            - link "在家闲得慌，自驾游再次来涠洲岛" [ref=e329] [cursor=pointer]:
+              - /url: /post/23
+          - paragraph [ref=e330]: 这次上岛先到的南湾街，还好人不多，海边海鲜市场也不臭，受疫情影响岛上也没啥人，菜市场，海鲜市场管控还是比较严格，当然我也是全副武装，口罩，酒精必备神器
+          - generic [ref=e331]:
+            - link "生活" [ref=e332] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "旅游" [ref=e333] [cursor=pointer]:
+              - /url: /?tag=旅游
+        - listitem [ref=e334]:
+          - generic [ref=e335]:
+            - time [ref=e336]: 2020-03-14
+            - generic [ref=e337]: 3 分钟
+          - heading "iPhone 11 返厂回来了，但是 屏幕刮花，中框刮花，后壳刮花" [level=3] [ref=e338]:
+            - link "iPhone 11 返厂回来了，但是 屏幕刮花，中框刮花，后壳刮花" [ref=e339] [cursor=pointer]:
+              - /url: /post/22
+          - paragraph [ref=e340]: 标题上述问题其实我早已料到因为2015年我的MacBook pro返厂也是一样到处刮花，而且投诉无效
+          - generic [ref=e341]:
+            - link "iPhone" [ref=e342] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "记录" [ref=e343] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e344]:
+          - generic [ref=e345]:
+            - time [ref=e346]: 2020-03-11
+            - generic [ref=e347]: 3 分钟
+          - heading "iPhone11无故自动重启，已维修返回，等快递了" [level=3] [ref=e348]:
+            - link "iPhone11无故自动重启，已维修返回，等快递了" [ref=e349] [cursor=pointer]:
+              - /url: /post/21
+          - paragraph [ref=e350]: 过年期间 手机每天都自动重启好多次，因为疫情原因也无法送修，然后400电话预约天才吧，预约不了，让我重装系统试试，重装系统后还是出现这个问题，3月2号申请返厂，今天官网显示已维修好退回![QQ图片20200311155402.png](ht
+          - generic [ref=e351]:
+            - link "iPhone" [ref=e352] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "生活" [ref=e353] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "记录" [ref=e354] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e355]:
+          - generic [ref=e356]:
+            - time [ref=e357]: 2020-03-08
+            - generic [ref=e358]: 3 分钟
+          - heading "坚果官网抢1499劵，你抢到了吗？我笑出了声" [level=3] [ref=e359]:
+            - link "坚果官网抢1499劵，你抢到了吗？我笑出了声" [ref=e360] [cursor=pointer]:
+              - /url: /post/20
+          - paragraph [ref=e361]: 原价 2399 - 1499劵 900块入手，当然划算，实际上嘛！ (⊙o⊙)… 你懂的
+          - generic [ref=e362]:
+            - link "生活" [ref=e363] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "数码" [ref=e364] [cursor=pointer]:
+              - /url: /?tag=数码
+        - listitem [ref=e365]:
+          - generic [ref=e366]:
+            - time [ref=e367]: 2020-03-06
+            - generic [ref=e368]: 3 分钟
+          - heading "Typecho配置Fastcgi_Cache缓存，如静态一般丝滑" [level=3] [ref=e369]:
+            - link "Typecho配置Fastcgi_Cache缓存，如静态一般丝滑" [ref=e370] [cursor=pointer]:
+              - /url: /post/19
+          - paragraph [ref=e371]: 此插件原作者 https://cuojue.org/read/typecho-fastcgi_cache.html
+          - generic [ref=e372]:
+            - link "技术" [ref=e373] [cursor=pointer]:
+              - /url: /?tag=技术
+            - link "Typecho" [ref=e374] [cursor=pointer]:
+              - /url: /?tag=Typecho
+            - link "缓存" [ref=e375] [cursor=pointer]:
+              - /url: /?tag=缓存
+        - listitem [ref=e376]:
+          - generic [ref=e377]:
+            - time [ref=e378]: 2020-01-29
+            - generic [ref=e379]: 3 分钟
+          - heading "菲律宾薄荷岛确实值得去，已景色为主，吃得过于普通" [level=3] [ref=e380]:
+            - link "菲律宾薄荷岛确实值得去，已景色为主，吃得过于普通" [ref=e381] [cursor=pointer]:
+              - /url: /post/18
+          - paragraph [ref=e382]: 在年前就计划到菲律宾旅游，开始准备签证，然后将护照拿给旅游社的人帮忙办理
+          - generic [ref=e383]:
+            - link "旅游" [ref=e384] [cursor=pointer]:
+              - /url: /?tag=旅游
+            - link "生活" [ref=e385] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e386]:
+          - generic [ref=e387]:
+            - time [ref=e388]: 2020-01-18
+            - generic [ref=e389]: 3 分钟
+          - heading "2020年iPhone全系国行无发票可能会拒保" [level=3] [ref=e390]:
+            - link "2020年iPhone全系国行无发票可能会拒保" [ref=e391] [cursor=pointer]:
+              - /url: /post/17
+          - paragraph [ref=e392]: 前段时间在威锋App上看见不少小伙伴无发票，导致拒保，没想到今天也轮到我被拒保了 233..
+          - generic [ref=e393]:
+            - link "iPhone" [ref=e394] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "生活" [ref=e395] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e396]:
+          - generic [ref=e397]:
+            - time [ref=e398]: 2020-01-16
+            - generic [ref=e399]: 3 分钟
+          - heading "过年准备在菲律宾度过了，希望平安！" [level=3] [ref=e400]:
+            - link "过年准备在菲律宾度过了，希望平安！" [ref=e401] [cursor=pointer]:
+              - /url: /post/16
+          - paragraph [ref=e402]: 今天去北海万达换比索，血亏1000比索，原汇率4000人民币能换30000比索，结果果汇率涨了 2333..![微信图片_20200116135241.jpg](https://www.xxhat.xyz/usr/uploads/2020/
+          - generic [ref=e403]:
+            - link "生活" [ref=e404] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "旅游" [ref=e405] [cursor=pointer]:
+              - /url: /?tag=旅游
+        - listitem [ref=e406]:
+          - generic [ref=e407]:
+            - time [ref=e408]: 2020-01-15
+            - generic [ref=e409]: 3 分钟
+          - heading "说一说我为什么购买iPhone 11而并非11 Pro和 Pro Max" [level=3] [ref=e410]:
+            - link "说一说我为什么购买iPhone 11而并非11 Pro和 Pro Max" [ref=e411] [cursor=pointer]:
+              - /url: /post/15
+          - paragraph [ref=e412]: JJYY：博主是穷人，不要讽刺我 233
+          - generic [ref=e413]:
+            - link "iPhone" [ref=e414] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "数码" [ref=e415] [cursor=pointer]:
+              - /url: /?tag=数码
+            - link "生活" [ref=e416] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e417]:
+          - generic [ref=e418]:
+            - time [ref=e419]: 2020-01-14
+            - generic [ref=e420]: 3 分钟
+          - heading "奉劝各位购买HEA(醒狮)的小伙伴不要买了，质量差" [level=3] [ref=e421]:
+            - link "奉劝各位购买HEA(醒狮)的小伙伴不要买了，质量差" [ref=e422] [cursor=pointer]:
+              - /url: /post/14
+          - paragraph [ref=e423]: 奉劝各位购买HEA(醒狮)的小伙伴，不要再买了，质量真的好差，价格也不便宜.
+          - generic [ref=e424]:
+            - link "生活" [ref=e425] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "记录" [ref=e426] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e427]:
+          - generic [ref=e428]:
+            - time [ref=e429]: 2019-11-21
+            - generic [ref=e430]: 3 分钟
+          - heading "冬天来了，取暖是个大问题，踢脚线？油汀？空调？" [level=3] [ref=e431]:
+            - link "冬天来了，取暖是个大问题，踢脚线？油汀？空调？" [ref=e432] [cursor=pointer]:
+              - /url: /post/13
+          - paragraph [ref=e433]: 博主今年冬天在南方过，所以今年没暖气可用，这几天实在冷得不行（本地的好像并不怕冷）
+          - generic [ref=e434]:
+            - link "生活" [ref=e435] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "记录" [ref=e436] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e437]:
+          - generic [ref=e438]:
+            - time [ref=e439]: 2019-11-10
+            - generic [ref=e440]: 3 分钟
+          - heading "MacBook用集显真坑，小1万都花了居然不给独显" [level=3] [ref=e441]:
+            - link "MacBook用集显真坑，小1万都花了居然不给独显" [ref=e442] [cursor=pointer]:
+              - /url: /post/12
+          - paragraph [ref=e443]: 苹果真的一毛不拔，太抠了，就知道赚钱！！！小一万的笔记本，居然不给独显，坑 坑
+          - generic [ref=e444]:
+            - link "MacBook" [ref=e445] [cursor=pointer]:
+              - /url: /?tag=MacBook
+            - link "数码" [ref=e446] [cursor=pointer]:
+              - /url: /?tag=数码
+            - link "记录" [ref=e447] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e448]:
+          - generic [ref=e449]:
+            - time [ref=e450]: 2019-09-22
+            - generic [ref=e451]: 2 分钟
+          - heading "新入手的 iPhone 11 并没有像网上说的那么发热" [level=3] [ref=e452]:
+            - link "新入手的 iPhone 11 并没有像网上说的那么发热" [ref=e453] [cursor=pointer]:
+              - /url: /post/7
+          - paragraph [ref=e454]: 入手 iPhone 11 后实测发热情况：玩王者荣耀、狂野飙车9、QQ 飞车均有感知发热但不烫手，帧率稳定在 50~60 帧，未出现断流。
+          - generic [ref=e455]:
+            - link "iPhone" [ref=e456] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "数码" [ref=e457] [cursor=pointer]:
+              - /url: /?tag=数码
+            - link "记录" [ref=e458] [cursor=pointer]:
+              - /url: /?tag=记录
+        - listitem [ref=e459]:
+          - generic [ref=e460]:
+            - time [ref=e461]: 2019-09-11
+            - generic [ref=e462]: 3 分钟
+          - heading "iPhone 11 发布了，然而并没有让我换新机的欲望！" [level=3] [ref=e463]:
+            - link "iPhone 11 发布了，然而并没有让我换新机的欲望！" [ref=e464] [cursor=pointer]:
+              - /url: /post/8
+          - paragraph [ref=e465]: 手持iPhone xr / max 就目前自用感觉速度非常快，至于信号嘛！
+          - generic [ref=e466]:
+            - link "iPhone" [ref=e467] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "数码" [ref=e468] [cursor=pointer]:
+              - /url: /?tag=数码
+            - link "生活" [ref=e469] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e470]:
+          - generic [ref=e471]:
+            - time [ref=e472]: 2019-08-28
+            - generic [ref=e473]: 3 分钟
+          - heading "iPhone 解网络锁教程适合att版本" [level=3] [ref=e474]:
+            - link "iPhone 解网络锁教程适合att版本" [ref=e475] [cursor=pointer]:
+              - /url: /post/9
+          - paragraph [ref=e476]: 解网络锁的通用步骤：
+          - generic [ref=e477]:
+            - link "iPhone" [ref=e478] [cursor=pointer]:
+              - /url: /?tag=iPhone
+            - link "教程" [ref=e479] [cursor=pointer]:
+              - /url: /?tag=教程
+            - link "生活" [ref=e480] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e481]:
+          - generic [ref=e482]:
+            - time [ref=e483]: 2019-08-22
+            - generic [ref=e484]: 3 分钟
+          - heading "手机de家，贴膜699一张，价格随店员心情！" [level=3] [ref=e485]:
+            - link "手机de家，贴膜699一张，价格随店员心情！" [ref=e486] [cursor=pointer]:
+              - /url: /post/10
+          - paragraph [ref=e487]: 一张贴膜，不同价格
+          - generic [ref=e488]:
+            - link "记录" [ref=e489] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e490] [cursor=pointer]:
+              - /url: /?tag=生活
+        - listitem [ref=e491]:
+          - generic [ref=e492]:
+            - time [ref=e493]: 2019-05-26
+            - generic [ref=e494]: 3 分钟
+          - heading "最近总是感觉头昏，晚上睡不着，早上睡不醒" [level=3] [ref=e495]:
+            - link "最近总是感觉头昏，晚上睡不着，早上睡不醒" [ref=e496] [cursor=pointer]:
+              - /url: /post/11
+          - paragraph [ref=e497]: 最近总是感觉头昏，晚上睡不着，早上睡不醒
+          - generic [ref=e498]:
+            - link "记录" [ref=e499] [cursor=pointer]:
+              - /url: /?tag=记录
+            - link "生活" [ref=e500] [cursor=pointer]:
+              - /url: /?tag=生活
+            - link "头昏" [ref=e501] [cursor=pointer]:
+              - /url: /?tag=头昏
+  - contentinfo [ref=e502]:
+    - generic [ref=e504]:
+      - paragraph [ref=e505]: © 2026 infowe.site · Powered by Flask
+      - generic [ref=e506]:
+        - link "开源项目" [ref=e507] [cursor=pointer]:
+          - /url: /projects
+        - link "友情链接" [ref=e508] [cursor=pointer]:
+          - /url: /links
+        - link "关于我" [ref=e509] [cursor=pointer]:
+          - /url: /about
+        - link "RSS" [ref=e510] [cursor=pointer]:
+          - /url: /feed.xml
+      - generic [ref=e511]:
+        - link "渝ICP备2024022518号-1" [ref=e512] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - link "渝公网安备50010802006394号" [ref=e513] [cursor=pointer]:
+          - /url: https://beian.mps.gov.cn

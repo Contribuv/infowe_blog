@@ -1,0 +1,155 @@
+- generic [active] [ref=e1]:
+  - link "跳到主要内容" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - navigation "主导航" [ref=e3]:
+    - generic [ref=e5]:
+      - link "infowe.site" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e7]:
+        - link "首页" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "文章" [ref=e9] [cursor=pointer]:
+          - /url: /posts
+        - link "标签" [ref=e10] [cursor=pointer]:
+          - /url: /tags
+        - link "项目" [ref=e11] [cursor=pointer]:
+          - /url: /projects
+        - link "友链" [ref=e12] [cursor=pointer]:
+          - /url: /links
+        - link "关于" [ref=e13] [cursor=pointer]:
+          - /url: /about
+        - link "状态" [ref=e14] [cursor=pointer]:
+          - /url: /status
+        - link "写作" [ref=e15] [cursor=pointer]:
+          - /url: /admin
+      - button "切换主题" [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+  - main [ref=e20]:
+    - generic [ref=e21]:
+      - heading "关于我" [level=1] [ref=e23]
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e26]:
+            - img "豪子 的头像" [ref=e27]
+            - generic [ref=e28]:
+              - heading "豪子" [level=2] [ref=e29]
+              - paragraph [ref=e30]:
+                - text: 一名从IT行业转投房地产经纪行业的程序员
+                - text: 目前的工作，就是房产中介，坐标：重庆·南岸
+              - generic [ref=e31]:
+                - link "GitHub" [ref=e32] [cursor=pointer]:
+                  - /url: https://github.com/Contribuv
+                  - img [ref=e33]
+                  - text: GitHub
+                - link "Email" [ref=e35] [cursor=pointer]:
+                  - /url: mailto:hao198608@gmail.com
+                  - img [ref=e36]
+                  - text: Email
+                - link "RSS" [ref=e39] [cursor=pointer]:
+                  - /url: /feed.xml
+                  - img [ref=e40]
+                  - text: RSS
+          - generic [ref=e43]:
+            - heading "技术栈" [level=2] [ref=e44]
+            - generic [ref=e45]:
+              - generic [ref=e47]:
+                - generic [ref=e48]: Python
+                - generic [ref=e49]: 95%
+              - generic [ref=e53]:
+                - generic [ref=e54]: Flask / Django
+                - generic [ref=e55]: 90%
+              - generic [ref=e59]:
+                - generic [ref=e60]: JavaScript
+                - generic [ref=e61]: 85%
+              - generic [ref=e65]:
+                - generic [ref=e66]: TypeScript
+                - generic [ref=e67]: 80%
+              - generic [ref=e71]:
+                - generic [ref=e72]: PHP
+                - generic [ref=e73]: 95%
+              - generic [ref=e77]:
+                - generic [ref=e78]: ‌.NET‌、F#、Visual Basic
+                - generic [ref=e79]: 96%
+              - generic [ref=e83]:
+                - generic [ref=e84]: C#
+                - generic [ref=e85]: 85%
+              - generic [ref=e89]:
+                - generic [ref=e90]: Rust
+                - generic [ref=e91]: 85%
+              - generic [ref=e95]:
+                - generic [ref=e96]: Docker / K8s
+                - generic [ref=e97]: 75%
+              - generic [ref=e101]:
+                - generic [ref=e102]: PostgreSQL
+                - generic [ref=e103]: 85%
+              - generic [ref=e107]:
+                - generic [ref=e108]: Redis
+                - generic [ref=e109]: 80%
+              - generic [ref=e113]:
+                - generic [ref=e114]: Go
+                - generic [ref=e115]: 88%
+              - generic [ref=e119]:
+                - generic [ref=e120]: Linux
+                - generic [ref=e121]: 88%
+        - generic [ref=e124]:
+          - heading "关于这个网站" [level=2] [ref=e125]
+          - generic [ref=e126]:
+            - text: 网站备案名：六号图文 - 六号自留地；此博客是我用 Python & Flask制作的
+            - text: 1986 年老登 全栈开发者，热爱开源；沉迷于代码美学与系统架构。
+            - text: 相信每一行代码都有它的灵魂；每一个 Bug 都是成长的阶梯。
+        - generic [ref=e127]:
+          - heading "网站历程" [level=2] [ref=e128]
+          - list [ref=e129]:
+            - listitem [ref=e130]:
+              - generic [ref=e131]: "2026.07"
+              - paragraph [ref=e132]: infowe.site 正式上线，发布第一篇文章
+            - listitem [ref=e133]:
+              - generic [ref=e134]: "2026.06"
+              - paragraph [ref=e135]: 博客开发启动，设计 infowe 赛博朋克主题
+            - listitem [ref=e136]:
+              - generic [ref=e137]: "2026.05"
+              - paragraph [ref=e138]: 决定开始写博客，记录技术成长与思考
+            - listitem [ref=e139]:
+              - generic [ref=e140]: "2025.12"
+              - paragraph [ref=e141]: 经过不懈努力，顺利拿到PMP证书
+            - listitem [ref=e142]:
+              - generic [ref=e143]: "2024.9"
+              - paragraph [ref=e144]: 博客再次启用，采用 Python + SQLite 技术栈运行至今
+            - listitem [ref=e145]:
+              - generic [ref=e146]: 2021.04 - 至今
+              - paragraph [ref=e147]: 加入房地产经纪行业
+            - listitem [ref=e148]:
+              - generic [ref=e149]: 2008 - 2021
+              - paragraph [ref=e150]: 因工作与生活原因，博客暂停运行，人生黑暗时刻
+            - listitem [ref=e151]:
+              - generic [ref=e152]: "2006.6"
+              - paragraph [ref=e153]: 在保留历史数据的前提下，博客改用 PHP 重构
+            - listitem [ref=e154]:
+              - generic [ref=e155]: "2004.2"
+              - paragraph [ref=e156]: 拿到某大厂offer，正式开启it牛马人生
+            - listitem [ref=e157]:
+              - generic [ref=e158]: "2003.12"
+              - paragraph [ref=e159]: 开发并开源高并发web_chat，并广泛被使用
+            - listitem [ref=e160]:
+              - generic [ref=e161]: "2002.4"
+              - paragraph [ref=e162]: 创立个人博客（第一版采用 ASP 搭建）
+            - listitem [ref=e163]:
+              - generic [ref=e164]: "1986.8"
+              - paragraph [ref=e165]: 出生，来时的路
+  - contentinfo [ref=e166]:
+    - generic [ref=e168]:
+      - paragraph [ref=e169]: © 2026 infowe.site · Powered by Flask
+      - generic [ref=e170]:
+        - link "开源项目" [ref=e171] [cursor=pointer]:
+          - /url: /projects
+        - link "友情链接" [ref=e172] [cursor=pointer]:
+          - /url: /links
+        - link "关于我" [ref=e173] [cursor=pointer]:
+          - /url: /about
+        - link "RSS" [ref=e174] [cursor=pointer]:
+          - /url: /feed.xml
+      - generic [ref=e175]:
+        - link "渝ICP备2024022518号-1" [ref=e176] [cursor=pointer]:
+          - /url: https://beian.miit.gov.cn
+        - link "渝公网安备50010802006394号" [ref=e177] [cursor=pointer]:
+          - /url: https://beian.mps.gov.cn
