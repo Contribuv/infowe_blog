@@ -237,7 +237,7 @@ img { max-width: 100%; }
 .tech-stat {
   display: inline-flex; align-items: baseline; gap: 4px;
   padding: 4px 12px; font-size: 13px; color: var(--text-secondary);
-  background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 20px;
+  background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px;
 }
 .tech-stat b { color: var(--accent); font-size: 15px; }
 
