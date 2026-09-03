@@ -16,6 +16,7 @@
   --text-secondary: #656d76;
   --accent: #0969da;
   --accent-weak: #ddf4ff;
+  --quote-bg: #eef1f6;
   --success: #1a7f37;
   --warning: #9a6700;
   --danger: #cf222e;
@@ -45,6 +46,7 @@
   --text-secondary: #8b949e;
   --accent: #58a6ff;
   --accent-weak: rgba(56, 139, 253, .15);
+  --quote-bg: #1b222c;
   --success: #3fb950;
   --warning: #d29922;
   --danger: #f85149;
@@ -276,10 +278,12 @@ img { max-width: 100%; }
 .tech-post-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tech-tag {
   font-size: 12px; color: var(--accent);
-  background: var(--accent-weak);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
   padding: 2px 10px; border-radius: 12px; text-decoration: none;
+  transition: border-color .15s, color .15s;
 }
-.tech-tag:hover { filter: brightness(1.1); }
+.tech-tag:hover { border-color: var(--accent); }
 
 /* ── 筛选栏（单行下拉） ── */
 .tech-filter-bar {
@@ -369,7 +373,7 @@ img { max-width: 100%; }
 .tech-post-body h3 { font-size: 18px; }
 .tech-post-body h4 { font-size: 16px; }
 .tech-post-body p { margin: 0 0 16px; }
-.tech-post-body strong { color: var(--accent); font-weight: 700; }
+.tech-post-body strong { font-weight: 700; }
 .tech-post-body em { font-style: italic; }
 .tech-post-body s, .tech-post-body del { color: var(--text-secondary); }
 .tech-post-body sub, .tech-post-body sup { font-size: 12px; }
@@ -380,10 +384,14 @@ img { max-width: 100%; }
 .tech-post-body a:hover { text-decoration: underline; }
 .tech-post-body img { max-width: 100%; border-radius: 6px; display: block; margin: 0 auto 16px; }
 .tech-post-body blockquote {
-  margin: 0 0 16px; padding: 4px 16px;
-  border-left: 4px solid var(--border-strong);
-  color: var(--text-secondary);
+  margin: 0 0 16px; padding: 10px 16px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  background: var(--quote-bg);
+  color: var(--text);
 }
+.tech-post-body blockquote > :first-child { margin-top: 0; }
+.tech-post-body blockquote > :last-child { margin-bottom: 0; }
 .tech-post-body blockquote p { margin: 8px 0; }
 .tech-post-body code {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -546,6 +554,25 @@ img { max-width: 100%; }
 .tech-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .tech-btn-primary:hover { filter: brightness(1.1); color: #fff; }
 .tech-license { font-size: 13px; color: var(--text-secondary); }
+
+/* ── 轻提示 toast（分享/复制反馈，全站可用） ── */
+.tech-toast {
+  position: fixed; left: 50%; bottom: 28px; z-index: 300;
+  transform: translateX(-50%) translateY(6px);
+  max-width: min(86vw, 420px);
+  padding: 9px 18px;
+  font-size: 13px; font-weight: 500; line-height: 1.5;
+  color: var(--text); background: var(--bg);
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease, visibility .2s;
+}
+.tech-toast.show {
+  opacity: 1; visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
 
 /* ── 相关文章 ── */
 .tech-related { margin: 40px 0 0; }
@@ -778,6 +805,13 @@ img { max-width: 100%; }
   .tech-about-social { justify-content: center; }
   .tech-skill-list { grid-template-columns: 1fr; }
   .tech-timeline { column-count: 1; }
+  /* 小屏代码自动折行，避免块内横向拖动；pre 保留 overflow-x 兜底极长内容 */
+  .tech-post-body pre code,
+  .tech-error-code-block code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 }
 
 @media (max-width: 480px) {
@@ -788,6 +822,20 @@ img { max-width: 100%; }
   .tech-select { width: 100%; }
   .tech-links-grid { grid-template-columns: 1fr; }
   .tech-project-grid { grid-template-columns: 1fr; }
+
+  /* 页脚：窄屏改为纵向堆叠，备案号整条折行，避免文字溢出 */
+  .tech-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .tech-footer-links { justify-content: flex-start; }
+  .tech-footer-beian {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+  }
+  .tech-footer-beian a { margin-right: 0; }
 }
 
 /* 打印：正文全宽 */

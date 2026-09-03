@@ -460,6 +460,9 @@
   const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
   document.querySelectorAll('.post-content pre, .post-body pre').forEach((pre) => {
+    // 文章页（post.html 内联 JS）已把 pre 包进 .code-wrap 并提供 .code-copy 按钮，
+    // 这里跳过避免同一代码块出现两个复制按钮。
+    if (pre.parentElement && pre.parentElement.classList.contains('code-wrap')) return;
     if (pre.querySelector('.code-copy-btn')) return;
     const btn = document.createElement('button');
     btn.type = 'button';

@@ -1,0 +1,284 @@
+/* =========================================================================
+   markdown-body.css —— 文章正文 Markdown 排版统一基准（GitHub 渲染风格）
+   -------------------------------------------------------------------------
+   目标：default 与 tech 两套主题的文章正文排版/颜色逐像素一致，均按
+   GitHub Primer 浅色/深色双配色渲染（随 <html data-theme> 切换）。
+   用法：文章正文容器统一带 .markdown-body 类，并在两主题自身 CSS 之后
+   <link> 本文件（等特异性规则按加载顺序后到者生效）。
+   配色取自 GitHub Primer（github-markdown-css 语义），代码高亮取官方
+   github.css / github-dark.css 语标配色的 GitHub 对应色。
+   ========================================================================= */
+
+/* ── 设计令牌（GitHub Primer） ── */
+:root,
+[data-theme="light"] {
+  --mb-fg: #1f2328;            /* 正文主色 */
+  --mb-fg-muted: #59636e;      /* 引用/次级文字 */
+  --mb-link: #0969da;          /* 链接 */
+  --mb-border: #d1d9e0;        /* 表格/代码块边框 */
+  --mb-border-muted: #d1d9e0;  /* 引用条 / hr */
+  --mb-code-bg: #f6f8fa;       /* 代码块底色 */
+  --mb-inline-code: rgba(175, 184, 193, .2); /* 行内 code 底色 */
+  --mb-hr: #d1d9e0;
+  --mb-mark: #fff8c5;
+  --mb-th-bg: #f6f8fa;
+}
+[data-theme="dark"] {
+  --mb-fg: #e6edf3;
+  --mb-fg-muted: #8b949e;
+  --mb-link: #58a6ff;
+  --mb-border: #30363d;
+  --mb-border-muted: #21262d;
+  --mb-code-bg: #161b22;
+  --mb-inline-code: rgba(110, 118, 129, .4);
+  --mb-hr: #21262d;
+  --mb-mark: rgba(187, 128, 9, .35);
+  --mb-th-bg: #161b22;
+}
+
+/* ── 容器基线 ── */
+.markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans",
+    Helvetica, Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--mb-fg);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  letter-spacing: normal; /* 抵消 default 主题 .01em 残留，正文按 GitHub 无字距 */
+}
+.markdown-body > :first-child { margin-top: 0 !important; }
+.markdown-body > :last-child  { margin-bottom: 0 !important; }
+
+/* ── 标题（GitHub 字阶 + 边框分隔，h2 起带下划线的只有 h1/h2 由 md 语义决定） ── */
+.markdown-body h1, .markdown-body h2, .markdown-body h3,
+.markdown-body h4, .markdown-body h5, .markdown-body h6 {
+  margin-top: 24px; margin-bottom: 16px;
+  font-weight: 600; line-height: 1.25;
+  color: var(--mb-fg);
+  letter-spacing: normal; /* 覆盖 default 标题负字距 */
+}
+.markdown-body h1 { font-size: 2em; padding-bottom: .3em; border-bottom: 1px solid var(--mb-border); }
+.markdown-body h2 { font-size: 1.5em; padding-bottom: .3em; border-bottom: 1px solid var(--mb-border); }
+.markdown-body h3 { font-size: 1.25em; }
+.markdown-body h4 { font-size: 1em; }
+.markdown-body h5 { font-size: .875em; }
+.markdown-body h6 { font-size: .85em; color: var(--mb-fg-muted); }
+.markdown-body h1 code, .markdown-body h2 code,
+.markdown-body h3 code, .markdown-body h4 code { font-size: inherit; }
+
+/* ── 段落 / 行内 ── */
+.markdown-body p { margin-top: 0; margin-bottom: 16px; }
+.markdown-body strong, .markdown-body b { font-weight: 600; color: inherit; }
+.markdown-body em, .markdown-body i { font-style: italic; }
+.markdown-body s, .markdown-body del { text-decoration: line-through; color: inherit; }
+.markdown-body mark { background: var(--mb-mark); color: inherit; padding: 0 .3em; border-radius: 4px; }
+.markdown-body sup { font-size: .75em; }
+
+/* ── 链接 ── */
+.markdown-body a { color: var(--mb-link); text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+
+/* ── 列表 ── */
+.markdown-body ul, .markdown-body ol {
+  margin-top: 0; margin-bottom: 16px; padding-left: 2em;
+}
+.markdown-body li { margin-top: .25em; margin-bottom: 0; } /* 行距由共享统一，覆盖两主题底部 margin */
+.markdown-body li > p { margin-bottom: 8px; }
+.markdown-body li > ul, .markdown-body li > ol { margin-bottom: 0; }
+.markdown-body li::marker { color: currentColor; }
+
+/* ── 引用（GitHub：仅左侧灰条，无底色；文字次级色） ── */
+.markdown-body blockquote {
+  margin: 0 0 16px; padding: 0 1em;
+  border-left: .25em solid var(--mb-border-muted);
+  background: transparent; /* 清掉两主题残留底色，GitHub 引用无底色 */
+  border-radius: 0;
+  color: var(--mb-fg-muted);
+}
+.markdown-body blockquote > :first-child { margin-top: 0; }
+.markdown-body blockquote > :last-child  { margin-bottom: 0; }
+.markdown-body blockquote p { margin: 0 0 8px; }
+.markdown-body blockquote strong { color: inherit; } /* 引用内加粗与引用同色（tech 旧规则染 accent） */
+
+/* ── 行内代码 / 代码块 ── */
+.markdown-body code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", "Microsoft YaHei", monospace;
+  font-size: 85%;
+  background: var(--mb-inline-code);
+  padding: .2em .4em;
+  border-radius: 6px;
+  color: inherit;
+}
+.markdown-body :not(pre) > code,
+.markdown-body :not(pre) > kbd {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.markdown-body pre {
+  margin: 0 0 16px;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", "Microsoft YaHei", monospace;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--mb-fg);
+  background: var(--mb-code-bg);
+  border: 1px solid var(--mb-border);
+  border-radius: 6px;
+  word-wrap: normal;
+  white-space: pre;
+  -moz-tab-size: 4; tab-size: 4;
+}
+.markdown-body pre code {
+  background: transparent; padding: 0; margin: 0;
+  font-size: 100%; line-height: inherit; color: inherit;
+  white-space: inherit;
+}
+/* JS 包装的复制按钮容器：间距收敛到容器自身，避免与 pre 双倍 */
+.markdown-body .code-wrap { margin: 0 0 16px; }
+.markdown-body .code-wrap pre { margin: 0; }
+
+/* ── 键盘键 ── */
+.markdown-body kbd {
+  display: inline-block;
+  padding: 3px 6px;
+  font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, "Microsoft YaHei", monospace;
+  line-height: 12px;
+  color: var(--mb-fg);
+  vertical-align: middle;
+  background: var(--mb-code-bg);
+  border: 1px solid var(--mb-border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+}
+
+/* ── 分割线（GitHub：实心粗横条） ── */
+.markdown-body hr {
+  height: 4px; padding: 0; margin: 24px 0;
+  background-color: var(--mb-hr);
+  border: 0;
+}
+
+/* ── 表格（GitHub 细线网格，表头微底；自身滚动防溢出） ── */
+.markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+  margin: 0 0 16px;
+  font-size: inherit; /* 统一表格字号继承正文（两主题原 14px 残留） */
+}
+.markdown-body th, .markdown-body td {
+  padding: 6px 13px;
+  border: 1px solid var(--mb-border);
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-body th {
+  font-weight: 600;
+  background: var(--mb-th-bg);
+}
+.markdown-body table code { background: transparent; padding: 0; }
+
+/* ── 图片 / 媒体：保证不溢出容器 ── */
+.markdown-body img { max-width: 100%; height: auto; }
+.markdown-body video, .markdown-body iframe { max-width: 100%; }
+
+/* ── 任务列表勾选（自定义 .ck 渲染，保证窄屏折行正常） ── */
+.markdown-body .task-list-item { list-style: none; }
+.markdown-body li:has(> .ck) { list-style: none; }
+
+/* ── 脚注（footnotes 扩展）统一为 GitHub 次级小字 ── */
+.markdown-body .footnote, .markdown-body .footnotes {
+  font-size: 14px;
+  color: var(--mb-fg-muted);
+}
+.markdown-body .footnote-ref { font-size: 12px; }
+
+/* =========================================================================
+   代码高亮 —— GitHub 语法配色（github.css / github-dark.css 语义）
+   hljs 会同时给 <code> 加 .hljs 类并逐个 token 上 .hljs-* 类；
+   类名不限定在容器内，但本文件仅在文章页加载，不会波及后台。
+   ========================================================================= */
+[data-theme="light"] .hljs-keyword, [data-theme="light"] .hljs-selector-tag,
+[data-theme="light"] .hljs-doctag, [data-theme="light"] .hljs-template-tag,
+[data-theme="light"] .hljs-template-variable, [data-theme="light"] .hljs-type,
+[data-theme="light"] .hljs-variable.language_,
+[data-theme="light"] .hljs-meta .hljs-keyword { color: #d73a49; }
+[data-theme="light"] .hljs-title, [data-theme="light"] .hljs-title.class_,
+[data-theme="light"] .hljs-title.class_.inherited__,
+[data-theme="light"] .hljs-title.function_ { color: #6f42c1; }
+[data-theme="light"] .hljs-attr, [data-theme="light"] .hljs-attribute,
+[data-theme="light"] .hljs-literal, [data-theme="light"] .hljs-meta,
+[data-theme="light"] .hljs-number, [data-theme="light"] .hljs-operator,
+[data-theme="light"] .hljs-variable, [data-theme="light"] .hljs-selector-attr,
+[data-theme="light"] .hljs-selector-class, [data-theme="light"] .hljs-selector-id,
+[data-theme="light"] .hljs-property { color: #005cc5; }
+[data-theme="light"] .hljs-regexp, [data-theme="light"] .hljs-string,
+[data-theme="light"] .hljs-meta .hljs-string { color: #032f62; }
+[data-theme="light"] .hljs-built_in, [data-theme="light"] .hljs-symbol,
+[data-theme="light"] .hljs-bullet { color: #e36209; }
+[data-theme="light"] .hljs-comment, [data-theme="light"] .hljs-code,
+[data-theme="light"] .hljs-formula { color: #6a737d; font-style: italic; }
+[data-theme="light"] .hljs-name, [data-theme="light"] .hljs-quote,
+[data-theme="light"] .hljs-selector-pseudo { color: #22863a; }
+[data-theme="light"] .hljs-subst { color: #1f2328; }
+[data-theme="light"] .hljs-section { color: #005cc5; font-weight: 700; }
+[data-theme="light"] .hljs-emphasis { font-style: italic; }
+[data-theme="light"] .hljs-strong { font-weight: 700; }
+[data-theme="light"] .hljs-addition { color: #22863a; background: rgba(46, 160, 67, .12); }
+[data-theme="light"] .hljs-deletion  { color: #b31d28; background: rgba(248, 81, 73, .12); }
+
+[data-theme="dark"] .hljs-keyword, [data-theme="dark"] .hljs-selector-tag,
+[data-theme="dark"] .hljs-doctag, [data-theme="dark"] .hljs-template-tag,
+[data-theme="dark"] .hljs-template-variable, [data-theme="dark"] .hljs-type,
+[data-theme="dark"] .hljs-variable.language_,
+[data-theme="dark"] .hljs-meta .hljs-keyword { color: #ff7b72; }
+[data-theme="dark"] .hljs-title, [data-theme="dark"] .hljs-title.class_,
+[data-theme="dark"] .hljs-title.class_.inherited__,
+[data-theme="dark"] .hljs-title.function_ { color: #d2a8ff; }
+[data-theme="dark"] .hljs-attr, [data-theme="dark"] .hljs-attribute,
+[data-theme="dark"] .hljs-literal, [data-theme="dark"] .hljs-meta,
+[data-theme="dark"] .hljs-number, [data-theme="dark"] .hljs-operator,
+[data-theme="dark"] .hljs-variable, [data-theme="dark"] .hljs-selector-attr,
+[data-theme="dark"] .hljs-selector-class, [data-theme="dark"] .hljs-selector-id,
+[data-theme="dark"] .hljs-property { color: #79c0ff; }
+[data-theme="dark"] .hljs-regexp, [data-theme="dark"] .hljs-string,
+[data-theme="dark"] .hljs-meta .hljs-string { color: #a5d6ff; }
+[data-theme="dark"] .hljs-built_in, [data-theme="dark"] .hljs-symbol,
+[data-theme="dark"] .hljs-bullet { color: #ffa657; }
+[data-theme="dark"] .hljs-comment, [data-theme="dark"] .hljs-code,
+[data-theme="dark"] .hljs-formula { color: #8b949e; font-style: italic; }
+[data-theme="dark"] .hljs-name, [data-theme="dark"] .hljs-quote,
+[data-theme="dark"] .hljs-selector-pseudo { color: #7ee787; }
+[data-theme="dark"] .hljs-subst { color: #e6edf3; }
+[data-theme="dark"] .hljs-section { color: #79c0ff; font-weight: 700; }
+[data-theme="dark"] .hljs-emphasis { font-style: italic; }
+[data-theme="dark"] .hljs-strong { font-weight: 700; }
+[data-theme="dark"] .hljs-addition { color: #aff5b4; background: rgba(46, 160, 67, .15); }
+[data-theme="dark"] .hljs-deletion  { color: #ffdcd7; background: rgba(248, 81, 73, .15); }
+
+/* =========================================================================
+   移动端：窄屏代码块自动折行（避免块内左右拖动），表格继续自身横向
+   滚动而不撑破页面；正文保持 GitHub 紧凑字阶。
+   ========================================================================= */
+@media (max-width: 768px) {
+  .markdown-body pre {
+    font-size: 12.5px;
+    padding: 12px;
+  }
+  .markdown-body pre code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .markdown-body table { width: 100%; }
+  .markdown-body h1 { font-size: 1.7em; }
+  .markdown-body h2 { font-size: 1.35em; }
+}

@@ -33,6 +33,8 @@
     <meta name="twitter:description" content="{% block tw_description %}{{ blog_subtitle }}{% endblock %}">
     <meta name="twitter:image" content="{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
     {% if request.path.startswith('/post/') %}
+    <!-- 文章正文统一 GitHub 排版（含 GitHub 浅/深双配色代码高亮），须在主题样式之后加载 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t='v' ~ version) }}">
     <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
     {% endif %}
 </head>
