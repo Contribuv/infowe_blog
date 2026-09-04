@@ -1056,13 +1056,15 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 @media (max-width: 768px) {
   .tech-nav-links { display: none; }
   .tech-burger { display: flex; }
+  /* 移动端：links 隐藏后 actions 失去 auto 居中推力，这里补回靠右 */
+  .tech-nav-actions { margin-left: auto; }
   /* 移动端：写作 icon 隐藏（drawer 菜单已有「写作」文字入口，避免重复） */
   .tech-nav-actions a.tech-icon-btn { display: none; }
   .tech-main { padding: 24px 0 48px; }
   .tech-main:has(.tech-page-head--center) { padding-top: 0; }
   .tech-main:has(.tech-about-hero) { padding-top: 24px; }
-  /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字 */
-  .tech-top { bottom: calc(72px + env(safe-area-inset-bottom)); }
+  /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（scrolled 压缩态同样覆盖） */
+  .tech-top, .tech-top.scrolled { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .tech-post-title-lg { font-size: 24px; }
   .tech-page-title { font-size: 24px; }
   .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 32px; }
