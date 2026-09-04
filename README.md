@@ -107,6 +107,14 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.9
+
+- **移动端导航修复（tech 主题）**：`.tech-nav-links` 移动端隐藏后，补回 `.tech-nav-actions { margin-left:auto }`（桌面靠 links 的 auto 推力顶右，移动端需自己补回），搜索/主题/汉堡图标组恢复靠右
+- **回到顶部按钮避让备案号**：移动端 `.tech-top.scrolled` 压缩态同样上移至 `bottom:72px`（原仅覆盖非压缩态，压缩态 28px 压住页脚备案号）
+- **抽屉菜单头改为「菜单」**：头部标题由 `blog_name`（与桌面 logo 三处重复）改为固定「菜单」二字
+- **抽屉头文字对齐**：`.tech-drawer-head` 左右 padding 由 16px 统一为 20px，与下方菜单链接左缘对齐
+- `app.py` VERSION 同步至 **1.3.9**
+
 ### v1.3.8
 
 - **导航链接组几何居中（tech 主题）**：`.tech-nav-links { margin: 0 auto }` 使 7 个导航链接以导航条中心为轴精确居中，左侧 `logo→链接` 与右侧 `链接→工具图标` 空隙完全对称（实测 delta 1px）；同时移除 `.tech-nav-actions` 的 `margin-left:auto`（此前与 links 的 auto 竞争导致链接偏左 47px）

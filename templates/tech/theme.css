@@ -199,7 +199,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-drawer.open { transform: none; visibility: visible; }
 .tech-drawer-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px; border-bottom: 1px solid var(--border);
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
 }
 .tech-drawer-title { font-size: 16px; font-weight: 700; }
 .tech-drawer-close {
