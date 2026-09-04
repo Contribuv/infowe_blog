@@ -143,7 +143,7 @@ img { max-width: 100%; }
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
-.tech-nav-links { display: flex; gap: 2px; margin-left: 24px; }
+.tech-nav-links { display: flex; gap: 2px; margin: 0 auto; }
 .tech-nav-link {
   padding: 8px 12px; font-size: 15px; color: var(--text-secondary);
   text-decoration: none; border-radius: 6px; white-space: nowrap; position: relative;
@@ -154,7 +154,7 @@ img { max-width: 100%; }
   content: ""; position: absolute; left: 12px; right: 12px; bottom: -9px;
   height: 2px; border-radius: 2px; background: var(--accent);
 }
-.tech-nav-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.tech-nav-actions { display: flex; align-items: center; gap: 4px; }
 /* 汉堡按钮桌面隐藏，仅移动端显示（移动端 media 中已 .tech-burger 显示） */
 .tech-burger { display: none; }
 
