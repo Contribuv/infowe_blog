@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <!-- 主题初始化：无闪烁跟随系统，用户手动切换后以 localStorage 优先 -->
+    <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
       (function () {
         try {
           var saved = localStorage.getItem('infowe-theme');
-          if (saved === 'light' || saved === 'dark') {
-            document.documentElement.setAttribute('data-theme', saved);
-          } else {
-            var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-          }
+          var mode = 'auto';
+          if (saved === 'light' || saved === 'dark' || saved === 'auto') mode = saved;
+          document.documentElement.setAttribute('data-theme-mode', mode);
+          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', mode === 'auto' ? (dark ? 'dark' : 'light') : mode);
         } catch (e) {}
       })();
     </script>
@@ -35,6 +34,8 @@
     {% if request.path.startswith('/post/') %}
     <!-- 文章正文统一 GitHub 排版（含 GitHub 浅/深双配色代码高亮），须在主题样式之后加载 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t='v' ~ version) }}">
+    <!-- 文章分享面板样式（两主题通用） -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t='v' ~ version) }}">
     <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
     {% endif %}
 </head>
@@ -56,6 +57,9 @@
                     <a href="/admin" class="tech-nav-link {% if request.path.startswith('/admin') %}active{% endif %}">写作</a>
                 </div>
                 <div class="tech-nav-actions">
+                    <button type="button" class="tech-icon-btn" id="tech-search-open" aria-label="搜索文章" aria-haspopup="dialog" aria-expanded="false" title="搜索文章">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                    </button>
                     <button class="tech-icon-btn" id="theme-toggle" aria-label="切换主题">
                         <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                         <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -64,6 +68,16 @@
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
                     </button>
                 </div>
+            </div>
+        </div>
+        <!-- 全局搜索下拉面板（导航随窗口粘性定位，面板随导航常驻顶部） -->
+        <div class="tech-search-layer" id="tech-search-layer">
+            <div class="tech-shell">
+                <form class="tech-search-form" action="/" method="GET" role="search">
+                    <input type="search" name="q" id="tech-search-input" class="tech-search-input" placeholder="搜索文章标题、标签、内容…" autocomplete="off" aria-label="搜索文章">
+                    <button type="submit" class="tech-search-btn">搜索</button>
+                    <button type="button" class="tech-search-close" id="tech-search-close" aria-label="关闭搜索" title="关闭">&times;</button>
+                </form>
             </div>
         </div>
     </nav>

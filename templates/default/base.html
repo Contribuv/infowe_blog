@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 主题初始化：无闪烁跟随系统，用户手动切换后以 localStorage 优先 -->
+    <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
       (function () {
         try {
           var saved = localStorage.getItem('infowe-theme');
-          if (saved === 'light' || saved === 'dark') {
-            document.documentElement.setAttribute('data-theme', saved);
-          } else {
-            var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-          }
+          var mode = 'auto';
+          if (saved === 'light' || saved === 'dark' || saved === 'auto') mode = saved;
+          document.documentElement.setAttribute('data-theme-mode', mode);
+          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', mode === 'auto' ? (dark ? 'dark' : 'light') : mode);
         } catch (e) {}
       })();
     </script>
@@ -39,6 +38,8 @@
     {% if request.path.startswith('/post/') %}
     <!-- 文章正文统一 GitHub 排版（含 GitHub 浅/深双配色代码高亮），须在主题样式之后加载 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t='v' ~ version) }}">
+    <!-- 文章分享面板样式（两主题通用） -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t='v' ~ version) }}">
     {% endif %}
 </head>
 <body>

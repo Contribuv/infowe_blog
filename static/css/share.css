@@ -1,0 +1,126 @@
+/* ==============================================
+   infowe Blog · 分享面板（default / tech 两主题通用）
+   仅使用两主题共有的 CSS 变量（带缺省回退，保证任意主题可用）
+   ============================================== */
+
+/* ── 遮罩 ── */
+.share-mask {
+  position: fixed; inset: 0;
+  background: var(--overlay, rgba(0, 0, 0, 0.5));
+  z-index: 900;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.share-mask.open { opacity: 1; visibility: visible; }
+
+/* ── 面板 ── */
+.share-panel {
+  position: fixed; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  width: min(360px, calc(100vw - 32px));
+  background: var(--bg-surface, var(--bg, #fff));
+  color: var(--text, #1f2328);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  z-index: 901;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+  padding: 18px 18px 16px;
+  box-sizing: border-box;
+}
+.share-panel.open { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+
+.share-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.share-panel-title {
+  font-size: 15px; font-weight: 600;
+  color: var(--text, #1f2328);
+}
+.share-close {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 8px;
+  background: none; cursor: pointer;
+  color: var(--text-secondary, #656d76);
+}
+.share-close:hover { color: var(--text, #1f2328); background: var(--bg-hover, var(--bg-subtle, rgba(0, 0, 0, 0.06))); }
+
+/* ── 渠道网格 ── */
+.share-channels {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.share-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 6px 2px;
+  background: none; border: none; cursor: pointer;
+  text-decoration: none;
+  color: var(--text-secondary, #656d76);
+  border-radius: 10px;
+  transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.share-item:hover { color: var(--text, #1f2328); background: var(--bg-hover, var(--bg-subtle, rgba(0, 0, 0, 0.06))); transform: translateY(-1px); }
+.share-chip {
+  width: 46px; height: 46px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  font-size: 20px; font-weight: 600;
+  color: #fff;
+  flex: none;
+}
+.share-label { font-size: 12px; line-height: 1.2; }
+
+/* 各渠道配色（品牌固定色，明暗主题下均可见） */
+.share-item-copy .share-chip {
+  background: var(--accent, #5b8def); color: #fff;
+}
+.share-item-wechat .share-chip { background: #07c160; }
+.share-item-weibo .share-chip { background: #e6162d; }
+.share-item-qzone .share-chip { background: #12b7f5; }
+
+.share-item.is-copied .share-label { color: #2e9b70; }
+
+.share-tip {
+  margin: 12px 2px 0;
+  font-size: 12px; line-height: 1.6;
+  color: var(--text-tertiary, var(--text-secondary, #8b949e));
+}
+
+/* ── 微信二维码视图 ── */
+.share-back {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  border: none; background: none; cursor: pointer;
+  color: var(--accent, #0969da);
+}
+.share-back:hover { text-decoration: underline; }
+
+.share-qr-box {
+  display: flex; justify-content: center;
+  padding: 6px;
+}
+.share-qr {
+  background: #fff;
+  padding: 8px;
+  border-radius: 8px;
+  line-height: 0;
+}
+.share-qr svg { width: 190px; height: 190px; display: block; }
+.share-qr-error {
+  width: 190px; height: 190px;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  font-size: 13px; line-height: 1.6;
+  color: var(--text-secondary, #656d76);
+}
+.share-qr-tip {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 12px; line-height: 1.6;
+  color: var(--text-tertiary, var(--text-secondary, #8b949e));
+}

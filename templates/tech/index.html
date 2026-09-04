@@ -1,14 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{% if current_tag %}{{ current_tag }}{% elif search_query %}搜索: {{ search_query }}{% elif home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}{% endblock %}
 {% block content %}
-<!-- 搜索框 -->
-<form class="tech-search" action="/" method="GET" role="search">
-    <input type="text" name="q" class="tech-search-input" placeholder="搜索文章..." value="{{ search_query }}" autocomplete="off" aria-label="搜索文章">
-    <button type="submit" class="tech-search-btn">搜索</button>
-</form>
-
-<!-- 页面头部 -->
-<div class="tech-page-head">
+<!-- 页面头部（居中 Hero；搜索入口已收纳至导航栏放大镜） -->
+<div class="tech-page-head tech-page-head--center">
     <h1 class="tech-page-title">
         {% if current_tag %}标签：{{ current_tag }}
         {% elif search_query %}搜索：&ldquo;{{ search_query }}&rdquo;
@@ -17,13 +11,19 @@
     </h1>
     <p class="tech-page-desc">
         {% if search_query %}找到 {{ total }} 篇相关文章
-        {% else %}共 {{ total }} 篇文章 · {{ all_tags|length }} 个标签{% endif %}
+        {% else %}共 {{ total }} 篇文章 · {{ all_tags|length }} 个标签 · {{ total_categories }} 个分类{% endif %}
     </p>
     {% if not current_tag and not search_query %}
-    <div class="tech-stats">
-        <span class="tech-stat"><b>{{ total }}</b> 篇文章</span>
-        <span class="tech-stat"><b>{{ all_tags|length }}</b> 个标签</span>
-        <span class="tech-stat"><b>{{ total_categories }}</b> 个分类</span>
+    <!-- 首页终端格言：一言 API + 本地兜底，仅首页展示；交互逻辑见 theme.js -->
+    <div class="tech-quote">
+        <!-- prompt 为人名路径（~/haozi $），避免与导航 / 页脚中的站点名重复；如需自动跟随站点名可改回 {{ blog_name|lower }} -->
+        <span class="tech-quote-prompt" aria-hidden="true">~/haozi $</span>
+        <span class="tech-quote-text" id="tech-quote-text"></span>
+        <span class="tech-quote-cursor" aria-hidden="true"></span>
+        <span class="tech-quote-src" id="tech-quote-src"></span>
+        <button type="button" class="tech-quote-refresh" id="tech-quote-refresh" title="换一句" aria-label="换一句格言">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
     </div>
     {% endif %}
 </div>

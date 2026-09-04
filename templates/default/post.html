@@ -49,7 +49,7 @@
     <!-- 文章底部 -->
     <footer class="post-footer">
         <div class="post-footer-actions">
-            <button class="share-btn" onclick="copyUrl()" title="复制链接" data-title="{{ post.title }}">
+            <button class="share-btn" data-share-open title="分享文章" data-title="{{ post.title }}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 分享文章
             </button>
@@ -175,23 +175,9 @@
 {% endif %}
 </div><!-- /.post-page -->
 
+<script src="{{ url_for('static', filename='vendor/qrcode/qrcode.min.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='js/share.js', t='v' ~ version) }}"></script>
 <script>
-function copyUrl() {
-    const btn = document.querySelectorAll('.share-btn')[0];
-    const title = (btn && btn.dataset.title) ? btn.dataset.title : document.title;
-    const url = window.location.href;
-    if (navigator.share) {
-        navigator.share({ title: title, url: url }).catch(() => {});
-        return;
-    }
-    const text = title + '\n' + url;
-    navigator.clipboard.writeText(text).then(() => {
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 已复制';
-        setTimeout(() => btn.innerHTML = orig, 2000);
-    });
-}
-
 (function () {
     const content = document.querySelector('.post-content');
     if (!content) return;

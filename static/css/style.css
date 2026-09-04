@@ -19,6 +19,7 @@ button, input, textarea, select { font: inherit; color: inherit; border: none; o
 /* ——— 设计令牌 ——— */
 :root {
   /* 颜色 — 暗色默认 */
+  color-scheme: dark;
   --bg:            #0f1117;
   --bg-raised:     #181b25;
   --bg-surface:    #1e2230;
@@ -89,6 +90,7 @@ button, input, textarea, select { font: inherit; color: inherit; border: none; o
 
 /* ——— 亮色模式 ——— */
 [data-theme="light"] {
+  color-scheme: light;
   --bg:            #f5f6fa;
   --bg-raised:     #ffffff;
   --bg-surface:    #ffffff;
@@ -216,6 +218,13 @@ body {
   border: 1px solid transparent; line-height: 1; padding: 0;
 }
 .theme-toggle:hover { color: var(--accent); background: var(--bg-hover); border-color: var(--border); }
+/* 三态主题切换：auto（跟随系统）态按钮右上角小圆点标识 */
+.theme-toggle { position: relative; }
+html[data-theme-mode="auto"] .theme-toggle::after {
+  content: ''; position: absolute; top: 2px; right: 2px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); pointer-events: none;
+}
 .theme-icon-dark { display: inline-flex; align-items: center; justify-content: center; line-height: 0; color: inherit; }
 .theme-icon-light { display: none; align-items: center; justify-content: center; line-height: 0; color: inherit; }
 [data-theme="light"] .theme-icon-dark { display: none; }

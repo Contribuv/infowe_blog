@@ -16,6 +16,8 @@ _nav_check.txt
 *.session
 .flaskenv
 .env
+.codebuddy/
+_tmp_*.py
 
 # ── 数据库与运行时数据（含 blog.db / posts.json，勿入库）──
 *.db

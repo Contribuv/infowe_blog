@@ -10,9 +10,9 @@
 <div class="tech-projects">
     <!-- 语言统计（一行文本，可点击筛选） -->
     <div class="tech-lang-stats">
-        <span class="tech-lang-link is-active" data-lang="__all__">全部 ({{ projects|length }})</span>
+        <span class="tech-lang-link is-active" data-lang="__all__" role="button" tabindex="0">全部 ({{ projects|length }})</span>
         {% for lang, count in languages.items() %}
-        <span class="tech-lang-link" data-lang="{{ lang }}">{{ lang }} ({{ count }})</span>
+        <span class="tech-lang-link" data-lang="{{ lang }}" role="button" tabindex="0">{{ lang }} ({{ count }})</span>
         {% endfor %}
     </div>
 
@@ -81,6 +81,13 @@
     links.forEach(function (b) {
         b.addEventListener('click', function () {
             applyFilter(b.getAttribute('data-lang'));
+        });
+        /* 键盘可达：Enter / 空格触发筛选 */
+        b.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+                ev.preventDefault();
+                applyFilter(b.getAttribute('data-lang'));
+            }
         });
     });
 })();

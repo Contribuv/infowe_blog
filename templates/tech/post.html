@@ -42,7 +42,7 @@
     <!-- 文章底部 -->
     <footer class="tech-post-footer">
         <div style="display: flex; gap: 10px;">
-            <button class="tech-btn" onclick="copyUrl()" data-title="{{ post.title }}">
+            <button class="tech-btn" data-share-open title="分享文章" data-title="{{ post.title }}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 分享
             </button>
@@ -126,49 +126,9 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='vendor/qrcode/qrcode.min.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='js/share.js', t='v' ~ version) }}"></script>
 <script>
-/* 轻提示：全站复用，单例浮层，底部居中 */
-var techToastEl = null, techToastTimer = null;
-function showToast(msg) {
-    if (!techToastEl) {
-        techToastEl = document.createElement('div');
-        techToastEl.className = 'tech-toast';
-        document.body.appendChild(techToastEl);
-    }
-    techToastEl.textContent = msg;
-    // 强制 reflow，避免连续触发时动画不重放
-    void techToastEl.offsetWidth;
-    techToastEl.classList.add('show');
-    clearTimeout(techToastTimer);
-    techToastTimer = setTimeout(function () {
-        techToastEl.classList.remove('show');
-    }, 2200);
-}
-
-/* 分享：支持 Web Share API 的环境（移动端/微信 iOS/抖音等）调起系统分享，否则复制标题+URL */
-function copyUrl() {
-    var btn = document.querySelector('.tech-post-footer .tech-btn');
-    var title = (btn && btn.dataset.title) ? btn.dataset.title : document.title;
-    var url = window.location.href;
-    if (navigator.share) {
-        navigator.share({ title: title, url: url }).catch(function (e) {
-            // 用户主动取消（AbortError）不打扰；其余异常给提示
-            if (e && e.name !== 'AbortError') showToast('分享失败，请重试');
-        });
-        return;
-    }
-    var text = title + '\n' + url;
-    if (!navigator.clipboard) {
-        showToast('当前环境不支持复制，请直接复制地址栏链接');
-        return;
-    }
-    navigator.clipboard.writeText(text).then(function () {
-        showToast('链接已复制，快发给朋友吧');
-    }, function () {
-        showToast('复制失败，请手动复制地址栏链接');
-    });
-}
-
 (function () {
     'use strict';
     var content = document.querySelector('.tech-post-body');

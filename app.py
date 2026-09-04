@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.3'
+VERSION = '1.3.5'
 
 import os
 import re
@@ -2245,6 +2245,9 @@ def about():
     about_intro = app.config.get('about_intro', '')
     author = app.config.get('author', '')
     github = app.config.get('github_username', '') or app.config.get('social_github', '')
+    # 关于页 Hero 统计（与首页口径一致：仅统计已发布文章）
+    _, post_total = db_load_posts(status='published', page=1, per_page=1)
+    category_total = len(db_load_categories())
     db = get_db()
     timeline_rows = db.execute(
         "SELECT id, date, content FROM timeline ORDER BY sort_order ASC, date DESC"
@@ -2252,7 +2255,8 @@ def about():
     db.close()
     timeline = [dict(r) for r in timeline_rows]
     return render_template('about.html', skills=skills, about_intro=about_intro,
-                           author=author, github=github, timeline=timeline)
+                           author=author, github=github, timeline=timeline,
+                           post_total=post_total, category_total=category_total)
 
 
 @app.route('/status')

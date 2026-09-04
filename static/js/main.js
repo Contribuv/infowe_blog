@@ -153,33 +153,41 @@
   }
 
   /* ============================================
-     2. 暗色/亮色模式切换
+     2. 主题切换：三态循环（auto 跟随系统 → light → dark → auto）
      ============================================ */
   const themeToggle = document.getElementById('theme-toggle');
-  if (themeToggle) {
-    const saved = localStorage.getItem('infowe-theme');
-    // 初始主题由 head 内联脚本已按系统/存储设好；此处仅在无存储时确保按系统设定
-    if (!saved) {
-      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  const rootEl = document.documentElement;
+  const SYS_DARK = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function syncTheme() {
+    const mode = rootEl.getAttribute('data-theme-mode') || 'auto';
+    rootEl.setAttribute('data-theme', mode === 'auto' ? (SYS_DARK.matches ? 'dark' : 'light') : mode);
+    if (themeToggle) {
+      const modeName = mode === 'auto' ? '自动（跟随系统）' : (mode === 'dark' ? '深色' : '浅色');
+      const label = '当前：' + modeName + '，点击切换主题';
+      themeToggle.setAttribute('aria-label', label);
+      themeToggle.title = label;
     }
-    // 系统主题变化时，若用户未手动选择则跟随
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onSysTheme = (e) => {
-      if (!localStorage.getItem('infowe-theme')) {
-        document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
-      }
+  }
+  if (themeToggle) {
+    // 系统主题变化：仅 auto（跟随系统）态实时跟随
+    const onSysTheme = () => {
+      if ((rootEl.getAttribute('data-theme-mode') || 'auto') === 'auto') syncTheme();
     };
-    if (mq.addEventListener) mq.addEventListener('change', onSysTheme);
-    else if (mq.addListener) mq.addListener(onSysTheme);
+    if (SYS_DARK.addEventListener) SYS_DARK.addEventListener('change', onSysTheme);
+    else if (SYS_DARK.addListener) SYS_DARK.addListener(onSysTheme);
+
     themeToggle.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme');
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('infowe-theme', next);
+      const mode = rootEl.getAttribute('data-theme-mode') || 'auto';
+      const next = mode === 'auto' ? 'light' : (mode === 'light' ? 'dark' : 'auto');
+      rootEl.setAttribute('data-theme-mode', next);
+      try { localStorage.setItem('infowe-theme', next); } catch (e) {}
+      syncTheme();
       // Re-trigger skill animation
       animateSkills();
     });
+    // 启动时同步按钮提示文案（实际明暗已由 head 内联脚本设好）
+    syncTheme();
   }
 
   /* ============================================
