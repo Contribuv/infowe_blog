@@ -52,8 +52,8 @@
                     <a href="/tags" class="tech-nav-link {% if request.path == '/tags' %}active{% endif %}">标签</a>
                     <a href="/projects" class="tech-nav-link {% if request.path == '/projects' %}active{% endif %}">项目</a>
                     <a href="/links" class="tech-nav-link {% if request.path == '/links' %}active{% endif %}">友链</a>
-                    <a href="/about" class="tech-nav-link {% if request.path == '/about' %}active{% endif %}">关于</a>
                     <a href="/status" class="tech-nav-link {% if request.path == '/status' %}active{% endif %}">状态</a>
+                    <a href="/about" class="tech-nav-link {% if request.path == '/about' %}active{% endif %}">关于</a>
                     <a href="/admin" class="tech-nav-link {% if request.path.startswith('/admin') %}active{% endif %}">写作</a>
                 </div>
                 <div class="tech-nav-actions">
@@ -110,7 +110,7 @@
     <footer class="tech-footer">
         <div class="tech-shell">
             <div class="tech-footer-inner">
-                <p class="tech-footer-copy">&copy; {{ now_year }} {{ blog_name }} · Powered by Flask</p>
+                <p class="tech-footer-copy">Powered by Flask &copy; {{ now_year }} {{ blog_name }}</p>
                 <div class="tech-footer-links">
                     <a href="/projects">开源项目</a>
                     <a href="/links">友情链接</a>

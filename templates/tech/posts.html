@@ -61,6 +61,7 @@
         <div class="tech-post-tags">
             {% for tag in post.tags %}<a href="/?tag={{ tag }}" class="tech-tag">{{ tag }}</a>{% endfor %}
         </div>
+        <span class="tech-post-arrow" aria-hidden="true">→</span>
     </li>
     {% endfor %}
 </ul>

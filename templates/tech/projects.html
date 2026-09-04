@@ -19,7 +19,7 @@
     <!-- 项目列表（卡片网格） -->
     <div class="tech-project-grid" id="projectsList">
         {% for project in projects %}
-        <article class="tech-project-card" data-langs="{{ project.lang_names }}">
+        <article class="tech-project-card{% if project.featured %} tech-project-card-featured{% endif %}" data-langs="{{ project.lang_names }}">
             <div class="tech-project-card-head">
                 {% if project.url %}
                 <a href="{{ project.url }}" target="_blank" rel="noopener" class="tech-project-name">{{ project.name }}</a>
@@ -27,24 +27,27 @@
                 <span class="tech-project-name">{{ project.name }}</span>
                 {% endif %}
                 {% if project.featured %}<span class="tech-project-featured">精选</span>{% endif %}
+                <span class="tech-project-stars">★ {{ project.stars }}</span>
             </div>
             {% if project.description %}
             <p class="tech-project-desc">{{ project.description }}</p>
             {% endif %}
             <div class="tech-project-meta">
-                <span class="tech-project-stars">★ {{ project.stars }}</span>
                 {% set langs = project.lang_list if project.lang_list else [] %}
                 {% if langs %}
-                {% for l in langs %}
+                {% for l in langs[0:2] %}
                 <span class="tech-project-lang">
                     <span class="tech-lang-dot" style="background: {{ l[2] }};"></span>
-                    {{ l[0] }} {{ l[1] }}%
+                    {{ l[0] }}<span class="tech-project-lang-pct"> {{ l[1] }}%</span>
                 </span>
                 {% endfor %}
+                {% if langs|length > 2 %}
+                <span class="tech-project-lang-more" data-more="{% for l in langs[2:] %}{% if not loop.first %}、{% endif %}{{ l[0] }}{% endfor %}">+{{ langs|length - 2 }} 种</span>
+                {% endif %}
                 {% elif project.language %}
                 <span class="tech-project-lang">
                     <span class="tech-lang-dot" style="background: #8b949e;"></span>
-                    {{ project.language }}
+                    <span class="tech-project-lang-pct">{{ project.language }}</span>
                 </span>
                 {% endif %}
             </div>
