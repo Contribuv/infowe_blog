@@ -107,6 +107,15 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.7
+
+- **导航左移 + 中段留白（tech 主题）**：`space-between` 三等分 → `flex-start` 聚左；logo 与首链接保持 24px 呼吸空间，链接组与正文左列对齐，右侧工具图标 `margin-left:auto` 贴右，中段自然留白，消除导航「居中悬空」观感
+- **active 导航底部指示条**：当前页链接下方新增 2px accent 指示条（随链接宽度、左右各留 12px），导航位置反馈明确
+- **「写作」入口图标化**：后台入口从导航文字链接改为右侧铅笔图标（进入后台 active 高亮）；移动端 ≤768px 隐藏该图标，与抽屉菜单「写作」文字入口去重（单一入口，避免重复）
+- **汉堡按钮桌面隐藏**：汉堡默认 `display:none`，仅 ≤768px 显示（原恒显示，桌面冗余）
+- **修复 CSS 标准属性警告**：`.tech-post-excerpt` / `.tech-project-desc` 补充标准 `line-clamp` 属性（与 `-webkit-line-clamp` 并存），editor problems 清零
+- `app.py` VERSION 同步至 **1.3.7**
+
 ### v1.3.6
 
 - **内容宽度定稿 940px（tech 主题）**：全站页面宽度由 720px 统一加宽至 940px（720 显窄、1000 显宽，居中视觉最稳）

@@ -54,9 +54,11 @@
                     <a href="/links" class="tech-nav-link {% if request.path == '/links' %}active{% endif %}">友链</a>
                     <a href="/status" class="tech-nav-link {% if request.path == '/status' %}active{% endif %}">状态</a>
                     <a href="/about" class="tech-nav-link {% if request.path == '/about' %}active{% endif %}">关于</a>
-                    <a href="/admin" class="tech-nav-link {% if request.path.startswith('/admin') %}active{% endif %}">写作</a>
                 </div>
                 <div class="tech-nav-actions">
+                    <a href="/admin" class="tech-icon-btn {% if request.path.startswith('/admin') %}active{% endif %}" aria-label="写作" title="写作">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-4.5L17 3z"/></svg>
+                    </a>
                     <button type="button" class="tech-icon-btn" id="tech-search-open" aria-label="搜索文章" aria-haspopup="dialog" aria-expanded="false" title="搜索文章">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
                     </button>
