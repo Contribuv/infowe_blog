@@ -107,6 +107,12 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.8
+
+- **导航链接组几何居中（tech 主题）**：`.tech-nav-links { margin: 0 auto }` 使 7 个导航链接以导航条中心为轴精确居中，左侧 `logo→链接` 与右侧 `链接→工具图标` 空隙完全对称（实测 delta 1px）；同时移除 `.tech-nav-actions` 的 `margin-left:auto`（此前与 links 的 auto 竞争导致链接偏左 47px）
+- **修复 `.tech-post-excerpt` 标准 `line-clamp` 属性**：编译告警提示补回标准属性（与 `-webkit-line-clamp: 2` 并存），editor problems 清零
+- `app.py` VERSION 同步至 **1.3.8**
+
 ### v1.3.7
 
 - **导航左移 + 中段留白（tech 主题）**：`space-between` 三等分 → `flex-start` 聚左；logo 与首链接保持 24px 呼吸空间，链接组与正文左列对齐，右侧工具图标 `margin-left:auto` 贴右，中段自然留白，消除导航「居中悬空」观感
