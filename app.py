@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.9'
+VERSION = '1.3.11'
 
 import os
 import re
@@ -81,33 +81,50 @@ TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templat
 DEFAULT_THEME_NAME = 'default'
 
 
+def _read_theme_info(name):
+    """读取主题目录下的 info.json（可选）。缺失/损坏/非对象时返回 {}，由调用方回退默认值。"""
+    infof = os.path.join(TEMPLATE_DIR, name, 'info.json')
+    if not os.path.isfile(infof):
+        return {}
+    try:
+        with open(infof, encoding='utf-8') as f:
+            info = json.load(f)
+    except Exception:
+        return {}
+    return info if isinstance(info, dict) else {}
+
+
 def list_themes():
     """扫描 templates/ 下的主题文件夹，返回 [{key,name,author,description,version,has_preview}]。
-    default 为内置主题（templates/default）。"""
-    themes = [{'key': 'default', 'name': '系统默认', 'author': 'infowe',
-               'description': '内置样式与模板', 'version': VERSION,
-               'has_preview': os.path.isfile(os.path.join(TEMPLATE_DIR, DEFAULT_THEME_NAME, 'preview.png'))}]
+
+    default 为内置主题（templates/default），固定排首位。
+    所有主题（含 default）的展示信息均优先取各自目录下的 info.json，
+    字段缺失时回退内置文案——这样 default 也能像其它主题一样用 info.json 自定义元信息。
+    """
+    fallback_default = {'key': DEFAULT_THEME_NAME, 'name': '系统默认', 'author': 'infowe',
+                        'description': '内置样式与模板', 'version': VERSION, 'has_preview': False}
     if not os.path.isdir(TEMPLATE_DIR):
-        return themes
-    for name in sorted(os.listdir(TEMPLATE_DIR)):
+        return [fallback_default]
+    # default 固定首位，其余按目录名字典序；跳过隐藏目录与后台专用目录 admin（非主题）
+    names = [DEFAULT_THEME_NAME] + sorted(
+        n for n in os.listdir(TEMPLATE_DIR)
+        if os.path.isdir(os.path.join(TEMPLATE_DIR, n))
+        and not n.startswith('.') and n != DEFAULT_THEME_NAME and n != 'admin'
+    )
+    themes = []
+    for name in names:
         d = os.path.join(TEMPLATE_DIR, name)
-        # 跳过隐藏目录、内置 default 与后台专用目录 admin（非主题）
-        if not os.path.isdir(d) or name.startswith('.') or name == DEFAULT_THEME_NAME or name == 'admin':
-            continue
-        info = {}
-        infof = os.path.join(d, 'info.json')
-        if os.path.isfile(infof):
-            try:
-                with open(infof, encoding='utf-8') as f:
-                    info = json.load(f)
-            except Exception:
-                info = {}
+        info = _read_theme_info(name)
+        if name == DEFAULT_THEME_NAME:
+            fb = {'name': '系统默认', 'author': 'infowe', 'description': '内置样式与模板', 'version': VERSION}
+        else:
+            fb = {'name': name, 'author': '', 'description': '', 'version': ''}
         themes.append({
             'key': name,
-            'name': info.get('name') or name,
-            'author': info.get('author', ''),
-            'description': info.get('description', ''),
-            'version': info.get('version', ''),
+            'name': info.get('name') or fb['name'],
+            'author': info.get('author', fb['author']),
+            'description': info.get('description', fb['description']),
+            'version': info.get('version', fb['version']),
             'has_preview': os.path.isfile(os.path.join(d, 'preview.png')),
         })
     return themes
@@ -1414,19 +1431,6 @@ def db_load_posts(status='published', tag=None, search=None, year=None, page=1, 
 
     db.close()
     return posts, total
-
-
-def db_get_all_tags():
-    """获取所有已发布文章的标签集合（去重，按频率排序）"""
-    db = get_db()
-    tag_counter = {}
-    rows = db.execute("SELECT tags FROM posts WHERE status='published'").fetchall()
-    for r in rows:
-        tags = json.loads(r['tags'])
-        for t in tags:
-            tag_counter[t] = tag_counter.get(t, 0) + 1
-    db.close()
-    return sorted(tag_counter.keys(), key=lambda x: (-tag_counter[x], x))
 
 
 def db_get_all_years():

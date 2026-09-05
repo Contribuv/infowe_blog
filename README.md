@@ -107,6 +107,15 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.11
+
+- **文章列表项移动端 hover 不再「变宽」（tech 主题）**：`.tech-post-item` 原为 `margin: 0 -16px` + `padding: 16px`，hover 底色比正文左右各宽 16px；390px 屏上底色正好顶满整屏（两侧零留白、10px 圆角被裁掉），观感像整条突然变宽。现于 ≤768px 取消外扩，底色与正文同宽（文字位置不变）
+- **消除触摸端 hover 滞留**：三条 `.tech-post-item:hover` 规则包入 `@media (hover: hover)`，触摸端点按文章后不再一直保持高亮底色与右侧箭头
+- **后台服务监控表移动端排版修复**：`admin/status.html` 监控表 7 个 `<td>` 补 `data-label`（接入 `admin.css` 的移动端表格卡片化方案，此前无标签导致排版错乱）；JS「添加服务」新增行同步补标签，并补回 `svc-cell`/`latency-cell`/`cert-cell` 类名（此前新增行探测结果无法回填）
+- **default 主题补齐 `info.json`**：与 tech 主题对称；`list_themes()` 重构为 default 与其它主题统一读取 `info.json`（抽出 `_read_theme_info()`），字段缺失时回退内置文案，向后兼容
+- **工程**：新增 `pyrightconfig.json` 关闭 basedpyright 噪音规则（`app.py` 告警清零）；清理 `db_get_all_tags` 被同名函数遮蔽的重复定义
+- `app.py` VERSION 同步至 **1.3.11**
+
 ### v1.3.9
 
 - **移动端导航修复（tech 主题）**：`.tech-nav-links` 移动端隐藏后，补回 `.tech-nav-actions { margin-left:auto }`（桌面靠 links 的 auto 推力顶右，移动端需自己补回），搜索/主题/汉堡图标组恢复靠右

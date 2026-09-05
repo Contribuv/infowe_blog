@@ -30,6 +30,11 @@
   color: var(--text-tertiary); cursor: pointer; transition: color var(--transition);
 }
 .pwd-toggle:hover { color: var(--text); background: var(--bg-hover); }
+/* 移动端：监控表卡片化后，输入框独占一行并撑满，避免与列标签（td::before）挤在一行 */
+@media (max-width: 768px) {
+  #svc-table td .input-text { display: block; width: 100%; }
+  #svc-table td:first-child { font-weight: 400; }
+}
 </style>
 {% endblock %}
 
@@ -156,19 +161,19 @@
             <tbody>
                 {% for s in services %}
                 <tr>
-                    <td><input type="text" name="svc_name" class="input-text" value="{{ s.name }}" placeholder="名称"></td>
-                    <td><input type="text" name="svc_url" class="input-text" value="{{ s.url }}" placeholder="https://..."></td>
-                    <td class="svc-cell" data-name="{{ s.name }}">
+                    <td data-label="名称"><input type="text" name="svc_name" class="input-text" value="{{ s.name }}" placeholder="名称"></td>
+                    <td data-label="URL"><input type="text" name="svc_url" class="input-text" value="{{ s.url }}" placeholder="https://..."></td>
+                    <td class="svc-cell" data-label="状态" data-name="{{ s.name }}">
                         {% for it in status_items if it.name == s.name %}
                         {% if it.ok %} <span class="svc-status"><span class="dot dot-ok"></span> 在线</span>
                         {% elif it.ok is none %} <span class="svc-status"><span class="dot dot-none"></span> 待探测</span>
                         {% else %} <span class="svc-status"><span class="dot dot-down"></span> 离线</span>{% endif %}
                         {% else %}<span class="text-muted">—</span>{% endfor %}
                     </td>
-                    <td class="latency-cell">{% for it in status_items if it.name == s.name %}{{ it.latency_ms ~ ' ms' if it.latency_ms is not none else '—' }}{% endfor %}</td>
-                    <td class="cert-cell">{% for it in status_items if it.name == s.name %}{% if it.cert_days and it.cert_days >= 0 %}{{ it.cert_days }} 天{% else %}—{% endif %}{% endfor %}</td>
-                    <td>{% for it in status_items if it.name == s.name %}{{ it.uptime ~ '%' if it.uptime is not none else '—' }}{% endfor %}</td>
-                    <td><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">删除</button></td>
+                    <td class="latency-cell" data-label="延迟">{% for it in status_items if it.name == s.name %}{{ it.latency_ms ~ ' ms' if it.latency_ms is not none else '—' }}{% endfor %}</td>
+                    <td class="cert-cell" data-label="SSL 剩余">{% for it in status_items if it.name == s.name %}{% if it.cert_days and it.cert_days >= 0 %}{{ it.cert_days }} 天{% else %}—{% endif %}{% endfor %}</td>
+                    <td data-label="可用率">{% for it in status_items if it.name == s.name %}{{ it.uptime ~ '%' if it.uptime is not none else '—' }}{% endfor %}</td>
+                    <td data-label="操作"><button type="button" class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">删除</button></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -208,10 +213,13 @@
         var tbody = document.querySelector('#svc-table tbody');
         var tr = document.createElement('tr');
         tr.innerHTML =
-            '<td><input type="text" name="svc_name" class="input-text" placeholder="名称"></td>' +
-            '<td><input type="text" name="svc_url" class="input-text" placeholder="https://..."></td>' +
-            '<td class="text-muted">—</td><td>—</td><td>—</td><td>—</td>' +
-            '<td><button type="button" class="btn btn-sm btn-danger" onclick="this.closest(\'tr\').remove()">删除</button></td>';
+            '<td data-label="名称"><input type="text" name="svc_name" class="input-text" placeholder="名称"></td>' +
+            '<td data-label="URL"><input type="text" name="svc_url" class="input-text" placeholder="https://..."></td>' +
+            '<td class="text-muted svc-cell" data-label="状态">—</td>' +
+            '<td class="latency-cell" data-label="延迟">—</td>' +
+            '<td class="cert-cell" data-label="SSL 剩余">—</td>' +
+            '<td data-label="可用率">—</td>' +
+            '<td data-label="操作"><button type="button" class="btn btn-sm btn-danger" onclick="this.closest(\'tr\').remove()">删除</button></td>';
         tbody.appendChild(tr);
     });
 

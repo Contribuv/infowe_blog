@@ -364,9 +364,13 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   border-bottom: 1px solid var(--border);
   transition: background-color .18s ease;
 }
-.tech-post-item:hover { background: var(--bg-subtle); }
-.tech-post-item:hover .tech-post-title a { color: var(--accent); }
-.tech-post-item:hover .tech-post-arrow { opacity: 1; transform: translateX(0); }
+/* hover 仅在真正支持悬停的设备生效：触摸端点按后 :hover 会滞留，
+   导致整条列表项一直高亮、右侧箭头一直显示 */
+@media (hover: hover) {
+  .tech-post-item:hover { background: var(--bg-subtle); }
+  .tech-post-item:hover .tech-post-title a { color: var(--accent); }
+  .tech-post-item:hover .tech-post-arrow { opacity: 1; transform: translateX(0); }
+}
 .tech-post-arrow {
   position: absolute; top: 20px; right: 18px;
   font-size: 18px; color: var(--accent); opacity: 0;
@@ -376,6 +380,13 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 }
 .tech-post-item:first-child { padding-top: 16px; }
 .tech-post-item:last-child { border-bottom: none; }
+/* 窄屏：取消左右 -16px 外扩。否则 hover 底色比正文宽 32px，
+   在 390px 屏上正好顶满整屏、两侧零留白且 10px 圆角被裁掉（看着像宽度变大）。
+   改为与正文同宽，文字位置不变 */
+@media (max-width: 768px) {
+  .tech-post-item { margin: 0 0 24px; padding: 16px 0; }
+  .tech-post-arrow { right: 0; }
+}
 .tech-post-meta {
   display: flex; flex-wrap: wrap; gap: 6px 16px;
   font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;

@@ -1,0 +1,16 @@
+{
+  // 基础检查档位（关闭 basedpyright 默认 recommended 档的严格类型推断噪音）
+  "typeCheckingMode": "standard",
+  // 本项目为无类型注解的单文件 Flask 应用，以下规则噪音过大，全部关闭：
+  "reportConstantRedefinition": "none",       // try/except 可选依赖重复赋值（_HAS_PIL 等）
+  "reportPossiblyUnboundVariable": "none",    // 可选依赖 import 后在分支中使用（Image 等）
+  "reportOptionalMemberAccess": "none",       // Flask/Jinja 属性被推断为 None（jinja_env.cache）
+  "reportOptionalSubscript": "none",
+  "reportGeneralTypeIssues": "none",          // raise last_err 模式（循环保证非 None）
+  "reportAttributeAccessIssue": "none",       // 第三方库存根差异（Image.LANCZOS / Markdown.toc）
+  "reportArgumentType": "none",               // 形参缺注解由默认值推断导致（status=None 等）
+  "reportCallIssue": "none",
+  "reportOperatorIssue": "none",
+  "reportMissingTypeStubs": "none",           // pillow_heif 等无存根
+  "reportUnusedCallResult": "none"            // sqlite cursor.execute 返回值不使用属正常
+}
