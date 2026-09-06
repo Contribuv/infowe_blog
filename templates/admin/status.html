@@ -190,8 +190,10 @@
 {% endblock %}
 
 {% block admin_scripts %}
+<script type="application/json" id="status-urls">{"probe": "{{ url_for('admin_status_probe') }}", "test_cloud": "{{ url_for('admin_status_test_cloud') }}"}</script>
 <script>
 (function () {
+    var STATUS_URLS = JSON.parse(document.getElementById('status-urls').textContent);
     // 密钥/密码明文与脱敏切换（眼睛图标）
     document.querySelectorAll('[data-pwd-toggle]').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -230,7 +232,7 @@
         var orig = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '探测中...';
-        fetch('{{ url_for("admin_status_probe") }}', { method: 'POST' })
+        fetch(STATUS_URLS.probe, { method: 'POST' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 var items = data.services || [];
@@ -269,7 +271,7 @@
             var btnEl = this;
             btnEl.disabled = true;
             btnEl.innerHTML = '同步中...';
-            fetch('{{ url_for("admin_status_test_cloud") }}', { method: 'POST' })
+            fetch(STATUS_URLS.test_cloud, { method: 'POST' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     var info = (data.expiry || {})[which];

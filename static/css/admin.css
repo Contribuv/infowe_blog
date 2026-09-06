@@ -604,7 +604,7 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 
 /* 状态徽章：更精致的圆角 + 微边框 + 轻微光晕 */
 .badge-success, .badge-warning, .badge-featured, .badge-danger,
-.badge-published, .badge-draft {
+.badge-published, .badge-draft, .badge-private {
   padding: 3px 10px; border-radius: 999px; font-size: var(--fz-xs);
   font-weight: 600; line-height: 1.4; border: 1px solid transparent;
 }
@@ -623,6 +623,10 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 .badge-danger {
   background: color-mix(in srgb, var(--danger) 14%, transparent);
   color: var(--danger); border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+}
+.badge-private {
+  background: color-mix(in srgb, #785ac8 14%, transparent);
+  color: #785ac8; border-color: color-mix(in srgb, #785ac8 30%, transparent);
 }
 
 /* page-header 标题内的计数徽章：与主色呼应，竖排居中、带微光 */
@@ -745,6 +749,46 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 .settings-form .card-header { margin-bottom: 0; }
 .settings-form .card .form-group { padding-top: var(--sp-5); }
 .settings-form .card .form-group:first-of-type { padding-top: 0; }
+
+/* 设置页「导航菜单」：每项一行（页面名 + 开关），说明收进卡片头副标题与底部单条提示，
+   网格按可用宽度自动分列，窄屏自然回退为单列 */
+.card-header--hint { flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); }
+.card-hint {
+  font-size: var(--fz-xs); font-weight: 400; color: var(--text-tertiary);
+  text-align: right;
+}
+.nav-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--sp-2) var(--sp-3);
+}
+.nav-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-3); min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--bg-surface);
+  cursor: pointer; user-select: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+.nav-toggle:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+/* 开启态沿用后台既有的「选中」语言：侧边栏激活项的淡蓝底 + 主色文字，
+   不用主色描边——整站无此用法，多项开启时蓝框连片，与朴素风格冲突 */
+.nav-toggle:has(input:checked) {
+  background: var(--sidebar-active);
+  border-color: var(--sidebar-border);
+}
+.nav-toggle:has(input:checked) .nav-toggle-name { color: var(--sidebar-active-text); }
+.nav-toggle-name {
+  font-size: var(--fz-sm); font-weight: 600; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 窄屏：副标题换行左对齐，开关行拉通整行更易点按 */
+@media (max-width: 640px) {
+  .card-hint { text-align: left; }
+  .nav-toggle-grid { grid-template-columns: 1fr; }
+  .nav-toggle { padding: var(--sp-3); }
+}
 
 .form-actions {
   display: flex; gap: var(--sp-3); padding-top: var(--sp-4);
@@ -1001,7 +1045,30 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
 .table td { padding: var(--sp-3); border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
 .table tr:hover td { background: var(--bg-hover); }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* 评论管理：批量操作栏 */
+.bulk-bar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3);
+  margin-bottom: var(--sp-3); padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--r); font-size: var(--fz-sm);
+}
+.bulk-bar .checkbox-label { margin-right: auto; }
+.bulk-count { color: var(--text-secondary); font-size: var(--fz-xs); }
+.bulk-count b { color: var(--primary); font-variant-numeric: tabular-nums; }
+.table .col-check { width: 44px; text-align: center; }
+.table .row-check {
+  width: 16px; height: 16px; accent-color: var(--primary);
+  cursor: pointer; vertical-align: middle;
+}
 .desc-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 评论管理：待审核行高亮 + 作者栏子信息 */
+.row-pending { background: rgba(240,160,48,0.05); }
+.cell-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; word-break: break-all; }
+.cell-sub a { color: var(--primary); }
+/* 评论管理：私密徽标 + 网址列 */
+.badge-private { background: rgba(120,90,200,0.1); color: #785ac8; }
+.cell-link { color: var(--primary); word-break: break-all; }
+.cell-muted { color: var(--text-tertiary); }
 .link-url { font-size: var(--fz-xs); color: var(--accent); word-break: break-all; }
 .link-avatar-mini { display: inline-flex; align-items: center; justify-content: center; }
 .link-avatar-mini img {
@@ -1129,6 +1196,13 @@ body.sidebar-open .sidebar-overlay { opacity: 1; visibility: visible; }
   /* 页面标题紧凑 */
   .page-header { margin-bottom: var(--sp-3); padding-bottom: var(--sp-2); }
 
+  /* 批量操作栏：吸顶跟随滚动，按钮等宽铺满 */
+  .bulk-bar {
+    position: sticky; top: 64px; z-index: 5;
+    gap: var(--sp-2); padding: var(--sp-2);
+  }
+  .bulk-bar .checkbox-label { margin-right: 0; width: 100%; }
+  .bulk-bar .btn { flex: 1; justify-content: center; }
   /* 表格 → 卡片（移动端优化，进一步压缩） */
   .table { font-size: var(--fz-xs); }
   .table thead { display: none; }

@@ -12,7 +12,7 @@
 {% block content %}
 <div class="post-page{% if not comments_enabled %} comments-off{% endif %}">
 {{ breadcrumb([{"url":"/posts","text":"文章"},{"text":post.title,"title":post.title}]) }}
-<article class="post-detail">
+<article class="post-detail" data-post-id="{{ post.id }}">
     <!-- 文章头部 -->
     <header class="post-header">
         <div class="post-header-meta">
@@ -132,20 +132,41 @@
         </h2>
     </div>
 
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, msg in messages %}
+    <div class="flash-msg flash-{{ category }}">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
     {% if comments %}
-    <div class="comments-list">
-        {% for c in comments %}
-        <div class="comment-item">
-            <div class="comment-avatar">{{ c.author[0] | upper }}</div>
-            <div class="comment-body">
-                <div class="comment-header">
-                    <span class="comment-author">{{ c.author }}</span>
-                    <time class="comment-time">{{ c.created_at[:16] }}</time>
-                </div>
-                <p class="comment-content">{{ c.content }}</p>
-            </div>
+    {% macro render_comment(c) %}
+    <div class="comment-item" id="comment-{{ c.id }}">
+        <div class="comment-avatar">
+            {% if c.avatar %}<img class="comment-avatar-img" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy" onerror="this.style.display='none'">{% else %}{{ c.author[0] | upper }}{% endif %}
         </div>
-        {% endfor %}
+        <div class="comment-body">
+            <div class="comment-header">
+                <span class="comment-author">{{ c.author }}</span>
+                {% if c.is_author %}<span class="comment-author-badge">博主</span>{% endif %}
+                {% if c.is_private %}<span class="comment-private-badge">私密</span>{% endif %}
+                {% if c.status == 'pending' %}<span class="comment-pending-badge">待审核</span>{% endif %}
+                {% if c.depth > 0 %}<a class="comment-replyto" href="#comment-{{ c.parent_id }}">@{{ c.parent_author }}</a>{% endif %}
+                <time class="comment-time">{{ c.created_at[:16] }}</time>
+            </div>
+            <p class="comment-content">{{ c.content }}</p>
+            <button type="button" class="comment-reply-btn" data-reply-to="{{ c.id }}" data-reply-name="{{ c.author }}">回复</button>
+        </div>
+    </div>
+    {% if c.children %}
+    <div class="comment-children">
+        {% for ch in c.children %}{{ render_comment(ch) }}{% endfor %}
+    </div>
+    {% endif %}
+    {% endmacro %}
+    <div class="comments-list">
+        {% for c in comments %}{{ render_comment(c) }}{% endfor %}
     </div>
     {% else %}
     <div class="comments-empty">
@@ -154,17 +175,30 @@
     {% endif %}
 
     <!-- 评论表单 -->
-    <form class="comment-form" method="POST" action="/post/{{ post.id }}/comment">
-        <div class="comment-form-row">
-            <input type="text" name="author" class="comment-input" placeholder="昵称（选填）" maxlength="30">
+    <form class="comment-form" method="POST" action="/post/{{ post.id }}/comment" id="comment-form">
+        <input type="hidden" name="parent_id" id="comment-parent-id" value="">
+        {% if commenter.author %}
+        <div class="comment-remember" id="comment-remember">
+            <span>已记住你的昵称（{{ commenter.author }}），直接输入内容即可评论</span>
+            <button type="button" class="comment-remember-edit" id="comment-remember-edit">修改</button>
+        </div>
+        {% endif %}
+        <div class="comment-form-row" id="comment-fields"{% if commenter.author %} hidden{% endif %}>
+            <input type="text" name="author" class="comment-input" placeholder="昵称" maxlength="30" value="{{ commenter.author or '' }}">
         </div>
         <div class="comment-form-row">
             <textarea name="content" class="comment-textarea" placeholder="写下你的想法..." maxlength="2000" required></textarea>
         </div>
         <div class="comment-form-actions">
+            <label class="comment-private">
+                <input type="checkbox" name="is_private" value="1">
+                <span>私密评论（仅博主可见）</span>
+            </label>
+            <span class="comment-replying" id="comment-replying" hidden>回复 @<b id="comment-replying-name"></b><button type="button" class="comment-cancel" id="comment-cancel-reply">取消</button></span>
             <button type="submit" class="comment-submit-btn">提交评论</button>
         </div>
     </form>
+    <div id="comment-form-anchor"></div>
 </section>
 {% else %}
 <section class="comments-section comments-closed">
@@ -213,6 +247,41 @@
         });
     });
 
+    /* 1.6 表格包 .table-wrap 滚动容器（宽表格横向滑动、单元格不折行） */
+    content.querySelectorAll('table').forEach(table => {
+        if (table.parentElement && table.parentElement.classList.contains('table-wrap')) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        table.parentNode.insertBefore(wrap, table);
+        wrap.appendChild(table);
+    });
+
+    /* 1.7 可横向滑动提示：溢出时打 is-scroll-x（移动端遮罩+»箭头由 CSS 处理）；
+        滚动到最右时补 at-end，遮罩与箭头淡出 */
+    function markScrollable() {
+        content.querySelectorAll('pre').forEach(pre => {
+            const host = pre.closest('.code-wrap') || pre;
+            host.classList.toggle('is-scroll-x', pre.scrollWidth > pre.clientWidth + 1);
+            updateAtEnd(pre, host);
+        });
+        content.querySelectorAll('.table-wrap').forEach(wrap => {
+            wrap.classList.toggle('is-scroll-x', wrap.scrollWidth > wrap.clientWidth + 1);
+            updateAtEnd(wrap, wrap);
+        });
+    }
+    function updateAtEnd(el, host) {
+        if (!host.classList.contains('is-scroll-x')) return;
+        host.classList.toggle('at-end', el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+    }
+    markScrollable();
+    content.querySelectorAll('pre').forEach(pre => {
+        pre.addEventListener('scroll', () => updateAtEnd(pre, pre.closest('.code-wrap') || pre));
+    });
+    content.querySelectorAll('.table-wrap').forEach(wrap => {
+        wrap.addEventListener('scroll', () => updateAtEnd(wrap, wrap));
+    });
+    window.addEventListener('resize', markScrollable);
+
     /* 2. 图片 Lightbox */
     const imgs = Array.from(content.querySelectorAll('img'));
     const lb = document.getElementById('lightbox');
@@ -257,7 +326,7 @@
 <script>
 // 浏览计数：页面可见且停留满 5 秒才上报一次（秒开秒关、切后台不计）；同一会话内刷新不重复计数
 (function () {
-    var postId = {{ post.id }};
+    var postId = Number(document.querySelector('article.post-detail').dataset.postId || 0);
     var minMs = 5000;
     var key = 'post_viewed_' + postId;
     if (sessionStorage.getItem(key)) return;   // 本会话已计过（含刷新），直接跳过
@@ -276,6 +345,53 @@
             }
         }
     }, 1000);
+})();
+</script>
+
+<script>
+// 盖楼回复：点击「回复」把表单移到该评论下并设置 parent_id，取消则回到底部
+(function () {
+    var form = document.getElementById('comment-form');
+    if (!form) return;
+    var parentId = document.getElementById('comment-parent-id');
+    var replying = document.getElementById('comment-replying');
+    var replyingName = document.getElementById('comment-replying-name');
+    var cancelBtn = document.getElementById('comment-cancel-reply');
+    var anchor = document.getElementById('comment-form-anchor');
+
+    function resetReply() {
+        parentId.value = '';
+        replying.hidden = true;
+        if (anchor) anchor.parentNode.insertBefore(form, anchor);
+    }
+
+    document.querySelectorAll('.comment-reply-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            parentId.value = btn.getAttribute('data-reply-to');
+            replyingName.textContent = btn.getAttribute('data-reply-name');
+            replying.hidden = false;
+            var item = btn.closest('.comment-item');
+            if (item) item.parentNode.insertBefore(form, item.nextSibling);
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            var ta = form.querySelector('textarea');
+            if (ta) ta.focus();
+        });
+    });
+    if (cancelBtn) cancelBtn.addEventListener('click', resetReply);
+})();
+
+// 记住信息：点「修改」展开昵称字段
+(function () {
+    var editBtn = document.getElementById('comment-remember-edit');
+    var fields = document.getElementById('comment-fields');
+    var remember = document.getElementById('comment-remember');
+    if (!editBtn || !fields) return;
+    editBtn.addEventListener('click', function () {
+        fields.hidden = false;
+        if (remember) remember.hidden = true;
+        var author = fields.querySelector('input[name=author]');
+        if (author) author.focus();
+    });
 })();
 </script>
 {% endblock %}

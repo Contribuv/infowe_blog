@@ -163,17 +163,24 @@
   border: 0;
 }
 
-/* ── 表格（GitHub 细线网格，表头微底；自身滚动防溢出） ── */
+/* ── 表格（GitHub 细线网格，表头微底） ──
+   表格自身 display:table + width:max-content：按内容自然宽度排版，单元格不折行；
+   JS 外层包 .table-wrap 滚动容器（max-width:100% + overflow-x:auto）：
+   窄表格原样展示，宽表格在容器内左右滑动，不撑破页面。 */
 .markdown-body table {
-  display: block;
+  display: table;
   width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
   border-collapse: collapse;
   border-spacing: 0;
   margin: 0 0 16px;
   font-size: inherit; /* 统一表格字号继承正文（两主题原 14px 残留） */
 }
+.markdown-body .table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 16px;
+}
+.markdown-body .table-wrap table { margin: 0; }
 .markdown-body th, .markdown-body td {
   padding: 6px 13px;
   border: 1px solid var(--mb-border);
@@ -265,20 +272,53 @@
 [data-theme="dark"] .hljs-deletion  { color: #ffdcd7; background: rgba(248, 81, 73, .15); }
 
 /* =========================================================================
-   移动端：窄屏代码块自动折行（避免块内左右拖动），表格继续自身横向
-   滚动而不撑破页面；正文保持 GitHub 紧凑字阶。
+   移动端：代码块/表格保持横向滚动（pre 自身 white-space:pre + overflow-x:auto，
+   table 自身 display:block + width:max-content + overflow-x:auto，均不折行、
+   不撑破页面）。内容超宽时由 JS 检测溢出并打 is-scroll-x 标记，绘制右侧
+   淡出阴影提示可左右滑动（移动端滚动条隐藏，需视觉提示）。
    ========================================================================= */
 @media (max-width: 768px) {
   .markdown-body pre {
     font-size: 12.5px;
     padding: 12px;
   }
-  .markdown-body pre code {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+  /* 可横向滑动提示：
+     1) ::after 右侧淡出遮罩 —— 模拟"内容被裁切"的视觉，深浅主题分别取色；
+     2) ::before 右缘滑动指示箭头 » —— 一眼可辨"这里还能左右滑"；
+     3) JS 滚到最右时补 .at-end，遮罩与箭头一起淡出。均为 pointer-events:none 不挡交互，
+        复制按钮 z-index 更高，仍显示在遮罩之上。 */
+  .markdown-body .code-wrap.is-scroll-x,
+  .markdown-body .table-wrap.is-scroll-x { position: relative; }
+  .markdown-body .code-wrap.is-scroll-x::after,
+  .markdown-body .table-wrap.is-scroll-x::after {
+    content: '';
+    position: absolute; inset: 0;
+    box-shadow: inset -18px 0 16px -12px rgba(0, 0, 0, .35);
+    pointer-events: none;
+    transition: opacity .2s;
   }
-  .markdown-body table { width: 100%; }
+  [data-theme="dark"] .markdown-body .code-wrap.is-scroll-x::after,
+  [data-theme="dark"] .markdown-body .table-wrap.is-scroll-x::after {
+    box-shadow: inset -20px 0 16px -12px rgba(0, 0, 0, .6);
+  }
+  .markdown-body .code-wrap.is-scroll-x::before,
+  .markdown-body .table-wrap.is-scroll-x::before {
+    content: '\00BB'; /* » */
+    position: absolute; top: 50%; right: 3px;
+    transform: translateY(-50%);
+    width: 20px; height: 20px; line-height: 18px;
+    text-align: center; border-radius: 10px;
+    font-size: 14px; font-weight: 700;
+    color: var(--mb-fg);
+    background: var(--mb-code-bg);
+    border: 1px solid var(--mb-border);
+    opacity: .9; pointer-events: none;
+    transition: opacity .2s;
+  }
+  .markdown-body .code-wrap.is-scroll-x.at-end::before,
+  .markdown-body .table-wrap.is-scroll-x.at-end::before,
+  .markdown-body .code-wrap.is-scroll-x.at-end::after,
+  .markdown-body .table-wrap.is-scroll-x.at-end::after { opacity: 0; }
   .markdown-body h1 { font-size: 1.7em; }
   .markdown-body h2 { font-size: 1.35em; }
 }

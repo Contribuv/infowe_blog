@@ -114,6 +114,7 @@
 
 {% block admin_scripts %}
 <script src="{{ url_for('static', filename='vendor/vditor/index.min.js') }}"></script>
+<script type="application/json" id="all-tags-data">{{ all_tags | tojson }}</script>
 <script>
 (function () {
     var textarea = document.getElementById('content');
@@ -142,7 +143,7 @@
     }
 
     // -- 标签自动识别与一键加入 --
-    var ALL_TAGS = {{ all_tags | tojson }};  // {标签名称: 使用次数}
+    var ALL_TAGS = JSON.parse(document.getElementById('all-tags-data').textContent || '{}');  // {标签名称: 使用次数}
     var tagsInput = document.getElementById('tags-input');
     var tagsAuto = document.getElementById('tags-auto');
     var tagsCommon = document.getElementById('tags-common');

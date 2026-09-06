@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.11'
+VERSION = '1.3.12'
 
 import os
 import re
@@ -63,7 +63,7 @@ except Exception as _heif_err:
 import werkzeug.security as ws
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, abort, request, redirect, url_for, session, flash, jsonify, send_from_directory, send_file
+from flask import Flask, render_template, abort, request, redirect, url_for, session, flash, jsonify, send_from_directory, send_file, make_response
 from jinja2 import FileSystemLoader
 
 
@@ -340,8 +340,13 @@ def init_db():
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             post_id INTEGER NOT NULL,
+            parent_id INTEGER DEFAULT NULL,
             author TEXT NOT NULL DEFAULT 'Anonymous',
+            email_hash TEXT DEFAULT '',
+            website TEXT DEFAULT '',
             content TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            is_private INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
         );
@@ -459,6 +464,13 @@ def init_db():
         ('home_posts_count', '6'),
         ('posts_per_page', '20'),
         ('comments_enabled', '1'),
+        # ── 导航菜单开关（关闭后对应页面返回 404，且 nav/页脚不再显示） ──
+        ('nav_posts', '1'),
+        ('nav_tags', '1'),
+        ('nav_projects', '1'),
+        ('nav_links', '1'),
+        ('nav_status', '1'),
+        ('nav_about', '1'),
         ('icp_beian', ''),
         ('police_beian', ''),
         # ── 服务时效 / Server Status 配置 ──
@@ -477,8 +489,35 @@ def init_db():
         db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
 
     db.commit()
+    _migrate_comments(db)
     migrate_from_json(db)
     db.close()
+
+
+def _migrate_comments(db):
+    """评论表结构升级（盖楼 + 联系方式 + 审核），幂等可重复执行。
+    老库走 ALTER TABLE 补列；新库建表时已含这些列，此处自动跳过。"""
+    cols = {r['name'] for r in db.execute("PRAGMA table_info(comments)").fetchall()}
+    added = []
+    if 'parent_id' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL")
+        added.append('parent_id')
+    if 'email_hash' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN email_hash TEXT DEFAULT ''")
+        added.append('email_hash')
+    if 'website' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN website TEXT DEFAULT ''")
+        added.append('website')
+    if 'status' not in cols:
+        # 老评论默认 approved，避免升级后前台评论凭空消失
+        db.execute("ALTER TABLE comments ADD COLUMN status TEXT DEFAULT 'approved'")
+        added.append('status')
+    if 'is_private' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN is_private INTEGER DEFAULT 0")
+        added.append('is_private')
+    db.execute("UPDATE comments SET status='approved' WHERE status IS NULL OR status=''")
+    if added:
+        print('[迁移] comments 表新增列：' + ', '.join(added))
 
 
 def migrate_from_json(db):
@@ -1971,23 +2010,93 @@ def db_delete_link(link_id):
 
 # ─────────────── 评论数据层 ───────────────
 
-def db_load_comments(post_id):
+def _avatar_url(email_hash, size=80):
+    """Cravatar 头像：https://cravatar.cn/avatar/{md5(小写去空格邮箱)}?s=尺寸&d=mp
+    未命中时 Cravatar 自动回退 Gravatar → QQ 头像 → 默认 mp。"""
+    if not email_hash:
+        return ''
+    return 'https://cravatar.cn/avatar/%s?s=%d&d=mp' % (email_hash, size)
+
+
+def db_load_comments(post_id, include_private=False, my_comments=None):
+    """加载评论并组装为树（一次查询，内存组装，避免 N+1）。
+    普通访客：仅已通过且非私密 + 本人待审核的非私密评论（my_comments 为 {评论id: 昵称} 映射，校验昵称防伪造）；
+    管理员：已通过 + 全部私密（含待审核）。
+    返回 (根评论列表, 评论总数)。每条评论附带 avatar / depth / parent_author。"""
     db = get_db()
-    rows = db.execute("SELECT * FROM comments WHERE post_id=? ORDER BY created_at ASC", (post_id,)).fetchall()
+    if include_private:
+        sql = "SELECT * FROM comments WHERE post_id=? AND (status='approved' OR is_private=1)"
+        params = [post_id]
+    else:
+        sql = "SELECT * FROM comments WHERE post_id=? AND status='approved' AND is_private=0"
+        params = [post_id]
+        if my_comments:
+            ids = [i for i in my_comments if str(i).isdigit()]
+            if ids:
+                sql += " OR (id IN (%s) AND is_private=0)" % ','.join('?' * len(ids))
+                params += ids
+    sql += " ORDER BY created_at ASC, id ASC"
+    rows = db.execute(sql, params).fetchall()
     db.close()
-    return rows_to_list(rows)
+    comments = rows_to_list(rows)
+    # 本人待审核评论：校验昵称与 cookie 记录一致，防止伪造 id 偷看他人待审核评论
+    if my_comments and not include_private:
+        comments = [c for c in comments
+                    if c['status'] == 'approved'
+                    or (str(c['id']) in my_comments and my_comments[str(c['id'])] == c['author'])]
+    author_name = app.config.get('author', '')
+    by_id = {c['id']: c for c in comments}
+    roots = []
+    for c in comments:
+        c['children'] = []
+        c['avatar'] = _avatar_url(c.get('email_hash', ''))
+        c['is_author'] = bool(author_name) and c['author'] == author_name
+        pid = c.get('parent_id')
+        if pid and pid in by_id:
+            c['parent_author'] = by_id[pid]['author']
+            by_id[pid]['children'].append(c)
+        else:
+            c['parent_author'] = ''
+            roots.append(c)
+
+    def set_depth(node, d):
+        node['depth'] = d
+        for ch in node['children']:
+            set_depth(ch, d + 1)
+
+    for r in roots:
+        set_depth(r, 0)
+    return roots, len(comments)
 
 
-def db_save_comment(post_id, author, content):
+def db_save_comment(post_id, author, email_hash, website, content, parent_id=None, is_private=False):
+    """新评论默认 pending，审核通过后才在前台展示。
+    私密评论同样 pending：仅管理员可见（含待审核），普通访客始终不可见。"""
+    status = 'pending'
     db = get_db()
-    db.execute("INSERT INTO comments (post_id, author, content) VALUES (?,?,?)", (post_id, author, content))
+    cur = db.execute(
+        "INSERT INTO comments (post_id, parent_id, author, email_hash, website, content, status, is_private) VALUES (?,?,?,?,?,?,?,?)",
+        (post_id, parent_id, author, email_hash, website, content, status, 1 if is_private else 0)
+    )
     db.commit()
     db.close()
+    return cur.lastrowid
 
 
 def db_delete_comment(comment_id):
+    """删除评论及其全部子回复（整棵子树）。"""
     db = get_db()
-    db.execute("DELETE FROM comments WHERE id=?", (comment_id,))
+    # 循环收集子树 id（避免依赖 SQLite 递归 CTE）
+    ids = [comment_id]
+    frontier = [comment_id]
+    while frontier:
+        rows = db.execute(
+            "SELECT id FROM comments WHERE parent_id IN (%s)" % ','.join('?' * len(frontier)),
+            frontier
+        ).fetchall()
+        frontier = [r['id'] for r in rows]
+        ids.extend(frontier)
+    db.execute("DELETE FROM comments WHERE id IN (%s)" % ','.join('?' * len(ids)), ids)
     db.commit()
     db.close()
 
@@ -2016,6 +2125,23 @@ def _before_theme_sync():
     _sync_theme_cache()
 
 
+# ─── 导航菜单开关 ───
+# (配置 key 后缀, 显示名, 链接)；首页、写作入口为固定导航，不参与开关
+NAV_PAGES = [
+    ('posts', '文章', '/posts'),
+    ('tags', '标签', '/tags'),
+    ('projects', '项目', '/projects'),
+    ('links', '友链', '/links'),
+    ('about', '关于', '/about'),
+    ('status', '状态', '/status'),
+]
+
+
+def nav_enabled(key):
+    """判断某个导航页面是否启用（默认启用）"""
+    return str(app.config.get('nav_' + key, '1')).strip().lower() in ('1', 'on', 'true', 'yes')
+
+
 @app.context_processor
 def inject_globals():
     load_settings()
@@ -2039,6 +2165,13 @@ def inject_globals():
         'avatar': app.config.get('avatar', ''),
         'all_tags': db_get_all_tags(),
         'links': db_load_links(),
+        # 导航开关：nav_on 供页脚条件渲染，nav_pages 供导航栏循环（仅启用项），
+        # nav_all 供后台设置页循环渲染开关
+        'nav_on': {k: nav_enabled(k) for k, _, _ in NAV_PAGES},
+        'nav_pages': [{'key': k, 'label': label, 'href': href}
+                      for k, label, href in NAV_PAGES if nav_enabled(k)],
+        'nav_all': [{'key': k, 'label': label, 'enabled': nav_enabled(k)}
+                    for k, label, _ in NAV_PAGES],
         'version': VERSION,
         'now_year': datetime.now().year,
         # 主题系统：当前启用主题 + 全部可选主题 + 当前主题是否带 theme.css
@@ -2090,6 +2223,8 @@ def index():
 
 @app.route('/posts')
 def posts_page():
+    if not nav_enabled('posts'):
+        abort(404)
     tag_filter = request.args.get('tag', '').strip() or None
     year_filter = request.args.get('year', '').strip() or None
     per_page = int(app.config.get('posts_per_page', '20') or 20)
@@ -2156,7 +2291,18 @@ def post_detail(post_id):
     post['word_count'] = len(re.sub(r'\s', '', post['content']))
     related = db_get_related_posts(post['id'], post['tags'])
     comments_enabled = str(app.config.get('comments_enabled', '1')) in ('1', 'on', 'true', 'yes')
-    comments = db_load_comments(post['id']) if comments_enabled else []
+    is_admin = bool(session.get('admin_logged_in'))
+    # 读取记住的评论者信息（昵称/邮箱/网址），用于表单预填；my_comments 用于展示本人待审核评论
+    commenter = {}
+    raw = request.cookies.get('blog_commenter')
+    if raw:
+        try:
+            commenter = json.loads(raw)
+        except (ValueError, TypeError):
+            commenter = {}
+    my_comments = commenter.get('my_comments') if isinstance(commenter, dict) else None
+    comments, comment_total = db_load_comments(post['id'], include_private=is_admin,
+                                               my_comments=my_comments) if comments_enabled else ([], 0)
 
     # 上一篇 / 下一篇（按 created_at 排序）
     db = get_db()
@@ -2177,9 +2323,10 @@ def post_detail(post_id):
     side_posts, _ = db_load_posts(status='published', page=1, per_page=12)
 
     return render_template('post.html', post=post, content=content_html, toc=toc_html,
-                           related=related, comments=comments,
+                           related=related, comments=comments, comment_total=comment_total,
                            prev_post=prev_post, next_post=next_post,
                            comments_enabled=comments_enabled,
+                           commenter=commenter, is_admin=is_admin,
                            side_posts=side_posts)
 
 
@@ -2205,6 +2352,11 @@ def post_view(post_id):
     return ('', 204)
 
 
+# 评论限流：同一 IP 在窗口期内只允许提交一条（防脚本刷评）
+_COMMENT_COOLDOWN = {}
+_COMMENT_COOLDOWN_WINDOW = 30  # 秒
+
+
 @app.route('/post/<int:post_id>/comment', methods=['POST'])
 def post_comment(post_id):
     # 评论开关关闭时，直接拦截上传
@@ -2213,19 +2365,96 @@ def post_comment(post_id):
     post = db_get_post_by_id(post_id)
     if not post:
         abort(404)
-    author = request.form.get('author', 'Anonymous').strip() or 'Anonymous'
+
+    # 限流：同一 IP 30 秒内只能发一条
+    ip = _client_ip()
+    now = time.time()
+    if now - _COMMENT_COOLDOWN.get(ip, 0) < _COMMENT_COOLDOWN_WINDOW:
+        flash('评论太频繁，请稍后再试', 'error')
+        return redirect(url_for('post_detail', post_id=post_id))
+
+    author = request.form.get('author', '').strip()
     content = request.form.get('content', '').strip()
-    if content and len(content) <= 2000:
-        db_save_comment(post['id'], author, content)
-        flash('评论已提交', 'success')
-    else:
+    email = request.form.get('email', '').strip()
+    website = request.form.get('website', '').strip()
+    parent_id = request.form.get('parent_id', '').strip()
+    is_private = request.form.get('is_private', '') in ('1', 'on', 'true', 'yes')
+
+    # 昵称必填（盖楼需要身份标识）
+    if not author or len(author) > 30:
+        flash('请填写昵称（30 字以内）', 'error')
+        return redirect(url_for('post_detail', post_id=post_id))
+    if not content or len(content) > 2000:
         flash('评论内容不能为空且不能超过2000字', 'error')
-    return redirect(url_for('post_detail', post_id=post_id))
+        return redirect(url_for('post_detail', post_id=post_id))
+
+    # 邮箱选填：仅用于生成 Cravatar 头像，不存明文
+    email_hash = ''
+    if email:
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            flash('邮箱格式不正确（选填，仅用于头像）', 'error')
+            return redirect(url_for('post_detail', post_id=post_id))
+        email_hash = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
+
+    # 网址选填：仅允许 http/https，防 javascript: 等伪协议
+    if website:
+        if not re.match(r'^https?://[^\s]+$', website) or len(website) > 200:
+            flash('网址格式不正确（需以 http:// 或 https:// 开头）', 'error')
+            return redirect(url_for('post_detail', post_id=post_id))
+
+    # 父级校验：必须是同一篇文章下已存在的评论，防跨文章伪造
+    pid = None
+    if parent_id:
+        try:
+            pid = int(parent_id)
+        except (TypeError, ValueError):
+            pid = None
+        if pid:
+            db = get_db()
+            row = db.execute(
+                "SELECT id FROM comments WHERE id=? AND post_id=?", (pid, post['id'])
+            ).fetchone()
+            db.close()
+            if not row:
+                pid = None
+
+    cid = db_save_comment(post['id'], author, email_hash, website, content, pid, is_private)
+    _COMMENT_COOLDOWN[ip] = now
+    # 记住评论者信息（昵称/邮箱/网址），下次免填；仅存非敏感字段
+    # my_comments 记录本人待审核评论 {id: 昵称}，用于前台展示"待审核"徽标
+    commenter_data = {'author': author, 'email': email, 'website': website}
+    my_comments = {}
+    raw = request.cookies.get('blog_commenter')
+    if raw:
+        try:
+            old = json.loads(raw)
+            if isinstance(old, dict):
+                for k in ('author', 'email', 'website'):
+                    if old.get(k):
+                        commenter_data[k] = old[k]
+                if isinstance(old.get('my_comments'), dict):
+                    my_comments = old['my_comments']
+        except (ValueError, TypeError):
+            pass
+    if not is_private:
+        my_comments[str(cid)] = author
+        # 限制数量防 cookie 膨胀，保留最新 20 条
+        if len(my_comments) > 20:
+            my_comments = dict(list(my_comments.items())[-20:])
+    commenter_data['my_comments'] = my_comments
+    resp = make_response(redirect(url_for('post_detail', post_id=post_id) + '#comments'))
+    resp.set_cookie('blog_commenter',
+                    json.dumps(commenter_data, ensure_ascii=False),
+                    max_age=365 * 24 * 3600, httponly=True, samesite='Lax')
+    flash('私密评论已提交，仅管理员可见' if is_private else '评论已提交，审核通过后显示', 'success')
+    return resp
 
 
 @app.route('/tags')
 def tags():
     """标签页：标签云 + 按标签分组的文章列表（对齐 leelaa 标签页结构）。"""
+    if not nav_enabled('tags'):
+        abort(404)
     posts, total = db_load_posts(status='published', page=1, per_page=99999)
     categories = {c['id']: c['name'] for c in db_load_categories()}
     buckets = {}
@@ -2241,6 +2470,8 @@ def tags():
 
 @app.route('/about')
 def about():
+    if not nav_enabled('about'):
+        abort(404)
     skills_str = app.config.get('skills', '[]')
     try:
         skills = json.loads(skills_str)
@@ -2266,6 +2497,8 @@ def about():
 @app.route('/status')
 def status_page():
     """前台服务状态页（Sever Status）。SSR 首批数据 + JS 轮询 /api/status。"""
+    if not nav_enabled('status'):
+        abort(404)
     return render_template('status.html', expiry=get_expiry_info(),
                            services=get_services_status())
 
@@ -2300,6 +2533,8 @@ def lang_color(name):
 
 @app.route('/projects')
 def projects_page():
+    if not nav_enabled('projects'):
+        abort(404)
     projects = db_load_projects()
     # 按语言统计（支持多语言，从 languages JSON 列表聚合）
     languages = {}
@@ -2328,6 +2563,8 @@ def links_page():
 
 @app.route('/links/apply', methods=['GET', 'POST'])
 def links_apply():
+    if not nav_enabled('links'):
+        abort(404)
     if request.method == 'POST':
         form = request.form
         name = (form.get('name') or '').strip()
@@ -2859,17 +3096,60 @@ def admin_timeline_delete(item_id):
 def admin_comments():
     db = get_db()
     rows = db.execute(
-        "SELECT c.*, p.title as post_title, p.id as post_id FROM comments c LEFT JOIN posts p ON c.post_id=p.id ORDER BY c.created_at DESC"
+        "SELECT c.*, p.title as post_title, p.id as post_id, "
+        "pa.author as parent_author "
+        "FROM comments c "
+        "LEFT JOIN posts p ON c.post_id=p.id "
+        "LEFT JOIN comments pa ON c.parent_id=pa.id "
+        "ORDER BY (c.status='pending') DESC, c.is_private DESC, c.created_at DESC"
     ).fetchall()
     db.close()
     return render_template('admin/comments.html', comments=rows_to_list(rows))
+
+
+@app.route('/admin/comments/<int:comment_id>/approve', methods=['POST'])
+@admin_required
+def admin_comment_approve(comment_id):
+    db = get_db()
+    db.execute("UPDATE comments SET status='approved' WHERE id=?", (comment_id,))
+    db.commit()
+    db.close()
+    flash('评论已通过', 'success')
+    return redirect(url_for('admin_comments'))
 
 
 @app.route('/admin/comments/<int:comment_id>/delete', methods=['POST'])
 @admin_required
 def admin_comment_delete(comment_id):
     db_delete_comment(comment_id)
-    flash('评论已删除', 'success')
+    flash('评论及其回复已删除', 'success')
+    return redirect(url_for('admin_comments'))
+
+
+@app.route('/admin/comments/bulk', methods=['POST'])
+@admin_required
+def admin_comments_bulk():
+    """批量操作：approve 批量通过 / delete 批量删除（含全部回复）。"""
+    action = request.form.get('action')
+    ids = request.form.getlist('comment_ids')
+    if action not in ('approve', 'delete'):
+        flash('无效的批量操作', 'error')
+        return redirect(url_for('admin_comments'))
+    if not ids:
+        flash('未选择任何评论', 'error')
+        return redirect(url_for('admin_comments'))
+    if action == 'approve':
+        db = get_db()
+        db.execute(
+            "UPDATE comments SET status='approved' WHERE id IN (%s)"
+            % ','.join('?' * len(ids)), ids)
+        db.commit()
+        db.close()
+        flash('已通过 %d 条评论' % len(ids), 'success')
+    else:
+        for cid in ids:
+            db_delete_comment(int(cid))
+        flash('已删除 %d 条评论及其回复' % len(ids), 'success')
     return redirect(url_for('admin_comments'))
 
 
@@ -3016,10 +3296,18 @@ def _avatar_file_exists():
     avatar = app.config.get('avatar', '')
     if not avatar:
         return False
-    rel = avatar.split('/static/', 1)[-1] if '/static/' in avatar else ''
+    # 兼容两种 URL 前缀：v1.0.6 起 /uploads/...（新上传目录），旧版 /static/uploads/...（旧目录已自动迁移）
+    if '/uploads/' in avatar:
+        rel = avatar.split('/uploads/', 1)[-1]
+        base = UPLOAD_DIR
+    elif '/static/' in avatar:
+        rel = avatar.split('/static/', 1)[-1]
+        base = os.path.join(BASE_DIR, 'static')
+    else:
+        return False
     if not rel:
         return False
-    return os.path.exists(os.path.join(BASE_DIR, 'static', rel))
+    return os.path.exists(os.path.join(base, rel))
 
 
 @app.route('/admin/status', methods=['GET', 'POST'])
@@ -3124,6 +3412,11 @@ def admin_settings():
         comments_on = '1' if request.form.get('comments_enabled') else '0'
         save_setting('comments_enabled', comments_on)
         app.config['comments_enabled'] = comments_on
+        # 导航菜单开关（同上，未勾选即为关闭）
+        for nav_key, _, _ in NAV_PAGES:
+            nav_on = '1' if request.form.get('nav_' + nav_key) == '1' else '0'
+            save_setting('nav_' + nav_key, nav_on)
+            app.config['nav_' + nav_key] = nav_on
 
         db = get_db()
         cur_user = session.get('admin_username', 'admin')

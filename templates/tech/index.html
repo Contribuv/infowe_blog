@@ -83,7 +83,7 @@
 {% endif %}
 
 <!-- 更多文章 -->
-{% if total > posts|length %}
+{% if total > posts|length and nav_on.posts %}
 <div class="tech-more-wrap">
     <a href="/posts" class="tech-btn tech-btn-primary">更多文章</a>
 </div>

@@ -47,8 +47,10 @@
 {% endblock %}
 
 {% block admin_scripts %}
+<script type="application/json" id="upgrade-urls">{"upgrade": "{{ url_for('admin_upgrade') }}", "check": "{{ url_for('admin_upgrade_check') }}"}</script>
 <script>
 (function () {
+    var UPGRADE_URLS = JSON.parse(document.getElementById('upgrade-urls').textContent);
     var resultBox = document.getElementById('upgrade-result');
     var latestBox = document.getElementById('upgrade-latest');
     var recheckBtn = document.getElementById('upgrade-recheck');
@@ -90,7 +92,7 @@
                 ' <span class="badge badge-available" style="background:rgba(46,155,112,.12);color:var(--success);">可升级</span></h3></div>' +
                 notes +
                 '<div class="upgrade-actions">' +
-                '<form method="POST" action="{{ url_for("admin_upgrade") }}" onsubmit="return confirm(\'升级将自动备份数据（数据库与上传文件），然后用 v' + esc(d.latest_version) + ' 覆盖程序代码（文章、上传、备份目录不受影响）。完成后需重启服务。确定升级吗？\')">' +
+                '<form method="POST" action="' + UPGRADE_URLS.upgrade + '" onsubmit="return confirm(\'升级将自动备份数据（数据库与上传文件），然后用 v' + esc(d.latest_version) + ' 覆盖程序代码（文章、上传、备份目录不受影响）。完成后需重启服务。确定升级吗？\')">' +
                 '<button type="submit" class="btn btn-primary">' + svgIcon('download', 16, 'icon-sm') + ' 备份数据并一键升级</button></form>' +
                 '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 在 GitHub 查看</a>' +
                 '</div></div>';
@@ -109,7 +111,7 @@
         resultBox.innerHTML =
             '<div class="card"><div class="card-header"><h3>' + svgIcon('history', 18) + ' 正在检测新版本…</h3></div>' +
             '<p class="text-muted">正在连接 GitHub 查询最新版本，请稍候。</p></div>';
-        fetch('{{ url_for("admin_upgrade_check") }}' + (force ? '?force=1' : ''))
+        fetch(UPGRADE_URLS.check + (force ? '?force=1' : ''))
             .then(function (r) { return r.json(); })
             .then(render)
             .catch(function () {

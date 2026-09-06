@@ -159,7 +159,7 @@
     {% endif %}
 
     <!-- 更多文章入口 -->
-    {% if not current_tag and not search_query and total > 0 %}
+    {% if not current_tag and not search_query and total > 0 and nav_on.posts %}
     <div class="view-all-wrap">
         <a href="/posts" class="view-all-link">
             <span>{{ icon('layout-dashboard', 16) | safe }}</span>

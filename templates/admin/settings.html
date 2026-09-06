@@ -97,6 +97,29 @@
                 </label>
             </div>
         </div>
+        <!-- 导航菜单：每项一行（页面名 + 开关），说明只保留头部副标题与底部一条提示，避免逐项重复 -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>导航菜单</h3>
+                <span class="card-hint">控制入口是否显示在顶部导航与页脚</span>
+            </div>
+            <div class="form-group">
+                <div class="nav-toggle-grid">
+                    {% for item in nav_all %}
+                    <label class="nav-toggle">
+                        <span class="nav-toggle-name">{{ item.label }}</span>
+                        <span class="switch">
+                            <input type="checkbox" name="nav_{{ item.key }}" value="1"{{ ' checked' if item.enabled else '' }}>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
+            </div>
+        </div>
     </div>
 
     <div class="settings-col">

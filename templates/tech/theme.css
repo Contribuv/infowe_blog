@@ -279,7 +279,9 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-page-head--center {
   text-align: center;
   padding: 40px 12px 40px;
-  margin-bottom: 40px;
+  /* 与左对齐子页 .tech-page-head 的 28px 对齐：hero 彩条到列表的距离收窄，
+     避免比卡片间距（24px）大一倍以上的空洞感 */
+  margin-bottom: 28px;
 }
 /* 彩条全站统一 64px：居中 Hero 仍居中，仅长度与左对齐页一致 */
 .tech-page-head--center::after {
@@ -357,35 +359,41 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 
 /* ── 文章列表（列表式） ── */
 .tech-post-list { list-style: none; margin: 0; padding: 0; }
-/* 整卡可点：卡间 24px 间距 + 底部细线；hover 整卡浅底色 + 标题染色 + 右上角 → 浮现 */
+/* 整卡可点：hover 背景向左右各外扩 8px 留出呼吸空间（负 margin 技巧，内容仍与正文严格对齐）；
+   外扩 16px 在宽屏上视觉溢出过多，8px 为「不贴边也不溢出」的折中；
+   分割线必须用 border-bottom（元素自身边框，会跟随 border-radius 圆角内收），
+   不能用 ::after 直线——直线两端会戳出圆角背景块外侧，hover 时产生割裂感；
+   触摸端禁用系统点按高亮，避免 Android 点按闪灰色块 */
 .tech-post-item {
-  position: relative; padding: 16px 16px 16px;
-  margin: 0 -16px 24px; border-radius: 10px;
+  position: relative;
+  padding: 16px;
+  margin: 0 -8px 24px;
+  border-radius: 10px;
   border-bottom: 1px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
   transition: background-color .18s ease;
 }
-/* hover 仅在真正支持悬停的设备生效：触摸端点按后 :hover 会滞留，
-   导致整条列表项一直高亮、右侧箭头一直显示 */
-@media (hover: hover) {
+.tech-post-item:last-child { border-bottom: none; }
+/* hover 仅在「宽屏 + 支持悬停 + 精确指针（鼠标）」的设备生效：
+   - (pointer: fine) 过滤 iPad / 触屏 Android 误报，避免点按后 :hover 滞留高亮卡死
+   - (min-width: 768px) 让移动端与 PC 窄窗口一律不显示 hover 背景，退化为纯分割线列表 */
+@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
   .tech-post-item:hover { background: var(--bg-subtle); }
   .tech-post-item:hover .tech-post-title a { color: var(--accent); }
   .tech-post-item:hover .tech-post-arrow { opacity: 1; transform: translateX(0); }
 }
 .tech-post-arrow {
-  position: absolute; top: 20px; right: 18px;
-  font-size: 18px; color: var(--accent); opacity: 0;
+  position: absolute; top: 17px; right: 8px;
+  font-size: 18px; line-height: 1; color: var(--accent); opacity: 0;
   transform: translateX(-6px);
   transition: opacity .18s ease, transform .18s ease;
   pointer-events: none;
 }
-.tech-post-item:first-child { padding-top: 16px; }
-.tech-post-item:last-child { border-bottom: none; }
-/* 窄屏：取消左右 -16px 外扩。否则 hover 底色比正文宽 32px，
-   在 390px 屏上正好顶满整屏、两侧零留白且 10px 圆角被裁掉（看着像宽度变大）。
-   改为与正文同宽，文字位置不变 */
-@media (max-width: 768px) {
-  .tech-post-item { margin: 0 0 24px; padding: 16px 0; }
-  .tech-post-arrow { right: 0; }
+/* 窄屏（真机移动端 / PC 窄窗口）：本就无 hover 背景，取消左右外扩，
+   让分割线与正文同宽；箭头在 meta 行右侧易与换行标题叠字，直接隐藏 */
+@media (max-width: 767px) {
+  .tech-post-item { margin: 0 0 20px; padding: 14px 0; }
+  .tech-post-arrow { display: none; }
 }
 .tech-post-meta {
   display: flex; flex-wrap: wrap; gap: 6px 16px;
@@ -758,14 +766,81 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   display: flex; align-items: center; justify-content: center;
   background: var(--accent-weak); color: var(--accent);
   font-size: 15px; font-weight: 700; border-radius: 50%;
+  object-fit: cover; overflow: hidden;
 }
+.tech-comment-avatar-link { display: inline-flex; flex-shrink: 0; border-radius: 50%; }
+.tech-comment-avatar-link:hover .tech-comment-avatar { box-shadow: 0 0 0 2px var(--accent); }
 .tech-comment-body { flex: 1; min-width: 0; }
 .tech-comment-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
 .tech-comment-author { font-size: 14px; font-weight: 600; }
+.tech-comment-author-badge {
+  display: inline-block; padding: 1px 8px; font-size: 11px;
+  color: #fff; background: var(--accent); border-radius: 10px;
+}
+.tech-comment-replyto {
+  display: inline-block; padding: 1px 8px; font-size: 11px;
+  color: var(--accent); background: var(--accent-weak);
+  border-radius: 10px; text-decoration: none; line-height: 1.6;
+  transition: background .2s, color .2s;
+}
+.tech-comment-replyto:hover { background: var(--accent); color: #fff; }
 .tech-comment-time { font-size: 12px; color: var(--text-secondary); }
 .tech-comment-content { font-size: 14px; margin: 0; word-wrap: break-word; }
 .tech-comments-empty { color: var(--text-secondary); font-size: 14px; padding: 16px 0; }
 .tech-comment-form { margin-top: 20px; }
+/* 盖楼：giscus/GitHub 风格——子回复整体缩进（头像随内容右移）+ 1px 细竖线，
+   第 2 层起不再加深（平铺），杜绝无限嵌套溢出 */
+.tech-comment-children { margin-left: 48px; padding-left: 16px; border-left: 1px solid var(--border); }
+.tech-comment-children .tech-comment-children { margin-left: 0; padding-left: 0; }
+.tech-comment-reply-btn {
+  margin-top: 6px; padding: 2px 10px; font-size: 12px;
+  color: var(--text-secondary); background: none;
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.tech-comment-reply-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-weak); }
+/* 评论表单：三字段一行 + 回复提示 */
+/* hidden 属性必须强制隐藏：.tech-comment-form-row 的 display:flex 会覆盖 UA 的 [hidden] 样式 */
+[hidden] { display: none !important; }
+.tech-comment-form-row { display: flex; gap: 10px; }
+.tech-comment-form-row .tech-input { flex: 1; }
+.tech-comment-form-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tech-comment-replying { font-size: 13px; color: var(--accent); }
+.tech-comment-cancel {
+  margin-left: 8px; padding: 2px 8px; font-size: 12px;
+  color: var(--text-secondary); background: none;
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
+}
+.tech-comment-cancel:hover { color: var(--accent); border-color: var(--accent); }
+/* 私密评论标记 */
+.tech-comment-private-badge {
+  display: inline-block; padding: 1px 8px; font-size: 11px;
+  color: #fff; background: var(--accent); border-radius: 10px;
+}
+.tech-comment-pending-badge {
+  display: inline-block; padding: 1px 8px; font-size: 11px;
+  color: #7a5b00; background: #f5e6b8; border-radius: 10px;
+}
+/* 记住信息提示条 */
+.tech-comment-remember {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 12px; margin-bottom: 10px; font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 6px;
+}
+.tech-comment-remember-edit {
+  flex-shrink: 0; padding: 2px 10px; font-size: 12px;
+  color: var(--accent); background: none;
+  border: 1px solid var(--accent); border-radius: 4px; cursor: pointer;
+}
+.tech-comment-remember-edit:hover { background: var(--accent-weak); }
+/* 私密评论开关 */
+.tech-comment-private {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text-secondary); cursor: pointer;
+  user-select: none;
+}
+.tech-comment-private input { accent-color: var(--accent); cursor: pointer; }
 .tech-input, .tech-textarea {
   width: 100%; padding: 10px 12px; margin-bottom: 10px;
   font-size: 16px; color: var(--text);
@@ -1078,7 +1153,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   .tech-top, .tech-top.scrolled { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .tech-post-title-lg { font-size: 24px; }
   .tech-page-title { font-size: 24px; }
-  .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 32px; }
+  .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 24px; }
   /* 关于页：移动端作者卡收紧内边距 */
   .tech-about-hero { padding: 24px 16px 20px; margin-bottom: 20px; }
   .tech-page-head--center .tech-page-title { font-size: 32px; }
@@ -1096,13 +1171,10 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   .tech-pager-next { text-align: left; }
   .tech-form-row { flex-direction: column; gap: 0; }
   .tech-skill-list { grid-template-columns: 1fr; }
-  /* 小屏代码自动折行，避免块内横向拖动；pre 保留 overflow-x 兜底极长内容 */
-  .tech-post-body pre code,
-  .tech-error-code-block code {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
+  /* 评论：表单三字段改纵向堆叠 */
+  .tech-comment-form-row { flex-direction: column; gap: 0; }
+  /* 盖楼：移动端缩进减半，避免窄屏挤压 */
+  .tech-comment-children { margin-left: 24px; padding-left: 8px; }
 }
 
 @media (max-width: 480px) {

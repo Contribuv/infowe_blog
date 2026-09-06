@@ -48,12 +48,10 @@
             <div class="tech-nav-inner">
                 <a href="/" class="tech-logo"><span class="tech-logo-bracket">&lt;</span>{{ blog_name }}<span class="tech-logo-bracket tech-logo-blink">/&gt;</span></a><div class="tech-nav-links">
                     <a href="/" class="tech-nav-link {% if request.path == '/' %}active{% endif %}">首页</a>
-                    <a href="/posts" class="tech-nav-link {% if request.path == '/posts' %}active{% endif %}">文章</a>
-                    <a href="/tags" class="tech-nav-link {% if request.path == '/tags' %}active{% endif %}">标签</a>
-                    <a href="/projects" class="tech-nav-link {% if request.path == '/projects' %}active{% endif %}">项目</a>
-                    <a href="/links" class="tech-nav-link {% if request.path == '/links' %}active{% endif %}">友链</a>
-                    <a href="/status" class="tech-nav-link {% if request.path == '/status' %}active{% endif %}">状态</a>
-                    <a href="/about" class="tech-nav-link {% if request.path == '/about' %}active{% endif %}">关于</a>
+                    {# 可开关页面：由后台「导航菜单」控制，关闭后不渲染 #}
+                    {% for item in nav_pages %}
+                    <a href="{{ item.href }}" class="tech-nav-link {% if request.path == item.href %}active{% endif %}">{{ item.label }}</a>
+                    {% endfor %}
                 </div>
                 <div class="tech-nav-actions">
                     <a href="/admin" class="tech-icon-btn {% if request.path.startswith('/admin') %}active{% endif %}" aria-label="写作" title="写作">
@@ -92,12 +90,9 @@
             <button class="tech-drawer-close" id="tech-drawer-close" aria-label="关闭菜单">&times;</button>
         </div>
         <a href="/" class="tech-drawer-link {% if request.path == '/' %}active{% endif %}">首页</a>
-        <a href="/posts" class="tech-drawer-link {% if request.path == '/posts' %}active{% endif %}">文章</a>
-        <a href="/tags" class="tech-drawer-link {% if request.path == '/tags' %}active{% endif %}">标签</a>
-        <a href="/projects" class="tech-drawer-link {% if request.path == '/projects' %}active{% endif %}">项目</a>
-        <a href="/links" class="tech-drawer-link {% if request.path == '/links' %}active{% endif %}">友链</a>
-        <a href="/about" class="tech-drawer-link {% if request.path == '/about' %}active{% endif %}">关于</a>
-        <a href="/status" class="tech-drawer-link {% if request.path == '/status' %}active{% endif %}">状态</a>
+        {% for item in nav_pages %}
+        <a href="{{ item.href }}" class="tech-drawer-link {% if request.path == item.href %}active{% endif %}">{{ item.label }}</a>
+        {% endfor %}
         <a href="/admin" class="tech-drawer-link {% if request.path.startswith('/admin') %}active{% endif %}">写作</a>
     </aside>
 
@@ -114,9 +109,9 @@
             <div class="tech-footer-inner">
                 <p class="tech-footer-copy">Powered by Flask &copy; {{ now_year }} {{ blog_name }}</p>
                 <div class="tech-footer-links">
-                    <a href="/projects">开源项目</a>
-                    <a href="/links">友情链接</a>
-                    <a href="/about">关于我</a>
+                    {% if nav_on.projects %}<a href="/projects">开源项目</a>{% endif %}
+                    {% if nav_on.links %}<a href="/links">友情链接</a>{% endif %}
+                    {% if nav_on.about %}<a href="/about">关于我</a>{% endif %}
                     <a href="/feed.xml">RSS</a>
                 </div>
                 {% if icp_beian or police_beian %}

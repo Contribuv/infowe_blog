@@ -66,24 +66,14 @@
                 <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">
                     {{ icon('home', 18, 'nav-icon') | safe }} 首页
                 </a>
-                <a href="/posts" class="nav-link {% if request.path == '/posts' %}active{% endif %}">
-                    {{ icon('file-text', 18, 'nav-icon') | safe }} 文章
+                {# 可开关页面：由后台「导航菜单」控制，关闭后不渲染 #}
+                {% set nav_icons = {'posts': 'file-text', 'tags': 'tag', 'projects': 'star',
+                                    'links': 'link', 'about': 'at-sign', 'status': 'rocket'} %}
+                {% for item in nav_pages %}
+                <a href="{{ item.href }}" class="nav-link {% if request.path == item.href %}active{% endif %}">
+                    {{ icon(nav_icons[item.key], 18, 'nav-icon') | safe }} {{ item.label }}
                 </a>
-                <a href="/tags" class="nav-link {% if request.path == '/tags' %}active{% endif %}">
-                    {{ icon('tag', 18, 'nav-icon') | safe }} 标签
-                </a>
-                <a href="/projects" class="nav-link {% if request.path == '/projects' %}active{% endif %}">
-                    {{ icon('star', 18, 'nav-icon') | safe }} 项目
-                </a>
-                <a href="/links" class="nav-link {% if request.path == '/links' %}active{% endif %}">
-                    {{ icon('link', 18, 'nav-icon') | safe }} 友链
-                </a>
-                <a href="/about" class="nav-link {% if request.path == '/about' %}active{% endif %}">
-                    {{ icon('at-sign', 18, 'nav-icon') | safe }} 关于
-                </a>
-                <a href="/status" class="nav-link {% if request.path == '/status' %}active{% endif %}">
-                    {{ icon('rocket', 18, 'nav-icon') | safe }} 状态
-                </a>
+                {% endfor %}
                 <a href="/admin" class="nav-link {% if request.path.startswith('/admin') %}active{% endif %}">
                     {{ icon('pencil', 18, 'nav-icon') | safe }} 写作
                 </a>
@@ -112,13 +102,15 @@
                 <span class="logo-bracket">&lt;</span>{{ blog_name }}<span class="logo-bracket">/&gt;</span>
             </div>
             <div class="footer-links">
-                <a href="/projects" class="footer-link">开源项目</a>
-                <span class="footer-divider">·</span>
-                <a href="/links" class="footer-link">友情链接</a>
-                <span class="footer-divider">·</span>
-                <a href="/about" class="footer-link">关于我</a>
-                <span class="footer-divider">·</span>
-                <a href="/feed.xml" class="footer-link">RSS</a>
+                {% set footer_links = [] %}
+                {% if nav_on.projects %}{% set _ = footer_links.append(('开源项目', '/projects')) %}{% endif %}
+                {% if nav_on.links %}{% set _ = footer_links.append(('友情链接', '/links')) %}{% endif %}
+                {% if nav_on.about %}{% set _ = footer_links.append(('关于我', '/about')) %}{% endif %}
+                {% set _ = footer_links.append(('RSS', '/feed.xml')) %}
+                {% for text, href in footer_links %}
+                {% if not loop.first %}<span class="footer-divider">·</span>{% endif %}
+                <a href="{{ href }}" class="footer-link">{{ text }}</a>
+                {% endfor %}
             </div>
             <p class="footer-copy">&copy; 2026 {{ blog_name }}. Powered by Python & Flask.</p>
             {% if icp_beian or police_beian %}

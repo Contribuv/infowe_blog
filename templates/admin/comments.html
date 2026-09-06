@@ -14,37 +14,121 @@
 {% endwith %}
 
 {% if comments %}
-<div class="table-wrap">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>作者</th>
-                <th>内容</th>
-                <th>文章</th>
-                <th>时间</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for c in comments %}
-            <tr>
-                <td data-label="作者"><strong>{{ c.author }}</strong></td>
-                <td class="desc-cell" data-label="内容">{{ c.content[:100] }}</td>
-                <td data-label="文章"><a href="/post/{{ c.post_id }}" target="_blank">{{ c.post_title[:20] }}</a></td>
-                <td data-label="时间">{{ c.created_at[:16] }}</td>
-                <td class="actions-cell" data-label="操作">
-                    <form method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" style="display:inline" onsubmit="return confirm('确定删除这条评论？')">
-                        <button type="submit" class="btn btn-sm btn-danger">删除</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+<form method="POST" action="{{ url_for('admin_comments_bulk') }}" id="bulkForm">
+    <input type="hidden" name="action" id="bulkAction" value="">
+    <div class="bulk-bar">
+        <label class="checkbox-label">
+            <input type="checkbox" id="checkAll">
+            全选
+        </label>
+        <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
+        <button type="submit" class="btn btn-sm btn-success" data-action="approve">批量通过</button>
+        <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+    </div>
+</form>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="col-check">选择</th>
+                    <th>状态</th>
+                    <th>作者</th>
+                    <th>内容</th>
+                    <th>文章</th>
+                    <th>网址</th>
+                    <th>时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in comments %}
+                <tr{% if c.status == 'pending' %} class="row-pending"{% endif %}>
+                    <td class="col-check" data-label="选择">
+                        <input type="checkbox" class="row-check" name="comment_ids" value="{{ c.id }}" form="bulkForm" aria-label="选择评论 {{ c.id }}">
+                    </td>
+                    <td data-label="状态">
+                        {% if c.status == 'pending' %}<span class="badge badge-warning">待审核</span>
+                        {% else %}<span class="badge badge-success">已通过</span>{% endif %}
+                        {% if c.is_private %}<span class="badge badge-private">私密</span>{% endif %}
+                    </td>
+                    <td data-label="作者">
+                        <strong>{{ c.author }}</strong>
+                        {% if c.parent_author %}<div class="cell-sub">回复 @{{ c.parent_author }}</div>{% endif %}
+                    </td>
+                    <td class="desc-cell" data-label="内容">{{ c.content[:100] }}</td>
+                    <td data-label="文章"><a href="/post/{{ c.post_id }}#comment-{{ c.id }}" target="_blank">{{ c.post_title[:20] }}</a></td>
+                    <td data-label="网址">
+                        {% if c.website %}<a href="{{ c.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ c.website[:30] }}</a>
+                        {% else %}<span class="cell-muted">—</span>{% endif %}
+                    </td>
+                    <td data-label="时间">{{ c.created_at[:16] }}</td>
+                    <td class="actions-cell" data-label="操作">
+                        {% if c.status == 'pending' %}
+                        <form method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" style="display:inline">
+                            <button type="submit" class="btn btn-sm btn-success">通过</button>
+                        </form>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" style="display:inline" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')">
+                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
 <div class="empty-state">
     <p>暂无评论</p>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('bulkForm');
+    if (!form) return;
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    var count = document.getElementById('bulkCount');
+
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        count.textContent = n;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+
+    form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) {
+            e.preventDefault();
+            alert('请先勾选要操作的评论');
+            return;
+        }
+        if (action === 'delete' && !confirm('确定删除选中的 ' + n + ' 条评论？其全部回复将一并删除')) {
+            e.preventDefault();
+            return;
+        }
+        document.getElementById('bulkAction').value = action;
+    });
+
+    update();
+})();
+</script>
 {% endblock %}
