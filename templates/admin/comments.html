@@ -36,6 +36,7 @@
                     <th>内容</th>
                     <th>文章</th>
                     <th>网址</th>
+                    <th>来源</th>
                     <th>时间</th>
                     <th>操作</th>
                 </tr>
@@ -60,6 +61,11 @@
                     <td data-label="网址">
                         {% if c.website %}<a href="{{ c.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ c.website[:30] }}</a>
                         {% else %}<span class="cell-muted">—</span>{% endif %}
+                    </td>
+                    <td data-label="来源">
+                        {% if c.ip_location %}<span class="badge">{{ c.ip_location }}</span>{% endif %}
+                        {% if c.ip_text %}<div class="cell-sub">{{ c.ip_text }}</div>{% endif %}
+                        {% if not c.ip_location and not c.ip_text %}<span class="cell-muted">—</span>{% endif %}
                     </td>
                     <td data-label="时间">{{ c.created_at[:16] }}</td>
                     <td class="actions-cell" data-label="操作">

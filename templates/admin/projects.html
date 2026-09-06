@@ -22,39 +22,44 @@
 
 {% if projects %}
 <div class="card">
-    <table class="table">
+    <div class="table-wrap">
+    <table class="table table-fixed">
         <thead>
             <tr>
-                <th style="width:8%">排序</th>
-                <th style="width:22%">项目名</th>
-                <th style="width:30%">描述</th>
-                <th style="width:12%">语言</th>
-                <th style="width:8%">Stars</th>
-                <th style="width:8%">精选</th>
-                <th style="width:12%">操作</th>
+                <th class="col-opt" style="width:7%">排序</th>
+                <th style="width:16%">项目名</th>
+                <th class="url-cell" style="width:14%">仓库地址</th>
+                <th style="width:20%">描述</th>
+                <th style="width:15%">语言</th>
+                <th class="col-opt" style="width:6%">Stars</th>
+                <th class="col-opt" style="width:6%">精选</th>
+                <th style="width:16%">操作</th>
             </tr>
         </thead>
         <tbody>
             {% for p in projects %}
             <tr>
-                <td data-label="排序">{{ p.sort_order }}</td>
+                <td class="sort-cell col-opt" data-label="排序">{{ p.sort_order }}</td>
                 <td data-label="项目名">
-                    <strong>{{ p.name }}</strong>{% if p.custom_name %} <span class="tag tag-custom" title="项目名已自定义，同步时不会被 GitHub 名称覆盖">自定义名</span>{% endif %}<br>
-                    <a href="{{ p.url }}" target="_blank" class="link-url">{{ p.url }}</a>
+                    <strong>{{ p.name }}</strong>{% if p.custom_name %} <span class="tag tag-custom" title="项目名已自定义，同步时不会被 GitHub 名称覆盖">自定义名</span>{% endif %}
+                </td>
+                <td class="url-cell" data-label="仓库地址">
+                    <a href="{{ p.url }}" target="_blank" class="link-url" title="{{ p.url }}">{{ p.url|replace('https://github.com/', '')|replace('http://github.com/', '') }}</a>
                 </td>
                 <td class="desc-cell" data-label="描述">{{ p.description }}</td>
                 <td data-label="语言">
                     {% set langs = p.lang_list if p.lang_list else [] %}
                     {% if langs %}
-                    {% for l in langs %}
-                    <span class="lang-tag"><span class="lang-dot" style="--lang-color: {{ l[2] }};"></span>{{ l[0] }}{% if l[1] %} {{ l[1] }}%{% endif %}</span>
+                    {% for l in langs[:2] %}
+                    <span class="lang-tag"{% if l[1] %} title="{{ l[0] }} {{ l[1] }}%"{% endif %}><span class="lang-dot" style="--lang-color: {{ l[2] }};"></span>{{ l[0] }}</span>
                     {% endfor %}
+                    {% if langs|length > 2 %}<span class="lang-more" title="{% for l in langs[2:] %}{{ l[0] }}{% if l[1] %} {{ l[1] }}%{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}">+{{ langs|length - 2 }}</span>{% endif %}
                     {% elif p.language %}
                     <span class="lang-tag"><span class="lang-dot" style="--lang-color: {{ lang_color(p.language) }};"></span>{{ p.language }}</span>
                     {% else %}-{% endif %}
                 </td>
-                <td class="text-muted" data-label="Stars">{{ p.stars }}</td>
-                <td data-label="精选">
+                <td class="text-muted col-opt" data-label="Stars">{{ p.stars }}</td>
+                <td class="col-opt" data-label="精选">
                     {% if p.featured %}<span class="badge badge-featured">{{ icon('star', 14) | safe }} 精选</span>
                     {% else %}-{% endif %}
                 </td>
@@ -73,6 +78,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% else %}
 <div class="empty-state">

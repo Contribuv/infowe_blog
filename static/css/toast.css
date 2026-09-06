@@ -1,0 +1,39 @@
+/* ═══════════════════════════════════════════════
+   Toast 轻提示（两套主题共用）
+   PC 右下角堆叠；移动端底部居中并避开安全区
+   ═══════════════════════════════════════════════ */
+.toast-layer{position:fixed;z-index:9999;right:24px;bottom:24px;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none;max-width:calc(100vw - 48px)}
+.toast{pointer-events:auto;display:flex;align-items:flex-start;gap:10px;min-width:200px;max-width:360px;padding:11px 13px;border-radius:10px;
+  background:var(--bg-raised, var(--bg-subtle, #1e2230));
+  color:var(--text, var(--text, #e6e8ef));
+  border:1px solid var(--border-strong, var(--border, rgba(255,255,255,.12)));
+  box-shadow:0 8px 28px rgba(0,0,0,.22);
+  font-size:13.5px;line-height:1.55;
+  opacity:0;transform:translateY(10px) scale(.98);
+  transition:opacity .22s cubic-bezier(.22,1,.36,1),transform .22s cubic-bezier(.22,1,.36,1);
+  will-change:opacity,transform}
+.toast.is-in{opacity:1;transform:translateY(0) scale(1)}
+.toast.is-out{opacity:0;transform:translateY(6px) scale(.98)}
+.toast-icon{flex:none;width:18px;height:18px;margin-top:1px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.toast-icon svg{width:11px;height:11px;stroke-width:2.6;fill:none;stroke:currentColor}
+.toast-msg{flex:1;min-width:0;word-break:break-word;color:var(--text-secondary, var(--text-secondary, #9ba0b5))}
+.toast-close{flex:none;margin-top:1px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;opacity:.5;transition:opacity .15s}
+.toast-close:hover{opacity:1}
+.toast-close svg{width:10px;height:10px;stroke:currentColor;stroke-width:2.4;fill:none}
+
+/* 语义色：只染图标与描边，保持整体克制 */
+.toast--success .toast-icon{background:rgba(63,185,80,.16);color:#3fb950}
+.toast--success{border-color:rgba(63,185,80,.35)}
+.toast--error .toast-icon{background:rgba(248,81,73,.16);color:#f85149}
+.toast--error{border-color:rgba(248,81,73,.35)}
+.toast--info .toast-icon{background:var(--accent-weak, rgba(91,141,239,.16));color:var(--accent, #5b8def)}
+.toast--info{border-color:var(--accent, rgba(91,141,239,.35))}
+
+/* 移动端：底部居中，宽度撑满可视区 */
+@media (max-width:767px){
+  .toast-layer{right:12px;left:12px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));align-items:stretch;max-width:none}
+  .toast{max-width:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .toast{transition:opacity .15s}
+}

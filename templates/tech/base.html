@@ -36,6 +36,9 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t='v' ~ version) }}">
     <!-- 文章分享面板样式（两主题通用） -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t='v' ~ version) }}">
+    <!-- 评论区（两主题共用，靠 CSS 变量换肤）+ Toast 轻提示 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css', t='v' ~ version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css', t='v' ~ version) }}">
     <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
     {% endif %}
 </head>

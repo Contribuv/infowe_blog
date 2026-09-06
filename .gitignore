@@ -27,6 +27,8 @@ data/
 # ── 用户上传附件（运行时生成，勿入库）──
 static/uploads/
 uploads/
+# ── 头像代理磁盘缓存（运行时生成，勿入库）──
+static/cache/
 
 # ── 打包 / 进程文件（勿入库）──
 blog.zip

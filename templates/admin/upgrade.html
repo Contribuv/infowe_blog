@@ -85,7 +85,7 @@
         if (d.upgradable) {
             var notes = '';
             if (d.published_at) notes += '<p class="text-muted">发布于 ' + esc(d.published_at) + '</p>';
-            if (d.body) notes += '<div class="upgrade-notes"><h4>更新内容</h4><pre class="upgrade-body">' + esc(d.body) + '</pre></div>';
+            if (d.body) notes += '<div class="upgrade-notes"><h4>更新内容</h4><div class="upgrade-body">' + (d.body_html || esc(d.body)) + '</div></div>';
             resultBox.innerHTML =
                 '<div class="card">' +
                 '<div class="card-header"><h3>' + svgIcon('check-circle', 18) + ' 发现新版本 v' + esc(d.latest_version) +

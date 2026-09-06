@@ -758,89 +758,8 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-related-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
 /* ── 评论 ── */
-.tech-comments { margin: 40px 0 0; }
-.tech-comments-title { font-size: 18px; font-weight: 600; margin: 0 0 16px; }
-.tech-comment-item { display: flex; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.tech-comment-avatar {
-  width: 36px; height: 36px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--accent-weak); color: var(--accent);
-  font-size: 15px; font-weight: 700; border-radius: 50%;
-  object-fit: cover; overflow: hidden;
-}
-.tech-comment-avatar-link { display: inline-flex; flex-shrink: 0; border-radius: 50%; }
-.tech-comment-avatar-link:hover .tech-comment-avatar { box-shadow: 0 0 0 2px var(--accent); }
-.tech-comment-body { flex: 1; min-width: 0; }
-.tech-comment-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 4px; }
-.tech-comment-author { font-size: 14px; font-weight: 600; }
-.tech-comment-author-badge {
-  display: inline-block; padding: 1px 8px; font-size: 11px;
-  color: #fff; background: var(--accent); border-radius: 10px;
-}
-.tech-comment-replyto {
-  display: inline-block; padding: 1px 8px; font-size: 11px;
-  color: var(--accent); background: var(--accent-weak);
-  border-radius: 10px; text-decoration: none; line-height: 1.6;
-  transition: background .2s, color .2s;
-}
-.tech-comment-replyto:hover { background: var(--accent); color: #fff; }
-.tech-comment-time { font-size: 12px; color: var(--text-secondary); }
-.tech-comment-content { font-size: 14px; margin: 0; word-wrap: break-word; }
-.tech-comments-empty { color: var(--text-secondary); font-size: 14px; padding: 16px 0; }
-.tech-comment-form { margin-top: 20px; }
-/* 盖楼：giscus/GitHub 风格——子回复整体缩进（头像随内容右移）+ 1px 细竖线，
-   第 2 层起不再加深（平铺），杜绝无限嵌套溢出 */
-.tech-comment-children { margin-left: 48px; padding-left: 16px; border-left: 1px solid var(--border); }
-.tech-comment-children .tech-comment-children { margin-left: 0; padding-left: 0; }
-.tech-comment-reply-btn {
-  margin-top: 6px; padding: 2px 10px; font-size: 12px;
-  color: var(--text-secondary); background: none;
-  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
-  transition: color .2s, border-color .2s, background .2s;
-}
-.tech-comment-reply-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-weak); }
-/* 评论表单：三字段一行 + 回复提示 */
 /* hidden 属性必须强制隐藏：.tech-comment-form-row 的 display:flex 会覆盖 UA 的 [hidden] 样式 */
 [hidden] { display: none !important; }
-.tech-comment-form-row { display: flex; gap: 10px; }
-.tech-comment-form-row .tech-input { flex: 1; }
-.tech-comment-form-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.tech-comment-replying { font-size: 13px; color: var(--accent); }
-.tech-comment-cancel {
-  margin-left: 8px; padding: 2px 8px; font-size: 12px;
-  color: var(--text-secondary); background: none;
-  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
-}
-.tech-comment-cancel:hover { color: var(--accent); border-color: var(--accent); }
-/* 私密评论标记 */
-.tech-comment-private-badge {
-  display: inline-block; padding: 1px 8px; font-size: 11px;
-  color: #fff; background: var(--accent); border-radius: 10px;
-}
-.tech-comment-pending-badge {
-  display: inline-block; padding: 1px 8px; font-size: 11px;
-  color: #7a5b00; background: #f5e6b8; border-radius: 10px;
-}
-/* 记住信息提示条 */
-.tech-comment-remember {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 8px 12px; margin-bottom: 10px; font-size: 13px;
-  color: var(--text-secondary);
-  background: var(--bg-subtle); border: 1px dashed var(--border); border-radius: 6px;
-}
-.tech-comment-remember-edit {
-  flex-shrink: 0; padding: 2px 10px; font-size: 12px;
-  color: var(--accent); background: none;
-  border: 1px solid var(--accent); border-radius: 4px; cursor: pointer;
-}
-.tech-comment-remember-edit:hover { background: var(--accent-weak); }
-/* 私密评论开关 */
-.tech-comment-private {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; color: var(--text-secondary); cursor: pointer;
-  user-select: none;
-}
-.tech-comment-private input { accent-color: var(--accent); cursor: pointer; }
 .tech-input, .tech-textarea {
   width: 100%; padding: 10px 12px; margin-bottom: 10px;
   font-size: 16px; color: var(--text);
@@ -1171,10 +1090,6 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   .tech-pager-next { text-align: left; }
   .tech-form-row { flex-direction: column; gap: 0; }
   .tech-skill-list { grid-template-columns: 1fr; }
-  /* 评论：表单三字段改纵向堆叠 */
-  .tech-comment-form-row { flex-direction: column; gap: 0; }
-  /* 盖楼：移动端缩进减半，避免窄屏挤压 */
-  .tech-comment-children { margin-left: 24px; padding-left: 8px; }
 }
 
 @media (max-width: 480px) {

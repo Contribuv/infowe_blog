@@ -14,7 +14,6 @@
 {% endwith %}
 
 <form method="POST" enctype="multipart/form-data" class="settings-form">
-    <div class="settings-col">
         <!-- 管理员：账号 + 头像 + 密码 -->
         <div class="card">
             <div class="card-header"><h3>管理员</h3></div>
@@ -97,32 +96,71 @@
                 </label>
             </div>
         </div>
-        <!-- 导航菜单：每项一行（页面名 + 开关），说明只保留头部副标题与底部一条提示，避免逐项重复 -->
+        <!-- 评论邮件通知：SMTP 配置，仅通知博主（不存评论者明文邮箱，无法通知评论者） -->
         <div class="card">
             <div class="card-header card-header--hint">
-                <h3>导航菜单</h3>
-                <span class="card-hint">控制入口是否显示在顶部导航与页脚</span>
+                <h3>评论邮件通知</h3>
+                <span class="card-hint">新评论 / 新回复时通过 SMTP 发送邮件提醒</span>
             </div>
             <div class="form-group">
-                <div class="nav-toggle-grid">
-                    {% for item in nav_all %}
-                    <label class="nav-toggle">
-                        <span class="nav-toggle-name">{{ item.label }}</span>
-                        <span class="switch">
-                            <input type="checkbox" name="nav_{{ item.key }}" value="1"{{ ' checked' if item.enabled else '' }}>
-                            <span class="slider"></span>
-                        </span>
-                    </label>
-                    {% endfor %}
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="comment_notify" value="1"{{ ' checked' if comment_notify|default('0') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后新评论提交即邮件通知；关闭则与当前行为一致（仅后台可见）。</span>
+                </label>
+            </div>
+            <div class="smtp-row">
+                <div class="form-group">
+                    <label>SMTP 服务器</label>
+                    <input type="text" name="smtp_host" class="input-text"
+                           value="{{ smtp_host }}" placeholder="如 smtp.qq.com">
+                </div>
+                <div class="form-group">
+                    <label>SMTP 端口</label>
+                    <select name="smtp_port" id="smtp_port" class="input-text">
+                        <option value="465"{{ ' selected' if smtp_port|string == '465' }}>465 — SSL 加密</option>
+                        <option value="587"{{ ' selected' if smtp_port|string == '587' }}>587 — STARTTLS（推荐）</option>
+                        <option value="25"{{ ' selected' if smtp_port|string == '25' }}>25 — 明文</option>
+                        <option value="2525"{{ ' selected' if smtp_port|string == '2525' }}>2525 — 备选</option>
+                        <option value="__custom__"{{ ' selected' if smtp_port and smtp_port|string not in ('465','587','25','2525') else '' }}>自定义…</option>
+                    </select>
+                    <span class="form-hint">465=SSL、587=STARTTLS（QQ/163 邮箱建议 465）。</span>
+                    <input type="text" name="smtp_port_custom" id="smtp_port_custom" class="input-text"
+                           style="display: none"
+                           value="{{ smtp_port if smtp_port and smtp_port|string not in ('465','587','25','2525') else '' }}"
+                           placeholder="输入自定义端口号">
+                    <span class="form-hint" id="smtp_port_hint" style="display: none;">端口范围 1-65535</span>
                 </div>
             </div>
             <div class="form-group">
-                <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
+                <label>发件名称</label>
+                <input type="text" name="smtp_sender_name" class="input-text"
+                       value="{{ smtp_sender_name }}" placeholder="收件人看到的名称，留空用博客名">
+            </div>
+            <div class="form-group">
+                <label>发件账号</label>
+                <input type="text" name="smtp_user" class="input-text"
+                       value="{{ smtp_user }}" placeholder="SMTP 登录账号，通常为发件邮箱">
+            </div>
+            <div class="form-group">
+                <label>发件授权码</label>
+                <input type="password" name="smtp_pass" class="input-text"
+                       value="{{ smtp_pass }}" placeholder="QQ 邮箱等需使用授权码">
+            </div>
+            <div class="form-group">
+                <label>收件人</label>
+                <input type="email" name="notify_email" class="input-text"
+                       value="{{ notify_email }}" placeholder="留空默认发送到「联系邮箱」">
+            </div>
+            <div class="form-group">
+                <button type="button" id="btn_test_email" class="btn btn-secondary">发送测试邮件</button>
+                <span class="form-hint" id="email_test_result" style="display: none"></span>
+                <span class="form-hint">先填好上方 SMTP 配置，点此验证连通性（不保存设置）；测试邮件发往「收件人」。新评论/新回复会自动通知博主与被回复者。</span>
             </div>
         </div>
-    </div>
 
-    <div class="settings-col">
         <!-- 博主资料：个人介绍 + 社交 -->
         <div class="card">
             <div class="card-header"><h3>博主资料</h3></div>
@@ -173,10 +211,6 @@
                           placeholder='[{"name":"Python","level":95},{"name":"Flask","level":85}]'>{{ skills }}</textarea>
                 <span class="form-hint">JSON 格式，每项包含 name 和 level (0-100)</span>
             </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><h3>备案信息</h3></div>
             <div class="form-group">
                 <label>ICP 备案号（工信部）</label>
                 <input type="text" name="icp_beian" class="input-text"
@@ -190,8 +224,30 @@
                        placeholder="如: 京公网安备11010802000000号">
             </div>
         </div>
-    </div>
 
+        <!-- 导航菜单：每项一行（页面名 + 开关） -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>导航菜单</h3>
+                <span class="card-hint">控制入口是否显示在顶部导航与页脚</span>
+            </div>
+            <div class="form-group">
+                <div class="nav-toggle-grid">
+                    {% for item in nav_all %}
+                    <label class="nav-toggle">
+                        <span class="nav-toggle-name">{{ item.label }}</span>
+                        <span class="switch">
+                            <input type="checkbox" name="nav_{{ item.key }}" value="1"{{ ' checked' if item.enabled else '' }}>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
+            </div>
+        </div>
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">保存所有设置</button>
         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">取消</a>
@@ -220,6 +276,77 @@
         };
         reader.readAsDataURL(this.files[0]);
       }
+    });
+  }
+  // SMTP 端口：预设下拉 + 「自定义…」切换显示输入框；提交时把自定义值回填到 select
+  var portSel = document.getElementById('smtp_port');
+  var portCustom = document.getElementById('smtp_port_custom');
+  var portHint = document.getElementById('smtp_port_hint');
+  if (portSel) {
+    var syncPortField = function () {
+      var custom = portSel.value === '__custom__';
+      portCustom.style.display = custom ? 'block' : 'none';
+      portHint.style.display = custom ? 'block' : 'none';
+      if (custom) portCustom.focus();
+    };
+    portSel.addEventListener('change', syncPortField);
+    syncPortField();  // 页面加载时，若存的是自定义端口则立即展开输入框
+    var pf = portSel.closest('form');
+    if (pf) {
+      pf.addEventListener('submit', function () {
+        if (portSel.value === '__custom__') {
+          var v = portCustom.value.trim();
+          if (/^[1-9]\d{0,4}$/.test(v) && +v >= 1 && +v <= 65535) {
+            portSel.value = v;
+          } else {
+            portSel.value = '587';
+            alert('自定义端口无效，已回退为 587（STARTTLS）');
+          }
+        }
+      });
+    }
+  }
+  // SMTP 测试邮件：AJAX 同页反馈（不刷新、不保存设置），结果展示在本卡片内
+  var btnTest = document.getElementById('btn_test_email');
+  var testRes = document.getElementById('email_test_result');
+  if (btnTest) {
+    var gv = function (n) {
+      var el = document.querySelector('[name="' + n + '"]');
+      return el ? el.value : '';
+    };
+    btnTest.addEventListener('click', function () {
+      var host = gv('smtp_host').trim();
+      if (!host) {
+        testRes.textContent = '请先填写 SMTP 服务器';
+        testRes.className = 'form-hint email-test-err';
+        testRes.style.display = 'block';
+        return;
+      }
+      var pv = portSel ? portSel.value : '';
+      if (pv === '__custom__') pv = (portCustom.value || '').trim();
+      var fd = new URLSearchParams();
+      ['smtp_host', 'smtp_user', 'smtp_pass', 'notify_email', 'contact_email'].forEach(function (k) {
+        fd.set(k, gv(k));
+      });
+      fd.set('smtp_port', pv || '');
+      btnTest.disabled = true;
+      testRes.textContent = '正在发送…';
+      testRes.className = 'form-hint';
+      testRes.style.display = 'block';
+      fetch('/admin/settings/test-email', {
+        method: 'POST',
+        body: fd,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      }).then(function (r) { return r.json(); })
+        .then(function (j) {
+          testRes.textContent = j.msg;
+          testRes.className = 'form-hint ' + (j.ok ? 'email-test-ok' : 'email-test-err');
+        })
+        .catch(function () {
+          testRes.textContent = '请求失败，请重试';
+          testRes.className = 'form-hint email-test-err';
+        })
+        .then(function () { btnTest.disabled = false; });
     });
   }
 </script>

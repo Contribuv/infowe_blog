@@ -28,9 +28,11 @@ import hmac
 import uuid
 import threading
 import urllib.parse
+import smtplib
 import email.utils
 import ipaddress
 from datetime import datetime, timezone
+from email.mime.text import MIMEText
 from functools import wraps
 
 import markdown
@@ -464,6 +466,14 @@ def init_db():
         ('home_posts_count', '6'),
         ('posts_per_page', '20'),
         ('comments_enabled', '1'),
+        # ── 评论邮件通知（SMTP，新评论/新回复时通知博主） ──
+        ('comment_notify', '0'),
+        ('smtp_host', ''),
+        ('smtp_sender_name', ''),
+        ('smtp_port', '465'),
+        ('smtp_user', ''),
+        ('smtp_pass', ''),
+        ('notify_email', ''),
         # ── 导航菜单开关（关闭后对应页面返回 404，且 nav/页脚不再显示） ──
         ('nav_posts', '1'),
         ('nav_tags', '1'),
@@ -515,6 +525,20 @@ def _migrate_comments(db):
     if 'is_private' not in cols:
         db.execute("ALTER TABLE comments ADD COLUMN is_private INTEGER DEFAULT 0")
         added.append('is_private')
+    # 评论邮箱通知：存评论者明文邮箱（仅用于发送回复通知，不出现在任何页面）
+    if 'email' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN email TEXT DEFAULT ''")
+        added.append('email')
+    # 评论 IP 归属地：原始 IP + 归属地（省份），归属地由后台线程查询后回填
+    if 'ip_text' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN ip_text TEXT DEFAULT ''")
+        added.append('ip_text')
+    if 'ip_location' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN ip_location TEXT DEFAULT ''")
+        added.append('ip_location')
+    if 'qq' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN qq TEXT DEFAULT ''")
+        added.append('qq')
     db.execute("UPDATE comments SET status='approved' WHERE status IS NULL OR status=''")
     if added:
         print('[迁移] comments 表新增列：' + ', '.join(added))
@@ -1392,6 +1416,68 @@ def _client_ip():
     return request.remote_addr or 'unknown'
 
 
+# ── 评论显示 IP 归属地（省份）──
+_IP_LOC_CACHE = {}
+
+
+def _fmt_loc(loc):
+    """去掉行政区划后缀：重庆市→重庆、四川省→四川、广西壮族自治区→广西。"""
+    if not loc:
+        return ''
+    for suf in ('壮族自治区', '维吾尔自治区', '回族自治区', '自治区', '特别行政区', '省', '市'):
+        loc = loc.replace(suf, '')
+    return loc.strip()
+
+
+def _ip_location(ip):
+    """在线查 IP 归属地并缓存；查不到返回 ''（前台不展示，不打扰）。"""
+    if not ip or ip == 'unknown' or ip.startswith('127.') or ip in _IP_LOC_CACHE:
+        return _IP_LOC_CACHE.get(ip, '')
+    loc = ''
+    prov = city = ''
+    for url in ('https://ip.useragentinfo.com/json?ip=%s' % ip,
+                'https://api.vore.top/api/IPdata?ip=%s' % ip,
+                'http://ip-api.com/json/%s?lang=zh-CN&fields=status,regionName,city' % ip):
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0',
+                                                       'Referer': 'https://ip.useragentinfo.com/'})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                data = json.loads(r.read().decode('utf-8'))
+            if 'province' in data:  # ip.useragentinfo.com
+                prov = (data.get('province') or '').strip()
+                city = (data.get('city') or '').strip()
+            elif (data.get('data') or {}).get('province') is not None:  # api.vore.top
+                d = data.get('data') or {}
+                prov = (d.get('province') or '').strip()
+                city = (d.get('city') or '').strip()
+            elif data.get('status') == 'success':  # ip-api.com（备用，仅 IPv4）
+                prov = (data.get('regionName') or '').strip()
+                city = (data.get('city') or '').strip()
+            prov = _fmt_loc(prov)
+            city = _fmt_loc(city)
+            if prov:
+                loc = prov if (prov == city or not city) else ('%s %s' % (prov, city))
+                break
+        except Exception:
+            continue
+    _IP_LOC_CACHE[ip] = loc
+    return loc
+
+
+def _fill_ip_location(cid, ip):
+    """后台线程：查询归属地后回填评论；失败静默（前台不展示归属地即可）。"""
+    try:
+        loc = _ip_location(ip)
+        if not loc:
+            return
+        db = get_db()
+        db.execute("UPDATE comments SET ip_location=? WHERE id=?", (loc, cid))
+        db.commit()
+        db.close()
+    except Exception:
+        pass
+
+
 def _login_blocked(ip):
     rec = _LOGIN_ATTEMPTS.get(ip)
     if not rec:
@@ -2011,11 +2097,104 @@ def db_delete_link(link_id):
 # ─────────────── 评论数据层 ───────────────
 
 def _avatar_url(email_hash, size=80):
-    """Cravatar 头像：https://cravatar.cn/avatar/{md5(小写去空格邮箱)}?s=尺寸&d=mp
-    未命中时 Cravatar 自动回退 Gravatar → QQ 头像 → 默认 mp。"""
+    """后台头像：经站内代理 /avatar/e/<md5>/<size>.png（后端 Cravatar → WeAvatar 轮换）。"""
     if not email_hash:
         return ''
-    return 'https://cravatar.cn/avatar/%s?s=%d&d=mp' % (email_hash, size)
+    return url_for('avatar_proxy', key='e' + email_hash, size=max(1, size), _external=True)
+
+
+_QQ_RE = re.compile(r'^(\d{5,12})@(?:qq\.com|foxmail\.com|vip\.qq\.com|qq\.com\.cn)$')
+
+
+def _qq_avatar_size(size):
+    """q1.qlogo.cn 只接受 40 / 100 / 640 三档，其它尺寸一律返回 400（2026-09-06 实测）。"""
+    return 40 if size <= 40 else (100 if size <= 100 else 640)
+
+
+def _avatar_urls(email_hash, qq='', size=80):
+    """返回 (主头像URL, 备用头像URL)。统一指向站内代理 /avatar/<key>/<size>.png：
+    外部图源（qlogo 多域名 / Cravatar / WeAvatar）在服务端轮换并落盘缓存，
+    浏览器不再直连任何外部域名，规避 qlogo 400/403、图源挂起、防盗链等问题。
+    备用源由代理内部兜底，故不再返回第二 URL。"""
+    if not email_hash and not qq:
+        return '', ''
+    if qq:
+        return url_for('avatar_proxy', key='q' + qq, size=_qq_avatar_size(size), _external=True), ''
+    return url_for('avatar_proxy', key='e' + email_hash, size=max(1, size), _external=True), ''
+
+
+# ─────────────── 头像代理：评论/博主头像统一经站内中转 ───────────────
+# 背景：评论头像此前直连外部图源。q1.qlogo.cn 对非 40/100/640 档的 s 参数返回 400，
+#   部分出口 IP / 域名被风控返回 403，个别请求 TCP 挂起 → 头像不可用。
+# 方案：浏览器只请求本站 /avatar/<key>/<size>.png，后端按源优先级轮换抓取并落盘缓存；
+#   全部外部源失败时返回 404，由前端本地 default-avatar.svg 兜底。
+_AVATAR_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'cache', 'avatars')
+_AVATAR_MAX_AGE = 15 * 24 * 3600      # 缓存 15 天，过期自动重新抓取
+_AVATAR_TIMEOUT = 8                    # 单源超时（秒），超时换下一个源
+_AVATAR_UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+              '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36')
+_AVATAR_MAGIC = ((b'\x89PNG', 'image/png'), (b'\xff\xd8\xff', 'image/jpeg'),
+                 (b'GIF8', 'image/gif'), (b'<svg', 'image/svg+xml'))
+
+
+def _fetch_image_bytes(url):
+    """抓取并校验图片格式；任何失败返回 (None, None)。"""
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': _AVATAR_UA})
+        with urllib.request.urlopen(req, timeout=_AVATAR_TIMEOUT) as r:
+            data = r.read(2 * 1024 * 1024)
+            ctype = (r.headers.get('Content-Type') or '').lower()
+    except Exception:
+        return None, None
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return data, 'image/webp'
+    for magic, mime in _AVATAR_MAGIC:
+        if data[:len(magic)].lower() == magic:
+            return data, mime
+    if data and 'image/' in ctype:
+        return data, ctype
+    return None, None
+
+
+@app.route('/avatar/<key>/<int:size>.png')
+def avatar_proxy(key, size):
+    """站内头像代理：键 q<QQ号> / e<md5>，按源优先级轮换抓取并缓存到磁盘。"""
+    if key.startswith('q') and key[1:].isdigit():
+        qq, s = key[1:], _qq_avatar_size(size)
+        sources = ['https://q%d.qlogo.cn/g?b=qq&nk=%s&s=%d' % (i, qq, s) for i in (1, 2, 3, 4)]
+    elif key.startswith('e') and re.fullmatch(r'[0-9a-f]{32}', key[1:]):
+        md5, s = key[1:], max(1, min(size, 640))
+        sources = ['https://cravatar.cn/avatar/%s?s=%d&d=mp' % (md5, s),
+                   'https://weavatar.com/avatar/%s?s=%d&d=mp' % (md5, s)]
+    else:
+        abort(404)
+    fname = '%s_%d.png' % (key, s)
+    path = os.path.join(_AVATAR_DIR, fname)
+    try:
+        if os.path.exists(path) and time.time() - os.path.getmtime(path) < _AVATAR_MAX_AGE:
+            return send_from_directory(_AVATAR_DIR, fname, max_age=_AVATAR_MAX_AGE)
+    except OSError:
+        pass
+    data, mime = None, None
+    for url in sources:
+        data, mime = _fetch_image_bytes(url)
+        if data:
+            break
+    if not data:
+        abort(404)
+    try:
+        os.makedirs(_AVATAR_DIR, exist_ok=True)
+        tmp = path + '.tmp'
+        with open(tmp, 'wb') as f:
+            f.write(data)
+        os.replace(tmp, path)          # 原子落盘，并发请求互不干扰
+    except OSError:
+        pass
+    resp = make_response(data)
+    resp.headers['Content-Type'] = mime
+    resp.headers['Cache-Control'] = 'public, max-age=%d' % _AVATAR_MAX_AGE
+    resp.headers['X-Avatar-Source'] = 'fetch'
+    return resp
 
 
 def db_load_comments(post_id, include_private=False, my_comments=None):
@@ -2045,12 +2224,24 @@ def db_load_comments(post_id, include_private=False, my_comments=None):
                     if c['status'] == 'approved'
                     or (str(c['id']) in my_comments and my_comments[str(c['id'])] == c['author'])]
     author_name = app.config.get('author', '')
+    # 博主头像固定用后台「联系邮箱」生成 Cravatar，与评论者邮箱无关
+    contact = (app.config.get('contact_email') or '').strip().lower()
+    contact_hash = hashlib.md5(contact.encode('utf-8')).hexdigest() if contact else ''
+    _cm = _QQ_RE.match(contact)
+    contact_qq = _cm.group(1) if _cm else ''
     by_id = {c['id']: c for c in comments}
     roots = []
+    # 本地默认头像：外部头像源不可达（失败/挂起）时由前端兜底显示，避免空白
+    avatar_default = url_for('static', filename='images/default-avatar.svg', _external=True)
     for c in comments:
         c['children'] = []
-        c['avatar'] = _avatar_url(c.get('email_hash', ''))
         c['is_author'] = bool(author_name) and c['author'] == author_name
+        c['avatar'], c['avatar_fallback'] = _avatar_urls(
+            contact_hash if c['is_author'] else c.get('email_hash', ''),
+            contact_qq if c['is_author'] else c.get('qq', ''))
+        c['avatar_default'] = avatar_default
+        # 明文邮箱仅用于回复通知，不出现在任何渲染上下文
+        c.pop('email', None)
         pid = c.get('parent_id')
         if pid and pid in by_id:
             c['parent_author'] = by_id[pid]['author']
@@ -2069,14 +2260,26 @@ def db_load_comments(post_id, include_private=False, my_comments=None):
     return roots, len(comments)
 
 
-def db_save_comment(post_id, author, email_hash, website, content, parent_id=None, is_private=False):
+def _count_pending(nodes):
+    """递归统计评论树中 status='pending' 的条数。
+    仅用于「你的评论正在审核中」提示：普通访客的树里只会含本人待审核评论。"""
+    n = 0
+    for c in nodes or []:
+        if c.get('status') == 'pending':
+            n += 1
+        n += _count_pending(c.get('children'))
+    return n
+
+
+def db_save_comment(post_id, author, email, email_hash, website, content, parent_id=None, is_private=False, qq='', ip_text='', status='pending'):
     """新评论默认 pending，审核通过后才在前台展示。
-    私密评论同样 pending：仅管理员可见（含待审核），普通访客始终不可见。"""
-    status = 'pending'
+    私密评论同样 pending：仅管理员可见（含待审核），普通访客始终不可见。
+    email 为评论者明文邮箱（仅用于发送回复通知，不展示）；ip_text 为原始 IP。
+    status 由调用方指定：博主本人（邮箱 == notify_email）在路由层传 approved 免审核。"""
     db = get_db()
     cur = db.execute(
-        "INSERT INTO comments (post_id, parent_id, author, email_hash, website, content, status, is_private) VALUES (?,?,?,?,?,?,?,?)",
-        (post_id, parent_id, author, email_hash, website, content, status, 1 if is_private else 0)
+        "INSERT INTO comments (post_id, parent_id, author, email, email_hash, website, content, status, is_private, qq, ip_text) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (post_id, parent_id, author, email, email_hash, website, content, status, 1 if is_private else 0, qq, ip_text)
     )
     db.commit()
     db.close()
@@ -2303,6 +2506,8 @@ def post_detail(post_id):
     my_comments = commenter.get('my_comments') if isinstance(commenter, dict) else None
     comments, comment_total = db_load_comments(post['id'], include_private=is_admin,
                                                my_comments=my_comments) if comments_enabled else ([], 0)
+    # 本人待审核评论数（管理员视角下 pending 全部可见，无需再提示）
+    my_pending = 0 if is_admin else _count_pending(comments)
 
     # 上一篇 / 下一篇（按 created_at 排序）
     db = get_db()
@@ -2322,11 +2527,20 @@ def post_detail(post_id):
     # 三栏阅读：左栏展示最近文章索引（用于高亮当前篇）
     side_posts, _ = db_load_posts(status='published', page=1, per_page=12)
 
+    # 博主身份条头像：后台「联系邮箱」生成 Cravatar
+    admin_avatar = ''
+    if is_admin:
+        contact = (app.config.get('contact_email') or '').strip().lower()
+        if contact:
+            admin_avatar = _avatar_url(hashlib.md5(contact.encode('utf-8')).hexdigest(), 40)
+
     return render_template('post.html', post=post, content=content_html, toc=toc_html,
                            related=related, comments=comments, comment_total=comment_total,
                            prev_post=prev_post, next_post=next_post,
                            comments_enabled=comments_enabled,
                            commenter=commenter, is_admin=is_admin,
+                           admin_avatar=admin_avatar,
+                           my_pending=my_pending,
                            side_posts=side_posts)
 
 
@@ -2373,10 +2587,16 @@ def post_comment(post_id):
         flash('评论太频繁，请稍后再试', 'error')
         return redirect(url_for('post_detail', post_id=post_id))
 
+    is_admin = bool(session.get('admin_logged_in'))
     author = request.form.get('author', '').strip()
     content = request.form.get('content', '').strip()
     email = request.form.get('email', '').strip()
     website = request.form.get('website', '').strip()
+    # 博主登录后以博主身份评论：昵称/邮箱固定取后台设置，忽略表单
+    if is_admin:
+        author = app.config.get('author', '') or '博主'
+        email = app.config.get('contact_email', '') or ''
+        website = ''
     parent_id = request.form.get('parent_id', '').strip()
     is_private = request.form.get('is_private', '') in ('1', 'on', 'true', 'yes')
 
@@ -2390,11 +2610,15 @@ def post_comment(post_id):
 
     # 邮箱选填：仅用于生成 Cravatar 头像，不存明文
     email_hash = ''
+    qq = ''
     if email:
         if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
             flash('邮箱格式不正确（选填，仅用于头像）', 'error')
             return redirect(url_for('post_detail', post_id=post_id))
         email_hash = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
+        _qm = _QQ_RE.match(email.strip().lower())
+        if _qm:
+            qq = _qm.group(1)
 
     # 网址选填：仅允许 http/https，防 javascript: 等伪协议
     if website:
@@ -2404,6 +2628,7 @@ def post_comment(post_id):
 
     # 父级校验：必须是同一篇文章下已存在的评论，防跨文章伪造
     pid = None
+    parent_author = ''
     if parent_id:
         try:
             pid = int(parent_id)
@@ -2412,14 +2637,27 @@ def post_comment(post_id):
         if pid:
             db = get_db()
             row = db.execute(
-                "SELECT id FROM comments WHERE id=? AND post_id=?", (pid, post['id'])
+                "SELECT id, author FROM comments WHERE id=? AND post_id=?", (pid, post['id'])
             ).fetchone()
             db.close()
             if not row:
                 pid = None
+            else:
+                parent_author = row['author']
 
-    cid = db_save_comment(post['id'], author, email_hash, website, content, pid, is_private)
+    admin_email = (app.config.get('notify_email') or '').strip()
+    status = 'approved' if (email and admin_email and email.lower() == admin_email.lower()) else 'pending'
+    cid = db_save_comment(post['id'], author, email, email_hash, website, content, pid, is_private, qq, ip, status=status)
     _COMMENT_COOLDOWN[ip] = now
+    # 评论邮件通知：配置了 SMTP 时后台线程发送（通知博主 + 被回复者），不阻塞提交、失败静默
+    if str(app.config.get('comment_notify', '0')) in ('1', 'on', 'true', 'yes'):
+        threading.Thread(
+            target=_send_comment_notify,
+            args=(post['id'], post['title'], request.host_url.rstrip('/'), author, content, pid, email),
+            daemon=True).start()
+    # IP 归属地：后台线程查询并回填，未查到则评论不显示归属地（静默）
+    if ip and ip != 'unknown':
+        threading.Thread(target=_fill_ip_location, args=(cid, ip), daemon=True).start()
     # 记住评论者信息（昵称/邮箱/网址），下次免填；仅存非敏感字段
     # my_comments 记录本人待审核评论 {id: 昵称}，用于前台展示"待审核"徽标
     commenter_data = {'author': author, 'email': email, 'website': website}
@@ -2446,8 +2684,101 @@ def post_comment(post_id):
     resp.set_cookie('blog_commenter',
                     json.dumps(commenter_data, ensure_ascii=False),
                     max_age=365 * 24 * 3600, httponly=True, samesite='Lax')
-    flash('私密评论已提交，仅管理员可见' if is_private else '评论已提交，审核通过后显示', 'success')
+    flash('私密评论已提交，仅管理员可见' if is_private else ('博主评论已直接显示' if status == 'approved' else '评论已提交，审核通过后显示'), 'success')
     return resp
+
+
+def _smtp_send(to_addr, subject, html, overrides=None):
+    """发送 HTML 邮件；SMTP 配置缺漏或连接失败时抛异常，由调用方决定吞还是报。
+    overrides：测试邮件用——以表单临时配置试发，不落库不改全局配置。"""
+    cfg = overrides if overrides is not None else app.config
+    host = (cfg.get('smtp_host') or '').strip()
+    if not host or not to_addr:
+        raise ValueError('SMTP 未配置')
+    port = int(cfg.get('smtp_port') or 465)
+    user = (cfg.get('smtp_user') or '').strip()
+    pwd = cfg.get('smtp_pass') or ''
+    sender = (cfg.get('smtp_sender_name') or '').strip() or app.config.get('blog_name') or 'Blog'
+    msg = MIMEText(html, 'html', 'utf-8')
+    msg['Subject'] = subject
+    msg['From'] = '%s <%s>' % (sender, user or to_addr)
+    msg['To'] = to_addr
+    msg['Date'] = email.utils.formatdate(localtime=True)
+    if port == 465:
+        s = smtplib.SMTP_SSL(host, port, timeout=15)
+    else:
+        s = smtplib.SMTP(host, port, timeout=15)
+        s.ehlo()
+        s.starttls()
+        s.ehlo()
+    if user:
+        s.login(user, pwd)
+    s.sendmail(user or to_addr, [to_addr], msg.as_string())
+    s.quit()
+
+
+_NOTIFY_CSS = ('body{margin:0;padding:0;background:#eef0f4;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",Arial,sans-serif}'
+               '.wrap{max-width:580px;margin:0 auto;padding:28px 16px}.brand{font-size:12px;font-weight:600;color:#98a1b3;letter-spacing:1.5px;margin:0 6px 10px}'
+               '.card{background:#fff;border:1px solid #e4e7ee;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(31,45,80,.06)}'
+               '.head{background:linear-gradient(135deg,#5b6cf5,#7c5cf5);color:#fff;padding:18px 22px;font-size:17px;font-weight:700}.head-sub{display:block;font-size:12px;font-weight:400;opacity:.92;margin-top:4px}'
+               '.body{padding:20px 22px}.meta{font-size:13px;color:#57606a;margin:6px 0;line-height:1.6}.link a{color:#0969da;text-decoration:none}'
+               '.article{font-size:15px;font-weight:600;color:#1f2328;line-height:1.5}.cta-wrap{margin-top:14px}'
+               '.cta{display:inline-block;background:#5b6cf5;color:#fff!important;text-decoration:none;font-size:13px;font-weight:600;padding:9px 18px;border-radius:8px}'
+               '.quote{margin-top:18px;background:#f6f8fa;border:1px solid #eef0f4;border-left:4px solid #5b6cf5;border-radius:8px;padding:12px 14px}'
+               '.q-author{font-size:13px;font-weight:700;color:#24292f;margin-bottom:6px}.q-avatar{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:#5b6cf5;color:#fff;font-size:13px;font-weight:700;margin-right:8px}'
+               '.q-content{font-size:14px;color:#3a4152;line-height:1.75;white-space:pre-wrap}'
+               '.foot{margin:16px 6px 0;font-size:12px;color:#98a1b3;line-height:1.6;text-align:center}')
+
+
+def _notify_html(head, post_title, post_url, author, content):
+    """评论通知邮件 HTML（内嵌样式，兼容主流邮箱客户端）。"""
+    blog_name = app.config.get('blog_name') or 'Blog'
+    av = (author or '匿')[0].upper()
+    return (
+        '<!doctype html><html><head><meta charset="utf-8"><style>%s</style></head><body>'
+        '<div class="wrap">'
+        '<div class="brand">%s</div>'
+        '<div class="card">'
+        '<div class="head">%s<span class="head-sub">文章《%s》</span></div>'
+        '<div class="body">'
+        '<div class="article">《%s》</div>'
+        '<div class="cta-wrap"><a class="cta" href="%s">查看详情</a></div>'
+        '<div class="quote">'
+        '<div class="q-author"><span class="q-avatar">%s</span>%s</div>'
+        '<div class="q-content">%s</div>'
+        '</div></div></div>'
+        '<div class="foot">本邮件由 %s 自动发送，请勿直接回复。</div>'
+        '</div></body></html>'
+    ) % (_NOTIFY_CSS, blog_name, head, post_title, post_title, post_url,
+         av, author or '匿名', content, blog_name)
+
+
+def _send_comment_notify(post_id, post_title, base_url, author, content, parent_id, commenter_email):
+    """后台线程：新评论通知博主；若是对既有评论的回复，同时通知被回复者。
+    SMTP 未配置或发送失败均静默，不阻塞评论提交。"""
+    try:
+        post_url = '%s/post/%d#comments' % (base_url.rstrip('/'), post_id)
+        blogger = (app.config.get('notify_email') or '').strip() or (app.config.get('contact_email') or '').strip()
+        reply = bool(parent_id)
+        # 1) 通知博主（博主自己也始终能收到新评论/新回复的提醒）
+        if blogger:
+            kind = '回复通知' if reply else '新评论通知'
+            _smtp_send(
+                blogger,
+                '[%s] %s《%s》' % (app.config.get('blog_name') or 'Blog', kind, post_title),
+                _notify_html(kind, post_title, post_url, author, content))
+        # 2) 通知被回复者（若其评论号填过邮箱且不是博主本人）
+        if reply:
+            db = get_db()
+            row = db.execute("SELECT author, email FROM comments WHERE id=?", (parent_id,)).fetchone()
+            db.close()
+            if row and row['email'] and row['email'] != commenter_email and row['email'] != blogger:
+                _smtp_send(
+                    row['email'],
+                    '[%s] 你的评论收到新回复《%s》' % (app.config.get('blog_name') or 'Blog', post_title),
+                    _notify_html('你的评论收到一条新回复', post_title, post_url, author, content))
+    except Exception as e:
+        print('[评论通知] 邮件发送失败：%s' % e)
 
 
 @app.route('/tags')
@@ -3404,7 +3735,8 @@ def admin_settings():
         for key in ['blog_name', 'blog_subtitle', 'author', 'author_bio',
                      'about_intro', 'skills', 'avatar', 'github_username',
                      'social_github', 'github_token', 'contact_email', 'home_title', 'icp_beian', 'police_beian',
-                     'home_posts_count', 'posts_per_page']:
+                     'home_posts_count', 'posts_per_page',
+                     'smtp_host', 'smtp_sender_name', 'smtp_port', 'smtp_user', 'smtp_pass', 'notify_email']:
             if key in request.form:
                 save_setting(key, request.form[key])
                 app.config[key] = request.form[key]
@@ -3412,6 +3744,30 @@ def admin_settings():
         comments_on = '1' if request.form.get('comments_enabled') else '0'
         save_setting('comments_enabled', comments_on)
         app.config['comments_enabled'] = comments_on
+        # 评论邮件通知开关（同上，未勾选即为关闭）
+        notify_on = '1' if request.form.get('comment_notify') else '0'
+        save_setting('comment_notify', notify_on)
+        app.config['comment_notify'] = notify_on
+        # 发送 SMTP 测试邮件（SMTP 配置已在上方保存循环中入库，这里直接验证）
+        if request.form.get('test_email'):
+            tgt = (request.form.get('notify_email') or '').strip() or (request.form.get('contact_email') or '').strip()
+            try:
+                _smtp_send(
+                    tgt,
+                    '[%s] SMTP 测试邮件' % (app.config.get('blog_name') or 'Blog'),
+                    ('<!doctype html><html><head><meta charset="utf-8"><style>%s</style></head><body>'
+                     '<div class="wrap"><div class="card">'
+                     '<div class="head">SMTP 配置测试</div>'
+                     '<div class="meta">服务器：%s:%s</div>'
+                     '<div class="meta">发件账号：%s</div>'
+                     '<div class="meta">收件人：%s</div>'
+                     '<div class="foot">收到本邮件说明 SMTP 配置可用，评论互动通知可正常送达。</div>'
+                     '</div></div></body></html>')
+                    % (_NOTIFY_CSS, request.form.get('smtp_host'), request.form.get('smtp_port'),
+                       request.form.get('smtp_user'), tgt))
+                flash('测试邮件已发送（%s），请查收收件箱/垃圾箱' % tgt, 'success')
+            except Exception as e:
+                flash('测试邮件发送失败：%s' % e, 'error')
         # 导航菜单开关（同上，未勾选即为关闭）
         for nav_key, _, _ in NAV_PAGES:
             nav_on = '1' if request.form.get('nav_' + nav_key) == '1' else '0'
@@ -3476,7 +3832,46 @@ def admin_settings():
     return render_template('admin/settings.html',
                            admin_username=session.get('admin_username', 'admin'),
                            admin_avatar=app.config.get('avatar', ''),
-                           avatar_exists=_avatar_file_exists())
+                           avatar_exists=_avatar_file_exists(),
+                           smtp_host=app.config.get('smtp_host', ''),
+                           smtp_port=app.config.get('smtp_port', '465'),
+                           smtp_user=app.config.get('smtp_user', ''),
+                           smtp_pass=app.config.get('smtp_pass', ''),
+                           notify_email=app.config.get('notify_email', ''),
+                           smtp_sender_name=app.config.get('smtp_sender_name', ''),
+                           comment_notify=app.config.get('comment_notify', '0'))
+
+
+@app.route('/admin/settings/test-email', methods=['POST'])
+@admin_required
+def admin_settings_test_email():
+    """SMTP 连通性测试：以表单当前配置试发，不落库；返回 JSON，前端卡片内反馈（不刷新页面）。"""
+    tgt = (request.form.get('notify_email') or '').strip() or (request.form.get('contact_email') or '').strip()
+    cfg = {
+        'smtp_host': (request.form.get('smtp_host') or '').strip(),
+        'smtp_port': (request.form.get('smtp_port') or '').strip(),
+        'smtp_user': (request.form.get('smtp_user') or '').strip(),
+        'smtp_pass': request.form.get('smtp_pass') or '',
+        'smtp_sender_name': (request.form.get('smtp_sender_name') or '').strip(),
+    }
+    try:
+        _smtp_send(
+            tgt,
+            '[%s] SMTP 测试邮件' % (app.config.get('blog_name') or 'Blog'),
+            ('<!doctype html><html><head><meta charset="utf-8"><style>%s</style></head><body>'
+             '<div class="wrap"><div class="card">'
+             '<div class="head">SMTP 配置测试</div>'
+             '<div class="meta">服务器：%s:%s</div>'
+             '<div class="meta">发件账号：%s</div>'
+             '<div class="meta">收件人：%s</div>'
+             '<div class="foot">收到本邮件说明 SMTP 配置可用，评论互动通知可正常送达。</div>'
+             '</div></div></body></html>')
+            % (_NOTIFY_CSS, cfg['smtp_host'], cfg['smtp_port'],
+               cfg['smtp_user'], tgt),
+            overrides=cfg)
+        return jsonify({'ok': True, 'msg': '测试邮件已发送（%s），请查收收件箱/垃圾箱' % tgt})
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': '发送失败：%s' % e})
 
 
 # ─────────────── 数据导出与备份 ───────────────
@@ -3872,6 +4267,16 @@ def admin_upgrade():
                            info=None, upgradable=False)
 
 
+def _md_to_safe_html(text):
+    """Markdown → HTML 并轻量消毒（剥 script/iframe/object/embed、事件属性、javascript:）。
+    内容来自自家 GitHub Releases 说明，此消毒仅为兜底。"""
+    html = markdown.markdown(text, extensions=['fenced_code', 'nl2br'])
+    html = re.sub(r'<(script|iframe|object|embed)\b[^>]*>.*?</\1>', '', html, flags=re.S | re.I)
+    html = re.sub(r'\son\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)', '', html, flags=re.I)
+    html = re.sub(r'javascript\s*:', '', html, flags=re.I)
+    return html
+
+
 @app.route('/admin/upgrade/check')
 @admin_required
 def admin_upgrade_check():
@@ -3879,6 +4284,7 @@ def admin_upgrade_check():
     cur_ver = parse_version(VERSION)
     info = check_latest_version(force=(request.args.get('force') == '1'))
     upgradable = bool(info and cur_ver and info['version'] > cur_ver)
+    body = info['body'] if info else ''
     return jsonify({
         'ok': info is not None,
         'current_version': VERSION,
@@ -3886,7 +4292,8 @@ def admin_upgrade_check():
         'tag': (info['tag'] if info else ''),
         'upgradable': upgradable,
         'published_at': (info['published_at'] if info else ''),
-        'body': (info['body'] if info else ''),
+        'body': body,
+        'body_html': _md_to_safe_html(body) if body else '',
         'release_url': (info['html_url'] if info else UPGRADE_RELEASE_URL),
     })
 

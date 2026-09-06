@@ -1,0 +1,133 @@
+/* ═══════════════════════════════════════════════════════════
+   评论区（两套主题共用 · 盖楼 v2）
+   结构：一个楼层 = 根评论 + 它下面全部回复，同属 .cmt-thread
+   层级表达：缩进 + 头像尺度 + @提及，不使用任何竖线/内部分隔线
+   皮肤：default=卡片容器；.cmt-skin-line（tech）= 无容器 + 组间极淡横线
+   变量做双主题兼容：default 提供 --bg-raised/--bg-surface/--text-tertiary，
+   tech 只提供 --bg-subtle/--text-secondary，故全部带回退。
+   ═══════════════════════════════════════════════════════════ */
+
+.cmt{
+  --av-root:40px;    /* 根评论头像 */
+  --av-reply:28px;   /* 回复头像 */
+  --gap:12px;        /* 头像与内容间距 */
+  --indent:52px;     /* 回复区缩进 = 根头像 40 + 间距 12，对齐根评论正文左缘 */
+  --c-card:var(--bg-raised, var(--bg-subtle, transparent));
+  --c-sub:var(--bg-surface, var(--bg-subtle, transparent));
+  --c-border:var(--border);
+  --c-border-h:var(--border-strong, var(--border));
+  --c-text:var(--text);
+  --c-text2:var(--text-secondary, var(--text));
+  --c-text3:var(--text-tertiary, var(--text-secondary, var(--text)));
+  --c-accent:var(--accent);
+  --c-accent-weak:var(--accent-weak, rgba(91,141,239,.14));
+  --c-radius:var(--r, 12px);
+  /* 头像配色：默认取主题 accent 渐变（default 暗色）；亮色/tech 皮肤在下方覆盖 */
+  --av-bg:linear-gradient(135deg,var(--accent),var(--accent-soft,var(--accent)));
+  --av-color:#fff;
+  font-size:14px;
+}
+
+/* ── 标题 ── */
+.cmt-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:var(--c-text);margin:26px 0 16px}
+.cmt-title .cmt-num{font-size:11.5px;font-weight:600;color:var(--c-text3);background:var(--c-sub);padding:2px 9px;border-radius:20px;font-variant-numeric:tabular-nums}
+
+/* ── 待审核提示条 ── */
+.cmt-notice{display:flex;align-items:flex-start;gap:8px;padding:10px 13px;margin-bottom:16px;border-radius:10px;font-size:12.5px;line-height:1.6;color:var(--c-text2);background:var(--c-accent-weak);border:1px solid transparent}
+.cmt-notice svg{flex:none;width:15px;height:15px;margin-top:1px;stroke:var(--c-accent);fill:none;stroke-width:2}
+.cmt-notice b{color:var(--c-accent);font-weight:600}
+
+/* ── 楼层组 ── */
+.cmt-thread{padding:18px 20px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-border);transition:border-color .18s}
+.cmt-thread+.cmt-thread{margin-top:14px}
+@media (hover:hover) and (pointer:fine){.cmt-thread:hover{border-color:var(--c-border-h)}}
+
+/* tech 皮肤：不要卡片，组间一条极淡横线 + 大留白 */
+.cmt-skin-line .cmt-thread{padding:22px 0 24px;background:none;border:none;border-radius:0;border-bottom:1px solid var(--c-border)}
+.cmt-skin-line .cmt-thread+.cmt-thread{margin-top:0}
+.cmt-skin-line .cmt-thread:last-of-type{border-bottom:none}
+
+/* ── 评论条目（根与回复同构，仅头像尺寸/字号不同） ── */
+.cmt-item{display:flex;gap:var(--gap)}
+.cmt-item[data-lv="root"] .cmt-avatar{width:var(--av-root);height:var(--av-root);font-size:15px}
+.cmt-item[data-lv="reply"] .cmt-avatar{width:var(--av-reply);height:var(--av-reply);font-size:12px}
+/* 头像外链包裹层：不影响 .cmt-avatar 的尺寸计算 */
+.cmt-avatar-link{flex:none;display:block;border-radius:50%;line-height:0}
+.cmt-avatar-link:hover{box-shadow:0 0 0 2px var(--c-accent)}
+.cmt-avatar{flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--av-color);font-weight:600;line-height:1;background:var(--av-bg);overflow:hidden;user-select:none}
+.cmt-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+/* 亮色主题（仅 default 皮肤）：柔和浅底 + 深字，避免高饱和渐变割裂 */
+[data-theme="light"] .cmt:not(.cmt-skin-line){--av-bg:linear-gradient(135deg,#e3e9ff,#e9e2ff);--av-color:#3b6eeb}
+/* tech 皮肤：accent-weak 底 + accent 字，随亮/暗自动切换 */
+.cmt-skin-line{--av-bg:var(--c-accent-weak);--av-color:var(--c-accent)}
+.cmt-main{flex:1;min-width:0}
+.cmt-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.4}
+.cmt-author{font-size:13.5px;font-weight:600;color:var(--c-text)}
+.cmt-time{font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
+.cmt-loc{font-size:11px;line-height:1.6;color:var(--c-text3);border:1px solid var(--c-border);border-radius:20px;padding:0 7px;font-style:normal}
+.cmt-badge{font-size:10.5px;line-height:1.6;padding:0 7px;border-radius:20px;font-weight:500;border:1px solid transparent}
+.cmt-badge--author{background:var(--c-accent-weak);color:var(--c-accent)}
+.cmt-badge--private{background:rgba(224,179,62,.16);color:#9a6700}
+.cmt-badge--pending{background:var(--c-sub);color:var(--c-text3);border-color:var(--c-border);border-style:dashed}
+.cmt-text{margin-top:5px;font-size:14px;line-height:1.75;color:var(--c-text2);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
+.cmt-item[data-lv="reply"] .cmt-text{font-size:13.5px;margin-top:3px}
+.cmt-at{color:var(--c-accent);text-decoration:none;font-weight:500;margin-right:2px}
+.cmt-at:hover{text-decoration:underline}
+.cmt-actions{margin-top:7px;display:flex;gap:14px}
+.cmt-reply{font-size:12.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer;transition:color .15s,opacity .15s}
+.cmt-reply:hover{color:var(--c-accent)}
+@media (hover:hover) and (pointer:fine){.cmt-reply{opacity:0}.cmt-item:hover .cmt-reply,.cmt-item:focus-within .cmt-reply{opacity:1}}
+
+/* ── 回复区：整体缩进到根评论正文左缘，组内一律平铺 ── */
+.cmt-replies{margin-top:16px;padding-left:var(--indent)}
+.cmt-replies .cmt-item+.cmt-item{margin-top:15px}
+/* display:flex 会覆盖 UA 的 [hidden]，必须强制隐藏 */
+.cmt [hidden]{display:none !important}
+/* 折叠按钮 */
+.cmt-fold{margin-top:14px;font-size:12.5px;font-weight:500;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.cmt-fold svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.4;transition:transform .18s}
+.cmt-fold[aria-expanded="true"] svg{transform:rotate(180deg)}
+.cmt-fold:hover{text-decoration:underline}
+
+/* ── 表单 ── */
+.cmt-form{margin-top:22px}
+.cmt-form.is-inline{margin-top:16px}
+.cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);padding:14px 16px}
+.cmt-skin-line .cmt-box{background:none}
+.cmt-form .row{display:flex;gap:9px;margin-bottom:9px}
+.cmt-form input,.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border);border-radius:8px;background:var(--bg, var(--c-card));color:var(--c-text);transition:border-color .15s,box-shadow .15s}
+.cmt-form textarea{min-height:76px;resize:vertical;margin-bottom:10px}
+.cmt-form input::placeholder,.cmt-form textarea::placeholder{color:var(--c-text3)}
+.cmt-form input:focus,.cmt-form textarea:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak)}
+.cmt-form .foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cmt-form .chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--c-text3);cursor:pointer;user-select:none}
+.cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
+.cmt-form .count{margin-left:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
+.cmt-form .count.is-over{color:#cf222e}
+.cmt-form .submit{padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
+.cmt-form .submit:hover{filter:brightness(1.08)}
+.cmt-form .submit[disabled]{opacity:.6;cursor:not-allowed}
+.cmt-hint{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px;color:var(--c-accent)}
+.cmt-hint button{font-size:11.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer}
+.cmt-hint button:hover{color:var(--c-text2)}
+.cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-sub);font-size:12.5px;color:var(--c-text3)}
+.cmt-remember button{flex:none;font-size:11.5px;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
+/* 博主身份条：登录后替代昵称/邮箱/网址输入行 */
+.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-sub);border:1px solid var(--c-border);font-size:13px;color:var(--c-text)}
+.cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none}
+
+/* ── 空态 ── */
+.cmt-empty{padding:26px 0;text-align:center;font-size:13.5px;color:var(--c-text3)}
+
+/* ── 移动端：收紧尺度，回复区缩进对齐根评论正文左缘（36+10=46） ── */
+@media (max-width:767px){
+  .cmt{--av-root:36px;--av-reply:26px;--gap:10px;--indent:46px}
+  .cmt-thread{padding:16px 14px}
+  .cmt-replies{margin-top:14px}
+  .cmt-replies .cmt-item+.cmt-item{margin-top:13px}
+  .cmt-skin-line .cmt-thread{padding:20px 0 22px}
+  .cmt-form .row{flex-direction:column;gap:9px}
+  .cmt-text{font-size:13.5px}
+  .cmt-reply{opacity:1}
+  .cmt-title{font-size:15px;margin-top:20px}
+}

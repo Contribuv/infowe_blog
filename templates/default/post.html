@@ -126,80 +126,114 @@
 <!-- 评论区 -->
 {% if comments_enabled %}
 <section class="comments-section">
-    <div class="section-header">
-        <h2 class="section-title">
-            {{ icon('message-circle', 18) | safe }} 评论 ({{ comments|length }})
-        </h2>
-    </div>
-
+    <div class="cmt{% if active_theme != 'default' %} cmt-skin-line{% endif %}">
+    {# 后端 flash 转为 Toast：渲染成隐藏节点，由 toast.js 统一消费 #}
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     {% for category, msg in messages %}
-    <div class="flash-msg flash-{{ category }}">{{ msg }}</div>
+    <span data-toast="{{ msg }}" data-toast-type="{% if category == 'error' %}error{% else %}success{% endif %}" hidden></span>
     {% endfor %}
     {% endif %}
     {% endwith %}
 
-    {% if comments %}
-    {% macro render_comment(c) %}
-    <div class="comment-item" id="comment-{{ c.id }}">
-        <div class="comment-avatar">
-            {% if c.avatar %}<img class="comment-avatar-img" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy" onerror="this.style.display='none'">{% else %}{{ c.author[0] | upper }}{% endif %}
-        </div>
-        <div class="comment-body">
-            <div class="comment-header">
-                <span class="comment-author">{{ c.author }}</span>
-                {% if c.is_author %}<span class="comment-author-badge">博主</span>{% endif %}
-                {% if c.is_private %}<span class="comment-private-badge">私密</span>{% endif %}
-                {% if c.status == 'pending' %}<span class="comment-pending-badge">待审核</span>{% endif %}
-                {% if c.depth > 0 %}<a class="comment-replyto" href="#comment-{{ c.parent_id }}">@{{ c.parent_author }}</a>{% endif %}
-                <time class="comment-time">{{ c.created_at[:16] }}</time>
-            </div>
-            <p class="comment-content">{{ c.content }}</p>
-            <button type="button" class="comment-reply-btn" data-reply-to="{{ c.id }}" data-reply-name="{{ c.author }}">回复</button>
-        </div>
-    </div>
-    {% if c.children %}
-    <div class="comment-children">
-        {% for ch in c.children %}{{ render_comment(ch) }}{% endfor %}
-    </div>
-    {% endif %}
-    {% endmacro %}
-    <div class="comments-list">
-        {% for c in comments %}{{ render_comment(c) }}{% endfor %}
-    </div>
-    {% else %}
-    <div class="comments-empty">
-        <p>还没有评论，来抢沙发吧~</p>
+    <h2 class="cmt-title">评论 <span class="cmt-num">{{ comment_total }}</span></h2>
+
+    {% if my_pending %}
+    <div class="cmt-notice" id="cmt-notice">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01" stroke-linecap="round"/></svg>
+        <span>你有 <b>{{ my_pending }}</b> 条评论正在审核中，通过后将公开展示，审核期间仅你可见。</span>
+        <button type="button" data-notice-close>知道了</button>
     </div>
     {% endif %}
 
-    <!-- 评论表单 -->
-    <form class="comment-form" method="POST" action="/post/{{ post.id }}/comment" id="comment-form">
-        <input type="hidden" name="parent_id" id="comment-parent-id" value="">
-        {% if commenter.author %}
-        <div class="comment-remember" id="comment-remember">
-            <span>已记住你的昵称（{{ commenter.author }}），直接输入内容即可评论</span>
-            <button type="button" class="comment-remember-edit" id="comment-remember-edit">修改</button>
-        </div>
+    {% macro render_item(c, lv, reply_to) %}
+    <article class="cmt-item" data-lv="{{ lv }}" id="comment-{{ c.id }}">
+        {% if c.avatar %}
+        {% set av_inner %}<img class="cmt-avatar-img" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy" data-fallback="{{ c.avatar_fallback }}" data-default="{{ c.avatar_default }}">{% endset %}
+        {% else %}
+        {% set av_inner %}{{ c.author[0] | upper }}{% endset %}
         {% endif %}
-        <div class="comment-form-row" id="comment-fields"{% if commenter.author %} hidden{% endif %}>
-            <input type="text" name="author" class="comment-input" placeholder="昵称" maxlength="30" value="{{ commenter.author or '' }}">
+        {% if c.website %}<a class="cmt-avatar-link" href="{{ c.website }}" target="_blank" rel="noopener nofollow" title="{{ c.website }}"><div class="cmt-avatar">{{ av_inner }}</div></a>
+        {% else %}<div class="cmt-avatar">{{ av_inner }}</div>{% endif %}
+        <div class="cmt-main">
+            <header class="cmt-head">
+                <span class="cmt-author">{{ c.author }}</span>
+                {% if c.is_author %}<span class="cmt-badge cmt-badge--author">博主</span>{% endif %}
+                {% if c.is_private %}<span class="cmt-badge cmt-badge--private">私密</span>{% endif %}
+                {% if c.status == 'pending' %}<span class="cmt-badge cmt-badge--pending">待审核</span>{% endif %}
+                {% if reply_to %}<a class="cmt-at" href="#comment-{{ c.parent_id }}">@{{ reply_to }}</a>{% endif %}
+                <time class="cmt-time">{{ c.created_at[:16] }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}
+            </header>
+            <p class="cmt-text">{{ c.content }}</p>
+            <footer class="cmt-actions">
+                <button type="button" class="cmt-reply" data-reply-to="{{ c.id }}" data-reply-name="{{ c.author }}">回复</button>
+            </footer>
         </div>
-        <div class="comment-form-row">
-            <textarea name="content" class="comment-textarea" placeholder="写下你的想法..." maxlength="2000" required></textarea>
-        </div>
-        <div class="comment-form-actions">
-            <label class="comment-private">
-                <input type="checkbox" name="is_private" value="1">
-                <span>私密评论（仅博主可见）</span>
-            </label>
-            <span class="comment-replying" id="comment-replying" hidden>回复 @<b id="comment-replying-name"></b><button type="button" class="comment-cancel" id="comment-cancel-reply">取消</button></span>
-            <button type="submit" class="comment-submit-btn">提交评论</button>
+    </article>
+    {% endmacro %}
+
+    {# 盖楼：全部后代在同一层平铺，回复关系由 @提及 表达，缩进只做一级 #}
+    {% macro render_replies(children, parent_name) %}
+        {% for ch in children %}
+        {{ render_item(ch, 'reply', parent_name) }}
+        {% if ch.children %}{{ render_replies(ch.children, ch.author) }}{% endif %}
+        {% endfor %}
+    {% endmacro %}
+
+    {% macro render_thread(c) %}
+    <div class="cmt-thread" data-root="{{ c.id }}">
+        {{ render_item(c, 'root', '') }}
+        {% if c.children %}
+        <div class="cmt-replies">{{ render_replies(c.children, '') }}</div>
+        {% endif %}
+    </div>
+    {% endmacro %}
+
+    {% if comments %}
+    <div class="cmt-list" id="cmt-list">
+        {% for c in comments %}{{ render_thread(c) }}{% endfor %}
+    </div>
+    {% else %}
+    <p class="cmt-empty">还没有评论，来抢沙发吧~</p>
+    {% endif %}
+
+    <!-- 评论表单（回复时由 comments.js 挂到对应楼层组的回复区末尾） -->
+    <form class="cmt-form" id="comment-form" method="POST" action="/post/{{ post.id }}/comment">
+        <input type="hidden" name="parent_id" id="comment-parent-id" value="">
+        <div class="cmt-hint" id="comment-replying" hidden>回复 @<b id="comment-replying-name"></b><button type="button" id="comment-cancel-reply">取消</button></div>
+        <div class="cmt-box">
+            {% if is_admin %}
+            <div class="cmt-admin">
+                {% if admin_avatar %}<img class="cmt-admin-avatar" src="{{ admin_avatar }}" alt="">{% endif %}
+                <span>以博主身份评论（{{ author }}）</span>
+            </div>
+            {% else %}
+            {% if commenter.author %}
+            <div class="cmt-remember" id="comment-remember">
+                <span>已记住你的信息（{{ commenter.author }}），直接输入内容即可评论</span>
+                <button type="button" id="comment-remember-edit">修改</button>
+            </div>
+            {% endif %}
+            <div class="row" id="comment-fields"{% if commenter.author %} hidden{% endif %}>
+                <input type="text" name="author" placeholder="昵称 *" maxlength="30" required value="{{ commenter.author or '' }}">
+                <input type="email" name="email" placeholder="邮箱（选填，用于头像）" maxlength="100" value="{{ commenter.email or '' }}">
+                <input type="url" name="website" placeholder="网址（选填）" maxlength="200" value="{{ commenter.website or '' }}">
+            </div>
+            {% endif %}
+            <textarea name="content" placeholder="写下你的想法..." maxlength="2000" required></textarea>
+            <div class="foot">
+                <label class="chk"><input type="checkbox" name="is_private" value="1"><span>私密评论（仅博主可见）</span></label>
+                <span class="count">0 / 2000</span>
+                <button type="submit" class="submit">提交评论</button>
+            </div>
         </div>
     </form>
     <div id="comment-form-anchor"></div>
+    </div><!-- /.cmt -->
 </section>
+
+<script src="{{ url_for('static', filename='js/toast.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='js/comments.js', t='v' ~ version) }}"></script>
 {% else %}
 <section class="comments-section comments-closed">
     <div class="comments-empty">
@@ -348,50 +382,4 @@
 })();
 </script>
 
-<script>
-// 盖楼回复：点击「回复」把表单移到该评论下并设置 parent_id，取消则回到底部
-(function () {
-    var form = document.getElementById('comment-form');
-    if (!form) return;
-    var parentId = document.getElementById('comment-parent-id');
-    var replying = document.getElementById('comment-replying');
-    var replyingName = document.getElementById('comment-replying-name');
-    var cancelBtn = document.getElementById('comment-cancel-reply');
-    var anchor = document.getElementById('comment-form-anchor');
-
-    function resetReply() {
-        parentId.value = '';
-        replying.hidden = true;
-        if (anchor) anchor.parentNode.insertBefore(form, anchor);
-    }
-
-    document.querySelectorAll('.comment-reply-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            parentId.value = btn.getAttribute('data-reply-to');
-            replyingName.textContent = btn.getAttribute('data-reply-name');
-            replying.hidden = false;
-            var item = btn.closest('.comment-item');
-            if (item) item.parentNode.insertBefore(form, item.nextSibling);
-            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            var ta = form.querySelector('textarea');
-            if (ta) ta.focus();
-        });
-    });
-    if (cancelBtn) cancelBtn.addEventListener('click', resetReply);
-})();
-
-// 记住信息：点「修改」展开昵称字段
-(function () {
-    var editBtn = document.getElementById('comment-remember-edit');
-    var fields = document.getElementById('comment-fields');
-    var remember = document.getElementById('comment-remember');
-    if (!editBtn || !fields) return;
-    editBtn.addEventListener('click', function () {
-        fields.hidden = false;
-        if (remember) remember.hidden = true;
-        var author = fields.querySelector('input[name=author]');
-        if (author) author.focus();
-    });
-})();
-</script>
 {% endblock %}
