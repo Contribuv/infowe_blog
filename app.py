@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.17'
+VERSION = '1.3.18'
 
 import os
 import re
@@ -2669,7 +2669,7 @@ def post_comment(post_id):
     if str(app.config.get('comment_notify', '0')) in ('1', 'on', 'true', 'yes'):
         threading.Thread(
             target=_send_comment_notify,
-            args=(post['id'], post['title'], request.host_url.rstrip('/'), author, content, pid, email),
+            args=(post['id'], post['title'], request.host_url.rstrip('/'), author, content, pid, email, status),
             daemon=True).start()
     # IP 归属地：后台线程查询并回填，未查到则评论不显示归属地（静默）
     if ip and ip != 'unknown':
@@ -2768,32 +2768,70 @@ def _notify_html(head, post_title, post_url, author, content):
          av, author or '匿名', content, blog_name)
 
 
-def _send_comment_notify(post_id, post_title, base_url, author, content, parent_id, commenter_email):
-    """后台线程：新评论通知博主；若是对既有评论的回复，同时通知被回复者。
-    SMTP 未配置或发送失败均静默，不阻塞评论提交。"""
+def _send_comment_notify(post_id, post_title, base_url, author, content, parent_id, commenter_email, status='pending'):
+    """后台线程：新评论通知博主；若评论已通过（博主免审核），同时通知被回复者。
+    待审核评论的被回复者通知延迟到审核通过后（见 _notify_reply_recipient），
+    避免对方点进链接却看不到待审核的回复。SMTP 未配置或发送失败均静默。"""
     try:
         post_url = '%s/post/%d#comments' % (base_url.rstrip('/'), post_id)
-        blogger = (app.config.get('notify_email') or '').strip() or (app.config.get('contact_email') or '').strip()
+        notify_email = (app.config.get('notify_email') or '').strip()
+        contact_email = (app.config.get('contact_email') or '').strip()
+        blogger = notify_email or contact_email
+        # 博主身份邮箱集合：notify_email 与 contact_email 任一命中即视为博主
+        blogger_emails = {e.lower() for e in (notify_email, contact_email) if e}
         reply = bool(parent_id)
-        # 1) 通知博主（博主自己也始终能收到新评论/新回复的提醒）
-        if blogger:
+        # 1) 通知博主（博主自己评论/回复时不打扰，仅访客互动才通知）
+        if blogger and (not commenter_email or commenter_email.lower() not in blogger_emails):
             kind = '回复通知' if reply else '新评论通知'
             _smtp_send(
                 blogger,
                 '[%s] %s《%s》' % (app.config.get('blog_name') or 'Blog', kind, post_title),
                 _notify_html(kind, post_title, post_url, author, content))
-        # 2) 通知被回复者（若其评论号填过邮箱且不是博主本人）
-        if reply:
+        # 2) 通知被回复者（仅已通过评论；待审核的由审核通过后补发）
+        if reply and status == 'approved':
             db = get_db()
             row = db.execute("SELECT author, email FROM comments WHERE id=?", (parent_id,)).fetchone()
             db.close()
-            if row and row['email'] and row['email'] != commenter_email and row['email'] != blogger:
+            if row and row['email'] and row['email'].lower() not in blogger_emails and row['email'].lower() != (commenter_email or '').lower():
                 _smtp_send(
                     row['email'],
                     '[%s] 你的评论收到新回复《%s》' % (app.config.get('blog_name') or 'Blog', post_title),
                     _notify_html('你的评论收到一条新回复', post_title, post_url, author, content))
     except Exception as e:
         print('[评论通知] 邮件发送失败：%s' % e)
+
+
+def _notify_reply_recipient(comment_id, base_url):
+    """审核通过后补发：通知被回复者（若其评论填过邮箱且不是博主本人、也不是评论者自己）。
+    后台线程调用，失败静默。"""
+    try:
+        db = get_db()
+        row = db.execute(
+            "SELECT c.post_id, c.author, c.content, c.parent_id, c.email AS commenter_email, "
+            "p.title AS post_title FROM comments c JOIN posts p ON p.id = c.post_id WHERE c.id = ?",
+            (comment_id,)).fetchone()
+        if not row or not row['parent_id']:
+            db.close()
+            return
+        parent = db.execute(
+            "SELECT author, email FROM comments WHERE id = ?", (row['parent_id'],)).fetchone()
+        db.close()
+        if not parent or not parent['email']:
+            return
+        notify_email = (app.config.get('notify_email') or '').strip()
+        contact_email = (app.config.get('contact_email') or '').strip()
+        blogger_emails = {e.lower() for e in (notify_email, contact_email) if e}
+        if parent['email'].lower() in blogger_emails:
+            return
+        if parent['email'].lower() == (row['commenter_email'] or '').lower():
+            return
+        post_url = '%s/post/%d#comments' % (base_url.rstrip('/'), row['post_id'])
+        _smtp_send(
+            parent['email'],
+            '[%s] 你的评论收到新回复《%s》' % (app.config.get('blog_name') or 'Blog', row['post_title']),
+            _notify_html('你的评论收到一条新回复', row['post_title'], post_url, row['author'], row['content']))
+    except Exception as e:
+        print('[评论通知] 回复通知发送失败：%s' % e)
 
 
 @app.route('/tags')
@@ -3460,6 +3498,12 @@ def admin_comment_approve(comment_id):
     db.execute("UPDATE comments SET status='approved' WHERE id=?", (comment_id,))
     db.commit()
     db.close()
+    # 审核通过后补发被回复者通知（若适用），后台线程发送不阻塞
+    if str(app.config.get('comment_notify', '0')) in ('1', 'on', 'true', 'yes'):
+        threading.Thread(
+            target=_notify_reply_recipient,
+            args=(comment_id, request.host_url.rstrip('/')),
+            daemon=True).start()
     flash('评论已通过', 'success')
     return redirect(url_for('admin_comments'))
 
@@ -3491,6 +3535,13 @@ def admin_comments_bulk():
             % ','.join('?' * len(ids)), ids)
         db.commit()
         db.close()
+        # 批量通过后逐条补发被回复者通知
+        if str(app.config.get('comment_notify', '0')) in ('1', 'on', 'true', 'yes'):
+            for cid in ids:
+                threading.Thread(
+                    target=_notify_reply_recipient,
+                    args=(int(cid), request.host_url.rstrip('/')),
+                    daemon=True).start()
         flash('已通过 %d 条评论' % len(ids), 'success')
     else:
         for cid in ids:

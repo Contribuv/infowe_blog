@@ -66,6 +66,30 @@
   var remember = document.getElementById('comment-remember');
   var editBtn = document.getElementById('comment-remember-edit');
 
+  /* ── 0.5 表单定位：仅当表单显示不全（底部/顶部被视口截断）时才滚动；
+     完全可见（如文章内容较短、页面本身能装下表单）则不滚动，避免多余跳动 ── */
+  function scrollFormIntoView() {
+    var rect = form.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.bottom > vh) {
+      form.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    } else if (rect.top < 0) {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  /* 滚动定位时给表单留出上下边距，避免贴住视口边缘 */
+  form.style.scrollMarginTop = '50px';
+  form.style.scrollMarginBottom = '50px';
+
+  /* 点「写评论」展开 <details> 后：表单被截断才滚动到可见 */
+  var cmtBox = form.querySelector('.cmt-box');
+  if (cmtBox) {
+    cmtBox.addEventListener('toggle', function () {
+      if (cmtBox.open) scrollFormIntoView();
+    });
+  }
+
   /* ── 1. 回复：把表单挂到该评论所属楼层组的回复区末尾 ── */
   function repliesBoxOf(el) {
     var thread = el.closest('.cmt-thread');
@@ -108,14 +132,14 @@
     if (typeof window.toast === 'function') {
       // 不打断用户：仅静默定位，不弹提示
     }
-    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    scrollFormIntoView();
     if (textarea) setTimeout(function () { textarea.focus({ preventScroll: true }); }, 260);
   });
 
   if (cancelBtn) {
     cancelBtn.addEventListener('click', function () {
       resetReply();
-      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      scrollFormIntoView();
     });
   }
 
