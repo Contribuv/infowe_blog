@@ -107,6 +107,13 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.15
+
+- **博主身份条头像 QQ 邮箱适配**：博主身份条头像（`cmt-admin-avatar`）在后台联系邮箱为 QQ 邮箱时改用 qlogo 源（`q<QQ>` 代理 key），不再强制走 Cravatar/WeAvatar（部分服务器出站抓取失败显示 404）
+- **升级页更新日志 Markdown 渲染**：`/admin/upgrade` 更新日志确认走 `body_html`（`_md_to_safe_html`）渲染而非原文
+- **头像代理 SSL 降级修复**：`_fetch_image_bytes` 在服务器缺少系统根证书时（精简环境/宝塔编译版 Python）SSLError 导致全部头像源失败、代理 404；现改为先校验证书、失败降级为不校验证书重试
+- `app.py` VERSION 同步至 **1.3.15**
+
 ### v1.3.13
 
 - **评论区盖楼 v2**：评论样式抽离为独立 `comments.css`（两主题共用，变量走主题 CSS 变量，亮/暗色自动适配）；回复/取消回复交互完善，操作结果 toast 轻提示

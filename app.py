@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.13'
+VERSION = '1.3.15'
 
 import os
 import re
@@ -2138,13 +2138,23 @@ _AVATAR_MAGIC = ((b'\x89PNG', 'image/png'), (b'\xff\xd8\xff', 'image/jpeg'),
 
 
 def _fetch_image_bytes(url):
-    """抓取并校验图片格式；任何失败返回 (None, None)。"""
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': _AVATAR_UA})
-        with urllib.request.urlopen(req, timeout=_AVATAR_TIMEOUT) as r:
-            data = r.read(2 * 1024 * 1024)
-            ctype = (r.headers.get('Content-Type') or '').lower()
-    except Exception:
+    """抓取并校验图片格式；任何失败返回 (None, None)。
+    服务器缺系统根证书时（精简环境/宝塔编译版 Python），校验证书分支会抛
+    SSLError 导致全部头像源失败 → 代理 404。头像为非敏感公开数据，
+    先按校验证书抓，SSLError 时降级为不校验证书重试一次。"""
+    req = urllib.request.Request(url, headers={'User-Agent': _AVATAR_UA})
+    for ctx, label in ((_default_ssl_context(), 'verify'),
+                       (ssl._create_unverified_context(), 'noverify')):
+        try:
+            with urllib.request.urlopen(req, timeout=_AVATAR_TIMEOUT, context=ctx) as r:
+                data = r.read(2 * 1024 * 1024)
+                ctype = (r.headers.get('Content-Type') or '').lower()
+            break
+        except ssl.SSLError:
+            continue
+        except Exception:
+            return None, None
+    else:
         return None, None
     if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
         return data, 'image/webp'
@@ -2527,12 +2537,16 @@ def post_detail(post_id):
     # 三栏阅读：左栏展示最近文章索引（用于高亮当前篇）
     side_posts, _ = db_load_posts(status='published', page=1, per_page=12)
 
-    # 博主身份条头像：后台「联系邮箱」生成 Cravatar
+    # 博主身份条头像：后台「联系邮箱」——QQ 邮箱走 qlogo，其余走 Cravatar
     admin_avatar = ''
     if is_admin:
         contact = (app.config.get('contact_email') or '').strip().lower()
         if contact:
-            admin_avatar = _avatar_url(hashlib.md5(contact.encode('utf-8')).hexdigest(), 40)
+            _cm = _QQ_RE.match(contact)
+            if _cm:
+                admin_avatar = url_for('avatar_proxy', key='q' + _cm.group(1), size=40, _external=True)
+            else:
+                admin_avatar = _avatar_url(hashlib.md5(contact.encode('utf-8')).hexdigest(), 40)
 
     return render_template('post.html', post=post, content=content_html, toc=toc_html,
                            related=related, comments=comments, comment_total=comment_total,
