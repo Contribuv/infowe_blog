@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.16'
+VERSION = '1.3.17'
 
 import os
 import re
@@ -32,7 +32,9 @@ import smtplib
 import email.utils
 import ipaddress
 from datetime import datetime, timezone
+from email.header import Header
 from email.mime.text import MIMEText
+from email.utils import formataddr
 from functools import wraps
 
 import markdown
@@ -2714,8 +2716,8 @@ def _smtp_send(to_addr, subject, html, overrides=None):
     pwd = cfg.get('smtp_pass') or ''
     sender = (cfg.get('smtp_sender_name') or '').strip() or app.config.get('blog_name') or 'Blog'
     msg = MIMEText(html, 'html', 'utf-8')
-    msg['Subject'] = subject
-    msg['From'] = '%s <%s>' % (sender, user or to_addr)
+    msg['Subject'] = Header(subject, 'utf-8')
+    msg['From'] = formataddr((sender, user or to_addr))
     msg['To'] = to_addr
     msg['Date'] = email.utils.formatdate(localtime=True)
     if port == 465:
@@ -2736,7 +2738,7 @@ _NOTIFY_CSS = ('body{margin:0;padding:0;background:#eef0f4;font-family:-apple-sy
                '.card{background:#fff;border:1px solid #e4e7ee;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(31,45,80,.06)}'
                '.head{background:linear-gradient(135deg,#5b6cf5,#7c5cf5);color:#fff;padding:18px 22px;font-size:17px;font-weight:700}.head-sub{display:block;font-size:12px;font-weight:400;opacity:.92;margin-top:4px}'
                '.body{padding:20px 22px}.meta{font-size:13px;color:#57606a;margin:6px 0;line-height:1.6}.link a{color:#0969da;text-decoration:none}'
-               '.article{font-size:15px;font-weight:600;color:#1f2328;line-height:1.5}.cta-wrap{margin-top:14px}'
+               '.cta-wrap{margin-top:14px}'
                '.cta{display:inline-block;background:#5b6cf5;color:#fff!important;text-decoration:none;font-size:13px;font-weight:600;padding:9px 18px;border-radius:8px}'
                '.quote{margin-top:18px;background:#f6f8fa;border:1px solid #eef0f4;border-left:4px solid #5b6cf5;border-radius:8px;padding:12px 14px}'
                '.q-author{font-size:13px;font-weight:700;color:#24292f;margin-bottom:6px}.q-avatar{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:#5b6cf5;color:#fff;font-size:13px;font-weight:700;margin-right:8px}'
@@ -2755,7 +2757,6 @@ def _notify_html(head, post_title, post_url, author, content):
         '<div class="card">'
         '<div class="head">%s<span class="head-sub">文章《%s》</span></div>'
         '<div class="body">'
-        '<div class="article">《%s》</div>'
         '<div class="cta-wrap"><a class="cta" href="%s">查看详情</a></div>'
         '<div class="quote">'
         '<div class="q-author"><span class="q-avatar">%s</span>%s</div>'
@@ -2763,7 +2764,7 @@ def _notify_html(head, post_title, post_url, author, content):
         '</div></div></div>'
         '<div class="foot">本邮件由 %s 自动发送，请勿直接回复。</div>'
         '</div></body></html>'
-    ) % (_NOTIFY_CSS, blog_name, head, post_title, post_title, post_url,
+    ) % (_NOTIFY_CSS, blog_name, head, post_title, post_url,
          av, author or '匿名', content, blog_name)
 
 
