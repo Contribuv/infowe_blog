@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.15'
+VERSION = '1.3.16'
 
 import os
 import re
@@ -467,7 +467,7 @@ def init_db():
         ('posts_per_page', '20'),
         ('comments_enabled', '1'),
         # ── 评论邮件通知（SMTP，新评论/新回复时通知博主） ──
-        ('comment_notify', '0'),
+        ('comment_notify', '1'),
         ('smtp_host', ''),
         ('smtp_sender_name', ''),
         ('smtp_port', '465'),

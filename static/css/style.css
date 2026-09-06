@@ -707,7 +707,8 @@ html[data-theme-mode="auto"] .theme-toggle::after {
 
 /* ——— 评论区 ——— */
 .comments-section {
-  margin-top: var(--sp-12); padding-top: var(--sp-8); border-top: 1px solid var(--border);
+  margin: var(--sp-6) var(--sp-6) 0; padding: var(--sp-6) 0 var(--sp-6);
+  border-top: 1px solid var(--border);
 }
 .comments-section.comments-closed { display: none; }
 
@@ -1444,6 +1445,8 @@ html[data-theme-mode="auto"] .theme-toggle::after {
   /* 移动端：上下篇导航堆叠，左右归零与 post-detail 对齐（靠 .main-content 的 sp-4） */
   .post-pager { flex-direction: column; gap: var(--sp-3); margin: 0; padding: var(--sp-3) 0; }
   .related-section { margin: var(--sp-6) 0 0; }
+  /* 移动端：评论区左右 margin 归零，靠 .main-content 的 sp-4 对齐 */
+  .comments-section { margin-left: 0; margin-right: 0; }
   /* 移动端：projects / links 页面左右 padding 归零、底部间距统一为 sp-6，靠 .main-content 的 sp-4 对齐 */
   .projects-page, .links-page { padding-left: 0; padding-right: 0; padding-bottom: var(--sp-6); }
   .pager-link { width: 100%; }

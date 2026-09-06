@@ -201,7 +201,12 @@
     <form class="cmt-form" id="comment-form" method="POST" action="/post/{{ post.id }}/comment">
         <input type="hidden" name="parent_id" id="comment-parent-id" value="">
         <div class="cmt-hint" id="comment-replying" hidden>回复 @<b id="comment-replying-name"></b><button type="button" id="comment-cancel-reply">取消</button></div>
-        <div class="cmt-box">
+        <details class="cmt-box" id="comment-box">
+            <summary class="cmt-toggle">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                写评论
+            </summary>
+            <div class="cmt-box-body">
             {% if is_admin %}
             <div class="cmt-admin">
                 {% if admin_avatar %}<img class="cmt-admin-avatar" src="{{ admin_avatar }}" alt="">{% endif %}
@@ -226,7 +231,8 @@
                 <span class="count">0 / 2000</span>
                 <button type="submit" class="submit">提交评论</button>
             </div>
-        </div>
+            </div>
+        </details>
     </form>
     <div id="comment-form-anchor"></div>
     </div><!-- /.cmt -->

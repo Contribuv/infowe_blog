@@ -101,6 +101,8 @@
     if (hintName) hintName.textContent = btn.getAttribute('data-reply-name') || '';
     if (hint) hint.hidden = false;
     form.classList.add('is-inline');
+    var boxEl = form.querySelector('.cmt-box');
+    if (boxEl && !boxEl.open) boxEl.open = true;   // 折叠态下点「回复」自动展开表单
     box.appendChild(form);   // 追加到末尾，位于已有回复之后
 
     if (typeof window.toast === 'function') {

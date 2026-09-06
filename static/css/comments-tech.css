@@ -1,11 +1,13 @@
 /* ═══════════════════════════════════════════════════════════
-   评论区（两套主题共用 · 盖楼 v2）
+   评论区（tech 主题专用 · 盖楼 v2，独立于 default 的 comments.css）
    结构：一个楼层 = 根评论 + 它下面全部回复，同属 .cmt-thread
    层级表达：缩进 + 头像尺度 + @提及，不使用任何竖线/内部分隔线
-   皮肤：default=卡片容器；.cmt-skin-line（tech）= 无容器 + 组间极淡横线
-   变量做双主题兼容：default 提供 --bg-raised/--bg-surface/--text-tertiary，
-   tech 只提供 --bg-subtle/--text-secondary，故全部带回退。
+   皮肤：tech = 无容器 + 组间极淡横线（.cmt-skin-line）
+   变量做双主题兼容：tech 提供 --bg-subtle/--text-secondary，故全部带回退。
    ═══════════════════════════════════════════════════════════ */
+
+/* ── tech 评论容器：与相关区块之间留 24px 上距（default 同节奏），底部靠 .tech-main 的 64px padding 收口 ── */
+.tech-comments{margin:24px 0 0}
 
 .cmt{
   --av-root:40px;    /* 根评论头像 */
@@ -22,14 +24,14 @@
   --c-accent:var(--accent);
   --c-accent-weak:var(--accent-weak, rgba(91,141,239,.14));
   --c-radius:var(--r, 12px);
-  /* 头像配色：默认取主题 accent 渐变（default 暗色）；亮色/tech 皮肤在下方覆盖 */
+  /* 头像配色：tech 皮肤在下方覆盖为 accent-weak 底 + accent 字 */
   --av-bg:linear-gradient(135deg,var(--accent),var(--accent-soft,var(--accent)));
   --av-color:#fff;
   font-size:14px;
 }
 
 /* ── 标题 ── */
-.cmt-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:var(--c-text);margin:0 0 14px}
+.cmt-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:var(--c-text);margin:0 0 18px}
 .cmt-title .cmt-num{font-size:11.5px;font-weight:600;color:var(--c-text3);background:var(--c-sub);padding:2px 9px;border-radius:20px;font-variant-numeric:tabular-nums}
 
 /* ── 待审核提示条 ── */
@@ -43,7 +45,7 @@
 @media (hover:hover) and (pointer:fine){.cmt-thread:hover{border-color:var(--c-border-h)}}
 
 /* tech 皮肤：不要卡片，组间一条极淡横线 + 大留白 */
-.cmt-skin-line .cmt-thread{padding:22px 0 24px;background:none;border:none;border-radius:0;border-bottom:1px solid var(--c-border)}
+.cmt-skin-line .cmt-thread{padding:14px 0 18px;background:none;border:none;border-radius:0;border-bottom:1px solid var(--c-border)}
 .cmt-skin-line .cmt-thread+.cmt-thread{margin-top:0}
 .cmt-skin-line .cmt-thread:last-of-type{border-bottom:none}
 
@@ -56,8 +58,6 @@
 .cmt-avatar-link:hover{box-shadow:0 0 0 2px var(--c-accent)}
 .cmt-avatar{flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--av-color);font-weight:600;line-height:1;background:var(--av-bg);overflow:hidden;user-select:none}
 .cmt-avatar img{width:100%;height:100%;object-fit:cover;display:block}
-/* 亮色主题（仅 default 皮肤）：柔和浅底 + 深字，避免高饱和渐变割裂 */
-[data-theme="light"] .cmt:not(.cmt-skin-line){--av-bg:linear-gradient(135deg,#e3e9ff,#e9e2ff);--av-color:#3b6eeb}
 /* tech 皮肤：accent-weak 底 + accent 字，随亮/暗自动切换 */
 .cmt-skin-line{--av-bg:var(--c-accent-weak);--av-color:var(--c-accent)}
 .cmt-main{flex:1;min-width:0}
@@ -90,7 +90,7 @@
 .cmt-fold:hover{text-decoration:underline}
 
 /* ── 表单 ── */
-.cmt-form{margin-top:22px}
+.cmt-form{margin-top:14px}
 .cmt-form.is-inline{margin-top:16px}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-skin-line .cmt-box{background:none}
@@ -132,7 +132,7 @@
   .cmt-thread{padding:16px 14px}
   .cmt-replies{margin-top:14px}
   .cmt-replies .cmt-item+.cmt-item{margin-top:13px}
-  .cmt-skin-line .cmt-thread{padding:20px 0 22px}
+  .cmt-skin-line .cmt-thread{padding:12px 0 16px}
   .cmt-form .row{flex-direction:column;gap:9px}
   .cmt-text{font-size:13.5px}
   .cmt-reply{opacity:1}
