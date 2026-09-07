@@ -84,6 +84,14 @@
     topBtn.addEventListener('click', function () {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+    /* 移动端：评论表单进入视口时隐藏悬浮按钮，避免遮住「提交评论」（按钮靠右，恰在悬浮球右下位置） */
+    var _cmtForm = document.getElementById('comment-form');
+    if (_cmtForm && window.matchMedia('(max-width: 768px)').matches && 'IntersectionObserver' in window) {
+      var _cmtIO = new IntersectionObserver(function (entries) {
+        topBtn.classList.toggle('hide', entries[0].isIntersecting);
+      }, { threshold: 0.02 });
+      _cmtIO.observe(_cmtForm);
+    }
   }
 })();
 

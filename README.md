@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.20
+
+- **评论表单不再被「回到顶部」悬浮球遮挡（tech 主题）**：移动端（≤768px）「写评论」表单进入视口时，右下角 `.tech-top` 悬浮球自动隐藏（IntersectionObserver 监听 `#comment-form`，滚离后恢复显示）。此前球固定 `right:28px / bottom:72px` 且 `z-index:150`，恰好压在表单 `.foot` 右侧的「提交评论」按钮上，真机点不到按钮
+- `app.py` VERSION 同步至 **1.3.20**
+
 ### v1.3.19
 
 - **评论跨文章可见泄漏修复**：`db_load_comments` 普通访客分支的 SQL 运算符优先级缺陷——`status='approved' AND is_private=0 OR (id IN ... AND is_private=0)` 中 `OR` 缺括号，导致同一作者在其它文章提交的（含待审核）评论会被错误加载到当前文章页评论区。加括号收紧为 `(status='approved' AND is_private=0) OR (id IN (...) AND is_private=0)`，仅当前文章、仅非私密

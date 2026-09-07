@@ -255,6 +255,8 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 }
 .tech-top.show { opacity: 1; visibility: visible; }
 .tech-top:hover { color: var(--accent); border-color: var(--accent); }
+/* JS 动态隐藏：移动端评论表单进视口时调用（遮「提交评论」），带 !important 压过 .show */
+.tech-top.hide { opacity: 0 !important; visibility: hidden !important; }
 /* 滚动后缩小成 56px 圆形，避免遮挡右侧阅读 */
 .tech-top.scrolled {
   width: 36px; height: 36px; right: 28px; bottom: calc(28px + env(safe-area-inset-bottom));
