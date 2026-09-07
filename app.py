@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.18'
+VERSION = '1.3.19'
 
 import os
 import re
@@ -2219,13 +2219,14 @@ def db_load_comments(post_id, include_private=False, my_comments=None):
         sql = "SELECT * FROM comments WHERE post_id=? AND (status='approved' OR is_private=1)"
         params = [post_id]
     else:
-        sql = "SELECT * FROM comments WHERE post_id=? AND status='approved' AND is_private=0"
+        sql = "SELECT * FROM comments WHERE post_id=? AND (status='approved' AND is_private=0"
         params = [post_id]
         if my_comments:
             ids = [i for i in my_comments if str(i).isdigit()]
             if ids:
                 sql += " OR (id IN (%s) AND is_private=0)" % ','.join('?' * len(ids))
                 params += ids
+        sql += ")"
     sql += " ORDER BY created_at ASC, id ASC"
     rows = db.execute(sql, params).fetchall()
     db.close()

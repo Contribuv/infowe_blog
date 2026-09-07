@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.19
+
+- **评论跨文章可见泄漏修复**：`db_load_comments` 普通访客分支的 SQL 运算符优先级缺陷——`status='approved' AND is_private=0 OR (id IN ... AND is_private=0)` 中 `OR` 缺括号，导致同一作者在其它文章提交的（含待审核）评论会被错误加载到当前文章页评论区。加括号收紧为 `(status='approved' AND is_private=0) OR (id IN (...) AND is_private=0)`，仅当前文章、仅非私密
+- `app.py` VERSION 同步至 **1.3.19**
+
 ### v1.3.18
 
 - **评论通知时序修复**：待审核的回复不再立即通知被回复者（此前对方点进链接却看不到待审核内容）；审核通过后由 `_notify_reply_recipient` 补发，复用同一套排除逻辑（博主邮箱 / 自己回复自己）
