@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.21'
+VERSION = '1.3.22'
 
 import os
 import re
@@ -2264,9 +2264,17 @@ def db_load_comments(post_id, include_private=False, my_comments=None):
     for c in comments:
         c['children'] = []
         c['is_author'] = bool(author_name) and c['author'] == author_name
-        c['avatar'], c['avatar_fallback'] = _avatar_urls(
-            contact_hash if c['is_author'] else c.get('email_hash', ''),
-            contact_qq if c['is_author'] else c.get('qq', ''))
+        # 博主头像单独判断：优先用后台「设置」上传的头像（管理员自行控制），
+        # 配置为空或文件已被删除时回退到 Cravatar（后台联系邮箱生成）
+        if c['is_author']:
+            cfg_avatar = app.config.get('avatar', '')
+            if cfg_avatar and _avatar_file_exists():
+                c['avatar'] = cfg_avatar
+                c['avatar_fallback'] = ''
+            else:
+                c['avatar'], c['avatar_fallback'] = _avatar_urls(contact_hash, contact_qq)
+        else:
+            c['avatar'], c['avatar_fallback'] = _avatar_urls(c.get('email_hash', ''), c.get('qq', ''))
         c['avatar_default'] = avatar_default
         # 明文邮箱仅用于回复通知，不出现在任何渲染上下文
         c.pop('email', None)

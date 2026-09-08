@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.22
+
+- **评论区博主头像单独判断（两端主题）**：评论判定为博主（昵称 = 后台作者名）时，头像优先使用后台「设置」页上传的头像（`/admin/settings` 的 avatar 配置）；未设置或图片文件已被删除时，回退到原 Cravatar（后台联系邮箱生成）。普通访客头像逻辑不变，仍走站内 `/avatar/...` 代理
+- `app.py` VERSION 同步至 **1.3.22**
+
 ### v1.3.21
 
 - **首页结构优化（tech 主题）**：精选区独立成块（最多 3 条）+ 分隔线，主文章列表不再重复显示精选、也不跳号（精选改由 `db_get_featured_posts` 独立取，主列表 `db_load_home_posts(..., exclude_featured=True)` 仅取普通文章）；首页 `featured` 与 `posts` 统一附加分类名
