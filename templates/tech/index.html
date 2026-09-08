@@ -30,7 +30,7 @@
 
 <!-- 精选文章 -->
 {% if featured and not current_tag and not search_query %}
-<section style="margin-bottom: 8px;">
+<section class="tech-featured">
     <h2 class="tech-related-title">精选推荐</h2>
     <ul class="tech-post-list">
         {% for post in featured %}
@@ -39,7 +39,7 @@
                 <time datetime="{{ post.created_at[:10] }}">{{ post.created_at[:10] }}</time>
                 {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
                 <span>{{ post.read_time }} 分钟</span>
-                <span style="color: var(--warning);">★ 精选</span>
+                <span class="tech-badge-featured">★ 精选</span>
             </div>
             <h3 class="tech-post-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
             <p class="tech-post-excerpt">{{ post.excerpt }}</p>
@@ -53,10 +53,10 @@
 </section>
 {% endif %}
 
-<!-- 文章列表 -->
-<ul class="tech-post-list">
+<!-- 文章列表（精选区已独立展示，此处不跳号，全部列出） -->
+<h2 class="sr-only">全部文章</h2>
+<ul class="tech-post-list" aria-label="全部文章">
     {% for post in posts %}
-    {% if not (not current_tag and not search_query and post.is_featured) %}
     <li class="tech-post-item">
         <div class="tech-post-meta">
             <time datetime="{{ post.created_at[:10] }}">{{ post.created_at[:10] }}</time>
@@ -70,7 +70,6 @@
         </div>
         <span class="tech-post-arrow" aria-hidden="true">→</span>
     </li>
-    {% endif %}
     {% endfor %}
 </ul>
 

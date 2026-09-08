@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.20'
+VERSION = '1.3.21'
 
 import os
 import re
@@ -1629,27 +1629,42 @@ def db_get_featured_posts(limit=3):
     return posts
 
 
-def db_load_home_posts(limit=6):
-    """首页文章：精选置顶，其次最新，总数受 limit 限制"""
+def db_load_home_posts(limit=6, exclude_featured=False):
+    """首页文章：默认精选置顶其次最新；exclude_featured=True 时仅取普通文章（精选改由独立区展示）"""
     db = get_db()
     featured_rows = db.execute(
         "SELECT * FROM posts WHERE status='published' AND is_featured=1 ORDER BY created_at DESC"
     ).fetchall()
     featured_ids = [r['id'] for r in featured_rows]
-    if featured_ids:
-        placeholders = ','.join('?' * len(featured_ids))
-        latest_rows = db.execute(
-            f"SELECT * FROM posts WHERE status='published' AND id NOT IN ({placeholders}) ORDER BY created_at DESC",
-            featured_ids
-        ).fetchall()
+    if exclude_featured:
+        # 主列表仅普通文章：首页 featured 已独立卡展示，避免同一篇重复出现
+        if featured_ids:
+            placeholders = ','.join('?' * len(featured_ids))
+            latest_rows = db.execute(
+                f"SELECT * FROM posts WHERE status='published' AND id NOT IN ({placeholders}) ORDER BY created_at DESC LIMIT ?",
+                featured_ids + [limit]
+            ).fetchall()
+        else:
+            latest_rows = db.execute(
+                "SELECT * FROM posts WHERE status='published' ORDER BY created_at DESC LIMIT ?",
+                (limit,)
+            ).fetchall()
+        rows = latest_rows
     else:
-        latest_rows = db.execute(
-            "SELECT * FROM posts WHERE status='published' ORDER BY created_at DESC"
-        ).fetchall()
+        if featured_ids:
+            placeholders = ','.join('?' * len(featured_ids))
+            latest_rows = db.execute(
+                f"SELECT * FROM posts WHERE status='published' AND id NOT IN ({placeholders}) ORDER BY created_at DESC",
+                featured_ids
+            ).fetchall()
+        else:
+            latest_rows = db.execute(
+                "SELECT * FROM posts WHERE status='published' ORDER BY created_at DESC"
+            ).fetchall()
+        rows = list(featured_rows) + list(latest_rows)
     db.close()
-    all_rows = list(featured_rows) + list(latest_rows)
     posts = []
-    for r in all_rows[:limit]:
+    for r in rows[:limit]:
         p = dict(r)
         p['tags'] = json.loads(p['tags'])
         posts.append(p)
@@ -2414,13 +2429,14 @@ def index():
         posts, total = db_load_posts(tag=tag if tag else None, search=search if search else None, page=1)
         featured = []
     else:
-        posts = db_load_home_posts(home_count)
-        featured = [p for p in posts if p['is_featured']]
+        # 首页：精选区独立展示（最多 3 条），主列表为最新普通文章，二者不重复不跳号
+        featured = db_get_featured_posts(3)
+        posts = db_load_home_posts(home_count, exclude_featured=True)
         _, total = db_load_posts(page=1)
 
     # 附加分类名称
     categories = {c['id']: c['name'] for c in db_load_categories()}
-    for p in posts:
+    for p in posts + featured:
         cid = p.get('category_id')
         p['category_name'] = categories.get(cid, '') if cid else ''
 
@@ -2620,6 +2636,11 @@ def post_comment(post_id):
     # 昵称必填（盖楼需要身份标识）
     if not author or len(author) > 30:
         flash('请填写昵称（30 字以内）', 'error')
+        return redirect(url_for('post_detail', post_id=post_id))
+    # 昵称保留：博主昵称仅限后台登录态使用，防访客冒充（展示时 is_author 按昵称判定）
+    blogger_name = (app.config.get('author') or '').strip()
+    if not is_admin and blogger_name and author == blogger_name:
+        flash('该昵称已被占用，请换一个', 'error')
         return redirect(url_for('post_detail', post_id=post_id))
     if not content or len(content) > 2000:
         flash('评论内容不能为空且不能超过2000字', 'error')

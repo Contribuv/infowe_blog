@@ -95,7 +95,7 @@
   }
 })();
 
-/* ── 首页终端格言：一言 API（5s 超时）+ 本地兜底，打字机输出，点击换一条 ── */
+/* ── 首页终端格言：本地句子库优先（秒出），一言 API 仅作在线增强，失败静默不回退 ── */
 (function () {
   'use strict';
   var quoteText = document.getElementById('tech-quote-text');
@@ -104,7 +104,7 @@
   var srcEl = document.getElementById('tech-quote-src');
   var refreshBtn = document.getElementById('tech-quote-refresh');
 
-  /* 本地兜底句子库：一言不可达 / 超时 / 返回异常时使用 */
+  /* 本地句子库：加载/刷新时先用它，保证弱网与一键旁路下首屏即时出句 */
   var FALLBACK = [
     { text: 'Talk is cheap. Show me the code.', src: 'Linus Torvalds' },
     { text: 'Stay hungry, stay foolish.', src: 'Steve Jobs' },
@@ -117,7 +117,15 @@
     { text: '代码如诗：先让它正确，再让它清晰，最后让它简洁。', src: '' },
     { text: '道阻且长，行则将至；行而不辍，未来可期。', src: '' },
     { text: '早优化是万恶之源：先量化，再优化，后庆祝。', src: '' },
-    { text: '热爱可抵岁月漫长。', src: '' }
+    { text: '热爱可抵岁月漫长。', src: '' },
+    { text: '流量是入口，房源是底牌；先收住线索，再谈转化。', src: '' },
+    { text: '渠道多不是本事，把一条货带出本地成交才是。', src: '' },
+    { text: '算法会变，人性不会；做内容先懂人，再猜机器。', src: '' },
+    { text: '四十未娶不是异类，是还没遇到值得将就的反面。', src: '' },
+    { text: '一个人把日子过明白，比凑合两个人更有分量。', src: '' },
+    { text: '自己造轮子不丢人，丢人的是不知道轮子怎么转。', src: '' },
+    { text: '开源的意义：省了别人的时间，也逼自己把活做干净。', src: '' },
+    { text: '好东西不靠调参堆出来，靠把每条链路都接住。', src: '' }
   ];
 
   var timers = [];
@@ -153,43 +161,39 @@
     typeQuote(item.text, item.src);
   }
 
-  function loadQuote() {
-    var my = ++seq;
-    quoteText.textContent = '';
-    srcEl.textContent = '';
+  /* 一言更多是彩蛋：连上就用在线句，连不上/超时就保持已出的本地句，不打断首屏 */
+  function enhanceOnline() {
     var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var guard = setTimeout(function () { if (ctrl) ctrl.abort(); }, 5000);
     fetch('https://v1.hitokoto.cn/?encode=json&lang=cn', { signal: ctrl && ctrl.signal })
       .then(function (res) {
         clearTimeout(guard);
-        if (!res.ok) throw new Error('http ' + res.status);
+        if (!res.ok) return;
         return res.json();
       })
       .then(function (d) {
-        if (my !== seq) return; // 已有更新的请求，丢弃本次结果
+        clearTimeout(guard);
         var text = d && d.hitokoto ? String(d.hitokoto) : '';
-        if (!text) { renderLocal(); return; }
+        if (!text) return;
         var from = '';
         if (d.from_who && d.from) from = d.from_who + ' · ' + d.from;
         else if (d.from) from = d.from;
-        typeQuote(text, from);
+        typeQuote(text, from); // 覆盖本地句，乱序由 seq 拆解
       })
-      .catch(function () {
-        clearTimeout(guard);
-        if (my !== seq) return;
-        renderLocal();
-      });
+      .catch(function () { clearTimeout(guard); });
   }
 
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function () {
       refreshBtn.classList.add('spin');
       setTimeout(function () { refreshBtn.classList.remove('spin'); }, 300);
-      loadQuote();
+      renderLocal();      // 点击立即换本地句，弱网也不空窗
+      enhanceOnline();    // 在线句带 5s 超时兜底，成功才覆盖
     });
   }
 
-  if (quoteText) loadQuote();
+  renderLocal();      // 首屏先出本地句
+  enhanceOnline();    // 在线增强在后台，成功才替换
 })();
 
 /* ── 全局搜索：导航放大镜按钮展开 / 收起下拉面板 ── */

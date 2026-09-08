@@ -143,6 +143,17 @@ img { max-width: 100%; }
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
+/* 无障碍：系统开启「减弱动态效果」时，整体关闭光标闪烁 / 动画 / 过渡错位，
+   保留状态切换但去掉位移与闪烁，避免前庭敏感用户不适 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .tech-quote-cursor { animation: none !important; }
+}
 .tech-nav-links { display: flex; gap: 2px; margin: 0 auto; }
 .tech-nav-link {
   padding: 8px 12px; font-size: 15px; color: var(--text-secondary);
@@ -295,6 +306,24 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 }
 .tech-page-head--center .tech-page-desc { font-size: 16px; }
 
+/* ── 仅 PC 宽屏：修「头轻脚重」──
+   A. 垂直重心上收：上留白略大于下留白，格言间距收紧，底部 64px 权重降低
+   B. 补宽屏横向空旷：标题/格言字号加大，Hero 在宽屏更有存在感
+   移动端（<769px）完全维持原状。 */
+@media (min-width: 769px) {
+  .tech-page-head--center {
+    padding: 36px 12px 28px;
+  }
+  .tech-page-head--center .tech-page-title {
+    font-size: 40px;
+  }
+  .tech-quote {
+    margin-top: 20px;
+    font-size: 17px;
+  }
+  .tech-quote .tech-quote-refresh svg { width: 16px; height: 16px; }
+}
+
 /* ── 首页终端格言 ── */
 .tech-quote {
   display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
@@ -400,6 +429,13 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-post-meta {
   display: flex; flex-wrap: wrap; gap: 6px 16px;
   font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;
+}
+/* 精选徽标：用主题强调色 --accent（亮 #0969da / 暗 #58a6ff），
+   与标题 hover、箭头、彩条同色系，亮色下清晰不糊灰；金色 chip 方案观感偏脏已弃 */
+.tech-badge-featured {
+  display: inline-block; flex: none;
+  color: var(--accent);
+  font-size: 12px; font-weight: 600;
 }
 .tech-post-title { font-size: 20px; font-weight: 600; line-height: 1.5; margin: 0 0 6px; }
 .tech-post-title a { color: var(--text); text-decoration: none; transition: color .15s; }
@@ -753,11 +789,31 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 /* ── 相关文章 ── */
 .tech-related { margin: 40px 0 0; }
 .tech-related-title { font-size: 18px; font-weight: 600; margin: 0 0 16px; }
+/* 精选推荐区：底部对齐页头 --center 的分隔线（细 border + 居中渐变彩条），
+   与下方「全部文章」列表分区；间距取卡片间距 24px，避免彩条贴线过挤 */
+.tech-featured {
+  position: relative;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.tech-featured::after {
+  content: "";
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: -1px; width: 64px; height: 3px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--hl-title));
+}
 .tech-related-list { list-style: none; margin: 0; padding: 0; }
 .tech-related-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
 .tech-related-item a { color: var(--text); text-decoration: none; font-size: 15px; }
 .tech-related-item a:hover { color: var(--accent); }
 .tech-related-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+/* 视觉隐藏但保留给读屏：补全 heading 层级用（列表前 h2） */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 
 /* ── 评论 ── */
 /* hidden 属性必须强制隐藏：.tech-comment-form-row 的 display:flex 会覆盖 UA 的 [hidden] 样式 */
