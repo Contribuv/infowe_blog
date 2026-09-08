@@ -19,9 +19,21 @@
     <h3>待审核申请 <span class="badge badge-warn">{{ pending|length }}</span></h3>
 </div>
 <div class="table-wrap">
-    <table class="table">
+    <form method="POST" action="{{ url_for('admin_links_bulk') }}" class="bulk-form" id="bulk-form-pending">
+        <input type="hidden" name="action" id="bulkActionPending" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" class="bulk-checkall"> 全选
+            </label>
+            <span class="bulk-count">已选 <b class="bulk-count-num">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-success" data-action="approve">批量通过</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="reject">批量拒绝</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        </div>
+        <table class="table">
         <thead>
             <tr>
+                <th class="col-check">选择</th>
                 <th>名称</th>
                 <th>头像</th>
                 <th>URL</th>
@@ -32,7 +44,10 @@
         <tbody>
             {% for l in pending %}
             <tr>
-                <td data-label="名称"><strong>{{ l.name }}</strong></td>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="link_ids" value="{{ l.id }}" form="bulk-form-pending" aria-label="选择链接 {{ l.id }}">
+                </td>
+                <td class="main-td" data-label="名称"><strong>{{ l.name }}</strong></td>
                 <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}">{% else %}{{ l.name[0] }}{% endif %}</span></td>
                 <td data-label="URL"><a href="{{ l.url }}" target="_blank" class="link-url">{{ l.url[:60] }}</a></td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
@@ -47,7 +62,8 @@
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+        </table>
+    </form>
 </div>
 {% endif %}
 
@@ -56,9 +72,19 @@
     <h3>已通过</h3>
 </div>
 <div class="table-wrap">
-    <table class="table">
+    <form method="POST" action="{{ url_for('admin_links_bulk') }}" class="bulk-form" id="bulk-form-links">
+        <input type="hidden" name="action" id="bulkActionLinks" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" class="bulk-checkall"> 全选
+            </label>
+            <span class="bulk-count">已选 <b class="bulk-count-num">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        </div>
+        <table class="table">
         <thead>
             <tr>
+                <th class="col-check">选择</th>
                 <th>排序</th>
                 <th>名称</th>
                 <th>头像</th>
@@ -70,8 +96,11 @@
         <tbody>
             {% for l in links %}
             <tr>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="link_ids" value="{{ l.id }}" form="bulk-form-links" aria-label="选择链接 {{ l.id }}">
+                </td>
                 <td data-label="排序">{{ l.sort_order }}</td>
-                <td data-label="名称"><strong>{{ l.name }}</strong></td>
+                <td class="main-td" data-label="名称"><strong>{{ l.name }}</strong></td>
                 <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}">{% else %}{{ l.name[0] }}{% endif %}</span></td>
                 <td data-label="URL"><a href="{{ l.url }}" target="_blank" class="link-url">{{ l.url[:60] }}</a></td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
@@ -84,11 +113,52 @@
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+        </table>
+    </form>
 </div>
 {% else %}
 <div class="empty-state">
     <p>暂无友链，点击右上角添加</p>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    // 友链页有「待审核」「已通过」两个批量表单，逐个初始化
+    var forms = document.querySelectorAll('.bulk-form');
+    Array.prototype.forEach.call(forms, function (form) {
+        var boxes = Array.prototype.slice.call(form.querySelectorAll('.row-check'));
+        var checkAll = form.querySelector('.bulk-checkall');
+        var count = form.querySelector('.bulk-count-num');
+        function update() {
+            var n = form.querySelectorAll('.row-check:checked').length;
+            count.textContent = n;
+            if (checkAll) {
+                checkAll.checked = boxes.length > 0 && n === boxes.length;
+                checkAll.indeterminate = n > 0 && n < boxes.length;
+            }
+        }
+        if (checkAll) {
+            checkAll.addEventListener('change', function () {
+                boxes.forEach(function (b) { b.checked = checkAll.checked; });
+                update();
+            });
+        }
+        boxes.forEach(function (b) { b.addEventListener('change', update); });
+        form.addEventListener('submit', function (e) {
+            var btn = e.submitter;
+            var action = btn && btn.getAttribute('data-action');
+            if (!action) return;
+            var n = form.querySelectorAll('.row-check:checked').length;
+            if (!n) { e.preventDefault(); alert('请先勾选要操作的链接'); return; }
+            if (action === 'delete' && !confirm('确定删除选中的 ' + n + ' 条链接？')) { e.preventDefault(); return; }
+            form.querySelector('input[name=action]').value = action;
+        });
+        update();
+    });
+})();
+</script>
 {% endblock %}

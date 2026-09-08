@@ -22,16 +22,26 @@
 
 {% if projects %}
 <div class="card">
+    <form method="POST" action="{{ url_for('admin_projects_bulk') }}" id="bulkProjects">
+        <input type="hidden" name="action" id="bulkAction" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkAll"> 全选
+            </label>
+            <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        </div>
     <div class="table-wrap">
     <table class="table table-fixed">
         <thead>
             <tr>
-                <th class="col-opt" style="width:7%">排序</th>
+                <th class="col-check">选择</th>
+                <th class="col-opt" style="width:6%">排序</th>
                 <th style="width:16%">项目名</th>
-                <th class="url-cell" style="width:14%">仓库地址</th>
+                <th class="url-cell" style="width:13%">仓库地址</th>
                 <th style="width:20%">描述</th>
-                <th style="width:15%">语言</th>
-                <th class="col-opt" style="width:6%">Stars</th>
+                <th style="width:14%">语言</th>
+                <th class="col-opt" style="width:5%">Stars</th>
                 <th class="col-opt" style="width:6%">精选</th>
                 <th style="width:16%">操作</th>
             </tr>
@@ -39,9 +49,13 @@
         <tbody>
             {% for p in projects %}
             <tr>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="project_ids" value="{{ p.id }}" form="bulkProjects" aria-label="选择项目 {{ p.id }}">
+                </td>
                 <td class="sort-cell col-opt" data-label="排序">{{ p.sort_order }}</td>
-                <td data-label="项目名">
-                    <strong>{{ p.name }}</strong>{% if p.custom_name %} <span class="tag tag-custom" title="项目名已自定义，同步时不会被 GitHub 名称覆盖">自定义名</span>{% endif %}
+                <td class="main-td" data-label="项目名">
+                    <strong>{{ p.name }}</strong>{% if p.custom_name %} <span class="tag tag-custom" title="显示名已自定义，GitHub 同步时不会被仓库名覆盖">自定义</span>{% endif %}
+                    {% if p.custom_name and p.github_repo %}<div class="cell-sub">GitHub：{{ p.github_repo }}</div>{% endif %}
                 </td>
                 <td class="url-cell" data-label="仓库地址">
                     <a href="{{ p.url }}" target="_blank" class="link-url" title="{{ p.url }}">{{ p.url|replace('https://github.com/', '')|replace('http://github.com/', '') }}</a>
@@ -79,6 +93,7 @@
         </tbody>
     </table>
     </div>
+    </form>
 </div>
 {% else %}
 <div class="empty-state">
@@ -86,4 +101,45 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('bulkProjects');
+    if (!form) return;
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    var count = document.getElementById('bulkCount');
+
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        count.textContent = n;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+
+    form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) { e.preventDefault(); alert('请先勾选要删除的项目'); return; }
+        if (!confirm('确定删除选中的 ' + n + ' 个项目？此操作不可恢复。')) { e.preventDefault(); return; }
+        document.getElementById('bulkAction').value = action;
+    });
+
+    update();
+})();
+</script>
 {% endblock %}

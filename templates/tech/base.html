@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
     <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
       (function () {
@@ -137,6 +137,7 @@
     </button>
 
     <script src="{{ url_for('theme_static', filename='tech/theme.js', t='v' ~ version) }}" defer></script>
+    <script src="{{ url_for('static', filename='js/disable-zoom.js', t='v' ~ version) }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

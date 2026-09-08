@@ -36,6 +36,7 @@
                     <th>内容</th>
                     <th>文章</th>
                     <th>网址</th>
+                    <th>邮箱</th>
                     <th>来源</th>
                     <th>时间</th>
                     <th>操作</th>
@@ -52,14 +53,23 @@
                         {% else %}<span class="badge badge-success">已通过</span>{% endif %}
                         {% if c.is_private %}<span class="badge badge-private">私密</span>{% endif %}
                     </td>
-                    <td data-label="作者">
-                        <strong>{{ c.author }}</strong>
-                        {% if c.parent_author %}<div class="cell-sub">回复 @{{ c.parent_author }}</div>{% endif %}
+                    <td class="main-td" data-label="作者">
+                        <span class="cmt-admin-author">
+                            {% if c.admin_avatar %}<img class="cmt-admin-avatar" src="{{ c.admin_avatar }}" alt="{{ c.author }}" loading="lazy" data-default="{{ c.admin_avatar_default }}" onerror="if(this.src!==this.getAttribute('data-default')){this.src=this.getAttribute('data-default');}">{% endif %}
+                            <span class="cmt-admin-id">
+                                <strong>{{ c.author }}</strong>
+                                {% if c.parent_author %}<div class="cell-sub">回复 @{{ c.parent_author }}</div>{% endif %}
+                            </span>
+                        </span>
                     </td>
                     <td class="desc-cell" data-label="内容">{{ c.content[:100] }}</td>
                     <td data-label="文章"><a href="/post/{{ c.post_id }}#comment-{{ c.id }}" target="_blank">{{ c.post_title[:20] }}</a></td>
                     <td data-label="网址">
                         {% if c.website %}<a href="{{ c.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ c.website[:30] }}</a>
+                        {% else %}<span class="cell-muted">—</span>{% endif %}
+                    </td>
+                    <td data-label="邮箱">
+                        {% if c.email %}<a href="mailto:{{ c.email }}" class="cell-link">{{ c.email[:30] }}</a>
                         {% else %}<span class="cell-muted">—</span>{% endif %}
                     </td>
                     <td data-label="来源">

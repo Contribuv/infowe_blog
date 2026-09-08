@@ -17,22 +17,35 @@
 
 {% if categories %}
 <div class="card">
-    <table class="table">
+    <form method="POST" action="{{ url_for('admin_categories_bulk') }}" id="bulkCats">
+        <input type="hidden" name="action" id="bulkAction" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkAll"> 全选
+            </label>
+            <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        </div>
+        <table class="table">
         <thead>
             <tr>
-                <th style="width:8%">ID</th>
+                <th class="col-check">选择</th>
+                <th style="width:7%">ID</th>
                 <th style="width:22%">分类名称</th>
                 <th style="width:25%">Slug</th>
                 <th style="width:10%">排序</th>
                 <th style="width:10%">文章数</th>
-                <th style="width:25%">操作</th>
+                <th style="width:22%">操作</th>
             </tr>
         </thead>
         <tbody>
             {% for c in categories %}
             <tr>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="cat_ids" value="{{ c.id }}" form="bulkCats" aria-label="选择分类 {{ c.id }}">
+                </td>
                 <td data-label="ID">{{ c.id }}</td>
-                <td data-label="分类名称"><strong>{{ c.name }}</strong></td>
+                <td class="main-td" data-label="分类名称"><strong>{{ c.name }}</strong></td>
                 <td data-label="Slug"><code class="slug-code">{{ c.slug }}</code></td>
                 <td data-label="排序">{{ c.sort_order }}</td>
                 <td data-label="文章数">{{ c.post_count }}</td>
@@ -48,7 +61,8 @@
             </tr>
             {% endfor %}
         </tbody>
-    </table>
+        </table>
+    </form>
 </div>
 {% else %}
 <div class="empty-state">
@@ -56,4 +70,42 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('bulkCats');
+    if (!form) return;
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    var count = document.getElementById('bulkCount');
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        count.textContent = n;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+    form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) { e.preventDefault(); alert('请先勾选要删除的分类'); return; }
+        if (!confirm('确定删除选中的 ' + n + ' 个分类？该分类下文章将变为未分类。')) { e.preventDefault(); return; }
+        document.getElementById('bulkAction').value = action;
+    });
+    update();
+})();
+</script>
 {% endblock %}

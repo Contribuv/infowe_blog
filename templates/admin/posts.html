@@ -30,9 +30,21 @@
 
 <!-- 文章表格 -->
 <div class="card">
-    <table class="table">
+    <form method="POST" action="{{ url_for('admin_posts_bulk') }}" id="bulkPosts">
+        <input type="hidden" name="action" id="bulkAction" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkAll"> 全选
+            </label>
+            <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-success" data-action="publish">批量发布</button>
+            <button type="submit" class="btn btn-sm" data-action="unpublish">批量下线</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        </div>
+        <table class="table">
         <thead>
             <tr>
+                <th class="col-check">选择</th>
                 <th style="width:35%">标题</th>
                 <th>标签</th>
                 <th>状态</th>
@@ -43,7 +55,10 @@
         <tbody>
             {% for post in posts %}
             <tr>
-                <td data-label="标题">
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="post_ids" value="{{ post.id }}" form="bulkPosts" aria-label="选择文章 {{ post.id }}">
+                </td>
+                <td class="main-td" data-label="标题">
                     <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="post-link">
                         {{ post.title }}
                         {% if post.is_featured %}<span class="featured-mark" title="精选">{{ icon('star', 14) | safe }}</span>{% endif %}
@@ -76,10 +91,11 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="5" class="text-muted text-center">暂无文章，<a href="{{ url_for('admin_post_new') }}">写一篇吧</a></td></tr>
+            <tr><td colspan="6" class="text-muted text-center">暂无文章，<a href="{{ url_for('admin_post_new') }}">写一篇吧</a></td></tr>
             {% endfor %}
         </tbody>
-    </table>
+        </table>
+    </form>
 </div>
 
 <!-- 分页 -->
@@ -96,4 +112,45 @@
     {% endif %}
 </nav>
 {% endif %}
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('bulkPosts');
+    if (!form) return;
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    var count = document.getElementById('bulkCount');
+
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        count.textContent = n;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+
+    form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) { e.preventDefault(); alert('请先勾选要操作的文章'); return; }
+        if (action === 'delete' && !confirm('确定删除选中的 ' + n + ' 篇文章？此操作不可恢复。')) { e.preventDefault(); return; }
+        document.getElementById('bulkAction').value = action;
+    });
+
+    update();
+})();
+</script>
 {% endblock %}

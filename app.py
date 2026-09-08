@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.22'
+VERSION = '1.3.23'
 
 import os
 import re
@@ -2191,8 +2191,10 @@ def avatar_proxy(key, size):
         sources = ['https://q%d.qlogo.cn/g?b=qq&nk=%s&s=%d' % (i, qq, s) for i in (1, 2, 3, 4)]
     elif key.startswith('e') and re.fullmatch(r'[0-9a-f]{32}', key[1:]):
         md5, s = key[1:], max(1, min(size, 640))
-        sources = ['https://cravatar.cn/avatar/%s?s=%d&d=mp' % (md5, s),
-                   'https://weavatar.com/avatar/%s?s=%d&d=mp' % (md5, s)]
+        # d=404：Cravatar/WeAvatar 未注册该邮箱时返回 404，而非黑色占位剪影，
+        # 由代理 404 + 前端 onerror 兜底显示博客默认头像。
+        sources = ['https://cravatar.cn/avatar/%s?s=%d&d=404' % (md5, s),
+                   'https://weavatar.com/avatar/%s?s=%d&d=404' % (md5, s)]
     else:
         abort(404)
     fname = '%s_%d.png' % (key, s)
@@ -2275,6 +2277,9 @@ def db_load_comments(post_id, include_private=False, my_comments=None):
                 c['avatar'], c['avatar_fallback'] = _avatar_urls(contact_hash, contact_qq)
         else:
             c['avatar'], c['avatar_fallback'] = _avatar_urls(c.get('email_hash', ''), c.get('qq', ''))
+        # 评论未留邮箱：_avatar_urls 返回空 → 直接显示博客默认头像（不渲染首字母）
+        if not c['avatar']:
+            c['avatar'], c['avatar_fallback'] = avatar_default, ''
         c['avatar_default'] = avatar_default
         # 明文邮箱仅用于回复通知，不出现在任何渲染上下文
         c.pop('email', None)
@@ -3174,6 +3179,24 @@ def admin_category_delete(cat_id):
     return redirect(url_for('admin_categories'))
 
 
+@app.route('/admin/categories/bulk', methods=['POST'])
+@admin_required
+def admin_categories_bulk():
+    """分类批量删除：解绑该分类下所有文章为未分类，再删除。"""
+    action = request.form.get('action')
+    ids = request.form.getlist('cat_ids')
+    if action != 'delete':
+        flash('无效的批量操作', 'error')
+        return redirect(url_for('admin_categories'))
+    if not ids:
+        flash('未选择任何分类', 'error')
+        return redirect(url_for('admin_categories'))
+    for cid in ids:
+        db_delete_category(int(cid))
+    flash('已删除 %d 个分类（该分类下文章已变为未分类）' % len(ids), 'success')
+    return redirect(url_for('admin_categories'))
+
+
 # ─────────────── 后台: 文章管理 ───────────────
 
 @app.route('/admin/posts')
@@ -3191,6 +3214,34 @@ def admin_posts():
     total_pages = max(1, math.ceil(total / PAGE_SIZE))
     return render_template('admin/posts.html', posts=posts, status_filter=status_filter,
                            search_query=search, page=page, total_pages=total_pages, total=total)
+
+
+@app.route('/admin/posts/bulk', methods=['POST'])
+@admin_required
+def admin_posts_bulk():
+    """文章批量操作：publish 批量发布 / unpublish 批量下线 / delete 批量删除。"""
+    action = request.form.get('action')
+    ids = request.form.getlist('post_ids')
+    if action not in ('publish', 'unpublish', 'delete'):
+        flash('无效的批量操作', 'error')
+        return redirect(url_for('admin_posts'))
+    if not ids:
+        flash('未选择任何文章', 'error')
+        return redirect(url_for('admin_posts'))
+    db = get_db()
+    if action == 'delete':
+        db.close()
+        for pid in ids:
+            db_delete_post(int(pid))
+        flash('已删除 %d 篇文章' % len(ids), 'success')
+    else:
+        new_status = 'published' if action == 'publish' else 'draft'
+        db.execute("UPDATE posts SET status=? WHERE id IN (%s)"
+                   % ','.join('?' * len(ids)), [new_status] + ids)
+        db.commit()
+        db.close()
+        flash('已将 %d 篇文章设为「%s」' % (len(ids), '已发布' if action == 'publish' else '草稿'), 'success')
+    return redirect(url_for('admin_posts'))
 
 
 @app.route('/admin/posts/new', methods=['GET', 'POST'])
@@ -3313,6 +3364,24 @@ def admin_project_delete(project_id):
     return redirect(url_for('admin_projects'))
 
 
+@app.route('/admin/projects/bulk', methods=['POST'])
+@admin_required
+def admin_projects_bulk():
+    """项目批量操作：delete 批量删除。"""
+    action = request.form.get('action')
+    ids = request.form.getlist('project_ids')
+    if action != 'delete':
+        flash('无效的批量操作', 'error')
+        return redirect(url_for('admin_projects'))
+    if not ids:
+        flash('未选择任何项目', 'error')
+        return redirect(url_for('admin_projects'))
+    for pid in ids:
+        db_delete_project(int(pid))
+    flash('已删除 %d 个项目' % len(ids), 'success')
+    return redirect(url_for('admin_projects'))
+
+
 @app.route('/admin/projects/<int:project_id>/sync', methods=['POST'])
 @admin_required
 def admin_project_sync(project_id):
@@ -3426,6 +3495,30 @@ def admin_link_delete(link_id):
     return redirect(url_for('admin_links'))
 
 
+@app.route('/admin/links/bulk', methods=['POST'])
+@admin_required
+def admin_links_bulk():
+    """友链批量操作：approve 通过 / reject 拒绝 / delete 删除。"""
+    action = request.form.get('action')
+    ids = request.form.getlist('link_ids')
+    if action not in ('approve', 'reject', 'delete'):
+        flash('无效的批量操作', 'error')
+        return redirect(url_for('admin_links'))
+    if not ids:
+        flash('未选择任何链接', 'error')
+        return redirect(url_for('admin_links'))
+    if action == 'delete':
+        for lid in ids:
+            db_delete_link(int(lid))
+        flash('已删除 %d 条链接' % len(ids), 'success')
+    else:
+        status = 'approved' if action == 'approve' else 'rejected'
+        for lid in ids:
+            db_set_link_status(int(lid), status)
+        flash('已将 %d 条链接设为「%s」' % (len(ids), '已通过' if action == 'approve' else '已拒绝'), 'success')
+    return redirect(url_for('admin_links'))
+
+
 # ─────────────── 后台: 博客历程（时间线）管理 ───────────────
 
 @app.route('/admin/timeline')
@@ -3503,6 +3596,26 @@ def admin_timeline_delete(item_id):
     return redirect(url_for('admin_timeline'))
 
 
+@app.route('/admin/timeline/bulk', methods=['POST'])
+@admin_required
+def admin_timeline_bulk():
+    """博客历程批量操作：delete 批量删除。"""
+    action = request.form.get('action')
+    ids = request.form.getlist('timeline_ids')
+    if action != 'delete':
+        flash('无效的批量操作', 'error')
+        return redirect(url_for('admin_timeline'))
+    if not ids:
+        flash('未选择任何历程', 'error')
+        return redirect(url_for('admin_timeline'))
+    db = get_db()
+    db.execute("DELETE FROM timeline WHERE id IN (%s)" % ','.join('?' * len(ids)), ids)
+    db.commit()
+    db.close()
+    flash('已删除 %d 条历程' % len(ids), 'success')
+    return redirect(url_for('admin_timeline'))
+
+
 # ─────────────── 后台: 评论管理 ───────────────
 
 @app.route('/admin/comments')
@@ -3518,7 +3631,21 @@ def admin_comments():
         "ORDER BY (c.status='pending') DESC, c.is_private DESC, c.created_at DESC"
     ).fetchall()
     db.close()
-    return render_template('admin/comments.html', comments=rows_to_list(rows))
+    comments = rows_to_list(rows)
+    # 后台头像：复用站内代理生成（qq 优先，其次 Cravatar），与前台同源
+    # 后台评论区默认头像（邮箱为空 / Cravatar 未注册时代理 404，前端 onerror 兜底到此）
+    admin_default_avatar = url_for('static', filename='images/default-avatar.svg', _external=True)
+    for c in comments:
+        is_author = bool(app.config.get('author')) and c.get('author') == app.config.get('author')
+        if is_author and app.config.get('avatar') and _avatar_file_exists():
+            c['admin_avatar'] = app.config.get('avatar')
+        else:
+            c['admin_avatar'], _ = _avatar_urls(c.get('email_hash', ''), c.get('qq', ''))
+        # 无任何头像来源（无邮箱无 QQ）→ 直接给博客默认头像，不再显示空位
+        if not c['admin_avatar']:
+            c['admin_avatar'] = admin_default_avatar
+        c['admin_avatar_default'] = admin_default_avatar
+    return render_template('admin/comments.html', comments=comments)
 
 
 @app.route('/admin/comments/<int:comment_id>/approve', methods=['POST'])

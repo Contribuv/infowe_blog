@@ -13,10 +13,7 @@
         var saved;
         try { saved = localStorage.getItem('infowe-theme'); } catch (err) {}
         if (saved !== 'light' && saved !== 'dark') {
-          var next = e.matches ? 'dark' : 'light';
-          document.documentElement.setAttribute('data-theme', next);
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta) meta.setAttribute('content', next === 'dark' ? '#0f1117' : '#f5f5f5');
+          applyTheme(e.matches);
         }
       };
       if (mql.addEventListener) { mql.addEventListener('change', onChange); }
@@ -24,35 +21,40 @@
     } catch (e) { /* 忽略 */ }
   })();
 
+  /* ─── 主题应用：html.theme-dark + data-theme + colorScheme（与 base.html 内置脚本一致）─── */
+  function applyTheme(dark) {
+    var html = document.documentElement;
+    html.classList.toggle('theme-dark', dark);
+    // data-theme 供编辑器（Vditor）等第三方组件读取 / 监听主题变化
+    html.setAttribute('data-theme', dark ? 'dark' : 'light');
+    html.style.colorScheme = dark ? 'dark' : 'light';
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#101418' : '#f5f7fb');
+    syncThemeIcons();
+  }
+  function currentDark() {
+    return document.documentElement.classList.contains('theme-dark');
+  }
+  /* 主题图标由 admin.css 控制显隐，这里无需 inline style，仅占位避免旧引用 */
+  function syncThemeIcons() {}
+
   /* ─── 主题手动切换：点击按钮翻转并持久化（支持顶栏与侧边栏两个按钮）─── */
   (function bindThemeToggle() {
-    function syncIcons() {
-      var theme = document.documentElement.getAttribute('data-theme');
-      var isLight = theme === 'light';
-      document.querySelectorAll('.theme-icon-dark, .theme-icon-light').forEach(function (el) {
-        if (!el) return;
-        var isDark = el.classList.contains('theme-icon-dark');
-        el.style.display = (isDark ? !isLight : isLight) ? 'inline-flex' : 'none';
-      });
-    }
     function toggle() {
-      var html = document.documentElement;
-      var next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-      html.setAttribute('data-theme', next);
-      try { localStorage.setItem('infowe-theme', next); } catch (e) {}
-      var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', next === 'dark' ? '#0f1117' : '#f5f5f5');
-      syncIcons();
+      applyTheme(!currentDark());
+      try {
+        localStorage.setItem('infowe-theme', currentDark() ? 'dark' : 'light');
+      } catch (e) {}
     }
     ['admin-theme-toggle', 'sidebar-theme-toggle'].forEach(function (id) {
       var btn = document.getElementById(id);
       if (btn) btn.addEventListener('click', toggle);
     });
-    syncIcons();
   })();
 
-  /* ─── Flash 自动消失 ─── */
-  document.querySelectorAll('.flash, .flash-msg').forEach(function (el) {
+  /* ─── Flash 自动消失（匹配 Tabler alert：.admin-flash 及其它 alert）─── */
+  document.querySelectorAll('.admin-flash, .flash, .flash-msg').forEach(function (el) {
+    if (el.closest('.admin-flash-wrap') && !el.classList.contains('admin-flash')) return;
     setTimeout(function () {
       el.style.transition = 'opacity 0.3s, transform 0.3s';
       el.style.opacity = '0';
@@ -89,28 +91,19 @@
         form.submit();
       }
     }
-    // Esc 关闭抽屉
-    if (e.key === 'Escape') {
-      document.body.classList.remove('sidebar-open');
-    }
+    // Esc 关闭 offcanvas（Bootstrap 默认已处理，无需额外逻辑）
   });
 
-  /* ─── 移动端抽屉侧边栏 ─── */
-  var toggle = document.getElementById('sidebarToggle');
-  var overlay = document.getElementById('sidebarOverlay');
-  var closeBtn = document.getElementById('sidebarClose');
-
-  function openSidebar() { document.body.classList.add('sidebar-open'); }
-  function closeSidebar() { document.body.classList.remove('sidebar-open'); }
-
-  if (toggle) toggle.addEventListener('click', openSidebar);
-  if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
-  if (overlay) overlay.addEventListener('click', closeSidebar);
-
-  // 点击导航项后自动收起（移动端）
-  document.querySelectorAll('.sidebar-nav .nav-item').forEach(function (el) {
+  /* ─── 移动端 offcanvas 侧边栏：Bootstrap 驱动，导航项点击后自动收起 ─── */
+  document.querySelectorAll('.admin-nav .admin-nav-item').forEach(function (el) {
     el.addEventListener('click', function () {
-      if (window.matchMedia('(max-width: 768px)').matches) closeSidebar();
+      if (!window.matchMedia('(min-width: 992px)').matches) {
+        var offcanvas = document.getElementById('adminSidebar');
+        if (offcanvas && typeof bootstrap !== 'undefined') {
+          var inst = bootstrap.Offcanvas.getInstance(offcanvas);
+          if (inst) inst.hide();
+        }
+      }
     });
   });
 })();
