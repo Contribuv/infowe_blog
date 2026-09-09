@@ -5,14 +5,6 @@
     <h2>{{ icon('message-circle', 20) | safe }} 评论管理 <span class="badge">{{ comments|length }}</span></h2>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, msg in messages %}
-<div class="flash-msg flash-{{ category }}">{{ msg }}</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
 {% if comments %}
 <form method="POST" action="{{ url_for('admin_comments_bulk') }}" id="bulkForm">
     <input type="hidden" name="action" id="bulkAction" value="">

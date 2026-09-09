@@ -6,14 +6,6 @@
     <a href="{{ url_for('admin_link_new') }}" class="btn btn-primary">+ 添加链接</a>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, msg in messages %}
-<div class="flash-msg flash-{{ category }}">{{ msg }}</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
 {% if pending %}
 <div class="admin-section-title">
     <h3>待审核申请 <span class="badge badge-warn">{{ pending|length }}</span></h3>

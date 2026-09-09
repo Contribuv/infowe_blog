@@ -2,14 +2,6 @@
 {% block admin_title %}开源项目{% endblock %}
 {% block admin_content %}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, msg in messages %}
-<div class="flash-msg flash-{{ category }}">{{ msg }}</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
 <div class="page-header">
     <h2>{{ icon('github', 20) | safe }} 开源项目 <span class="badge">{{ projects|length }}</span></h2>
     <div class="page-actions">

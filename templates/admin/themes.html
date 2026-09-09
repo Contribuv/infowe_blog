@@ -7,14 +7,6 @@
         当前使用：<strong>{{ active_theme }}</strong></span>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for cat, msg in messages %}
-<div class="flash-msg flash-{{ cat }}"><span>{{ msg }}</span><span class="flash-close" onclick="this.parentElement.remove()">{{ icon('x', 14) | safe }}</span></div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
 <form method="POST" class="themes-page">
     <div class="theme-grid theme-grid-lg">
         {% for t in themes %}

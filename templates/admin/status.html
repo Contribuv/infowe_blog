@@ -8,12 +8,6 @@
 .dot-ok { background: #22c55e; }
 .dot-down { background: #ef4444; }
 .dot-none { background: #9ca3af; }
-/* 卡片之间及与底部操作区保持统一间距（form 包裹导致全局 .card + .card 不生效）
-   —— 修复两张卡片紧贴、保存按钮贴卡片的问题 */
-.status-form > .card + .card { margin-top: var(--sp-5); }
-.status-form > .quick-actions { margin: var(--sp-5) 0 0; }
-/* 卡片内「添加服务」与表格留出间距，不再贴表格 */
-.status-form .card .quick-actions { margin: var(--sp-4) 0 0; }
 /* 同步按钮行：按钮与提示间距、窄屏自动换行 */
 .test-row { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-2); flex-wrap: wrap; }
 .button-tip { font-size: var(--fz-xs); color: var(--text-tertiary); line-height: 1.4; }
@@ -30,10 +24,10 @@
   color: var(--text-tertiary); cursor: pointer; transition: color var(--transition);
 }
 .pwd-toggle:hover { color: var(--text); background: var(--bg-hover); }
-/* 移动端：监控表卡片化后，输入框独占一行并撑满，避免与列标签（td::before）挤在一行 */
+/* 移动端：监控表走全局卡片化；td 竖排（标签在上、内容在下），输入框撑满 */
 @media (max-width: 768px) {
-  #svc-table td .input-text { display: block; width: 100%; }
-  #svc-table td:first-child { font-weight: 400; }
+  #svc-table td { flex-direction: column; align-items: stretch; text-align: left; gap: 4px; }
+  #svc-table td .input-text { width: 100%; }
 }
 </style>
 {% endblock %}
@@ -42,14 +36,6 @@
 <div class="page-header">
     <h2>{{ icon('zap', 20) | safe }} 服务时效</h2>
 </div>
-
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for cat, msg in messages %}
-<div class="flash-msg flash-{{ cat }}"><span>{{ msg }}</span><span class="flash-close" onclick="this.parentElement.remove()">{{ icon('x', 14) | safe }}</span></div>
-{% endfor %}
-{% endif %}
-{% endwith %}
 
 <form method="POST" class="status-form">
     <!-- 云资源时效 -->
@@ -146,6 +132,7 @@
             <h3>{{ icon('zap', 18) | safe }} HTTP(S) 服务监控</h3>
             <button type="button" class="btn btn-outline btn-sm" id="probe-now">{{ icon('history', 14) | safe }} 立即探测</button>
         </div>
+        <div class="table-wrap">
         <table class="table" id="svc-table">
             <thead>
                 <tr>
@@ -178,6 +165,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         <div class="quick-actions">
             <button type="button" class="btn btn-outline btn-sm" id="add-svc">{{ icon('plus', 14) | safe }} 添加服务</button>
         </div>

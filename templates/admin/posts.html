@@ -20,14 +20,6 @@
     </form>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, msg in messages %}
-<div class="flash-msg flash-{{ category }}">{{ msg }}</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
 <!-- 文章表格 -->
 <div class="card">
     <form method="POST" action="{{ url_for('admin_posts_bulk') }}" id="bulkPosts">
@@ -41,6 +33,7 @@
             <button type="submit" class="btn btn-sm" data-action="unpublish">批量下线</button>
             <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
         </div>
+        <div class="table-wrap">
         <table class="table">
         <thead>
             <tr>
@@ -95,6 +88,7 @@
             {% endfor %}
         </tbody>
         </table>
+        </div>
     </form>
 </div>
 

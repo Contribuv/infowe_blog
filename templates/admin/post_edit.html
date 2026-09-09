@@ -121,17 +121,7 @@
     var editorEl = document.getElementById('editor');
     var titleInput = document.getElementById('title');
 
-    // —— 侧栏自适应：内容不超视口则粘性跟随；超出视口则随页面滚动，任何分辨率都不裁剪 ——
-    var editSidebar = document.querySelector('.edit-sidebar');
-    if (editSidebar) {
-        function updateSidebarSticky() {
-            // 视口高度减去上下留白（top/bottom 各 16px）
-            var fits = editSidebar.scrollHeight <= window.innerHeight - 32;
-            editSidebar.classList.toggle('not-sticky', !fits);
-        }
-        updateSidebarSticky();
-        window.addEventListener('resize', updateSidebarSticky);
-    }
+    // —— 侧栏常驻吸附：高度受限时在侧栏内部滚动，见 admin.css .edit-sidebar ——
 
     // 新建文章默认日期 = 当前本地时间（编辑时已有值则保留）
     var createdInput = document.getElementById('created_at');
@@ -305,6 +295,11 @@
         return currentTheme() === 'dark' ? 'dark' : 'light';
     }
 
+    // 代码高亮主题（highlight.js）：暗色用 github-dark，亮色用 github
+    function currentCodeTheme() {
+        return currentTheme() === 'dark' ? 'github-dark' : 'github';
+    }
+
     // 单个文件上传（fetch 到现有后端接口）
     function uploadOne(endpoint, field, file) {
         var fd = new FormData();
@@ -346,6 +341,7 @@
         customZoom: undefined,
         theme: currentTheme(),          // 跟随后台主题（工具栏/界面）
         contentTheme: currentContentTheme(),  // 跟随后台主题（内容区：表格、代码块等）
+        codeTheme: currentCodeTheme(),  // 跟随后台主题（代码块高亮配色）
         value: textarea.value,
         cache: { enable: false },
         height: '100%',
@@ -389,7 +385,7 @@
             var observer = new MutationObserver(function (muts) {
                 muts.forEach(function (m) {
                     if (m.attributeName === 'data-theme') {
-                        vditor.setTheme(currentTheme(), currentContentTheme());
+                        vditor.setTheme(currentTheme(), currentContentTheme(), currentCodeTheme());
                     }
                 });
             });

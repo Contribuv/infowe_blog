@@ -9,13 +9,6 @@
     </div>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, msg in messages %}
-<div class="flash-msg flash-{{ category }}">{{ msg }}</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
 
 {% if items %}
 <div class="card">

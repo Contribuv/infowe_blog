@@ -6,16 +6,8 @@
     <h2>{{ icon('database', 20) | safe }} 数据管理</h2>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for cat, msg in messages %}
-<div class="flash-msg flash-{{ cat }}"><span>{{ msg }}</span><span class="flash-close" onclick="this.parentElement.remove()">{{ icon('x', 14) | safe }}</span></div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
 <!-- 数据统计 -->
-<div class="stats-grid">
+<div class="stats-grid stats-grid--six">
     <div class="stat-card">
         <div class="stat-icon">{{ icon('file-text', 28) | safe }}</div>
         <div class="stat-info">
@@ -61,12 +53,17 @@
 </div>
 
 <!-- 导出操作 -->
-<div class="quick-actions">
-    <a href="{{ url_for('admin_export_json') }}" class="btn btn-primary">{{ icon('download', 16, 'icon-sm') | safe }} JSON 导出</a>
-    <a href="{{ url_for('admin_export_markdown') }}" class="btn btn-secondary">{{ icon('file-text', 16, 'icon-sm') | safe }} Markdown 导出</a>
-    <form method="POST" action="{{ url_for('admin_export_db_backup') }}" style="display:inline">
-        <button type="submit" class="btn btn-secondary">{{ icon('plus', 16, 'icon-sm') | safe }} 数据库备份</button>
-    </form>
+<div class="card">
+    <div class="card-header">
+        <h3>{{ icon('archive', 18) | safe }} 导出操作</h3>
+    </div>
+    <div class="quick-actions">
+        <a href="{{ url_for('admin_export_json') }}" class="btn btn-primary">{{ icon('download', 16, 'icon-sm') | safe }} JSON 导出</a>
+        <a href="{{ url_for('admin_export_markdown') }}" class="btn btn-secondary">{{ icon('file-text', 16, 'icon-sm') | safe }} Markdown 导出</a>
+        <form method="POST" action="{{ url_for('admin_export_db_backup') }}" style="display:inline">
+            <button type="submit" class="btn btn-secondary">{{ icon('plus', 16, 'icon-sm') | safe }} 数据库备份</button>
+        </form>
+    </div>
 </div>
 
 <!-- 备份文件列表 -->
@@ -75,6 +72,7 @@
         <h3>{{ icon('archive', 18) | safe }} 备份文件 <span class="badge">{{ backups|length }}</span></h3>
     </div>
     {% if backups %}
+    <div class="table-wrap">
     <table class="table">
         <thead>
             <tr>
@@ -103,6 +101,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <div class="empty-state">
         <div class="empty-state-icon">{{ icon('archive', 40) | safe }}</div>
