@@ -3,7 +3,9 @@
 {% block admin_content %}
 <div class="page-header">
     <h2>{{ icon('file-text', 20) | safe }} 文章管理 <span class="badge">{{ total }}</span></h2>
-    <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary">{{ icon('pencil', 16, 'icon-sm') | safe }} 新建文章</a>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary btn-sm">{{ icon('pencil', 14, 'icon-sm') | safe }} 新建文章</a>
+    </div>
 </div>
 
 <!-- 搜索 + 筛选 -->

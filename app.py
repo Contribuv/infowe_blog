@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.24'
+VERSION = '1.3.25'
 
 import os
 import re
@@ -147,6 +147,19 @@ def _theme_asset_ver():
     for f in ('theme.css', 'theme.js'):
         try:
             ver = max(ver, int(os.path.getmtime(os.path.join(tdir, f))))
+        except OSError:
+            pass
+    return ver or 0
+
+
+def _admin_asset_ver():
+    """后台静态资源缓存版本：admin.css / admin.js 的最新 mtime。
+    此前用发布版本号做 ?t= 参数，样式修复未发版时用户浏览器永远命中旧缓存（SMTP
+    溢出修复"看似没生效"的根因）。改为 mtime 后，改动即时破缓存。"""
+    ver = 0
+    for f in ('css/admin.css', 'js/admin.js'):
+        try:
+            ver = max(ver, int(os.path.getmtime(os.path.join(app.static_folder, f))))
         except OSError:
             pass
     return ver or 0
@@ -2347,16 +2360,43 @@ def db_delete_comment(comment_id):
 
 # ─────────────── 全局上下文 ───────────────
 
+def _preview_thumb(source):
+    """主题预览图缩略：cover 裁切为 480x300，缓存于主题目录（preview.thumb.png）。
+    主题目录只读或 PIL 不可用时回退原图（后台仍显示完整图，不报错）。"""
+    cache = os.path.join(os.path.dirname(source), 'preview.thumb.png')
+    if not os.path.isfile(cache):
+        try:
+            from PIL import Image
+            with Image.open(source) as im:
+                im = im.convert('RGB')
+                tw, th = 480, 300
+                scale = max(tw / im.width, th / im.height)
+                nw, nh = max(tw, round(im.width * scale)), max(th, round(im.height * scale))
+                im = im.resize((nw, nh))
+                im = im.crop(((nw - tw) // 2, (nh - th) // 2,
+                              (nw - tw) // 2 + tw, (nh - th) // 2 + th))
+                im.save(cache, 'PNG', optimize=True)
+        except Exception:
+            return source
+    return cache
+
+
 @app.route('/themes/<path:filename>')
 def theme_static(filename):
     """主题静态资源（theme.css、preview.png 等），从 templates/ 主题文件夹发送。
-    仅允许静态资源扩展名；default 内置主题仅放行 preview.png（供后台预览）。"""
+    仅允许静态资源扩展名；default 内置主题仅放行 preview.png（供后台预览）。
+    preview.png 请求自动改发服务端缩略图（480x300），避免后台列表加载完整大图。"""
     if filename.startswith(DEFAULT_THEME_NAME + '/') and filename != DEFAULT_THEME_NAME + '/preview.png':
         abort(404)
     if not filename.lower().endswith(('.css', '.js', '.png', '.jpg', '.jpeg', '.gif',
                                       '.webp', '.svg', '.ico', '.woff', '.woff2',
                                       '.ttf', '.otf')):
         abort(404)
+    if filename.endswith('/preview.png'):
+        source = os.path.join(TEMPLATE_DIR, filename)
+        if os.path.isfile(source):
+            # ponytail: 缩略图尺寸 480x300 匹配预览容器 16:10；换更大卡片时同步调大
+            return send_file(_preview_thumb(source), mimetype='image/png', max_age=86400)
     return send_from_directory(TEMPLATE_DIR, filename)
 
 
@@ -2424,6 +2464,8 @@ def inject_globals():
         'theme_has_css': _theme_has_css(),
         # 主题静态资源缓存版本：随 theme.css/theme.js 的 mtime 变化，改样式即可强制浏览器换新
         'theme_ver': _theme_asset_ver(),
+        # 后台静态资源缓存版本：同机制，admin.css / admin.js 改动即破缓存
+        'admin_ver': _admin_asset_ver(),
         # 后台页面才检测更新（有缓存，前台不受网络影响）
         'upgrade_check': _upgrade_info,
         'upgrade_available': bool(_upgrade_info and _upgrade_info['version'] > parse_version(VERSION)),

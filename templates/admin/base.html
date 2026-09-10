@@ -6,20 +6,22 @@
     <title>{% block admin_title %}管理后台{% endblock %} - {{ blog_name }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <meta name="theme-color" id="themeColor" content="#0f1117">
-    <!-- 防白屏闪烁 + 主题预设（暗色默认，data-theme="light" 切亮色） -->
+    <!-- 防白屏闪烁 + 主题预设（三模式：auto 跟随系统 / dark 深色 / light 浅色，默认 auto；与前台共用 infowe-theme 键） -->
     <style>html{background:#0f1117}html[data-theme="light"]{background:#f5f6fa}</style>
     <script>
     (function(){
         var t; try { t = localStorage.getItem('infowe-theme'); } catch (e) {}
-        if (t !== 'light' && t !== 'dark') { t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+        if (t !== 'light' && t !== 'dark' && t !== 'auto') t = 'auto';
+        var dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         var html = document.documentElement;
-        if (t === 'light') html.setAttribute('data-theme', 'light');
-        html.style.colorScheme = t;
+        html.setAttribute('data-theme-mode', t);
+        html.setAttribute('data-theme', dark ? 'dark' : 'light');
+        html.style.colorScheme = dark ? 'dark' : 'light';
         var m = document.getElementById('themeColor');
-        if (m) m.setAttribute('content', t === 'light' ? '#f5f6fa' : '#0f1117');
+        if (m) m.setAttribute('content', dark ? '#0f1117' : '#f5f6fa');
     })();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='v' ~ version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t=admin_ver) }}">
     {% block admin_head %}{% endblock %}
 </head>
 <body class="admin-body">
@@ -86,9 +88,10 @@
                         {{ icon('home', 20, 'admin-nav-icon') | safe }}<span>返回首页</span>
                     </a>
                     <button type="button" id="sidebar-theme-toggle" class="admin-nav-item w-100 text-start">
+                        <span class="theme-icon theme-icon-auto">{{ icon('monitor', 20, 'admin-nav-icon') | safe }}</span>
                         <span class="theme-icon theme-icon-dark">{{ icon('moon', 20, 'admin-nav-icon') | safe }}</span>
                         <span class="theme-icon theme-icon-light">{{ icon('sun', 20, 'admin-nav-icon') | safe }}</span>
-                        <span class="theme-label">切换颜色</span>
+                        <span class="theme-label">跟随系统</span>
                     </button>
                     <a href="{{ url_for('admin_logout') }}" class="admin-nav-item admin-nav-danger">
                         {{ icon('log-out', 20, 'admin-nav-icon') | safe }}<span>退出登录</span>
@@ -113,6 +116,7 @@
             </a>
             <div class="topbar-actions">
                 <button type="button" id="admin-theme-toggle" class="btn btn-icon" aria-label="切换主题">
+                    <span class="theme-icon theme-icon-auto">{{ icon('monitor', 20) | safe }}</span>
                     <span class="theme-icon theme-icon-dark">{{ icon('moon', 20) | safe }}</span>
                     <span class="theme-icon theme-icon-light">{{ icon('sun', 20) | safe }}</span>
                 </button>
@@ -154,8 +158,8 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/admin.js', t='v' ~ version) }}"></script>
-<script src="{{ url_for('static', filename='js/disable-zoom.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js', t=admin_ver) }}"></script>
+<script src="{{ url_for('static', filename='js/disable-zoom.js', t=admin_ver) }}"></script>
 {% block admin_scripts %}{% endblock %}
 </body>
 </html>

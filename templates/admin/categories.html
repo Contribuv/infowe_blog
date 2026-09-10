@@ -4,7 +4,9 @@
 
 <div class="page-header">
     <h2>{{ icon('folder', 20) | safe }} 文章分类 <span class="badge">{{ categories|length }}</span></h2>
-    <a href="{{ url_for('admin_category_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 新建分类</a>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_category_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 新建分类</a>
+    </div>
 </div>
 
 {% if categories %}
@@ -23,11 +25,11 @@
         <thead>
             <tr>
                 <th class="col-check">选择</th>
-                <th style="width:7%">ID</th>
+                <th class="col-num">ID</th>
                 <th style="width:22%">分类名称</th>
                 <th style="width:25%">Slug</th>
-                <th style="width:10%">排序</th>
-                <th style="width:10%">文章数</th>
+                <th class="col-num">排序</th>
+                <th class="col-num">文章数</th>
                 <th style="width:22%">操作</th>
             </tr>
         </thead>
@@ -37,11 +39,11 @@
                 <td class="col-check" data-label="选择">
                     <input type="checkbox" class="row-check" name="cat_ids" value="{{ c.id }}" form="bulkCats" aria-label="选择分类 {{ c.id }}">
                 </td>
-                <td data-label="ID">{{ c.id }}</td>
+                <td class="col-num" data-label="ID">{{ c.id }}</td>
                 <td class="main-td" data-label="分类名称"><strong>{{ c.name }}</strong></td>
                 <td data-label="Slug"><code class="slug-code">{{ c.slug }}</code></td>
-                <td data-label="排序">{{ c.sort_order }}</td>
-                <td data-label="文章数">{{ c.post_count }}</td>
+                <td class="col-num" data-label="排序">{{ c.sort_order }}</td>
+                <td class="col-num" data-label="文章数">{{ c.post_count }}</td>
                 <td data-label="操作">
                     <div class="btn-group">
                         <a href="{{ url_for('admin_category_edit', cat_id=c.id) }}" class="btn btn-sm">编辑</a>

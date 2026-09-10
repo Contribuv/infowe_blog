@@ -7,12 +7,12 @@
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <!-- 浏览器 chrome 颜色（JS 按存储/系统偏好修正） -->
     <meta name="theme-color" content="#0f1117">
-    <!-- 防白屏闪烁：关键内联样式 + 同步设置 data-theme + 修正 theme-color（与 base 一致：无存储时跟随系统偏好） -->
+    <!-- 防白屏闪烁：关键内联样式 + 同步设置 data-theme（三模式：auto/light/dark，默认 auto，与 base 一致） -->
     <style>html{background:#0f1117}html[data-theme="light"]{background:#f5f6fa}</style>
     <script>
-    (function(){var t;try{t=localStorage.getItem('infowe-theme');}catch(e){}if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}var h=document.documentElement;if(t==='light')h.setAttribute('data-theme','light');h.style.colorScheme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',t==='light'?'#f5f6fa':'#0f1117');})();
+    (function(){var t;try{t=localStorage.getItem('infowe-theme');}catch(e){}if(t!=='light'&&t!=='dark'&&t!=='auto')t='auto';var d=t==='dark'||(t==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var h=document.documentElement;h.setAttribute('data-theme-mode',t);h.setAttribute('data-theme',d?'dark':'light');h.style.colorScheme=d?'dark':'light';var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#0f1117':'#f5f6fa');})();
     </script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t='v' ~ version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t=admin_ver) }}">
 </head>
 <body class="login-page">
     <!-- 粒子特效背景（与首页同款） -->
@@ -21,6 +21,7 @@
 
     <!-- 主题切换 -->
     <button type="button" id="theme-toggle" class="login-theme-toggle" title="切换主题" aria-label="切换主题">
+        <svg class="icon-auto" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
         <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
         <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
     </button>
@@ -103,18 +104,42 @@
     </div>
 
     <script>
-        // ── 主题切换按钮（初始化已由 head 内联脚本完成）──
+        // ── 主题切换按钮：三模式循环（初始化已由 head 内联脚本完成，顺序与后台/前台一致）──
         (function () {
             var btn = document.getElementById('theme-toggle');
-            if (btn) {
-                btn.addEventListener('click', function () {
-                    var root = document.documentElement;
-                    var cur = root.getAttribute('data-theme');
-                    var next = cur === 'dark' ? 'light' : 'dark';
-                    root.setAttribute('data-theme', next);
-                    localStorage.setItem('infowe-theme', next);
-                });
+            if (!btn) return;
+            var ORDER = ['auto', 'light', 'dark'];
+            var LABEL = { auto: '跟随系统', light: '浅色', dark: '深色' };
+            function saved() {
+                var t;
+                try { t = localStorage.getItem('infowe-theme'); } catch (e) {}
+                return ORDER.indexOf(t) !== -1 ? t : 'auto';
             }
+            function apply(mode) {
+                var dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                var root = document.documentElement;
+                root.setAttribute('data-theme-mode', mode);
+                root.setAttribute('data-theme', dark ? 'dark' : 'light');
+                root.style.colorScheme = dark ? 'dark' : 'light';
+                var m = document.querySelector('meta[name="theme-color"]');
+                if (m) m.setAttribute('content', dark ? '#0f1117' : '#f5f6fa');
+                var label = '当前：' + LABEL[mode] + '，点击切换主题';
+                btn.title = label;
+                btn.setAttribute('aria-label', label);
+            }
+            /* 系统偏好变化：auto 模式实时跟随 */
+            try {
+                var mql = window.matchMedia('(prefers-color-scheme: dark)');
+                var onChange = function () { if (saved() === 'auto') apply('auto'); };
+                if (mql.addEventListener) mql.addEventListener('change', onChange);
+                else if (mql.addListener) mql.addListener(onChange);
+            } catch (e) {}
+            btn.addEventListener('click', function () {
+                var mode = ORDER[(ORDER.indexOf(saved()) + 1) % ORDER.length];
+                apply(mode);
+                try { localStorage.setItem('infowe-theme', mode); } catch (e) {}
+            });
+            apply(saved());   // 启动时同步按钮提示
         })();
 
         // ── 粒子特效（首页同款，登录页内联轻量版）──

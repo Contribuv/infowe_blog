@@ -26,7 +26,7 @@
         <thead>
             <tr>
                 <th class="col-check">选择</th>
-                <th style="width:8%">排序</th>
+                <th class="col-num">排序</th>
                 <th style="width:14%">日期</th>
                 <th style="width:45%">内容</th>
                 <th style="width:25%">操作</th>
@@ -38,7 +38,7 @@
                 <td class="col-check" data-label="选择">
                     <input type="checkbox" class="row-check" name="timeline_ids" value="{{ it.id }}" form="bulkTimeline" aria-label="选择历程 {{ it.id }}">
                 </td>
-                <td data-label="排序">{{ it.sort_order }}</td>
+                <td class="col-num" data-label="排序">{{ it.sort_order }}</td>
                 <td data-label="日期"><strong>{{ it.date }}</strong></td>
                 <td class="main-td desc-cell" data-label="内容">{{ it.content[:80] }}</td>
                 <td data-label="操作">

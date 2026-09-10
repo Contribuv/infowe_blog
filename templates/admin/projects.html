@@ -5,10 +5,10 @@
 <div class="page-header">
     <h2>{{ icon('github', 20) | safe }} 开源项目 <span class="badge">{{ projects|length }}</span></h2>
     <div class="page-actions">
+        <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加项目</a>
         <form method="POST" action="{{ url_for('admin_projects_sync_all') }}" style="display:inline" onsubmit="return confirm('确定从 GitHub 同步全部项目？重复仓库将自动跳过。')">
             <button type="submit" class="btn btn-sm btn-secondary">{{ icon('refresh-cw', 14, 'icon-sm') | safe }} 一键同步全部</button>
         </form>
-        <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加项目</a>
     </div>
 </div>
 
@@ -28,13 +28,13 @@
         <thead>
             <tr>
                 <th class="col-check">选择</th>
-                <th class="col-opt" style="width:6%">排序</th>
+                <th class="col-opt col-num">排序</th>
                 <th style="width:16%">项目名</th>
                 <th class="url-cell" style="width:13%">仓库地址</th>
                 <th style="width:20%">描述</th>
                 <th style="width:14%">语言</th>
-                <th class="col-opt" style="width:5%">Stars</th>
-                <th class="col-opt" style="width:6%">精选</th>
+                <th class="col-opt col-num">Stars</th>
+                <th class="col-opt col-num">精选</th>
                 <th style="width:16%">操作</th>
             </tr>
         </thead>
@@ -44,7 +44,7 @@
                 <td class="col-check" data-label="选择">
                     <input type="checkbox" class="row-check" name="project_ids" value="{{ p.id }}" form="bulkProjects" aria-label="选择项目 {{ p.id }}">
                 </td>
-                <td class="sort-cell col-opt" data-label="排序">{{ p.sort_order }}</td>
+                <td class="sort-cell col-opt col-num" data-label="排序">{{ p.sort_order }}</td>
                 <td class="main-td" data-label="项目名">
                     <strong>{{ p.name }}</strong>{% if p.custom_name %} <span class="tag tag-custom" title="显示名已自定义，GitHub 同步时不会被仓库名覆盖">自定义</span>{% endif %}
                     {% if p.custom_name and p.github_repo %}<div class="cell-sub">GitHub：{{ p.github_repo }}</div>{% endif %}
@@ -64,8 +64,8 @@
                     <span class="lang-tag"><span class="lang-dot" style="--lang-color: {{ lang_color(p.language) }};"></span>{{ p.language }}</span>
                     {% else %}-{% endif %}
                 </td>
-                <td class="text-muted col-opt" data-label="Stars">{{ p.stars }}</td>
-                <td class="col-opt" data-label="精选">
+                <td class="text-muted col-opt col-num" data-label="Stars">{{ p.stars }}</td>
+                <td class="col-opt col-num" data-label="精选">
                     {% if p.featured %}<span class="badge badge-featured">{{ icon('star', 14) | safe }} 精选</span>
                     {% else %}-{% endif %}
                 </td>

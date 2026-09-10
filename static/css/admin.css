@@ -397,7 +397,7 @@ svg { vertical-align: -3px; flex: none; }
 }
 .table { width: 100%; border-collapse: collapse; font-size: var(--fz-sm); }
 .table th {
-  padding: 10px var(--sp-4);
+  padding: 10px 12px;
   text-align: left; white-space: nowrap;
   font-size: var(--fz-xs); font-weight: 600; letter-spacing: .03em;
   color: var(--text-tertiary);
@@ -405,7 +405,7 @@ svg { vertical-align: -3px; flex: none; }
   border-bottom: 1px solid var(--border);
 }
 .table td {
-  padding: 11px var(--sp-4);
+  padding: 11px 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   color: var(--text-secondary);
@@ -421,7 +421,13 @@ svg { vertical-align: -3px; flex: none; }
 .cell-sub { font-size: var(--fz-xs); color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
 .cell-muted { color: var(--text-tertiary); }
 .cell-link { word-break: break-all; }
-.col-check { width: 1%; white-space: nowrap; }
+/* 批量选择列：默认隐藏（页面更干净），进入批量模式（body.bulk-on）后显示。
+   用 .table td.col-check（0,2,1）而非 .col-check（0,1,0），否则被移动端 .table td（0,1,1）压过 */
+.col-check { width: 40px; white-space: nowrap; }
+.table th.col-check, .table td.col-check { display: none; }
+body.bulk-on .table th.col-check, body.bulk-on .table td.col-check { display: table-cell; }
+/* 窄数字/短标签列：固定像素宽，避免 fixed 布局下小百分比列互相挤压换行 */
+.col-num { width: 72px; white-space: nowrap; text-align: center; }
 .post-link { word-break: break-all; }
 .featured-mark { color: var(--warning); margin-left: 4px; }
 .row-pending td { background: var(--warning-soft); }
@@ -528,13 +534,14 @@ input[type="checkbox"], input[type="radio"] {
 .filter-search { display: flex; gap: var(--sp-2); flex: 1; max-width: 300px; min-width: 200px; }
 .filter-search input { flex: 1; }
 
-/* ─────────── 13. 批量操作条（统一放 card 顶部 / 表格上方） ─────────── */
+/* ─────────── 13. 批量操作条（统一放 card 顶部 / 表格上方；默认隐藏，批量模式显示） ─────────── */
 .bulk-bar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3);
+  display: none; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3);
   padding: var(--sp-3) var(--sp-5);
   border-bottom: 1px solid var(--border);
   background: var(--bg-surface-2);
 }
+body.bulk-on .bulk-bar { display: flex; }
 .bulk-count { font-size: var(--fz-xs); color: var(--text-tertiary); }
 .bulk-count b { color: var(--accent); font-family: var(--font-mono); }
 .bulk-bar .btn { margin-left: auto; }
@@ -562,7 +569,7 @@ input[type="checkbox"], input[type="radio"] {
 /* ─────────── 15. 统计卡（dashboard / export / upgrade） ─────────── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
   gap: var(--sp-4);
 }
 .stat-card {
@@ -734,7 +741,8 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
 .avatar-preview-empty { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-tertiary); }
 .avatar-hint { font-size: 10px; }
 .avatar-upload { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-.smtp-row { display: grid; grid-template-columns: 2fr 1fr; gap: 0 var(--sp-4); }
+/* minmax(0,…)：防止 select 最长选项的 min-content 宽把窄列撑出卡片（SMTP 端口列溢出修复） */
+.smtp-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 0 var(--sp-4); }
 .nav-toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--sp-2) var(--sp-4); }
 .nav-toggle {
   display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
@@ -812,6 +820,10 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
 .card > hr.divider { margin: var(--sp-4) var(--sp-5); border: none; border-top: 1px solid var(--border); }
 .card > .test-row { padding: 0 var(--sp-5) var(--sp-4); }
 .card > .quick-actions { padding: var(--sp-3) var(--sp-5) var(--sp-4); }
+/* SMTP 双列行：与裸 form-group 同 padding 体系，保证左右缩进与上下间距和其他字段一致 */
+.card > .smtp-row { padding: 6px var(--sp-5); }
+/* 裸放卡底的提示文字：补左右缩进与底部留白，不贴边框 */
+.card > .form-hint { padding: 6px var(--sp-5) var(--sp-4); }
 
 /* ─────────── 24. form 包裹多卡片：间距统一（admin-content gap 不穿透 form） ─────────── */
 .settings-form, .status-form, .themes-page {
@@ -833,11 +845,13 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
 .link-url { color: var(--text-secondary); font-size: var(--fz-xs); font-family: var(--font-mono); word-break: break-all; }
 .link-url:hover { color: var(--accent); }
 
-/* 主题切换图标：暗色显月亮、亮色显太阳（base 侧栏/顶栏 + login） */
-.theme-icon { display: inline-flex; }
-.theme-icon-light { display: none; }
-html[data-theme="light"] .theme-icon-dark { display: none; }
-html[data-theme="light"] .theme-icon-light { display: inline-flex; }
+/* 主题切换图标三态：auto 显显示器、dark 显月亮、light 显太阳（base 侧栏/顶栏）。
+   无 data-theme-mode 属性（极端无 JS）时兜底显月亮 */
+.theme-icon { display: none; }
+html[data-theme-mode="auto"] .theme-icon-auto,
+html[data-theme-mode="dark"] .theme-icon-dark,
+html[data-theme-mode="light"] .theme-icon-light,
+html:not([data-theme-mode]) .theme-icon-dark { display: inline-flex; }
 
 /* ─────────── 26. 登录页（独立骨架，不依赖 base 布局） ─────────── */
 .login-page {
@@ -876,9 +890,11 @@ html[data-theme="light"] .theme-icon-light { display: inline-flex; }
 .login-theme-toggle:hover, .login-home-btn:hover {
   color: var(--text); border-color: var(--border-strong); transform: translateY(-1px);
 }
-.login-theme-toggle .icon-sun { display: none; }
-html[data-theme="light"] .login-theme-toggle .icon-sun { display: block; }
-html[data-theme="light"] .login-theme-toggle .icon-moon { display: none; }
+.login-theme-toggle .icon-sun, .login-theme-toggle .icon-auto { display: none; }
+html[data-theme-mode="auto"] .login-theme-toggle .icon-auto { display: block; }
+html[data-theme-mode="auto"] .login-theme-toggle .icon-moon { display: none; }
+html[data-theme-mode="light"] .login-theme-toggle .icon-sun { display: block; }
+html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
 
 .login-shell {
   position: relative; z-index: 10;
@@ -957,15 +973,22 @@ html[data-theme="light"] .login-theme-toggle .icon-moon { display: none; }
 @media (min-width: 1024px) { .topbar-brand { display: none; } }
 @media (max-width: 575.98px) { .topbar-home { display: none; } }
 
-/* ≥1024：设置页双栏（两列等宽、顶部对齐、底部操作通栏） */
+/* ≥1024：设置页流式双栏（CSS columns 瀑布流：卡片按内容高度依次填列，两列底部均衡；
+   form-actions 跨全列通栏，避免被折进某一列内部） */
 @media (min-width: 1024px) {
   .settings-form {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--sp-5);
-    align-items: start;
+    display: block;
+    columns: 2;
+    column-gap: var(--sp-5);
   }
-  .settings-form .form-actions { grid-column: 1 / -1; }
+  .settings-form > .card {
+    break-inside: avoid;
+    margin-bottom: var(--sp-5);
+  }
+  .settings-form .form-actions {
+    column-span: all;
+    margin-top: var(--sp-4);
+  }
 }
 
 /* 导出页统计卡：≥1200 六列一行 / 768-1199 三列两行（避免 auto-fill 参差折行） */
@@ -1027,6 +1050,8 @@ html[data-theme="light"] .login-theme-toggle .icon-moon { display: none; }
     text-align: left;
   }
   .table td.col-check { justify-content: flex-start; padding: 5px 0 10px; }
+  /* 移动端卡片化布局下，批量模式的 td 也要恢复 flex（否则被上面的 table-cell 规则破坏竖排） */
+  body.bulk-on .table td.col-check { display: flex; }
   .table td.actions-cell { justify-content: flex-end; padding-top: 10px; }
   .table .desc-cell { max-width: none; white-space: normal; overflow: visible; text-overflow: clip; }
   .table td.col-opt { display: none; }  /* projects 次要列隐藏 */

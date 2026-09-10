@@ -107,6 +107,16 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.25
+
+- **批量选择模式（6 个列表页）**：posts/comments/categories/projects/links/timeline 选择列与批量工具条默认隐藏，页头「批量操作」按钮进入/退出（Esc 亦可退出），选中状态仅激活时可见；移动端窄屏同样生效（选择列批量模式下方块显示）
+- **comments/links 卡片化统一**：评论页与友链页表格容器补齐 `.card > form > bulk-bar + .table-wrap > table` 结构，与其他列表页视觉完全一致（此前 form 与 table-wrap 裸放页面导致边框/间距不一致）
+- **主题三模式（系统自适应/深色/浅色）**：后台顶栏与侧栏主题按钮改为三态循环（跟随系统 → 浅色 → 深色），与前台共用 `infowe-theme` 键（auto/light/dark）；`auto` 模式实时跟随系统偏好变化，图标三态（显示器/太阳/月亮）、侧栏文字标签同步；登录页同款三模式；旧存储值（light/dark）无缝迁移为显式模式
+- **编辑器暗色预览自适应修复**：此前后台暗色时 `data-theme` 属性被移除（而非显式设 `dark`），编辑器读到空值回退亮色预览；现显式设置两值，`/admin/posts/new` Vditor 界面（`vditor--dark`）、内容区（dark contentTheme）、代码高亮（github-dark）在暗色下全部正确适配且随切换实时联动
+- **页头按钮统一**：全站页头主按钮统一 `btn btn-primary btn-sm`（14px 图标）+ `.page-actions` 容器，批量操作按钮统一挂容器末尾——主操作在前、批量在后排序一致，按钮高度/对齐实测完全吻合（28px 基线对齐）；projects 页「添加项目」移至最前与其他页统一
+- **静态资源破缓存**：后台 CSS/JS 引用附加 mtime 版本参数（`admin_ver`），改动后浏览器无需强制刷新即命中新资源
+- `app.py` VERSION 同步至 **1.3.25**
+
 ### v1.3.24
 
 - **后台整体重构**：admin.css 全新设计系统（CSS 变量令牌 + 统一间距/圆角/阴影），19 个后台模板排版全部重做；PC 固定侧栏 + 顶栏、平板（<1024）抽屉式、移动端（<768）单列卡片化，表格窄屏自动转卡片（data-label），全端交互统一
