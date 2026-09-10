@@ -829,6 +829,9 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
    不能用 auto 填满。用显式 calc：宽 = 父宽 - 两侧 margin，实测精确贴合卡内
    （279px，右缘 1788 ≤ 卡右缘 1808），并保持与 .card > .form-group 相同缩进 */
 .card > .btn.btn-full, .card > a.btn.btn-full { width: calc(100% - var(--sp-5) * 2); display: flex; }
+/* 裸按钮紧跟最后一个字段时，字段的 padding-bottom(16) 与按钮 margin-top(16) 叠加成 32px，
+   上大下小显得断层；压掉字段底部 padding，让按钮上下留白一致（≈20px） */
+.card > .form-group:has(+ .btn.btn-full) { padding-bottom: var(--sp-1); }
 .card > hr.divider { margin: var(--sp-4) var(--sp-5); border: none; border-top: 1px solid var(--border); }
 .card > .test-row { padding: 0 var(--sp-5) var(--sp-4); }
 .card > .quick-actions { padding: var(--sp-3) var(--sp-5) var(--sp-4); }
