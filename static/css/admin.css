@@ -667,9 +667,15 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
 .cmt-admin-id { display: flex; flex-direction: column; min-width: 0; }
 
 /* 标签建议区（post 编辑页） */
-.tag-suggest { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-.tag-suggest-group { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.tag-suggest { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+/* 纵向分层：label 一行、chips 一行。若横向排，.tag-chips 整块 wrap 会产生
+   label 与 chips 错位混排，窄侧栏下视觉混乱 */
+.tag-suggest-group { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+/* hidden 属性会被上面的 display:flex 覆盖（类选择器特异性 > UA 默认），必须显式压回 */
+.tag-suggest-group[hidden] { display: none; }
 .tag-suggest-label { font-size: 11px; color: var(--text-tertiary); }
+/* 建议 chips 间距：inline 排布无空白节点，不加 margin 会零间距紧贴 */
+.tag-suggest .tag-chip { margin: 3px; }
 
 /* 分区小标题（links 页：待审核 / 已通过） */
 .admin-section-title h3 {
@@ -714,18 +720,19 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
   margin-bottom: 0;
 }
 .edit-main .form-group:has(#editor) #editor { flex: 1; }
-/* 右侧设置面板：吸附顶栏，超高时面板内部滚动 */
+/* 右侧设置面板：吸附顶栏。内容超过视口时面板内部可滚（滚轮/触摸板触达底部卡片），
+   但滚动条视觉隐藏——sticky 吸顶后侧栏不动，若无内部滚动，底部内容在任何页面滚动位置都不可见 */
 .edit-sidebar {
   position: sticky;
   top: calc(var(--topbar-h) + var(--sp-5));
   display: flex; flex-direction: column; gap: var(--sp-4);
-  max-height: calc(100vh - var(--topbar-h) - var(--sp-8));
+  max-height: calc(100vh - var(--topbar-h) - var(--sp-5) - var(--sp-4));
   overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
+  scrollbar-width: none;   /* Firefox：隐藏滚动条 */
 }
+.edit-sidebar::-webkit-scrollbar { display: none; }   /* Chromium/Edge：隐藏滚动条 */
 .sidebar-card { flex: none; }
-.preview-box { padding: 0 var(--sp-5) var(--sp-5); font-size: var(--fz-sm); color: var(--text-secondary); line-height: 1.7; }
+.preview-box { padding: var(--sp-4) var(--sp-5) var(--sp-5); font-size: var(--fz-sm); color: var(--text-secondary); line-height: 1.7; }
 
 /* ─────────── 20. settings 专属组件 ─────────── */
 .avatar-edit { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
@@ -817,6 +824,11 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
 .card > .form-group:last-of-type { padding-bottom: var(--sp-4); }
 .card > p { padding: var(--sp-4) var(--sp-5) 0; font-size: var(--fz-sm); color: var(--text-secondary); }
 .card > .btn, .card > a.btn { margin: var(--sp-4) var(--sp-5) var(--sp-5); }
+/* 全宽按钮（卡直接子级）：width:100% 按父内容盒计算不扣 margin，与上面水平 margin
+   叠加导致溢出 21px。且 <button> 的 width:auto 是 shrink-to-fit（按内容收缩），
+   不能用 auto 填满。用显式 calc：宽 = 父宽 - 两侧 margin，实测精确贴合卡内
+   （279px，右缘 1788 ≤ 卡右缘 1808），并保持与 .card > .form-group 相同缩进 */
+.card > .btn.btn-full, .card > a.btn.btn-full { width: calc(100% - var(--sp-5) * 2); display: flex; }
 .card > hr.divider { margin: var(--sp-4) var(--sp-5); border: none; border-top: 1px solid var(--border); }
 .card > .test-row { padding: 0 var(--sp-5) var(--sp-4); }
 .card > .quick-actions { padding: var(--sp-3) var(--sp-5) var(--sp-4); }

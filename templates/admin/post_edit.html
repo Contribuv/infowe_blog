@@ -83,7 +83,7 @@
                         <div class="tag-suggest-group" id="tags-auto" hidden>
                             <span class="tag-suggest-label">自动识别</span><span class="tag-chips"></span>
                         </div>
-                        <div class="tag-suggest-group">
+                        <div class="tag-suggest-group" hidden>
                             <span class="tag-suggest-label">常用</span><span class="tag-chips" id="tags-common"></span>
                         </div>
                     </div>
@@ -121,7 +121,7 @@
     var editorEl = document.getElementById('editor');
     var titleInput = document.getElementById('title');
 
-    // —— 侧栏常驻吸附：高度受限时在侧栏内部滚动，见 admin.css .edit-sidebar ——
+    // —— 侧栏吸附顶栏（sticky）；超高时随页面滚动，无独立滚动条，见 admin.css .edit-sidebar ——
 
     // 新建文章默认日期 = 当前本地时间（编辑时已有值则保留）
     var createdInput = document.getElementById('created_at');
@@ -136,7 +136,10 @@
     var ALL_TAGS = JSON.parse(document.getElementById('all-tags-data').textContent || '{}');  // {标签名称: 使用次数}
     var tagsInput = document.getElementById('tags-input');
     var tagsAuto = document.getElementById('tags-auto');
-    var tagsCommon = document.getElementById('tags-common');
+    // tagsCommon 指向组容器（与 tagsAuto 对称），paintChips 内 querySelector('.tag-chips')
+    // 只查后代不匹配自身——若指向 span#tags-common 本身会返回 null，chips 永远画不出来
+    var tagsCommonEl = document.getElementById('tags-common');
+    var tagsCommon = tagsCommonEl ? tagsCommonEl.closest('.tag-suggest-group') : null;
     var tagsDatalist = document.getElementById('tags-datalist');
 
     // -- Slug 实时预览：标题输入时自动生成 slug 预览 --
@@ -226,8 +229,8 @@
         });
     }
     // 英文常见停用词（不当作标签候选）
-    var STOP_WORDS = new Set(('the,and,for,with,that,this,from,are,was,were,has,have,had,not,your,you,our,its,how,why,when,where,what,which,who,can,could,would,should,will,shall,may,might,must,all,any,each,every,some,such,only,just,also,very,other,over,into,than,then,them,they,their,these,those,about,because,been,before,being,between,both,but,does,doing,down,during,more,most,off,once,out,own,same,too,under,until,up,via,while,again,against,https,http,www,com,html,json,api,url,get,post,true,false,null,use,using,used,uses,like,need,needs,make,makeup,can').split(','));
-    // 从正文提取出现较多的英文术语（≥3 字符、非停用词、非纯数字）→ 候选标签
+    var STOP_WORDS = new Set(('the,and,for,with,that,this,from,are,was,were,has,have,had,not,your,you,our,its,how,why,when,where,what,which,who,can,could,would,should,will,shall,may,might,must,all,any,each,every,some,such,only,just,also,very,other,over,into,than,then,them,they,their,these,those,about,because,been,before,being,between,both,but,does,doing,down,during,more,most,off,once,out,own,same,too,under,until,up,via,while,again,against,https,http,www,com,html,json,api,url,get,post,true,false,null,use,using,used,uses,like,need,needs,make,makeup,can,await,async,const,let,var,def,fn,return,import,export,print,console,log,self,none,str,int,float,dict,set,len,yield,pass,raise,elif,except,finally,switch,case,break,continue,new,obj,key,value,type,name,file,files,path,dir,root,src,build,run,cmd,trim,app,user').split(','));
+    // 从正文提取出现较多的英文术语（≥3 字符、非停用词、非纯数字、出现≥2次）→ 候选标签
     function extractEnglishTerms(src) {
         var words = src.toLowerCase().match(/[a-z][a-z0-9-]{2,}/g) || [];
         var count = {};
@@ -236,11 +239,13 @@
             if (t.length < 3 || STOP_WORDS.has(t) || /^\d+$/.test(t)) return;
             count[t] = (count[t] || 0) + 1;
         });
-        return Object.keys(count).sort(function (a, b) { return count[b] - count[a]; });
+        // 词频门槛 ≥2：过滤只出现一次的运维/语法噪声词（sudo、var、etc 之类）
+        return Object.keys(count).filter(function (t) { return count[t] >= 2; })
+            .sort(function (a, b) { return count[b] - count[a]; });
     }
     // 自动添加开关：仅在标签框为空且尚未自动添加过时执行一次，避免用户手动编辑后被覆盖
     var autoAdded = false;
-    // 自动将词频最高的 5-7 个候选标签填入输入框（数量随机取 5-7，选词按词频优先）；返回是否执行了自动添加
+    // 自动将匹配正文的已有标签填入输入框（仅限词典可靠项，数量随机取 5-7）；返回是否执行了自动添加
     function autoAddTags(autoList) {
         if (autoAdded || !tagsInput) return false;
         if (tagsInput.value.trim()) { autoAdded = true; return false; }
@@ -258,22 +263,25 @@
             (document.getElementById('title') ? document.getElementById('title').value : '') + ' ' +
             (typeof vditor !== 'undefined' && vditor ? vditor.getValue() : '');
         var byFreq = Object.keys(ALL_TAGS).sort(function (a, b) { return ALL_TAGS[b] - ALL_TAGS[a]; });
-        var auto = byFreq.filter(function (t) { return !hasTag(t) && isMatch(t, source); });
-        // 正文中高频英文术语也加入自动识别（按小写去重、去已选，避免 Python/python 大小写重复）
+        // 已有标签中匹配正文的：词典可靠，可自动填入输入框
+        var autoKnown = byFreq.filter(function (t) { return !hasTag(t) && isMatch(t, source); });
+        var auto = autoKnown.slice();
+        // 正文中高频英文术语只进建议区（代码噪声词如 trim/const 自动写入会污染标签数据）
         var seen = {};
         auto.forEach(function (t) { seen[t.toLowerCase()] = 1; });
         extractEnglishTerms(source).forEach(function (t) {
             var k = t.toLowerCase();
             if (!seen[k] && !hasTag(t)) { seen[k] = 1; auto.push(t); }
         });
-        auto = auto.slice(0, 20);
-        // 标签为空时自动填入 5-7 个候选；若已自动填充，渲染已由内部递归完成，直接结束避免旧列表覆盖
-        if (autoAddTags(auto)) return;
-        var common = byFreq.filter(function (t) { return !hasTag(t); }).slice(0, 20);
+        auto = auto.slice(0, 6);   // 上限 6：窄侧栏一组一行到两行，防拥挤（常用区同理）
+        // 自动填入仅限已有标签；若已自动填充，渲染已由内部递归完成，直接结束避免旧列表覆盖
+        if (autoAddTags(autoKnown)) return;
+        var common = byFreq.filter(function (t) { return !hasTag(t); }).slice(0, 6);
         paintChips(tagsAuto, auto);
         paintChips(tagsCommon, common);
         tagsAuto.hidden = auto.length === 0;
-        tagsCommon.style.display = common.length ? '' : 'none';
+        // 空组隐藏整组容器（含 label），否则「常用」标签会孤零零悬一行
+        tagsCommon.hidden = common.length === 0;
     }
 
     // 当前主题：后台通过 <html data-theme="dark|light"> 控制
@@ -340,8 +348,8 @@
         customWysiwygToolbar: function () { return []; },
         customZoom: undefined,
         theme: currentTheme(),          // 跟随后台主题（工具栏/界面）
-        contentTheme: currentContentTheme(),  // 跟随后台主题（内容区：表格、代码块等）
-        codeTheme: currentCodeTheme(),  // 跟随后台主题（代码块高亮配色）
+        // 注：Vditor 3.11.2 构造器不识别顶层 contentTheme/codeTheme（会被静默忽略），
+        // 内容区与代码高亮主题须在 after() 中通过 vditor.setTheme(界面, 内容, 代码) 应用
         value: textarea.value,
         cache: { enable: false },
         height: '100%',
@@ -366,6 +374,8 @@
             }
         },
         after: function () {
+            // 初始同步内容区/代码高亮主题（setTheme 幂等：href 相同则不重复加载）
+            vditor.setTheme(currentTheme(), currentContentTheme(), currentCodeTheme());
             renderChips();  // 编辑器就绪后初始化标签建议
             // 标题、标签输入变化时同步更新建议
             if (titleInput) titleInput.addEventListener('input', renderChips);
