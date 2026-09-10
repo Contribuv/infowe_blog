@@ -107,6 +107,14 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.26
+
+- **标签建议区布局修复（文章编辑页）**：`span#tags-common` 指向 `.tag-chips` 自身导致 `querySelector('.tag-chips')` 只查后代不匹配自身、返回 null，chips 一个都画不出——现指向 `.closest('.tag-suggest-group')`，常用/自动识别两组 chips 正常渲染
+- **空组 label 孤行修复**：`.tag-suggest-group` 的 `display:flex` 特异性压过 UA 默认 `[hidden]{display:none}`，空组仍显示——新增 `.tag-suggest-group[hidden]{display:none}` 显式压回，空组连同 label 整体隐藏
+- **建议区拥挤优化**：两组 chips 上限 10→6（窄侧栏一组一行到两行），`.tag-suggest .tag-chip{margin:3px}` 修间距，编辑区不再挤成多行
+- **自动标签数据污染修复（双管）**：逻辑侧拆 `autoKnown`（已有标签、词典可靠、可自动填入）与 `extractEnglishTerms`（正文词频提取、噪声高、仅作建议不写输入框）；`STOP_WORDS` 扩充代码关键词（trim/app/user/const 等）；数据侧清 `posts` 表被正文代码 token 污染成标签的垃圾数据（仅 post 36）
+- `app.py` VERSION 同步至 **1.3.26**
+
 ### v1.3.25
 
 - **批量选择模式（6 个列表页）**：posts/comments/categories/projects/links/timeline 选择列与批量工具条默认隐藏，页头「批量操作」按钮进入/退出（Esc 亦可退出），选中状态仅激活时可见；移动端窄屏同样生效（选择列批量模式下方块显示）
