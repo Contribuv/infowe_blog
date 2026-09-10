@@ -109,11 +109,11 @@ sudo systemctl restart blog
 
 ### v1.3.26
 
-- **标签建议区布局修复（文章编辑页）**：`span#tags-common` 指向 `.tag-chips` 自身导致 `querySelector('.tag-chips')` 只查后代不匹配自身、返回 null，chips 一个都画不出——现指向 `.closest('.tag-suggest-group')`，常用/自动识别两组 chips 正常渲染
-- **空组 label 孤行修复**：`.tag-suggest-group` 的 `display:flex` 特异性压过 UA 默认 `[hidden]{display:none}`，空组仍显示——新增 `.tag-suggest-group[hidden]{display:none}` 显式压回，空组连同 label 整体隐藏
-- **建议区拥挤优化**：两组 chips 上限 10→6（窄侧栏一组一行到两行），`.tag-suggest .tag-chip{margin:3px}` 修间距，编辑区不再挤成多行
-- **自动标签数据污染修复（双管）**：逻辑侧拆 `autoKnown`（已有标签、词典可靠、可自动填入）与 `extractEnglishTerms`（正文词频提取、噪声高、仅作建议不写输入框）；`STOP_WORDS` 扩充代码关键词（trim/app/user/const 等）；数据侧清 `posts` 表被正文代码 token 污染成标签的垃圾数据（仅 post 36）
-- `app.py` VERSION 同步至 **1.3.26**
+- **标签建议区终于能用了**。之前「常用」那一排标签死活不显示，查到头是代码里拿错了容器，`querySelector` 只找后代找不到自己，画了个寂寞；改了一行指向就正常了。
+- 空组不再「标签悬空」。以前没标签时「常用」两个字会孤零零挂一行，现在没有就整个藏起来，清爽。
+- 每个建议区最多 6 个，挤在一起反而看不清，够用就好。
+- 顺手把自动填标签的毛病治了：之前它会从正文里抓 `trim`、`const` 这种代码词当真标签写进输入框，存进数据库到处都是垃圾标签。现在只拿真正的标签来填，历史污染的那篇也清掉了。
+- 版本号同步到 **1.3.26**。
 
 ### v1.3.25
 
