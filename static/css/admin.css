@@ -910,7 +910,7 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
 
 .login-shell {
   position: relative; z-index: 10;
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: grid; grid-template-columns: 1fr;   /* 默认单列：<900px 时 aside 隐藏，若仍两列会把卡片压进左半列 */
   gap: var(--sp-8);
   width: min(960px, 100% - 48px);
   margin: auto;  /* 居中且内容超高时可滚动，不裁切 */
@@ -1084,7 +1084,8 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
   .theme-grid, .theme-grid-lg { grid-template-columns: 1fr; }
 }
 
-/* ≥900：登录页展示左侧品牌区 */
+/* ≥900：登录页展示左侧品牌区，此时才用两列 */
 @media (min-width: 900px) {
+  .login-shell { grid-template-columns: 1fr 1fr; }
   .login-aside { display: block; }
 }
