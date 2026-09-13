@@ -28,18 +28,23 @@
 <div id="upgrade-result"></div>
 
 <div class="card">
-    <div class="card-header"><h3>升级说明</h3></div>
+    <div class="card-header">
+        <h3>升级说明</h3>
+        {% if restart_available %}
+        <button type="button" id="btn-service-restart" class="btn btn-secondary">{{ icon('zap', 14, 'icon-sm') | safe }} 重启服务</button>
+        {% endif %}
+    </div>
     <ul class="upgrade-help">
         <li><strong>数据安全：</strong>升级前自动备份数据库与上传文件到 <code>backups/upgrade_时间_版本/</code>。文章中、分类、评论、设置等数据保留不变。</li>
         <li><strong>不覆盖内容：</strong><code>data/</code>、<code>uploads/</code>、<code>posts/</code>、<code>backups/</code> 目录不会被新代码覆盖。</li>
-        <li><strong>生效方式：</strong>代码文件替换后需<strong>重启服务</strong>生效（systemd 请执行 <code>systemctl restart blog</code>；本地开发重启 <code>python app.py</code>）。</li>
+        <li><strong>生效方式：</strong>代码文件替换后需<strong>重启服务</strong>生效。使用本页右上角「<strong>重启服务</strong>」按钮（适用于 <code>python app.py</code> 直跑部署，自动停旧起新）；systemd 托管请执行 <code>systemctl restart blog</code>。</li>
         <li><strong>回滚：</strong>如升级后异常，可用备份目录中的 <code>blog.db</code> 与 <code>uploads/</code> 恢复，或重新部署上一版本源码。</li>
     </ul>
 </div>
 {% endblock %}
 
 {% block admin_scripts %}
-<script type="application/json" id="upgrade-urls">{"upgrade": "{{ url_for('admin_upgrade') }}", "check": "{{ url_for('admin_upgrade_check') }}"}</script>
+<script type="application/json" id="upgrade-urls">{"upgrade": "{{ url_for('admin_upgrade') }}", "check": "{{ url_for('admin_upgrade_check') }}", "restart": "{{ url_for('admin_restart') }}"}</script>
 <script>
 (function () {
     var UPGRADE_URLS = JSON.parse(document.getElementById('upgrade-urls').textContent);
@@ -53,7 +58,8 @@
             'check-circle': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path>',
             'history': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path>',
             'external-link': '<path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>',
-            'download': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>'
+            'download': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>',
+            'zap': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>'
         };
         var p = paths[name] || paths['history'];
         return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
@@ -115,6 +121,32 @@
         e.preventDefault();
         check(true);
     });
+
+    // 「重启服务」按钮：下发重启指令后服务会短暂断开，故不等待页面刷新
+    var restartBtn = document.getElementById('btn-service-restart');
+    if (restartBtn) {
+        restartBtn.addEventListener('click', function () {
+            if (!confirm('将重启博客服务（仅适用于 python app.py 直跑部署）。\n重启期间页面会短暂断开，几秒后自动恢复，确定重启吗？')) return;
+            restartBtn.disabled = true;
+            restartBtn.innerHTML = svgIcon('zap', 14, 'icon-sm') + ' 正在重启…';
+            fetch(UPGRADE_URLS.restart, { method: 'POST' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    alert(d.msg);
+                    if (d.ok) {
+                        restartBtn.textContent = '已下发重启，稍后刷新';
+                    } else {
+                        restartBtn.disabled = false;
+                        restartBtn.innerHTML = svgIcon('zap', 14, 'icon-sm') + ' 重启服务';
+                    }
+                })
+                .catch(function () {
+                    alert('重启指令发送失败，请检查网络后重试');
+                    restartBtn.disabled = false;
+                    restartBtn.innerHTML = svgIcon('zap', 14, 'icon-sm') + ' 重启服务';
+                });
+        });
+    }
     check(false);
 })();
 </script>

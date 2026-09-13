@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.29'
+VERSION = '1.3.30'
 
 import os
 import re
@@ -27,6 +27,7 @@ import base64
 import hmac
 import uuid
 import threading
+import subprocess
 import urllib.parse
 import smtplib
 import email.utils
@@ -4584,7 +4585,40 @@ def admin_upgrade():
         return redirect(url_for('admin_upgrade'))
     return render_template('admin/upgrade.html',
                            current_version=VERSION,
-                           info=None, upgradable=False)
+                           info=None, upgradable=False,
+                           restart_available=os.path.isfile(
+                               os.path.join(BASE_DIR, 'restart.bat' if os.name == 'nt' else 'restart.sh')))
+
+
+@app.route('/admin/restart', methods=['POST'])
+@admin_required
+def admin_restart():
+    """一键重启：下发带延迟的重启脚本（先让当前响应返回），脚本随后停掉占用 5000 端口的旧进程并重新拉起。
+    仅适用于 python app.py 直跑部署；systemd/supervisor 等托管方式请使用托管器自带的重启命令。"""
+    script = os.path.join(BASE_DIR, 'restart.bat' if os.name == 'nt' else 'restart.sh')
+    if not os.path.isfile(script):
+        return jsonify(ok=False, msg='未找到 restart.%s，重启功能暂不可用。请先通过 git pull 拉取包含重启脚本的版本。'
+                       % ('bat' if os.name == 'nt' else 'sh'))
+    try:
+        def _delayed_restart():
+            # 先等 3 秒让当前响应发送完毕，再停旧起新（cmd 嵌套引号不可靠，故延迟放 Python 侧）
+            time.sleep(3)
+            try:
+                if os.name == 'nt':
+                    # 执行 .bat 必须经 shell（CreateProcess 不直接支持脚本文件）
+                    subprocess.Popen([script], cwd=BASE_DIR, shell=True,
+                                     creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+                else:
+                    subprocess.Popen(['bash', script], cwd=BASE_DIR,
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                     start_new_session=True)
+            except Exception:
+                pass  # 重启失败只能用户手动处理，请求此时已断开，无处上报
+
+        threading.Thread(target=_delayed_restart, daemon=True).start()
+        return jsonify(ok=True, msg='重启指令已下发：服务将在几秒内重启，页面会短暂断开，稍后刷新即可。')
+    except Exception as e:
+        return jsonify(ok=False, msg='重启指令下发失败：' + str(e))
 
 
 def _md_to_safe_html(text):
