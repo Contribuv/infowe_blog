@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.27'
+VERSION = '1.3.28'
 
 import os
 import re
@@ -67,7 +67,7 @@ except Exception as _heif_err:
 import werkzeug.security as ws
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, abort, request, redirect, url_for, session, flash, jsonify, send_from_directory, send_file, make_response
+from flask import Flask, render_template, abort, request, redirect, url_for, session, flash, jsonify, send_from_directory, send_file, make_response, g, has_request_context
 from jinja2 import FileSystemLoader
 
 
@@ -286,9 +286,33 @@ PAGE_SIZE = 20  # 每页文章数
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    # 不再在此处逐连接执行 PRAGMA journal_mode=WAL：该 PRAGMA 要拿数据库锁，
+    # 高并发下新连接执行会撞锁抛 database is locked。WAL 模式已在 init_db 一次性
+    # 激活并持久化到库文件，后续连接无需重设。
+    # foreign_keys=ON 保留：posts 表存在外键级联删除（L368），依赖此连接级开关。
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
+
+
+def _request_db():
+    """请求上下文内复用同一连接（g 缓存，teardown 统一关闭）：
+    把每请求多次开 SQLite 连接压成 1 次，减少连接开销与锁争用。
+    非请求上下文（模块导入期 load_settings、守护线程等）退回独立连接。"""
+    if has_request_context():
+        db = getattr(g, '_request_db', None)
+        if db is None:
+            db = get_db()
+            g._request_db = db
+        return db
+    return get_db()
+
+
+@app.teardown_appcontext
+def _close_request_db(exc=None):
+    """请求结束统一关闭 g 缓存的连接，避免连接泄漏。"""
+    db = g.pop('_request_db', None)
+    if db is not None:
+        db.close()
 
 
 def hash_password(password):
@@ -299,6 +323,8 @@ def hash_password(password):
 
 def init_db():
     db = get_db()
+    # 建库/启动时一次性激活 WAL 模式并持久化（此后所有连接无需重设，见 get_db）
+    db.execute("PRAGMA journal_mode=WAL")
 
     # 基础表
     db.executescript('''
@@ -651,8 +677,15 @@ migrate_uploads()
 # ─────────────── 工具函数 ───────────────
 
 def load_settings():
-    db = get_db()
-    rows = db.execute("SELECT key, value FROM settings").fetchall()
+    """每请求最早阶段把 settings 表加载进 app.config。
+    请求内复用 g 连接（每请求仅开 1 个）；非请求上下文（启动期 L1383、守护线程）走独立连接。"""
+    in_request = has_request_context()
+    db = _request_db()
+    try:
+        rows = db.execute("SELECT key, value FROM settings").fetchall()
+    finally:
+        if not in_request:
+            db.close()
     keys = set()
     for row in rows:
         app.config[row['key']] = row['value']
@@ -660,7 +693,6 @@ def load_settings():
     # 主题设置已从库中移除时回退内置默认主题，避免残留旧值导致无法还原
     if 'active_theme' not in keys:
         app.config.pop('active_theme', None)
-    db.close()
 
 
 # ─────────────── 服务时效 / Server Status ───────────────
@@ -1260,13 +1292,14 @@ def probe_url(url, timeout=5):
 
 def probe_all_services(force=False):
     """轮询全部监控服务并写入 service_checks。
-    默认按 MONITOR_INTERVAL 窗口去重；force=True 时立即重探。"""
+    默认按 MONITOR_INTERVAL 窗口去重；force=True 时立即重探。
+    探测（单服务网络超时最长 5s）不占写事务；每个服务独立小事务落库，
+    避免单事务长占 SQLite 写锁导致其它写请求（后台保存/评论）长时间等待。"""
     services = _parse_monitor_services()
     if not services:
         return {}
     with MONITOR_LOCK:
         now = time.time()
-        db = get_db()
         results = {}
         for svc in services:
             name = (svc.get('name') or svc.get('url') or '').strip()
@@ -1274,27 +1307,40 @@ def probe_all_services(force=False):
             if not name or not url:
                 continue
             if not force:
-                row = db.execute(
-                    "SELECT checked_at FROM service_checks WHERE service_id=? "
-                    "ORDER BY checked_at DESC LIMIT 1", (name,)).fetchone()
+                db = get_db()
+                try:
+                    row = db.execute(
+                        "SELECT checked_at FROM service_checks WHERE service_id=? "
+                        "ORDER BY checked_at DESC LIMIT 1", (name,)).fetchone()
+                finally:
+                    db.close()
                 if row and now - row['checked_at'] < MONITOR_INTERVAL:
                     continue
             ok, latency, cert_days, detail = probe_url(url)
-            db.execute(
-                "INSERT INTO service_checks (service_id, checked_at, ok, latency_ms, cert_days, detail) "
-                "VALUES (?,?,?,?,?,?)",
-                (name, now, 1 if ok else 0, latency, cert_days, detail))
+            db = get_db()
+            try:
+                db.execute(
+                    "INSERT INTO service_checks (service_id, checked_at, ok, latency_ms, cert_days, detail) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (name, now, 1 if ok else 0, latency, cert_days, detail))
+                db.commit()
+            finally:
+                db.close()
             results[name] = {
                 'name': name, 'url': url, 'ok': ok,
                 'latency_ms': latency, 'cert_days': cert_days, 'detail': detail,
             }
+        # 超量记录清理（独立小事务，不长期占用写锁）
         for name in results:
-            db.execute(
-                "DELETE FROM service_checks WHERE service_id=? AND id NOT IN "
-                "(SELECT id FROM service_checks WHERE service_id=? ORDER BY id DESC LIMIT 2000)",
-                (name, name))
-        db.commit()
-        db.close()
+            db = get_db()
+            try:
+                db.execute(
+                    "DELETE FROM service_checks WHERE service_id=? AND id NOT IN "
+                    "(SELECT id FROM service_checks WHERE service_id=? ORDER BY id DESC LIMIT 2000)",
+                    (name, name))
+                db.commit()
+            finally:
+                db.close()
     return results
 
 
@@ -1685,10 +1731,15 @@ def db_load_home_posts(limit=6, exclude_featured=False):
 
 
 def db_get_all_tags():
-    """获取所有文章的标签集合（含草稿，去重，按频率排序）"""
-    db = get_db()
-    rows = db.execute("SELECT tags FROM posts").fetchall()
-    db.close()
+    """获取所有文章的标签集合（含草稿，去重，按频率排序）。
+    请求内复用 g 连接（每请求 1 个连接），非请求上下文走独立连接。"""
+    in_request = has_request_context()
+    db = _request_db()
+    try:
+        rows = db.execute("SELECT tags FROM posts").fetchall()
+    finally:
+        if not in_request:
+            db.close()
     tag_counts = {}
     for r in rows:
         for tag in json.loads(r['tags']):
@@ -2081,15 +2132,19 @@ def db_delete_project(project_id):
 # ─────────────── 友情链接数据层 ───────────────
 
 def db_load_links(status=None):
-    db = get_db()
-    if status:
-        rows = db.execute(
-            "SELECT * FROM links WHERE status=? ORDER BY sort_order ASC, created_at DESC",
-            (status,)).fetchall()
-    else:
-        rows = db.execute(
-            "SELECT * FROM links ORDER BY sort_order ASC, created_at DESC").fetchall()
-    db.close()
+    in_request = has_request_context()
+    db = _request_db()
+    try:
+        if status:
+            rows = db.execute(
+                "SELECT * FROM links WHERE status=? ORDER BY sort_order ASC, created_at DESC",
+                (status,)).fetchall()
+        else:
+            rows = db.execute(
+                "SELECT * FROM links ORDER BY sort_order ASC, created_at DESC").fetchall()
+    finally:
+        if not in_request:
+            db.close()
     return rows_to_list(rows)
 
 
