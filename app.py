@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.30'
+VERSION = '1.3.31'
 
 import os
 import re
@@ -4609,9 +4609,13 @@ def admin_restart():
                     subprocess.Popen([script], cwd=BASE_DIR, shell=True,
                                      creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
                 else:
-                    subprocess.Popen(['bash', script], cwd=BASE_DIR,
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                     start_new_session=True)
+                    # 脚本输出写入 logs/restart.log，便于排查托管器重启失败的原因
+                    log_dir = os.path.join(BASE_DIR, 'logs')
+                    os.makedirs(log_dir, exist_ok=True)
+                    with open(os.path.join(log_dir, 'restart.log'), 'a', encoding='utf-8') as logf:
+                        subprocess.Popen(['bash', script], cwd=BASE_DIR,
+                                         stdout=logf, stderr=logf,
+                                         start_new_session=True)
             except Exception:
                 pass  # 重启失败只能用户手动处理，请求此时已断开，无处上报
 
