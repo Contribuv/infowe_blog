@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.32
+
+- **撤销「重启服务」按钮**：1.3.30 起加的一键重启在宝塔面板这类托管环境下靠不住——托管的服务根本不该由应用自己去杀进程、裸起新进程，容易闹出「端口占用、服务反复重启失败」的烂摊子（服务器上那串 `Address already in use` 就是这来的）。干脆把升级页的「重启服务」按钮和后端重启路由整个撤掉，回归手动重启：systemd 托管用 `systemctl restart blog`，`python app.py` 直跑就自己跑仓库根目录的 `restart.bat`/`restart.sh`，托管器之外的事不掺和。
+- 版本号同步到 **1.3.32**。
+
 ### v1.3.31
 
 - **「重启服务」按钮适配宝塔面板**：宝塔部署的服务由 supervisord 托管，之前的重启脚本只认「裸进程」，在宝塔下要么白杀进程要么裸起抢端口。现在脚本会自动探测：发现进程挂在 supervisord 下就改用 `supervisorctl restart` 重启（自动认宝塔的 supervisorctl 路径），匹配不到程序名就结束进程交给 supervisor 自动拉起；裸进程场景保持原有停旧起新逻辑。
