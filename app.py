@@ -4961,6 +4961,12 @@ def _load_upgrade_cache():
         with open(UPGRADE_CACHE_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
         if isinstance(data, dict) and isinstance(data.get('t'), (int, float)):
+            # 磁盘 JSON 中 version 是数组（tuple 序列化后的 list），读回需还原为
+            # tuple，否则 inject_globals 里 list 与 parse_version 的 tuple 比较
+            # 会 TypeError（后台页面 500）
+            info = data.get('info')
+            if isinstance(info, dict) and isinstance(info.get('version'), list):
+                info['version'] = tuple(info['version'])
             return data
     except (OSError, ValueError, TypeError):
         pass
