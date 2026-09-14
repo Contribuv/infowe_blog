@@ -76,12 +76,8 @@
                     <div class="btn-group">
                         <a href="/projects/{{ p.id }}" class="btn btn-sm" target="_blank" title="在前台查看项目详情页">前台</a>
                         <a href="{{ url_for('admin_project_edit', project_id=p.id) }}" class="btn btn-sm">编辑</a>
-                        <form method="POST" action="{{ url_for('admin_project_sync', project_id=p.id) }}" style="display:inline">
-                            <button type="submit" class="btn btn-sm" title="重新从 GitHub 拉取实时数据与 README">{{ icon('refresh-cw', 14) | safe }} 同步</button>
-                        </form>
-                        <form method="POST" action="{{ url_for('admin_project_delete', project_id=p.id) }}" style="display:inline" onsubmit="return confirm('确定删除项目 {{ p.name }} ？')">
-                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
-                        </form>
+                        <button type="submit" form="syncForm{{ p.id }}" class="btn btn-sm" title="重新从 GitHub 拉取实时数据与 README">{{ icon('refresh-cw', 14) | safe }} 同步</button>
+                        <button type="submit" form="delForm{{ p.id }}" class="btn btn-sm btn-danger">删除</button>
                     </div>
                 </td>
             </tr>
@@ -90,6 +86,13 @@
     </table>
     </div>
     </form>
+    {# 同步/删除按钮归属的表单必须定义在批量操作表单之外：HTML 禁止嵌套 form，
+       嵌套时浏览器会忽略内层 form 的 action，按钮归属外层批量表单，
+       导致点击「同步」提交到批量接口并报「无效的批量操作」。 #}
+    {% for p in projects %}
+    <form id="syncForm{{ p.id }}" method="POST" action="{{ url_for('admin_project_sync', project_id=p.id) }}" style="display:none"></form>
+    <form id="delForm{{ p.id }}" method="POST" action="{{ url_for('admin_project_delete', project_id=p.id) }}" style="display:none" onsubmit="return confirm('确定删除项目 {{ p.name }} ？')"></form>
+    {% endfor %}
 </div>
 {% else %}
 <div class="empty-state">
