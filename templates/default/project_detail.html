@@ -60,23 +60,17 @@
     {% endif %}
 </section>
 
-<!-- 项目文档：拉取 GitHub 仓库 README 渲染（缓存过期后自动跟随 GitHub 更新） -->
+<!-- 项目文档：展示管理员后台同步的 GitHub README（前台零 GitHub 请求） -->
 <section class="proj-readme" id="readme">
     <div class="proj-readme-head">
         <h2 class="proj-readme-title">{{ icon('file-text', 18) | safe }} 项目文档</h2>
-        <div class="proj-readme-tools">
-            {% if gh.age_text %}<span class="proj-readme-age">{{ gh.age_text }}更新</span>{% endif %}
-            <form class="proj-refresh-form" method="POST" action="/projects/{{ project.id }}/refresh"
-                  onsubmit="this.querySelector('button').disabled = true">
-                <button type="submit" class="proj-refresh-btn" title="重新拉取 GitHub 上的最新 README">{{ icon('history', 14) | safe }} 刷新</button>
-            </form>
-        </div>
+        {% if gh.age_text %}<span class="proj-readme-age">{{ gh.age_text }}更新</span>{% endif %}
     </div>
     {% if gh.readme %}
     <div class="proj-readme-body markdown-body">{{ gh.readme | safe }}</div>
     {% else %}
     <div class="proj-readme-empty">
-        <p>{{ gh.error or '暂无项目文档' }}</p>
+        <p>{% if gh.error %}{{ gh.error }}{% else %}项目文档尚未同步，请管理员在后台「项目 → 同步」中拉取 README。{% endif %}</p>
         {% if project.url %}
         <p class="proj-readme-empty-hint">可前往 <a href="{{ project.url }}" target="_blank" rel="noopener">GitHub 仓库</a> 查看完整说明</p>
         {% endif %}

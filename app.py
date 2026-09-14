@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.33'
+VERSION = '1.3.34'
 
 import os
 import re
@@ -27,6 +27,7 @@ import base64
 import hmac
 import uuid
 import threading
+import concurrent.futures
 import urllib.parse
 import smtplib
 import email.utils
@@ -507,8 +508,6 @@ def init_db():
         ('home_posts_count', '6'),
         ('posts_per_page', '20'),
         ('comments_enabled', '1'),
-        # ── 项目详情页 README 缓存秒数（GitHub 文档更新后，缓存过期即自动重取） ──
-        ('readme_cache_seconds', '300'),
         # ── 评论邮件通知（SMTP，新评论/新回复时通知博主） ──
         ('comment_notify', '1'),
         ('smtp_host', ''),
@@ -1962,18 +1961,25 @@ def parse_github_repo(url):
 last_gh_error = ''
 
 
+_GITHUB_SSL_CTX = None  # GitHub API SSL 上下文（模块级缓存，避免每次请求重建 CA bundle）
+
+
 def _github_ssl_context():
-    """构造用于访问 GitHub API 的 SSL 上下文。
+    """构造用于访问 GitHub API 的 SSL 上下文（首次创建后缓存复用）。
 
     优先使用 certifi 提供的 CA 证书包（跨平台稳定，避免服务器缺少
     系统 CA 时出现的 CERTIFICATE_VERIFY_FAILED）；certifi 不可用时
     回退到系统默认证书。
     """
+    global _GITHUB_SSL_CTX
+    if _GITHUB_SSL_CTX is not None:
+        return _GITHUB_SSL_CTX
     try:
         import certifi
-        return ssl.create_default_context(cafile=certifi.where())
+        _GITHUB_SSL_CTX = ssl.create_default_context(cafile=certifi.where())
     except Exception:
-        return ssl.create_default_context()
+        _GITHUB_SSL_CTX = ssl.create_default_context()
+    return _GITHUB_SSL_CTX
 
 
 def fetch_github_repo(url):
@@ -1993,10 +1999,8 @@ def fetch_github_repo(url):
     token = (app.config.get('github_token') or '').strip()
     if token:
         headers['Authorization'] = f'Bearer {token}'
-    req = urllib.request.Request(api, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=8, context=_github_ssl_context()) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
+        data = json.loads(_http_get_text_auto(api, headers))
     except urllib.error.HTTPError as e:
         code = getattr(e, 'code', 0)
         if code == 403:
@@ -2005,7 +2009,8 @@ def fetch_github_repo(url):
         elif code == 404:
             last_gh_error = '仓库不存在或无访问权限（404）：请检查地址，或仓库为私有需在「设置」配置 Token。'
         elif code == 401:
-            last_gh_error = 'GitHub Token 无效或无权限（401）：请检查「设置」中的 Token。'
+            last_gh_error = ('GitHub 拒绝访问（401）：Token 无效且匿名重试仍被拒（可能为私有仓库），'
+                             '请在「设置」中更新 GitHub Token。')
         else:
             last_gh_error = f'GitHub API 返回错误码 {code}'
         return None
@@ -2021,10 +2026,8 @@ def fetch_github_repo(url):
         lang_headers = {'User-Agent': 'infowe-Blog', 'Accept': 'application/vnd.github+json'}
         if token:
             lang_headers['Authorization'] = f'Bearer {token}'
-        lang_req = urllib.request.Request(
-            f"https://api.github.com/repos/{slug}/languages", headers=lang_headers)
-        with urllib.request.urlopen(lang_req, timeout=8, context=_github_ssl_context()) as lang_resp:
-            lang_data = json.loads(lang_resp.read().decode('utf-8'))
+        lang_data = json.loads(_http_get_text_auto(
+            f"https://api.github.com/repos/{slug}/languages", lang_headers))
         if isinstance(lang_data, dict) and lang_data:
             total = sum(lang_data.values())
             # 按字节数降序，存储 [(语言名, 百分比), ...]
@@ -2051,19 +2054,8 @@ def fetch_github_repo(url):
 # 详情页访问时按 TTL 检查，过期即重取，从而跟随 GitHub 上 README 的更新
 _PROJECT_GH_CACHE = {}
 _PROJECT_GH_LOCK = threading.Lock()
-# 手动刷新冷却：{repo_slug: 上次刷新时间戳}，防连点把 GitHub 打爆
-_PROJECT_REFRESH_AT = {}
-_PROJECT_REFRESH_GAP = 30  # 秒
 # README 候选文件名（覆盖常见大小写与 .markdown 后缀写法）
 _README_FILENAMES = ('README.md', 'readme.md', 'Readme.md', 'README.markdown')
-
-
-def _project_cache_ttl():
-    """项目详情页 GitHub 数据缓存时长（秒）：后台可配，默认 300 秒。"""
-    try:
-        return max(0, int(app.config.get('readme_cache_seconds') or 300))
-    except (TypeError, ValueError):
-        return 300
 
 
 def _github_headers(json_accept=True):
@@ -2084,6 +2076,21 @@ def _http_get_text(url, headers, timeout=8):
         return resp.read().decode('utf-8', 'replace')
 
 
+def _http_get_text_auto(url, headers, timeout=8):
+    """带认证的 GET；若 Token 无效被拒（401），自动去掉 Authorization 匿名重试一次。
+
+    公开仓库即使配置了失效的 Token 也能正常读取；匿名重试仍失败则抛最终异常。
+    """
+    try:
+        return _http_get_text(url, headers, timeout)
+    except urllib.error.HTTPError as e:
+        if e.code == 401 and headers.get('Authorization'):
+            h2 = dict(headers)
+            h2.pop('Authorization', None)
+            return _http_get_text(url, h2, timeout)
+        raise
+
+
 def fetch_github_readme(slug, branch=None):
     """拉取仓库 README 原文（Markdown 文本），返回 (文本, 错误信息)，失败时文本为 None。
 
@@ -2097,31 +2104,36 @@ def fetch_github_readme(slug, branch=None):
     if not branch:
         # 未提供默认分支时查一次仓库 API；失败不阻断，用 main/master 试探
         try:
-            data = json.loads(_http_get_text(f'https://api.github.com/repos/{slug}', _github_headers()))
+            data = json.loads(_http_get_text_auto(f'https://api.github.com/repos/{slug}', _github_headers()))
             branch = data.get('default_branch') or ''
         except Exception:
             branch = ''
     branches = list(dict.fromkeys([b for b in (branch, 'main', 'master') if b]))
+    net_err = ''
     for br in branches:
         for fn in _README_FILENAMES:
             try:
-                text = _http_get_text(
+                text = _http_get_text_auto(
                     f'https://raw.githubusercontent.com/{slug}/{br}/{fn}', _github_headers(json_accept=False))
             except urllib.error.HTTPError:
                 continue          # 该文件名不存在，试下一个
             except (urllib.error.URLError, OSError, ValueError):
-                return None, last_gh_error or '网络请求失败，无法访问 GitHub'
+                # raw 域名网络不通：记下错误，改走 readme API 兜底（api 域名可能可达）
+                net_err = last_gh_error or '网络请求失败，无法访问 GitHub'
+                break
             if text.strip():
                 return text, ''
-    # 回退：readme API（占 1 次 API 配额，可拿到自定义路径的 README）
+        if net_err:
+            break
+    # 回退：readme API（占 1 次 API 配额，可拿到自定义路径的 README；Token 失效会自动匿名重试）
     try:
-        data = json.loads(_http_get_text(f'https://api.github.com/repos/{slug}/readme', _github_headers()))
+        data = json.loads(_http_get_text_auto(f'https://api.github.com/repos/{slug}/readme', _github_headers()))
         content = base64.b64decode(data.get('content') or '').decode('utf-8', 'replace')
         if content.strip():
             return content, ''
     except Exception:
         pass
-    return None, '仓库中未找到 README 文件'
+    return None, net_err or '仓库中未找到 README 文件'
 
 
 def _absolutize_readme_urls(html, slug, branch):
@@ -2153,49 +2165,209 @@ def render_readme_html(md, slug, branch):
     return _sanitize_html(html)
 
 
-def fetch_project_github(project, force=False):
-    """拉取项目在 GitHub 上的实时元数据与 README，整体按 TTL 内存缓存。
+# ── README 图片本地化：同步时把 GitHub raw 图片下载到本地上传目录 ──
+# 存储位置 uploads/projects/<slug>/readme/（与上传附件同体系，URL 走 /uploads/ 路由，
+# 不入 static/ 避免参与版本指纹扫描）；文件名为 URL 的 MD5 + 扩展名，内容不变则文件复用。
+_README_IMG_ROOT = os.path.join(UPLOAD_DIR, 'projects')
+_README_IMG_EXT = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico')
+_README_IMG_MAX = 8 * 1024 * 1024  # 单图上限 8MB，防超大图拖慢同步/占满磁盘
 
-    返回 {'gh': 元数据|None, 'readme': HTML|None, 'branch': 分支名,
-          'ts': 抓取时间戳, 'error': 错误信息, 'cached': 是否命中缓存}。
-    缓存过期（默认 300 秒）后下次访问自动重取 —— 即 GitHub 上 README 更新后
-    页面会在一个 TTL 周期内跟随更新，无需人工干预；force=True 用于手动刷新。
+
+def _fetch_bin(url, timeout, accept=None, auth=False):
+    """下载二进制内容（带 UA/可选 Accept/Bearer）；失败或超限返回 None。"""
+    headers = {'User-Agent': 'infowe-Blog'}
+    if accept:
+        headers['Accept'] = accept
+    if auth:
+        token = (app.config.get('github_token') or '').strip()
+        if token:
+            headers['Authorization'] = 'Bearer ' + token
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=timeout, context=_github_ssl_context()) as resp:
+            return resp.read(_README_IMG_MAX + 1)
+    except Exception:
+        return None
+
+
+def _raw_url_to_api(url, slug):
+    """raw.githubusercontent.com/{slug}/{branch}/{path} → api.github.com 下载地址。
+
+    raw 域名在部分网络下极慢，回退到 api.github.com（一般快得多）仍能取到原图字节。
     """
-    slug = (project.get('github_repo') or '').strip() or parse_github_repo(project.get('url') or '')
+    m = re.match(r'https://raw\.githubusercontent\.com/' + re.escape(slug) + r'/([^/]+)/(.+)', url)
+    if not m:
+        return None
+    branch, path = m.group(1), m.group(2)
+    # 路径可能含中文/空格等非 ASCII 字符，必须 percent-encode（保留 / 与已有编码）
+    path_q = urllib.parse.quote(path, safe='/%')
+    return (f'https://api.github.com/repos/{slug}/contents/{path_q}?ref={branch}')
+
+
+def _guess_image_ext(data, url):
+    """扩展名：URL 后缀优先，其次按文件魔数识别，均无法识别则留空。"""
+    ext = os.path.splitext(urllib.parse.urlparse(url).path)[1].lower()
+    if ext in _README_IMG_EXT:
+        return ext
+    if data[:8] == b'\x89PNG\r\n\x1a\n':
+        return '.png'
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        return '.gif'
+    if data[:2] == b'\xff\xd8':
+        return '.jpg'
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return '.webp'
+    if data[:5] in (b'<svg ', b'<?xml'):
+        return '.svg'
+    return ''
+
+
+def _download_readme_image(url, slug):
+    """下载单个 README 图片到本地，返回 'projects/<slug>/readme/<name>'；失败返回 None。"""
+    data = _fetch_bin(url, 15)
+    if data is None:
+        # raw 域名网络不通时回退 GitHub API 下载（计入 API 配额，Token 下配额充足）
+        alt = _raw_url_to_api(url, slug)
+        if alt:
+            data = _fetch_bin(alt, 15, accept='application/vnd.github.raw', auth=True)
+    if not data or len(data) > _README_IMG_MAX:
+        return None
+    name = hashlib.md5(url.encode('utf-8')).hexdigest() + _guess_image_ext(data, url)
+    directory = os.path.join(_README_IMG_ROOT, slug, 'readme')
+    try:
+        os.makedirs(directory, exist_ok=True)
+        with open(os.path.join(directory, name), 'wb') as f:
+            f.write(data)
+    except OSError:
+        return None
+    return 'projects/%s/readme/%s' % (slug, name)
+
+
+def _prune_readme_images(slug, new_html):
+    """清理 readme 图片目录中已不被新 HTML 引用的旧文件（防止多次同步后膨胀）。"""
+    directory = os.path.join(_README_IMG_ROOT, slug, 'readme')
+    if not os.path.isdir(directory):
+        return
+    kept = set(re.findall(r'/uploads/projects/%s/readme/([A-Za-z0-9._-]+)' % re.escape(slug),
+                          new_html))
+    try:
+        for name in os.listdir(directory):
+            p = os.path.join(directory, name)
+            if os.path.isfile(p) and name not in kept:
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
+
+def _localize_readme_images(html, slug):
+    """把 README 中指向同仓库 raw.githubusercontent.com 的图片下载到本地并替换 src。
+
+    仅管理员同步时调用（前台零 GitHub 请求）。下载失败的图片保留原 GitHub 地址，
+    不影响 README 展示。多张图并发下载（该域名在部分网络下较慢，串行会拖死同步）。
+    返回替换后的 HTML。
+    """
+    if not html or not slug:
+        return html
+    pattern = re.compile(
+        r'(<img\b[^>]*\bsrc=")(https://raw\.githubusercontent\.com/' + re.escape(slug) + r'/[^"]*)(")',
+        re.I)
+    urls = [m.group(2) for m in pattern.finditer(html)]
+    if not urls:
+        return html
+    # 子线程只负责下载并返回文件名（不调用 url_for，避免线程外无 app context）；URL 组装回主线程
+    filename_map = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
+        futs = {ex.submit(_download_readme_image, u, slug): u for u in dict.fromkeys(urls)}
+        for f in concurrent.futures.as_completed(futs):
+            try:
+                fn = f.result()
+            except Exception:
+                fn = None
+            if fn:
+                filename_map[futs[f]] = fn
+
+    def _replace(m):
+        fn = filename_map.get(m.group(2))
+        if not fn:
+            return m.group(0)
+        # 直接拼 /uploads/ 相对路径（与 /uploads 路由一致），避免依赖请求上下文
+        return m.group(1) + '/uploads/' + fn + m.group(3)
+
+    new_html = pattern.sub(_replace, html)
+    if new_html != html:
+        _prune_readme_images(slug, new_html)
+    return new_html
+
+
+# 磁盘持久化缓存文件：拉取结果存盘，服务重启后仍可秒开已拉取过的项目
+_PROJECT_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   'data', 'project_gh_cache.json')
+
+
+def _persist_project_cache():
+    """把内存缓存写盘（data/project_gh_cache.json），失败静默。"""
+    try:
+        with open(_PROJECT_CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(_PROJECT_GH_CACHE, f, ensure_ascii=False)
+    except (OSError, TypeError, ValueError):
+        pass
+
+
+def _load_project_cache():
+    """启动时把磁盘缓存载入内存（结构校验，坏数据忽略）。"""
+    try:
+        with open(_PROJECT_CACHE_FILE, 'r', encoding='utf-8') as f:
+            raw = json.load(f)
+        if isinstance(raw, dict):
+            for k, v in raw.items():
+                if isinstance(v, dict) and isinstance(v.get('ts'), (int, float)):
+                    _PROJECT_GH_CACHE[k] = v
+    except (OSError, ValueError, TypeError):
+        pass
+
+
+_load_project_cache()
+
+
+def project_cache_snapshot(slug):
+    """只读缓存快照（绝不触发网络请求）；无缓存返回 None。"""
+    hit = _PROJECT_GH_CACHE.get(slug)
+    return dict(hit) if hit else None
+
+
+def fetch_project_github(project_url):
+    """拉取项目在 GitHub 上的实时元数据与 README，写入内存缓存并持久化（磁盘）。
+
+    仅在管理员后台「新增项目 / 同步 / 一键同步全部」时被调用（手动触发），
+    前台页面绝不发起任何 GitHub 请求 —— 匿名 API 限额（60/小时）只被低频的
+    管理员操作消耗，前台永远秒开。返回 {'gh','readme','branch','ts','error'}。
+    """
+    slug = parse_github_repo(project_url)
     if not slug:
         return {'gh': None, 'readme': None, 'branch': '', 'ts': 0,
-                'error': '该项目未关联 GitHub 仓库', 'cached': False}
+                'error': '该项目未关联 GitHub 仓库'}
     now = time.time()
-    ttl = _project_cache_ttl()
-    if not force and ttl > 0:
-        hit = _PROJECT_GH_CACHE.get(slug)
-        if hit and now - hit['ts'] < ttl:
-            out = dict(hit)
-            out['cached'] = True
-            return out
-    gh = fetch_github_repo(project.get('url') or f'https://github.com/{slug}')
+    gh = fetch_github_repo(project_url)
     branch = (gh or {}).get('default_branch') or ''
     md, err = fetch_github_readme(slug, branch)
+    html = render_readme_html(md, slug, branch)
+    if html:
+        # 图片本地化：同仓库 raw 图片下载到 uploads/projects/<slug>/readme/，前台零 GitHub 请求
+        html = _localize_readme_images(html, slug)
     entry = {
         'ts': now,
         'gh': gh,
         'branch': branch or 'main',
-        'readme': render_readme_html(md, slug, branch),
+        'readme': html,
         'error': '' if md else (err or '未找到 README 文件'),
-        'cached': False,
     }
     with _PROJECT_GH_LOCK:
         _PROJECT_GH_CACHE[slug] = entry
+    _persist_project_cache()
     return dict(entry)
-
-
-def invalidate_project_cache(slug=None):
-    """清空项目 GitHub 数据缓存（slug 为空则全清），后台「清除缓存」按钮调用。"""
-    with _PROJECT_GH_LOCK:
-        if slug:
-            _PROJECT_GH_CACHE.pop(slug, None)
-        else:
-            _PROJECT_GH_CACHE.clear()
 
 
 def db_repo_exists(slug, exclude_id=None):
@@ -2742,7 +2914,7 @@ def index():
                            page=1, total_pages=1, total=total,
                            featured=featured,
                            links=home_links,
-                           total_categories=len(db_load_categories()))
+                           total_categories=len(categories))
 
 
 @app.route('/posts')
@@ -3321,8 +3493,16 @@ def project_detail(project_id):
     project['lang_list'] = [[n, pct, lang_color(n)] for n, pct in langs]
     project['lang_names'] = ','.join(n for n, _, _ in project['lang_list'])
 
-    # GitHub 实时数据 + README（内存缓存，默认 300 秒，随 GitHub 更新自动重取）
-    gh = fetch_project_github(project)
+    # GitHub 实时数据 + README（内存缓存 + 磁盘持久化）。
+    # 前台零 GitHub 请求：缓存只在管理员后台「新增/同步/一键同步全部」时写入；
+    # 详情页直接读快照，无缓存则显示「未同步」提示（管理员可在后台点同步拉取）。
+    slug = (project.get('github_repo') or '').strip() or parse_github_repo(project.get('url') or '')
+    cached = project_cache_snapshot(slug) if slug else None
+    if cached:
+        gh = dict(cached)
+        gh['cached'] = True
+    else:
+        gh = {'gh': None, 'readme': None, 'branch': '', 'ts': 0, 'error': '', 'cached': False}
     # README 抓取时间 → 「更新于 X 分钟前」文案
     if gh['ts']:
         minutes = max(0, int((time.time() - gh['ts']) / 60))
@@ -3361,32 +3541,7 @@ def project_detail(project_id):
                            comments=comments, comment_total=comment_total,
                            comments_enabled=comments_enabled,
                            commenter=commenter, is_admin=is_admin,
-                           admin_avatar=admin_avatar, my_pending=my_pending,
-                           refresh_gap=_PROJECT_REFRESH_GAP)
-
-
-@app.route('/projects/<int:project_id>/refresh', methods=['POST'])
-def project_readme_refresh(project_id):
-    """手动刷新项目 GitHub 数据 + README（带冷却，防连点打爆 GitHub）。"""
-    if not nav_enabled('projects'):
-        abort(404)
-    project = db_get_project(project_id)
-    if not project:
-        abort(404)
-    slug = (project.get('github_repo') or '').strip() or parse_github_repo(project.get('url') or '')
-    now = time.time()
-    # 冷却期内拒绝重复刷新（仅限有 GitHub 仓库的项目）
-    if slug and now - _PROJECT_REFRESH_AT.get(slug, 0) < _PROJECT_REFRESH_GAP:
-        flash('刷新太频繁，请稍后再试', 'error')
-        return redirect(url_for('project_detail', project_id=project_id))
-    if slug:
-        _PROJECT_REFRESH_AT[slug] = now
-    info = fetch_project_github(project, force=True)
-    if info.get('readme'):
-        flash('README 已更新为 GitHub 最新内容', 'success')
-    else:
-        flash('README 刷新失败：%s' % (info.get('error') or '未知原因'), 'error')
-    return redirect(url_for('project_detail', project_id=project_id) + '#readme')
+                           admin_avatar=admin_avatar, my_pending=my_pending)
 
 
 @app.route('/links')
@@ -3747,6 +3902,9 @@ def admin_project_new():
             flash('该项目已存在，不能重复添加（' + slug + '）', 'error')
             return render_template('admin/project_edit.html', project=None)
         db_save_project(request.form)
+        # 同时同步 README 入缓存（管理员手动触发，前台零 GitHub 请求）
+        if slug:
+            fetch_project_github(request.form.get('url', ''))
         flash('项目已添加（已从 GitHub 同步实时数据）', 'success')
         return redirect(url_for('admin_projects'))
     return render_template('admin/project_edit.html', project=None)
@@ -3811,11 +3969,16 @@ def admin_project_sync(project_id):
     if not gh:
         flash('同步失败：' + (last_gh_error or '无法获取 GitHub 数据（地址无效或已达 API 限额）'), 'error')
         return redirect(url_for('admin_projects'))
+    # 同步 README 入缓存（前台零 GitHub 请求，README 仅随管理员同步更新）
+    info = fetch_project_github(row['url'])
     db_save_project({
         'url': gh['url'], 'sort_order': request.form.get('sort_order', '0'),
         'featured': request.form.get('featured', '')
     }, project_id, keep_name=True)
-    flash('已从 GitHub 同步：' + gh['name'] + '（★' + str(gh['stars']) + '）', 'success')
+    msg = '已从 GitHub 同步：' + gh['name'] + '（★' + str(gh['stars']) + '）'
+    if not info.get('readme'):
+        msg += '；README 拉取失败：' + (info.get('error') or '未知原因')
+    flash(msg, 'success')
     return redirect(url_for('admin_projects'))
 
 
@@ -3839,6 +4002,8 @@ def admin_projects_sync_all():
         if not gh:
             failed += 1
             continue
+        # 同步 README 入缓存（前台零 GitHub 请求，README 仅随管理员同步更新）
+        fetch_project_github(p['url'])
         db_save_project({
             'url': gh['url'], 'sort_order': p['sort_order'],
             'featured': '1' if p['featured'] else ''
@@ -4376,7 +4541,6 @@ def admin_settings():
                      'about_intro', 'skills', 'avatar', 'github_username',
                      'social_github', 'github_token', 'contact_email', 'home_title', 'icp_beian', 'police_beian',
                      'home_posts_count', 'posts_per_page',
-                     'readme_cache_seconds',
                      'smtp_host', 'smtp_sender_name', 'smtp_port', 'smtp_user', 'smtp_pass', 'notify_email']:
             if key in request.form:
                 save_setting(key, request.form[key])

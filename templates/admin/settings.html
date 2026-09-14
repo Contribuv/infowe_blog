@@ -78,12 +78,6 @@
                 <span class="form-hint">前台「文章」列表页每页显示的文章数量，超过则分页（默认 20）。</span>
             </div>
             <div class="form-group">
-                <label>项目文档缓存时间（秒）</label>
-                <input type="number" name="readme_cache_seconds" class="input-text"
-                       value="{{ config.get('readme_cache_seconds', '300') }}" min="0" max="86400">
-                <span class="form-hint">项目详情页拉取 GitHub README 的缓存时长，过期后自动重取最新文档（默认 300 秒）。</span>
-            </div>
-            <div class="form-group">
                 <label>评论功能</label>
                 <label class="switch-label">
                     <span class="switch">
@@ -189,7 +183,7 @@
                 <input type="password" name="github_token" class="input-text"
                        value="{{ config.get('github_token', '') }}"
                        placeholder="ghp_xxx 或 github_pat_xxx（仅用于同步私有仓库/提升限额）">
-                <span class="form-hint">用于在后台同步 GitHub 项目数据。配置后可访问私有仓库，并将 API 限额从匿名 60/小时 提升到 5000/小时。建议用仅含 <code>repo</code> 只读权限的 Token，留空则用匿名访问。</span>
+                <span class="form-hint">仅后台「项目同步」时使用，可留空匿名拉取。配置后可访问私有仓库，并将 API 限额从匿名 60/小时 提升到 5000/小时。建议用仅含 <code>repo</code> 只读权限的 Token。前台项目页不依赖此配置。</span>
             </div>
             <div class="form-hint">
                 RSS 链接自动生成（/feed.xml）。邮箱、GitHub 会用于前台"关于我"卡片展示。
