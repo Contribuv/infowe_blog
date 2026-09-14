@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.36'
+VERSION = '1.3.37'
 
 import os
 import re
@@ -2062,27 +2062,104 @@ _README_FILENAMES = ('README.md', 'readme.md', 'Readme.md', 'README.markdown')
 # 同步会拉取 README 并本地化图片，单项目可能耗时 1-2 分钟、一键同步全部更久，
 # 远超 nginx 默认 60s 上游超时。因此 POST 后立即返回，由 daemon 线程执行，
 # 页面用 /admin/projects/sync-status 轮询进度，完成后再刷新查看结果。
-_PROJECT_SYNC_STATE = {
+#
+# 同步状态落盘（data/project_sync_state.json）：gunicorn 多 worker 部署下各进程
+# 内存彼此独立，提交与轮询可能打到不同 worker，只有磁盘状态才是跨 worker 一致
+# 的——同步线程每更新一次即写盘，读取以内存（本 worker 正在跑）为优先、否则回退
+# 磁盘（其他 worker 提交的任务）。
+_PROJECT_SYNC_STATE_DEFAULT = {
     'running': False, 'finished': False,
     'total': 0, 'done': 0, 'ok': 0, 'failed': 0,
-    'current': '', 'summary': '',
+    'current': '', 'summary': '', 'saved_at': 0,
 }
+SYNC_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               'data', 'project_sync_state.json')
+
+
+def _load_sync_state():
+    """启动/首访时从磁盘加载同步状态（多 worker / 重启后状态不丢）。"""
+    try:
+        with open(SYNC_STATE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            st = dict(_PROJECT_SYNC_STATE_DEFAULT)
+            for k in st:
+                if k in data:
+                    st[k] = data[k]
+            # 不残留陈旧的「完成」提示：完成超过 10 分钟即视为空闲，
+            # 避免重启/换 worker 后页面一直挂着上次的「同步完成」条。
+            if st['finished'] and time.time() - st.get('saved_at', 0) > 600:
+                st['finished'] = False
+                st['summary'] = ''
+            return st
+    except (OSError, ValueError, TypeError):
+        pass
+    return dict(_PROJECT_SYNC_STATE_DEFAULT)
+
+
+def _save_sync_state():
+    """原子写入同步状态（tmp + os.replace），供其他 worker 读取。"""
+    try:
+        tmp = SYNC_STATE_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(_PROJECT_SYNC_STATE, f, ensure_ascii=False)
+        os.replace(tmp, SYNC_STATE_FILE)
+    except OSError:
+        pass
+
+
+_PROJECT_SYNC_STATE = _load_sync_state()
 _PROJECT_SYNC_LOCK = threading.Lock()
+# 磁盘读取 mtime 快照：[上次比对键, 上次文件键, 上次解析数据]
+_SYNC_STATE_SNAP = [None, None, dict(_PROJECT_SYNC_STATE_DEFAULT)]
+
+
+def project_sync_state():
+    """读取跨 worker 一致的同步状态（只读不写）。
+    本 worker 正在跑任务则以内存为准；否则回退磁盘（可能是其他 worker 提交的）。
+    带 mtime+size 快照，避免每个轮询请求都做 IO + JSON 解析。"""
+    mem = _PROJECT_SYNC_STATE
+    if mem.get('running'):
+        return dict(mem)
+    try:
+        st = os.stat(SYNC_STATE_FILE)
+        key = (st.st_mtime_ns, st.st_size)
+        if _SYNC_STATE_SNAP[0] != key:
+            if key != _SYNC_STATE_SNAP[1]:
+                with open(SYNC_STATE_FILE, 'r', encoding='utf-8') as f:
+                    raw = json.load(f)
+                data = raw if isinstance(raw, dict) else {}
+                _SYNC_STATE_SNAP[1] = key
+            else:
+                data = _SYNC_STATE_SNAP[2]
+            _SYNC_STATE_SNAP[0] = key
+            _SYNC_STATE_SNAP[2] = data
+        else:
+            data = _SYNC_STATE_SNAP[2]
+    except (OSError, ValueError, TypeError):
+        data = {}
+    st_out = dict(_PROJECT_SYNC_STATE_DEFAULT)
+    for k in st_out:
+        if k in data:
+            st_out[k] = data[k]
+    return st_out
 
 
 def _sync_projects_background(projects, single_id=None):
-    """后台线程批量同步项目（GitHub 实时数据 + README 本地化），状态写入 _PROJECT_SYNC_STATE。
-
-    projects: 全部项目行；single_id: 仅同步该 id（其余忽略）；None 表示同步全部。
-    进程内互斥：同一 worker 不会同时跑两个同步任务。"""
+    """后台线程批量同步项目（GitHub 实时数据 + README 本地化），状态写入
+    _PROJECT_SYNC_STATE 并立即落盘（供多 worker 读取）。
+    projects: 全部项目行；single_id: 仅同步该 id（其余忽略）；None 表示同步全部。"""
     with _PROJECT_SYNC_LOCK:
-        if _PROJECT_SYNC_STATE['running']:
+        # 兜底防重：磁盘显示已有任务（本 worker 或他 worker）则不再启动
+        if project_sync_state()['running']:
             return
         _PROJECT_SYNC_STATE.update(running=True, finished=False,
                                    total=0, done=0, ok=0, failed=0,
-                                   current='', summary='')
+                                   current='', summary='', saved_at=time.time())
+        _save_sync_state()
     targets = [p for p in projects if single_id is None or p['id'] == single_id]
     _PROJECT_SYNC_STATE['total'] = len(targets)
+    _save_sync_state()
     seen = set()
     try:
         for p in targets:
@@ -2090,6 +2167,7 @@ def _sync_projects_background(projects, single_id=None):
             _PROJECT_SYNC_STATE['current'] = (p.get('name') or p.get('title') or p.get('url') or '').strip() or slug
             if not slug or slug in seen:
                 _PROJECT_SYNC_STATE['done'] += 1
+                _save_sync_state()
                 continue
             seen.add(slug)
             try:
@@ -2108,17 +2186,21 @@ def _sync_projects_background(projects, single_id=None):
             except Exception:
                 _PROJECT_SYNC_STATE['failed'] += 1
             _PROJECT_SYNC_STATE['done'] += 1
+            _save_sync_state()
         _PROJECT_SYNC_STATE['summary'] = '同步完成：成功 %d 个，失败 %d 个' % (
             _PROJECT_SYNC_STATE['ok'], _PROJECT_SYNC_STATE['failed'])
     finally:
         _PROJECT_SYNC_STATE['running'] = False
         _PROJECT_SYNC_STATE['finished'] = True
+        _PROJECT_SYNC_STATE['saved_at'] = time.time()
+        _save_sync_state()
 
 
 def _start_project_sync(projects, single_id=None):
-    """以 daemon 线程启动后台同步（已在同步中则返回 False，不重复排队）。"""
+    """以 daemon 线程启动后台同步（本 worker 或磁盘显示已在同步则返回 False）。
+    真正的 running 标记由后台线程设置并立即落盘，启动前只做只读检查。"""
     with _PROJECT_SYNC_LOCK:
-        if _PROJECT_SYNC_STATE['running']:
+        if project_sync_state()['running']:
             return False
     t = threading.Thread(target=_sync_projects_background,
                          args=(list(projects), single_id), daemon=True)
@@ -4093,8 +4175,21 @@ def admin_projects_sync_all():
 @app.route('/admin/projects/sync-status')
 @admin_required
 def admin_projects_sync_status():
-    """后台同步进度接口（前台轮询）：running/total/done/current/summary。"""
-    return jsonify(dict(_PROJECT_SYNC_STATE))
+    """后台同步进度接口（前台轮询）：running/total/done/current/summary。
+    返回跨 worker 一致的状态（本 worker 内存优先，否则回退磁盘）。
+    ?consume=1：页面自动刷新前调用，把已完成的提示消费掉（清空 finished/summary
+    及进度数字），避免下次进入 /admin/projects 时仍挂「同步完成」条；运行中不可消费。"""
+    st = project_sync_state()
+    if request.args.get('consume') == '1' and st.get('finished') and not st.get('running'):
+        with _PROJECT_SYNC_LOCK:
+            _PROJECT_SYNC_STATE.update(finished=False, summary='', current='',
+                                       done=0, total=0, ok=0, failed=0)
+            _save_sync_state()
+        st['finished'] = False
+        st['summary'] = ''
+        st['current'] = ''
+        st['done'] = st['total'] = st['ok'] = st['failed'] = 0
+    return jsonify(st)
 
 
 # ─────────────── 后台: 友情链接管理 ───────────────

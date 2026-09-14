@@ -107,6 +107,14 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.37
+
+- **修复：后台所有页面 500**（升级检测缓存落盘引入）：`data/upgrade_cache.json` 里 `version` 是 tuple 序列化后的数组，读回为 list，与 `parse_version()` 返回的 tuple 比较抛 `TypeError`，导致后台每个页面渲染都崩。现读缓存时自动还原为 tuple。
+- **修复：`/admin/projects` 点「同步」报「无效的批量操作」**：同步/删除按钮的表单原本嵌套在批量操作表单内，违反 HTML 规范——浏览器丢弃内层表单 `action`，点击实际提交到批量接口。已改为表格外定义表单 + `form` 属性归属。
+- **修复：同步完成后页面无限闪屏**：`finished` 状态常驻，页面每次加载都触发自动刷新，形成 reload 死循环。现仅当本次加载观测到「进行中→完成」转变才刷新；打开页面时同步早已完成则静默不提示。
+- **优化：同步完成提示不再常驻**：自动刷新前先 `consume` 完成状态，之后重新进入/刷新页面不再看到「同步完成」旧提示。
+- **优化：同步状态落盘**（`data/project_sync_state.json`）：gunicorn 多 worker 下状态跨进程一致——提交、进度轮询、防重复并发均以磁盘为权威，任一 worker 都能看到同步进度与结果。
+
 ### v1.3.36
 
 - **修复：项目同步触发 nginx 60s 上游超时**：同步单个项目需拉取 GitHub 数据并本地化 README 图片，耗时 1-2 分钟（一键同步全部更久），远超 nginx 默认 60s 上游超时，日志报 `upstream timed out ... POST /admin/projects/1/sync`。现在同步改为**后台线程执行**，POST 立即返回（实测 6.9ms），后台页面每 2 秒轮询 `/admin/projects/sync-status` 进度，完成后自动刷新列表；同步进行中重复提交会被拒绝并提示。
