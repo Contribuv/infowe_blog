@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block og_title %}{{ project.name }}{% endblock %}
+{% block tw_title %}{{ project.name }}{% endblock %}
+{% block og_description %}{{ (project.description or blog_subtitle) }}{% endblock %}
+{% block tw_description %}{{ (project.description or blog_subtitle) }}{% endblock %}
+{% block og_url %}{{ request.url }}{% endblock %}
+{% block content %}
+{# gh.gh 为 GitHub 实时元数据（拉取失败时为 None，回退到库内数据） #}
+{% set gh_meta = gh.gh or {} %}
+<article class="tech-proj">
+    <!-- 顶部项目卡片：简介 + 实时统计 + 访问 GitHub 入口 -->
+    <section class="tech-proj-hero">
+        <div class="tech-proj-hero-main">
+            <h1 class="tech-proj-name">
+                {{ project.name }}
+                {% if project.featured %}<span class="tech-proj-badge">精选</span>{% endif %}
+            </h1>
+            {% set desc = gh_meta.description or project.description %}
+            {% if desc %}<p class="tech-proj-desc">{{ desc }}</p>{% endif %}
+
+            <div class="tech-proj-meta">
+                <span class="tech-proj-meta-item">★ {{ gh_meta.stars or project.stars }} Stars</span>
+                {% if project.lang_list %}
+                <span class="tech-proj-meta-item">{{ project.lang_list | length }} 种语言</span>
+                {% endif %}
+                {% if gh.age_text %}
+                <span class="tech-proj-meta-item">文档更新于 {{ gh.age_text }}</span>
+                {% endif %}
+            </div>
+
+            {% if project.lang_list %}
+            <div class="tech-proj-langs">
+                {% for l in project.lang_list %}
+                <span class="tech-project-lang">
+                    <span class="tech-lang-dot" style="background: {{ l[2] }};"></span>
+                    {{ l[0] }}<span class="tech-project-lang-pct"> {{ l[1] }}%</span>
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if project.topics %}
+            <div class="tech-proj-topics">
+                {% for t in project.topics %}<span class="tech-proj-topic">{{ t }}</span>{% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        {% if project.url %}
+        <a class="tech-btn tech-proj-gh" href="{{ project.url }}" target="_blank" rel="noopener">访问 GitHub ↗</a>
+        {% endif %}
+    </section>
+
+    <!-- 项目文档：拉取 GitHub 仓库 README 渲染（缓存过期后自动跟随 GitHub 更新） -->
+    <section class="tech-proj-readme" id="readme">
+        <div class="tech-proj-readme-head">
+            <h2 class="tech-proj-readme-title">项目文档</h2>
+            <div class="tech-proj-readme-tools">
+                {% if gh.age_text %}<span class="tech-proj-readme-age">{{ gh.age_text }}更新</span>{% endif %}
+                <form class="tech-proj-refresh-form" method="POST" action="/projects/{{ project.id }}/refresh"
+                      onsubmit="this.querySelector('button').disabled = true">
+                    <button type="submit" class="tech-btn tech-proj-refresh" title="重新拉取 GitHub 上的最新 README">刷新</button>
+                </form>
+            </div>
+        </div>
+        {% if gh.readme %}
+        <div class="tech-proj-readme-body markdown-body">{{ gh.readme | safe }}</div>
+        {% else %}
+        <div class="tech-proj-readme-empty">
+            <p>{{ gh.error or '暂无项目文档' }}</p>
+            {% if project.url %}
+            <p>可前往 <a href="{{ project.url }}" target="_blank" rel="noopener">GitHub 仓库</a> 查看完整说明</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- 评论区（与文章页共用同一片段，表单指向项目评论接口；关闭评论时整块不显示） -->
+    {% if comments_enabled %}
+    {% set comment_section_class = 'tech-comments' %}
+    {% set comment_form_action = '/projects/' ~ project.id ~ '/comment' %}
+    {% include "_comments.html" %}
+    {% endif %}
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* README 增强：宽表格横向滚动容器 + 代码块复制按钮 + 代码高亮 */
+(function () {
+    'use strict';
+    var content = document.querySelector('.tech-proj-readme-body');
+    if (!content) return;
+
+    content.querySelectorAll('table').forEach(function (table) {
+        if (table.parentElement && table.parentElement.classList.contains('table-wrap')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        table.parentNode.insertBefore(wrap, table);
+        wrap.appendChild(table);
+    });
+
+    content.querySelectorAll('pre').forEach(function (pre) {
+        if (pre.parentElement && pre.parentElement.classList.contains('code-wrap')) return;
+        var wrap = document.createElement('div');
+        wrap.className = 'code-wrap';
+        pre.parentNode.insertBefore(wrap, pre);
+        wrap.appendChild(pre);
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'code-copy';
+        btn.textContent = '复制';
+        btn.setAttribute('aria-label', '复制代码');
+        wrap.appendChild(btn);
+        btn.addEventListener('click', function () {
+            var code = pre.querySelector('code');
+            navigator.clipboard.writeText(code ? code.innerText : pre.innerText).then(function () {
+                btn.textContent = '已复制';
+                setTimeout(function () { btn.textContent = '复制'; }, 2000);
+            });
+        });
+    });
+    if (typeof hljs !== 'undefined') {
+        content.querySelectorAll('pre code').forEach(function (block) { hljs.highlightElement(block); });
+    }
+})();
+</script>
+{% if comments_enabled %}
+<script src="{{ url_for('static', filename='js/toast.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='js/comments.js', t='v' ~ version) }}"></script>
+{% endif %}
+{% endblock %}

@@ -26,7 +26,7 @@
                     <th>状态</th>
                     <th>作者</th>
                     <th>内容</th>
-                    <th>文章</th>
+                    <th>文章 / 项目</th>
                     <th>网址</th>
                     <th>邮箱</th>
                     <th>来源</th>
@@ -55,7 +55,11 @@
                         </span>
                     </td>
                     <td class="desc-cell" data-label="内容">{{ c.content[:100] }}</td>
-                    <td data-label="文章"><a href="/post/{{ c.post_id }}#comment-{{ c.id }}" target="_blank">{{ c.post_title[:20] }}</a></td>
+                    <td data-label="文章 / 项目">
+                        {% if c.post_id %}<a href="/post/{{ c.post_id }}#comment-{{ c.id }}" target="_blank">{{ c.post_title[:20] }}</a>
+                        {% elif c.project_id %}<a href="/projects/{{ c.project_id }}#comment-{{ c.id }}" target="_blank">{{ c.project_name[:20] }}</a>
+                        {% else %}<span class="cell-muted">—</span>{% endif %}
+                    </td>
                     <td data-label="网址">
                         {% if c.website %}<a href="{{ c.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ c.website[:30] }}</a>
                         {% else %}<span class="cell-muted">—</span>{% endif %}

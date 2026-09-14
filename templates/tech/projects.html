@@ -21,11 +21,7 @@
         {% for project in projects %}
         <article class="tech-project-card{% if project.featured %} tech-project-card-featured{% endif %}" data-langs="{{ project.lang_names }}">
             <div class="tech-project-card-head">
-                {% if project.url %}
-                <a href="{{ project.url }}" target="_blank" rel="noopener" class="tech-project-name">{{ project.name }}</a>
-                {% else %}
-                <span class="tech-project-name">{{ project.name }}</span>
-                {% endif %}
+                <a href="/projects/{{ project.id }}" class="tech-project-name">{{ project.name }}</a>
                 {% if project.featured %}<span class="tech-project-featured">精选</span>{% endif %}
                 <span class="tech-project-stars">★ {{ project.stars }}</span>
             </div>

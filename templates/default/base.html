@@ -35,14 +35,16 @@
     <meta name="twitter:title" content="{% block tw_title %}{{ blog_name }}{% endblock %}">
     <meta name="twitter:description" content="{% block tw_description %}{{ blog_subtitle }}{% endblock %}">
     <meta name="twitter:image" content="{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
-    {% if request.path.startswith('/post/') %}
-    <!-- 文章正文统一 GitHub 排版（含 GitHub 浅/深双配色代码高亮），须在主题样式之后加载 -->
+    {% if request.path.startswith('/post/') or request.path.startswith('/projects/') %}
+    <!-- 正文统一 GitHub 排版（文章正文 / 项目 README 共用），须在主题样式之后加载 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t='v' ~ version) }}">
-    <!-- 文章分享面板样式（两主题通用） -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t='v' ~ version) }}">
     <!-- 评论区（两主题共用，靠 CSS 变量换肤）+ Toast 轻提示 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css', t='v' ~ version) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css', t='v' ~ version) }}">
+    {% endif %}
+    {% if request.path.startswith('/post/') %}
+    <!-- 文章分享面板样式（两主题通用） -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t='v' ~ version) }}">
     {% endif %}
 </head>
 <body>
@@ -136,7 +138,7 @@
         </svg>
     </button>
 
-    {% if request.path.startswith('/post/') %}
+    {% if request.path.startswith('/post/') or request.path.startswith('/projects/') %}
     <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
     {% endif %}
     <script src="{{ url_for('static', filename='js/main.js', t='v' ~ version) }}" defer></script>

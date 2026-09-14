@@ -71,6 +71,7 @@
                 </td>
                 <td data-label="操作">
                     <div class="btn-group">
+                        <a href="/projects/{{ p.id }}" class="btn btn-sm" target="_blank" title="在前台查看项目详情页">前台</a>
                         <a href="{{ url_for('admin_project_edit', project_id=p.id) }}" class="btn btn-sm">编辑</a>
                         <form method="POST" action="{{ url_for('admin_project_sync', project_id=p.id) }}" style="display:inline">
                             <button type="submit" class="btn btn-sm" title="重新从 GitHub 拉取实时数据">{{ icon('refresh-cw', 14) | safe }} 同步</button>

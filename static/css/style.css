@@ -11,6 +11,8 @@ html {
   -webkit-font-smoothing: antialiased;
   /* 始终预留滚动条槽位，消除页面长短切换时内容区的水平位移 */
   scrollbar-gutter: stable;
+  /* 禁用双击缩放 / 捏合缩放的 CSS 兜底（disable-zoom.js 为 iOS 主力拦截） */
+  touch-action: manipulation;
 }
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
@@ -971,6 +973,110 @@ html[data-theme-mode="auto"] .theme-toggle::after {
 }
 .lang-filter-item:hover { border-color: var(--border-strong); }
 .lang-filter-item.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+
+/* ——— 项目详情页 ——— */
+.project-detail-page {
+  max-width: var(--w-wide); margin: 0 auto; padding: var(--sp-4) var(--sp-6) var(--sp-6);
+}
+
+/* 顶部项目卡片：与列表卡片同款杂志感（渐变顶条 + 表面底） */
+.proj-hero {
+  position: relative; overflow: hidden;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-6);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: var(--sp-6);
+  margin-bottom: var(--sp-6);
+}
+.proj-hero::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+}
+.proj-hero-main {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: var(--sp-3);
+}
+.proj-hero-head {
+  display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  margin: 0; font-size: var(--fz-2xl); font-weight: 700; line-height: 1.3;
+}
+.proj-hero-icon { flex-shrink: 0; color: var(--accent); opacity: .7; }
+.proj-hero-name { min-width: 0; overflow-wrap: anywhere; }
+.proj-hero-badge {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  padding: 1px 8px; font-size: var(--fz-xs); font-weight: 600;
+  border-radius: var(--r-full);
+  color: var(--badge-featured-color); background: var(--badge-featured-bg);
+  border: 1px solid var(--border);
+}
+.proj-hero-desc {
+  margin: 0; font-size: var(--fz-base);
+  color: var(--text-secondary); line-height: var(--lh-relaxed);
+}
+.proj-hero-meta {
+  display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+  font-size: var(--fz-xs); color: var(--text-tertiary);
+}
+.proj-meta-item { display: inline-flex; align-items: center; gap: 4px; }
+.proj-hero-langs { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.proj-hero-topics { display: flex; gap: var(--sp-1); flex-wrap: wrap; }
+.proj-topic {
+  padding: 2px 8px; border-radius: var(--r-sm); font-size: .72rem;
+  color: var(--text-tertiary); background: var(--bg-hover);
+}
+.proj-hero-cta { flex-shrink: 0; }
+.proj-btn-github {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5); border-radius: var(--r);
+  font-size: var(--fz-sm); font-weight: 600; white-space: nowrap;
+  color: #fff; background: var(--accent); border: 1px solid var(--accent);
+  transition: all var(--transition);
+}
+.proj-btn-github:hover { filter: brightness(1.08); box-shadow: var(--shadow-md); }
+
+/* 项目文档（README）区 */
+.proj-readme {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: var(--sp-6);
+  margin-bottom: var(--sp-6); min-width: 0;
+}
+.proj-readme-head {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  flex-wrap: wrap; padding-bottom: var(--sp-3); margin-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+.proj-readme-title {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  margin: 0; font-size: var(--fz-lg); font-weight: 700;
+}
+.proj-readme-tools { display: inline-flex; align-items: center; gap: var(--sp-3); }
+.proj-readme-age { font-size: var(--fz-xs); color: var(--text-tertiary); }
+.proj-refresh-form { margin: 0; }
+.proj-refresh-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; font-size: var(--fz-xs); font-weight: 500;
+  border: 1px solid var(--border); border-radius: var(--r-full);
+  background: var(--bg-hover); color: var(--text-secondary); cursor: pointer;
+  transition: all var(--transition);
+}
+.proj-refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+.proj-refresh-btn:disabled { opacity: .55; cursor: default; }
+.proj-readme-body { min-width: 0; }
+.proj-readme-empty {
+  padding: var(--sp-8) 0; text-align: center;
+  font-size: var(--fz-sm); color: var(--text-tertiary);
+}
+.proj-readme-empty p { margin: 0 0 var(--sp-2); }
+.proj-readme-empty-hint a { color: var(--accent); }
+
+/* 项目详情页移动端：卡片纵向排布、GitHub 按钮整行 */
+@media (max-width: 720px) {
+  .project-detail-page { padding: var(--sp-3) var(--sp-4) var(--sp-6); }
+  .proj-hero { flex-direction: column; gap: var(--sp-4); padding: var(--sp-5); }
+  .proj-hero-cta { align-self: stretch; }
+  .proj-btn-github { width: 100%; justify-content: center; }
+  .proj-readme { padding: var(--sp-5); }
+}
 
 
 /* ——— 友链页 ——— */

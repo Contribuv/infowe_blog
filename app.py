@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.32'
+VERSION = '1.3.33'
 
 import os
 import re
@@ -507,6 +507,8 @@ def init_db():
         ('home_posts_count', '6'),
         ('posts_per_page', '20'),
         ('comments_enabled', '1'),
+        # ── 项目详情页 README 缓存秒数（GitHub 文档更新后，缓存过期即自动重取） ──
+        ('readme_cache_seconds', '300'),
         # ── 评论邮件通知（SMTP，新评论/新回复时通知博主） ──
         ('comment_notify', '1'),
         ('smtp_host', ''),
@@ -566,6 +568,10 @@ def _migrate_comments(db):
     if 'is_private' not in cols:
         db.execute("ALTER TABLE comments ADD COLUMN is_private INTEGER DEFAULT 0")
         added.append('is_private')
+    # 项目详情页评论：comments 支持挂到项目（project_id 与 post_id 二选一）
+    if 'project_id' not in cols:
+        db.execute("ALTER TABLE comments ADD COLUMN project_id INTEGER DEFAULT NULL")
+        added.append('project_id')
     # 评论邮箱通知：存评论者明文邮箱（仅用于发送回复通知，不出现在任何页面）
     if 'email' not in cols:
         db.execute("ALTER TABLE comments ADD COLUMN email TEXT DEFAULT ''")
@@ -1938,7 +1944,6 @@ def db_delete_category(cat_id):
     db.commit()
     db.close()
 
-
 # ─────────────── GitHub 项目数据层 ───────────────
 
 def parse_github_repo(url):
@@ -2036,7 +2041,161 @@ def fetch_github_repo(url):
         'language': data.get('language') or (languages[0][0] if languages else ''),
         'languages': languages,  # [(name, pct), ...]
         'topics': data.get('topics') or [],
+        'default_branch': data.get('default_branch') or 'main',
     }
+
+
+# ─────────────── GitHub README 拉取与缓存（项目详情页） ───────────────
+
+# 内存缓存：{repo_slug: {'ts', 'gh', 'readme', 'branch', 'error'}}
+# 详情页访问时按 TTL 检查，过期即重取，从而跟随 GitHub 上 README 的更新
+_PROJECT_GH_CACHE = {}
+_PROJECT_GH_LOCK = threading.Lock()
+# 手动刷新冷却：{repo_slug: 上次刷新时间戳}，防连点把 GitHub 打爆
+_PROJECT_REFRESH_AT = {}
+_PROJECT_REFRESH_GAP = 30  # 秒
+# README 候选文件名（覆盖常见大小写与 .markdown 后缀写法）
+_README_FILENAMES = ('README.md', 'readme.md', 'Readme.md', 'README.markdown')
+
+
+def _project_cache_ttl():
+    """项目详情页 GitHub 数据缓存时长（秒）：后台可配，默认 300 秒。"""
+    try:
+        return max(0, int(app.config.get('readme_cache_seconds') or 300))
+    except (TypeError, ValueError):
+        return 300
+
+
+def _github_headers(json_accept=True):
+    """构造 GitHub 请求头（配置了 Token 则带认证，提升限额并可访问私有仓库）。"""
+    headers = {'User-Agent': 'infowe-Blog'}
+    if json_accept:
+        headers['Accept'] = 'application/vnd.github+json'
+    token = (app.config.get('github_token') or '').strip()
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    return headers
+
+
+def _http_get_text(url, headers, timeout=8):
+    """GET 并解码为文本，失败抛异常交调用方处理。"""
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout, context=_github_ssl_context()) as resp:
+        return resp.read().decode('utf-8', 'replace')
+
+
+def fetch_github_readme(slug, branch=None):
+    """拉取仓库 README 原文（Markdown 文本），返回 (文本, 错误信息)，失败时文本为 None。
+
+    优先请求 raw.githubusercontent.com —— 该域名不计入 GitHub API 匿名配额（60 次/小时），
+    因此详情页频繁刷新 README 也不会耗尽限额；常见文件名都取不到时，回退 readme API 兜底
+    （可覆盖 README 使用自定义路径的情况）。
+    """
+    owner, _, repo = (slug or '').partition('/')
+    if not (owner and repo):
+        return None, '仓库地址无效'
+    if not branch:
+        # 未提供默认分支时查一次仓库 API；失败不阻断，用 main/master 试探
+        try:
+            data = json.loads(_http_get_text(f'https://api.github.com/repos/{slug}', _github_headers()))
+            branch = data.get('default_branch') or ''
+        except Exception:
+            branch = ''
+    branches = list(dict.fromkeys([b for b in (branch, 'main', 'master') if b]))
+    for br in branches:
+        for fn in _README_FILENAMES:
+            try:
+                text = _http_get_text(
+                    f'https://raw.githubusercontent.com/{slug}/{br}/{fn}', _github_headers(json_accept=False))
+            except urllib.error.HTTPError:
+                continue          # 该文件名不存在，试下一个
+            except (urllib.error.URLError, OSError, ValueError):
+                return None, last_gh_error or '网络请求失败，无法访问 GitHub'
+            if text.strip():
+                return text, ''
+    # 回退：readme API（占 1 次 API 配额，可拿到自定义路径的 README）
+    try:
+        data = json.loads(_http_get_text(f'https://api.github.com/repos/{slug}/readme', _github_headers()))
+        content = base64.b64decode(data.get('content') or '').decode('utf-8', 'replace')
+        if content.strip():
+            return content, ''
+    except Exception:
+        pass
+    return None, '仓库中未找到 README 文件'
+
+
+def _absolutize_readme_urls(html, slug, branch):
+    """把 README 中的相对链接/图片补成 GitHub 绝对地址，避免图片与跳转失效。"""
+    base_blob = f'https://github.com/{slug}/blob/{branch}/'
+    base_raw = f'https://raw.githubusercontent.com/{slug}/{branch}/'
+
+    def _fix(m):
+        attr, url = m.group(1), m.group(2)
+        # 已是绝对地址、协议相对或页内锚点则原样保留
+        if re.match(r'^(?:[a-z][a-z0-9+.-]*:|//|#)', url, re.I):
+            return m.group(0)
+        target = base_raw if attr == 'src' else base_blob
+        return '%s="%s%s"' % (attr, target, url.lstrip('/'))
+
+    return re.sub(r'\b(src|href)="([^"]*)"', _fix, html)
+
+
+def render_readme_html(md, slug, branch):
+    """README Markdown → 消毒后的 HTML（含相对链接修正）。转换异常时返回 None。"""
+    if not md:
+        return None
+    try:
+        html = markdown.markdown(
+            md, extensions=['fenced_code', 'tables', 'nl2br', 'sane_lists'])
+    except Exception:
+        return None
+    html = _absolutize_readme_urls(html, slug, branch or 'main')
+    return _sanitize_html(html)
+
+
+def fetch_project_github(project, force=False):
+    """拉取项目在 GitHub 上的实时元数据与 README，整体按 TTL 内存缓存。
+
+    返回 {'gh': 元数据|None, 'readme': HTML|None, 'branch': 分支名,
+          'ts': 抓取时间戳, 'error': 错误信息, 'cached': 是否命中缓存}。
+    缓存过期（默认 300 秒）后下次访问自动重取 —— 即 GitHub 上 README 更新后
+    页面会在一个 TTL 周期内跟随更新，无需人工干预；force=True 用于手动刷新。
+    """
+    slug = (project.get('github_repo') or '').strip() or parse_github_repo(project.get('url') or '')
+    if not slug:
+        return {'gh': None, 'readme': None, 'branch': '', 'ts': 0,
+                'error': '该项目未关联 GitHub 仓库', 'cached': False}
+    now = time.time()
+    ttl = _project_cache_ttl()
+    if not force and ttl > 0:
+        hit = _PROJECT_GH_CACHE.get(slug)
+        if hit and now - hit['ts'] < ttl:
+            out = dict(hit)
+            out['cached'] = True
+            return out
+    gh = fetch_github_repo(project.get('url') or f'https://github.com/{slug}')
+    branch = (gh or {}).get('default_branch') or ''
+    md, err = fetch_github_readme(slug, branch)
+    entry = {
+        'ts': now,
+        'gh': gh,
+        'branch': branch or 'main',
+        'readme': render_readme_html(md, slug, branch),
+        'error': '' if md else (err or '未找到 README 文件'),
+        'cached': False,
+    }
+    with _PROJECT_GH_LOCK:
+        _PROJECT_GH_CACHE[slug] = entry
+    return dict(entry)
+
+
+def invalidate_project_cache(slug=None):
+    """清空项目 GitHub 数据缓存（slug 为空则全清），后台「清除缓存」按钮调用。"""
+    with _PROJECT_GH_LOCK:
+        if slug:
+            _PROJECT_GH_CACHE.pop(slug, None)
+        else:
+            _PROJECT_GH_CACHE.clear()
 
 
 def db_repo_exists(slug, exclude_id=None):
@@ -2125,8 +2284,25 @@ def db_save_project(form_data, project_id=None, keep_name=False):
 def db_delete_project(project_id):
     db = get_db()
     db.execute("DELETE FROM projects WHERE id=?", (project_id,))
+    # 项目删除后其评论失去归属，一并清理（post_id 与 project_id 二选一的载体）
+    db.execute("DELETE FROM comments WHERE project_id=?", (project_id,))
     db.commit()
     db.close()
+
+
+def db_get_project(project_id):
+    """按 id 取单个项目（topics 解析为列表），不存在返回 None。"""
+    db = get_db()
+    row = db.execute("SELECT * FROM projects WHERE id=?", (project_id,)).fetchone()
+    db.close()
+    if not row:
+        return None
+    p = dict(row)
+    try:
+        p['topics'] = json.loads(p['topics']) if p['topics'] else []
+    except (ValueError, TypeError):
+        p['topics'] = []
+    return p
 
 
 # ─────────────── 友情链接数据层 ───────────────
@@ -2294,18 +2470,23 @@ def avatar_proxy(key, size):
     return resp
 
 
-def db_load_comments(post_id, include_private=False, my_comments=None):
+def db_load_comments(post_id=None, project_id=None, include_private=False, my_comments=None):
     """加载评论并组装为树（一次查询，内存组装，避免 N+1）。
     普通访客：仅已通过且非私密 + 本人待审核的非私密评论（my_comments 为 {评论id: 昵称} 映射，校验昵称防伪造）；
     管理员：已通过 + 全部私密（含待审核）。
+    post_id / project_id 二选一：写评论归属的载体（文章或项目）。
     返回 (根评论列表, 评论总数)。每条评论附带 avatar / depth / parent_author。"""
     db = get_db()
-    if include_private:
-        sql = "SELECT * FROM comments WHERE post_id=? AND (status='approved' OR is_private=1)"
-        params = [post_id]
+    if project_id is not None:
+        target_col, target_val = 'project_id', project_id
     else:
-        sql = "SELECT * FROM comments WHERE post_id=? AND (status='approved' AND is_private=0"
-        params = [post_id]
+        target_col, target_val = 'post_id', post_id
+    if include_private:
+        sql = "SELECT * FROM comments WHERE %s=? AND (status='approved' OR is_private=1)" % target_col
+        params = [target_val]
+    else:
+        sql = "SELECT * FROM comments WHERE %s=? AND (status='approved' AND is_private=0" % target_col
+        params = [target_val]
         if my_comments:
             ids = [i for i in my_comments if str(i).isdigit()]
             if ids:
@@ -2380,15 +2561,16 @@ def _count_pending(nodes):
     return n
 
 
-def db_save_comment(post_id, author, email, email_hash, website, content, parent_id=None, is_private=False, qq='', ip_text='', status='pending'):
+def db_save_comment(post_id, author, email, email_hash, website, content, parent_id=None, is_private=False, qq='', ip_text='', status='pending', project_id=None):
     """新评论默认 pending，审核通过后才在前台展示。
     私密评论同样 pending：仅管理员可见（含待审核），普通访客始终不可见。
     email 为评论者明文邮箱（仅用于发送回复通知，不展示）；ip_text 为原始 IP。
-    status 由调用方指定：博主本人（邮箱 == notify_email）在路由层传 approved 免审核。"""
+    status 由调用方指定：博主本人（邮箱 == notify_email）在路由层传 approved 免审核。
+    project_id 与 post_id 二选一：项目详情页评论传 project_id（文章评论保持传 post_id）。"""
     db = get_db()
     cur = db.execute(
-        "INSERT INTO comments (post_id, parent_id, author, email, email_hash, website, content, status, is_private, qq, ip_text) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        (post_id, parent_id, author, email, email_hash, website, content, status, 1 if is_private else 0, qq, ip_text)
+        "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, website, content, status, is_private, qq, ip_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        (post_id, project_id, parent_id, author, email, email_hash, website, content, status, 1 if is_private else 0, qq, ip_text)
     )
     db.commit()
     db.close()
@@ -2714,21 +2896,28 @@ _COMMENT_COOLDOWN = {}
 _COMMENT_COOLDOWN_WINDOW = 30  # 秒
 
 
-@app.route('/post/<int:post_id>/comment', methods=['POST'])
-def post_comment(post_id):
-    # 评论开关关闭时，直接拦截上传
-    if str(app.config.get('comments_enabled', '1')) not in ('1', 'on', 'true', 'yes'):
-        abort(403)
-    post = db_get_post_by_id(post_id)
-    if not post:
-        abort(404)
+def _comments_open():
+    """评论总开关。"""
+    return str(app.config.get('comments_enabled', '1')) in ('1', 'on', 'true', 'yes')
+
+
+def _handle_new_comment(post=None, project=None):
+    """评论提交的公共逻辑（文章 / 项目详情页共用）。
+
+    post / project 二选一：post 不为空走文章评论（post_id），否则走项目评论（project_id）；
+    均不允许同时为空。校验/保存/通知/记忆与文章评论完全一致。
+    """
+    is_project = project is not None
+    target_id = project['id'] if is_project else post['id']
+    title = project['name'] if is_project else post['title']
+    back = url_for('project_detail', project_id=target_id) if is_project else url_for('post_detail', post_id=target_id)
 
     # 限流：同一 IP 30 秒内只能发一条
     ip = _client_ip()
     now = time.time()
     if now - _COMMENT_COOLDOWN.get(ip, 0) < _COMMENT_COOLDOWN_WINDOW:
         flash('评论太频繁，请稍后再试', 'error')
-        return redirect(url_for('post_detail', post_id=post_id))
+        return redirect(back)
 
     is_admin = bool(session.get('admin_logged_in'))
     author = request.form.get('author', '').strip()
@@ -2746,15 +2935,15 @@ def post_comment(post_id):
     # 昵称必填（盖楼需要身份标识）
     if not author or len(author) > 30:
         flash('请填写昵称（30 字以内）', 'error')
-        return redirect(url_for('post_detail', post_id=post_id))
+        return redirect(back)
     # 昵称保留：博主昵称仅限后台登录态使用，防访客冒充（展示时 is_author 按昵称判定）
     blogger_name = (app.config.get('author') or '').strip()
     if not is_admin and blogger_name and author == blogger_name:
         flash('该昵称已被占用，请换一个', 'error')
-        return redirect(url_for('post_detail', post_id=post_id))
+        return redirect(back)
     if not content or len(content) > 2000:
         flash('评论内容不能为空且不能超过2000字', 'error')
-        return redirect(url_for('post_detail', post_id=post_id))
+        return redirect(back)
 
     # 邮箱选填：仅用于生成 Cravatar 头像，不存明文
     email_hash = ''
@@ -2762,7 +2951,7 @@ def post_comment(post_id):
     if email:
         if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
             flash('邮箱格式不正确（选填，仅用于头像）', 'error')
-            return redirect(url_for('post_detail', post_id=post_id))
+            return redirect(back)
         email_hash = hashlib.md5(email.lower().encode('utf-8')).hexdigest()
         _qm = _QQ_RE.match(email.strip().lower())
         if _qm:
@@ -2772,9 +2961,9 @@ def post_comment(post_id):
     if website:
         if not re.match(r'^https?://[^\s]+$', website) or len(website) > 200:
             flash('网址格式不正确（需以 http:// 或 https:// 开头）', 'error')
-            return redirect(url_for('post_detail', post_id=post_id))
+            return redirect(back)
 
-    # 父级校验：必须是同一篇文章下已存在的评论，防跨文章伪造
+    # 父级校验：必须是同一载体（文章/项目）下已存在的评论，防跨载体伪造
     pid = None
     parent_author = ''
     if parent_id:
@@ -2783,9 +2972,10 @@ def post_comment(post_id):
         except (TypeError, ValueError):
             pid = None
         if pid:
+            col = 'project_id' if is_project else 'post_id'
             db = get_db()
             row = db.execute(
-                "SELECT id, author FROM comments WHERE id=? AND post_id=?", (pid, post['id'])
+                "SELECT id, author FROM comments WHERE id=? AND %s=?" % col, (pid, target_id)
             ).fetchone()
             db.close()
             if not row:
@@ -2795,13 +2985,19 @@ def post_comment(post_id):
 
     admin_email = (app.config.get('notify_email') or '').strip()
     status = 'approved' if (email and admin_email and email.lower() == admin_email.lower()) else 'pending'
-    cid = db_save_comment(post['id'], author, email, email_hash, website, content, pid, is_private, qq, ip, status=status)
+    cid = db_save_comment(
+        None if is_project else target_id, author, email, email_hash, website, content,
+        pid, is_private, qq, ip, status=status,
+        project_id=target_id if is_project else None)
     _COMMENT_COOLDOWN[ip] = now
     # 评论邮件通知：配置了 SMTP 时后台线程发送（通知博主 + 被回复者），不阻塞提交、失败静默
+    detail_path = ('/projects/%d#comments' if is_project else '/post/%d#comments') % target_id
     if str(app.config.get('comment_notify', '0')) in ('1', 'on', 'true', 'yes'):
         threading.Thread(
             target=_send_comment_notify,
-            args=(post['id'], post['title'], request.host_url.rstrip('/'), author, content, pid, email, status),
+            args=(None if is_project else target_id, title, request.host_url.rstrip('/'),
+                  author, content, pid, email, status),
+            kwargs={'detail_path': detail_path, 'label': '项目' if is_project else '文章'},
             daemon=True).start()
     # IP 归属地：后台线程查询并回填，未查到则评论不显示归属地（静默）
     if ip and ip != 'unknown':
@@ -2828,12 +3024,34 @@ def post_comment(post_id):
         if len(my_comments) > 20:
             my_comments = dict(list(my_comments.items())[-20:])
     commenter_data['my_comments'] = my_comments
-    resp = make_response(redirect(url_for('post_detail', post_id=post_id) + '#comments'))
+    resp = make_response(redirect(back + '#comments'))
     resp.set_cookie('blog_commenter',
                     json.dumps(commenter_data, ensure_ascii=False),
                     max_age=365 * 24 * 3600, httponly=True, samesite='Lax')
     flash('私密评论已提交，仅管理员可见' if is_private else ('博主评论已直接显示' if status == 'approved' else '评论已提交，审核通过后显示'), 'success')
     return resp
+
+
+@app.route('/post/<int:post_id>/comment', methods=['POST'])
+def post_comment(post_id):
+    # 评论开关关闭时，直接拦截上传
+    if not _comments_open():
+        abort(403)
+    post = db_get_post_by_id(post_id)
+    if not post:
+        abort(404)
+    return _handle_new_comment(post=post)
+
+
+@app.route('/projects/<int:project_id>/comment', methods=['POST'])
+def project_comment(project_id):
+    """项目详情页评论提交：与文章评论同一套校验/审核/通知，归属 project_id。"""
+    if not _comments_open():
+        abort(403)
+    project = db_get_project(project_id)
+    if not project:
+        abort(404)
+    return _handle_new_comment(project=project)
 
 
 def _smtp_send(to_addr, subject, html, overrides=None):
@@ -2878,8 +3096,9 @@ _NOTIFY_CSS = ('body{margin:0;padding:0;background:#eef0f4;font-family:-apple-sy
                '.foot{margin:16px 6px 0;font-size:12px;color:#98a1b3;line-height:1.6;text-align:center}')
 
 
-def _notify_html(head, post_title, post_url, author, content):
-    """评论通知邮件 HTML（内嵌样式，兼容主流邮箱客户端）。"""
+def _notify_html(head, post_title, post_url, author, content, label='文章'):
+    """评论通知邮件 HTML（内嵌样式，兼容主流邮箱客户端）。
+    label 为归属载体名称：文章评论传「文章」，项目详情页评论传「项目」。"""
     blog_name = app.config.get('blog_name') or 'Blog'
     av = (author or '匿')[0].upper()
     return (
@@ -2887,7 +3106,7 @@ def _notify_html(head, post_title, post_url, author, content):
         '<div class="wrap">'
         '<div class="brand">%s</div>'
         '<div class="card">'
-        '<div class="head">%s<span class="head-sub">文章《%s》</span></div>'
+        '<div class="head">%s<span class="head-sub">%s《%s》</span></div>'
         '<div class="body">'
         '<div class="cta-wrap"><a class="cta" href="%s">查看详情</a></div>'
         '<div class="quote">'
@@ -2896,16 +3115,18 @@ def _notify_html(head, post_title, post_url, author, content):
         '</div></div></div>'
         '<div class="foot">本邮件由 %s 自动发送，请勿直接回复。</div>'
         '</div></body></html>'
-    ) % (_NOTIFY_CSS, blog_name, head, post_title, post_url,
+    ) % (_NOTIFY_CSS, blog_name, head, label, post_title, post_url,
          av, author or '匿名', content, blog_name)
 
 
-def _send_comment_notify(post_id, post_title, base_url, author, content, parent_id, commenter_email, status='pending'):
+def _send_comment_notify(post_id, post_title, base_url, author, content, parent_id, commenter_email, status='pending', detail_path=None, label='文章'):
     """后台线程：新评论通知博主；若评论已通过（博主免审核），同时通知被回复者。
     待审核评论的被回复者通知延迟到审核通过后（见 _notify_reply_recipient），
-    避免对方点进链接却看不到待审核的回复。SMTP 未配置或发送失败均静默。"""
+    避免对方点进链接却看不到待审核的回复。SMTP 未配置或发送失败均静默。
+    detail_path 为详情页路径：文章评论传 /post/<id>#comments，项目评论传 /projects/<id>#comments；
+    不传时按文章规则拼 URL（兼容既有调用）。"""
     try:
-        post_url = '%s/post/%d#comments' % (base_url.rstrip('/'), post_id)
+        post_url = '%s%s' % (base_url.rstrip('/'), detail_path or ('/post/%d#comments' % post_id))
         notify_email = (app.config.get('notify_email') or '').strip()
         contact_email = (app.config.get('contact_email') or '').strip()
         blogger = notify_email or contact_email
@@ -2917,8 +3138,8 @@ def _send_comment_notify(post_id, post_title, base_url, author, content, parent_
             kind = '回复通知' if reply else '新评论通知'
             _smtp_send(
                 blogger,
-                '[%s] %s《%s》' % (app.config.get('blog_name') or 'Blog', kind, post_title),
-                _notify_html(kind, post_title, post_url, author, content))
+                '[%s] %s%s《%s》' % (app.config.get('blog_name') or 'Blog', kind, label, post_title),
+                _notify_html(kind, post_title, post_url, author, content, label))
         # 2) 通知被回复者（仅已通过评论；待审核的由审核通过后补发）
         if reply and status == 'approved':
             db = get_db()
@@ -2927,20 +3148,22 @@ def _send_comment_notify(post_id, post_title, base_url, author, content, parent_
             if row and row['email'] and row['email'].lower() not in blogger_emails and row['email'].lower() != (commenter_email or '').lower():
                 _smtp_send(
                     row['email'],
-                    '[%s] 你的评论收到新回复《%s》' % (app.config.get('blog_name') or 'Blog', post_title),
-                    _notify_html('你的评论收到一条新回复', post_title, post_url, author, content))
+                    '[%s] 你的评论收到新回复%s《%s》' % (app.config.get('blog_name') or 'Blog', label, post_title),
+                    _notify_html('你的评论收到一条新回复', post_title, post_url, author, content, label))
     except Exception as e:
         print('[评论通知] 邮件发送失败：%s' % e)
 
 
 def _notify_reply_recipient(comment_id, base_url):
     """审核通过后补发：通知被回复者（若其评论填过邮箱且不是博主本人、也不是评论者自己）。
-    后台线程调用，失败静默。"""
+    同时兼容文章评论与项目详情页评论。后台线程调用，失败静默。"""
     try:
         db = get_db()
         row = db.execute(
-            "SELECT c.post_id, c.author, c.content, c.parent_id, c.email AS commenter_email, "
-            "p.title AS post_title FROM comments c JOIN posts p ON p.id = c.post_id WHERE c.id = ?",
+            "SELECT c.post_id, c.project_id, c.author, c.content, c.parent_id, c.email AS commenter_email, "
+            "p.title AS post_title, pj.name AS project_name "
+            "FROM comments c LEFT JOIN posts p ON p.id = c.post_id "
+            "LEFT JOIN projects pj ON pj.id = c.project_id WHERE c.id = ?",
             (comment_id,)).fetchone()
         if not row or not row['parent_id']:
             db.close()
@@ -2957,11 +3180,20 @@ def _notify_reply_recipient(comment_id, base_url):
             return
         if parent['email'].lower() == (row['commenter_email'] or '').lower():
             return
-        post_url = '%s/post/%d#comments' % (base_url.rstrip('/'), row['post_id'])
+        # 归属载体不同，详情页地址与文案随之变化
+        if row['project_id']:
+            label = '项目'
+            title = row['project_name'] or '项目'
+            detail_path = '/projects/%d#comments' % row['project_id']
+        else:
+            label = '文章'
+            title = row['post_title'] or ''
+            detail_path = '/post/%d#comments' % row['post_id']
+        post_url = '%s%s' % (base_url.rstrip('/'), detail_path)
         _smtp_send(
             parent['email'],
-            '[%s] 你的评论收到新回复《%s》' % (app.config.get('blog_name') or 'Blog', row['post_title']),
-            _notify_html('你的评论收到一条新回复', row['post_title'], post_url, row['author'], row['content']))
+            '[%s] 你的评论收到新回复%s《%s》' % (app.config.get('blog_name') or 'Blog', label, title),
+            _notify_html('你的评论收到一条新回复', title, post_url, row['author'], row['content'], label))
     except Exception as e:
         print('[评论通知] 回复通知发送失败：%s' % e)
 
@@ -3069,6 +3301,92 @@ def projects_page():
             lang = item[0] if isinstance(item, (list, tuple)) else item
             languages[lang] = languages.get(lang, 0) + 1
     return render_template('projects.html', projects=projects, languages=languages)
+
+
+@app.route('/projects/<int:project_id>')
+def project_detail(project_id):
+    """项目详情页：顶部项目卡片（访问 GitHub 入口）+ 中部 README 区 + 底部评论区。"""
+    if not nav_enabled('projects'):
+        abort(404)
+    project = db_get_project(project_id)
+    if not project:
+        abort(404)
+    # 语言徽章配色（与列表页一致）：[[name, pct, color], ...]
+    try:
+        langs = json.loads(project['languages']) if project['languages'] else []
+    except (ValueError, TypeError):
+        langs = []
+    if not langs and project['language']:
+        langs = [[project['language'], 100]]
+    project['lang_list'] = [[n, pct, lang_color(n)] for n, pct in langs]
+    project['lang_names'] = ','.join(n for n, _, _ in project['lang_list'])
+
+    # GitHub 实时数据 + README（内存缓存，默认 300 秒，随 GitHub 更新自动重取）
+    gh = fetch_project_github(project)
+    # README 抓取时间 → 「更新于 X 分钟前」文案
+    if gh['ts']:
+        minutes = max(0, int((time.time() - gh['ts']) / 60))
+        gh['age_text'] = '刚刚' if minutes == 0 else ('%d 分钟前' % minutes)
+    else:
+        gh['age_text'] = ''
+
+    comments_enabled = _comments_open()
+    is_admin = bool(session.get('admin_logged_in'))
+    # 读取记住的评论者信息（昵称/邮箱/网址），用于表单预填；my_comments 用于展示本人待审核评论
+    commenter = {}
+    raw = request.cookies.get('blog_commenter')
+    if raw:
+        try:
+            commenter = json.loads(raw)
+        except (ValueError, TypeError):
+            commenter = {}
+    my_comments = commenter.get('my_comments') if isinstance(commenter, dict) else None
+    comments, comment_total = (db_load_comments(project_id=project_id, include_private=is_admin,
+                                                my_comments=my_comments)
+                               if comments_enabled else ([], 0))
+    # 本人待审核评论数（管理员视角下 pending 全部可见，无需再提示）
+    my_pending = 0 if is_admin else _count_pending(comments)
+    # 博主身份条头像（与文章页一致）
+    admin_avatar = ''
+    if is_admin:
+        contact = (app.config.get('contact_email') or '').strip().lower()
+        if contact:
+            _cm = _QQ_RE.match(contact)
+            if _cm:
+                admin_avatar = url_for('avatar_proxy', key='q' + _cm.group(1), size=40, _external=True)
+            else:
+                admin_avatar = _avatar_url(hashlib.md5(contact.encode('utf-8')).hexdigest(), 40)
+
+    return render_template('project_detail.html', project=project, gh=gh,
+                           comments=comments, comment_total=comment_total,
+                           comments_enabled=comments_enabled,
+                           commenter=commenter, is_admin=is_admin,
+                           admin_avatar=admin_avatar, my_pending=my_pending,
+                           refresh_gap=_PROJECT_REFRESH_GAP)
+
+
+@app.route('/projects/<int:project_id>/refresh', methods=['POST'])
+def project_readme_refresh(project_id):
+    """手动刷新项目 GitHub 数据 + README（带冷却，防连点打爆 GitHub）。"""
+    if not nav_enabled('projects'):
+        abort(404)
+    project = db_get_project(project_id)
+    if not project:
+        abort(404)
+    slug = (project.get('github_repo') or '').strip() or parse_github_repo(project.get('url') or '')
+    now = time.time()
+    # 冷却期内拒绝重复刷新（仅限有 GitHub 仓库的项目）
+    if slug and now - _PROJECT_REFRESH_AT.get(slug, 0) < _PROJECT_REFRESH_GAP:
+        flash('刷新太频繁，请稍后再试', 'error')
+        return redirect(url_for('project_detail', project_id=project_id))
+    if slug:
+        _PROJECT_REFRESH_AT[slug] = now
+    info = fetch_project_github(project, force=True)
+    if info.get('readme'):
+        flash('README 已更新为 GitHub 最新内容', 'success')
+    else:
+        flash('README 刷新失败：%s' % (info.get('error') or '未知原因'), 'error')
+    return redirect(url_for('project_detail', project_id=project_id) + '#readme')
 
 
 @app.route('/links')
@@ -3721,9 +4039,11 @@ def admin_comments():
     db = get_db()
     rows = db.execute(
         "SELECT c.*, p.title as post_title, p.id as post_id, "
+        "pj.name as project_name, "
         "pa.author as parent_author "
         "FROM comments c "
         "LEFT JOIN posts p ON c.post_id=p.id "
+        "LEFT JOIN projects pj ON c.project_id=pj.id "
         "LEFT JOIN comments pa ON c.parent_id=pa.id "
         "ORDER BY (c.status='pending') DESC, c.is_private DESC, c.created_at DESC"
     ).fetchall()
@@ -4056,6 +4376,7 @@ def admin_settings():
                      'about_intro', 'skills', 'avatar', 'github_username',
                      'social_github', 'github_token', 'contact_email', 'home_title', 'icp_beian', 'police_beian',
                      'home_posts_count', 'posts_per_page',
+                     'readme_cache_seconds',
                      'smtp_host', 'smtp_sender_name', 'smtp_port', 'smtp_user', 'smtp_pass', 'notify_email']:
             if key in request.form:
                 save_setting(key, request.form[key])
@@ -4587,14 +4908,18 @@ def admin_upgrade():
                            info=None, upgradable=False)
 
 
-def _md_to_safe_html(text):
-    """Markdown → HTML 并轻量消毒（剥 script/iframe/object/embed、事件属性、javascript:）。
-    内容来自自家 GitHub Releases 说明，此消毒仅为兜底。"""
-    html = markdown.markdown(text, extensions=['fenced_code', 'nl2br'])
+def _sanitize_html(html):
+    """剥离 script/iframe/object/embed、事件属性与 javascript:，抵消 Markdown→HTML 后的注入风险。"""
     html = re.sub(r'<(script|iframe|object|embed)\b[^>]*>.*?</\1>', '', html, flags=re.S | re.I)
     html = re.sub(r'\son\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)', '', html, flags=re.I)
     html = re.sub(r'javascript\s*:', '', html, flags=re.I)
     return html
+
+
+def _md_to_safe_html(text):
+    """Markdown → HTML 并轻量消毒。内容来自自有 GitHub Releases（升级页），此消毒仅为兜底。"""
+    html = markdown.markdown(text, extensions=['fenced_code', 'nl2br'])
+    return _sanitize_html(html)
 
 
 @app.route('/admin/upgrade/check')
