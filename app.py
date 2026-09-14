@@ -4903,7 +4903,34 @@ UPGRADE_SKIP = {
 }
 UPGRADE_MAX_BYTES = 200 * 1024 * 1024  # 下载/解压上限 200MB，防异常包
 UPGRADE_LOCK_TTL = 600  # 升级锁超时（秒）：超过视为上次升级异常中断，自动清理后允许重试
-UPGRADE_CACHE = {}  # 检测结果缓存：{'t': 时间戳, 'ok': 是否成功, 'info': 版本信息}
+UPGRADE_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'data', 'upgrade_cache.json')  # 版本检测缓存落盘，重启/多进程不丢
+
+
+def _load_upgrade_cache():
+    """启动/首访时从磁盘加载版本检测缓存，避免重启后首个请求必等 GitHub。"""
+    try:
+        with open(UPGRADE_CACHE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, dict) and isinstance(data.get('t'), (int, float)):
+            return data
+    except (OSError, ValueError, TypeError):
+        pass
+    return {'t': 0, 'ok': None, 'info': None}
+
+
+def _save_upgrade_cache():
+    """把版本检测缓存原子写入磁盘（多进程部署下各 worker 结果一致）。"""
+    try:
+        tmp = UPGRADE_CACHE_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(UPGRADE_CACHE, f, ensure_ascii=False)
+        os.replace(tmp, UPGRADE_CACHE_FILE)
+    except OSError:
+        pass
+
+
+UPGRADE_CACHE = _load_upgrade_cache()  # 检测结果缓存：{'t': 时间戳, 'ok': 是否成功, 'info': 版本信息}
 
 # 升级包下载镜像（仅作备用）：默认优先直连 GitHub，连接失败/超时才自动降级到镜像，
 # 避免部分网络环境直连 codeload.github.com 下载源码包长时间卡死。
@@ -4921,13 +4948,12 @@ def parse_version(v):
 
 
 def check_latest_version(force=False):
-    """查询 GitHub Releases 最新版本。失败静默返回 None（不阻塞页面），结果缓存。
+    """查询 GitHub Releases 最新版本。失败静默返回 None（不阻塞页面），结果缓存到磁盘。
     返回 {'tag','version','html_url','body','published_at'} 或 None。"""
     now = time.time()
     cached = UPGRADE_CACHE.get('info')
-    # 失败缓存 10 分钟防反复打 GitHub；成功缓存 10 分钟（国内服务器访问慢，且避免新版发布后检测延迟）
-    ttl = 600 if UPGRADE_CACHE.get('ok') is False else 600
-    if not force and UPGRADE_CACHE and now - UPGRADE_CACHE.get('t', 0) < ttl:
+    # 成功/失败都缓存 10 分钟（国内服务器访问 GitHub 慢，避免反复打 API）
+    if not force and UPGRADE_CACHE.get('t', 0) and now - UPGRADE_CACHE['t'] < 600:
         return cached
     info = None
     try:
@@ -4950,6 +4976,7 @@ def check_latest_version(force=False):
     UPGRADE_CACHE['t'] = now
     UPGRADE_CACHE['ok'] = info is not None
     UPGRADE_CACHE['info'] = info
+    _save_upgrade_cache()
     return info
 
 
