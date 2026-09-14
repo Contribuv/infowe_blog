@@ -2058,6 +2058,74 @@ _PROJECT_GH_LOCK = threading.Lock()
 _README_FILENAMES = ('README.md', 'readme.md', 'Readme.md', 'README.markdown')
 
 
+# ── 项目同步后台任务 ──
+# 同步会拉取 README 并本地化图片，单项目可能耗时 1-2 分钟、一键同步全部更久，
+# 远超 nginx 默认 60s 上游超时。因此 POST 后立即返回，由 daemon 线程执行，
+# 页面用 /admin/projects/sync-status 轮询进度，完成后再刷新查看结果。
+_PROJECT_SYNC_STATE = {
+    'running': False, 'finished': False,
+    'total': 0, 'done': 0, 'ok': 0, 'failed': 0,
+    'current': '', 'summary': '',
+}
+_PROJECT_SYNC_LOCK = threading.Lock()
+
+
+def _sync_projects_background(projects, single_id=None):
+    """后台线程批量同步项目（GitHub 实时数据 + README 本地化），状态写入 _PROJECT_SYNC_STATE。
+
+    projects: 全部项目行；single_id: 仅同步该 id（其余忽略）；None 表示同步全部。
+    进程内互斥：同一 worker 不会同时跑两个同步任务。"""
+    with _PROJECT_SYNC_LOCK:
+        if _PROJECT_SYNC_STATE['running']:
+            return
+        _PROJECT_SYNC_STATE.update(running=True, finished=False,
+                                   total=0, done=0, ok=0, failed=0,
+                                   current='', summary='')
+    targets = [p for p in projects if single_id is None or p['id'] == single_id]
+    _PROJECT_SYNC_STATE['total'] = len(targets)
+    seen = set()
+    try:
+        for p in targets:
+            slug = parse_github_repo(p.get('url') or '') or ''
+            _PROJECT_SYNC_STATE['current'] = (p.get('name') or p.get('title') or p.get('url') or '').strip() or slug
+            if not slug or slug in seen:
+                _PROJECT_SYNC_STATE['done'] += 1
+                continue
+            seen.add(slug)
+            try:
+                gh = fetch_github_repo(p['url'])
+                if not gh:
+                    _PROJECT_SYNC_STATE['failed'] += 1
+                else:
+                    # 拉 README 并本地化图片（写磁盘缓存）
+                    fetch_project_github(p['url'])
+                    db_save_project({
+                        'url': gh['url'],
+                        'sort_order': p.get('sort_order') or 0,
+                        'featured': '1' if p.get('featured') else '',
+                    }, p['id'], keep_name=True)
+                    _PROJECT_SYNC_STATE['ok'] += 1
+            except Exception:
+                _PROJECT_SYNC_STATE['failed'] += 1
+            _PROJECT_SYNC_STATE['done'] += 1
+        _PROJECT_SYNC_STATE['summary'] = '同步完成：成功 %d 个，失败 %d 个' % (
+            _PROJECT_SYNC_STATE['ok'], _PROJECT_SYNC_STATE['failed'])
+    finally:
+        _PROJECT_SYNC_STATE['running'] = False
+        _PROJECT_SYNC_STATE['finished'] = True
+
+
+def _start_project_sync(projects, single_id=None):
+    """以 daemon 线程启动后台同步（已在同步中则返回 False，不重复排队）。"""
+    with _PROJECT_SYNC_LOCK:
+        if _PROJECT_SYNC_STATE['running']:
+            return False
+    t = threading.Thread(target=_sync_projects_background,
+                         args=(list(projects), single_id), daemon=True)
+    t.start()
+    return True
+
+
 def _github_headers(json_accept=True):
     """构造 GitHub 请求头（配置了 Token 则带认证，提升限额并可访问私有仓库）。"""
     headers = {'User-Agent': 'infowe-Blog'}
@@ -3994,59 +4062,39 @@ def admin_projects_bulk():
 @app.route('/admin/projects/<int:project_id>/sync', methods=['POST'])
 @admin_required
 def admin_project_sync(project_id):
-    """同步单个项目：重新从 GitHub 拉取实时数据。"""
-    db = get_db()
-    row = db.execute("SELECT url FROM projects WHERE id=?", (project_id,)).fetchone()
-    db.close()
-    if not row:
+    """同步单个项目：转入后台线程执行（含 README 图片本地化，可能耗时 1-2 分钟，
+    同步执行会超 nginx 60s 上游超时），进度经 /admin/projects/sync-status 轮询。"""
+    projects = db_load_projects()
+    if not any(p['id'] == project_id for p in projects):
         flash('项目不存在', 'error')
         return redirect(url_for('admin_projects'))
-    gh = fetch_github_repo(row['url'])
-    if not gh:
-        flash('同步失败：' + (last_gh_error or '无法获取 GitHub 数据（地址无效或已达 API 限额）'), 'error')
+    if not _start_project_sync(projects, single_id=project_id):
+        flash('已有同步任务正在后台执行，请等待完成后再次尝试', 'error')
         return redirect(url_for('admin_projects'))
-    # 同步 README 入缓存（前台零 GitHub 请求，README 仅随管理员同步更新）
-    info = fetch_project_github(row['url'])
-    db_save_project({
-        'url': gh['url'], 'sort_order': request.form.get('sort_order', '0'),
-        'featured': request.form.get('featured', '')
-    }, project_id, keep_name=True)
-    msg = '已从 GitHub 同步：' + gh['name'] + '（★' + str(gh['stars']) + '）'
-    if not info.get('readme'):
-        msg += '；README 拉取失败：' + (info.get('error') or '未知原因')
-    flash(msg, 'success')
+    flash('已提交后台同步，正在拉取 GitHub 数据与 README 图片（约需几十秒）…', 'success')
     return redirect(url_for('admin_projects'))
 
 
 @app.route('/admin/projects/sync-all', methods=['POST'])
 @admin_required
 def admin_projects_sync_all():
-    """批量同步全部项目，按 GitHub 仓库去重，不重复。"""
+    """批量同步全部项目（后台线程执行，按 GitHub 仓库去重，不重复请求）。"""
     projects = db_load_projects()
-    ok = skipped = failed = 0
-    seen = set()
-    for p in projects:
-        slug = parse_github_repo(p['url'])
-        if not slug:
-            skipped += 1
-            continue
-        if slug in seen:  # 本次批量内去重，不重复请求
-            skipped += 1
-            continue
-        seen.add(slug)
-        gh = fetch_github_repo(p['url'])
-        if not gh:
-            failed += 1
-            continue
-        # 同步 README 入缓存（前台零 GitHub 请求，README 仅随管理员同步更新）
-        fetch_project_github(p['url'])
-        db_save_project({
-            'url': gh['url'], 'sort_order': p['sort_order'],
-            'featured': '1' if p['featured'] else ''
-        }, p['id'], keep_name=True)
-        ok += 1
-    flash(f'同步完成：成功 {ok} 个，跳过(重复/无GitHub) {skipped} 个，失败 {failed} 个', 'success')
+    if not projects:
+        flash('没有可同步的项目', 'error')
+        return redirect(url_for('admin_projects'))
+    if not _start_project_sync(projects, single_id=None):
+        flash('已有同步任务正在后台执行，请等待完成后再次尝试', 'error')
+        return redirect(url_for('admin_projects'))
+    flash('已提交后台批量同步（共 %d 个项目，约需数分钟），完成后页面将自动刷新查看结果' % len(projects), 'success')
     return redirect(url_for('admin_projects'))
+
+
+@app.route('/admin/projects/sync-status')
+@admin_required
+def admin_projects_sync_status():
+    """后台同步进度接口（前台轮询）：running/total/done/current/summary。"""
+    return jsonify(dict(_PROJECT_SYNC_STATE))
 
 
 # ─────────────── 后台: 友情链接管理 ───────────────

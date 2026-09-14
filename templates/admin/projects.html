@@ -13,6 +13,9 @@
 </div>
 
 {% if projects %}
+<div id="syncStatusBar" class="flash-msg info" style="display:none">
+    <div id="syncStatusText"></div>
+</div>
 <div class="card">
     <form method="POST" action="{{ url_for('admin_projects_bulk') }}" id="bulkProjects">
         <input type="hidden" name="action" id="bulkAction" value="">
@@ -100,6 +103,7 @@
 <script>
 (function () {
     'use strict';
+    // 批量操作：全选 / 计数 / 删除确认
     var form = document.getElementById('bulkProjects');
     if (!form) return;
     var checkAll = document.getElementById('checkAll');
@@ -131,6 +135,29 @@
         if (!confirm('确定删除选中的 ' + n + ' 个项目？此操作不可恢复。')) { e.preventDefault(); return; }
         document.getElementById('bulkAction').value = action;
     });
+
+    // 后台同步进度轮询：同步（含 README 图片本地化）在后台线程执行，
+    // 请求立即返回，这里每 2 秒查一次进度，见"正在同步→完成"则自动刷新列表。
+    var bar = document.getElementById('syncStatusBar');
+    var text = document.getElementById('syncStatusText');
+
+    function poll() {
+        fetch('{{ url_for("admin_projects_sync_status") }}')
+            .then(function (r) { return r.json(); })
+            .then(function (s) {
+                if (s.running) {
+                    bar.style.display = '';
+                    text.textContent = '后台同步中 ' + s.done + '/' + s.total + '（当前：' + (s.current || '…') + '）…';
+                    setTimeout(poll, 2000);
+                } else if (s.finished) {
+                    bar.style.display = '';
+                    text.textContent = s.summary || '同步完成';
+                    setTimeout(function () { location.reload(); }, 1200);
+                }
+            })
+            .catch(function () { setTimeout(poll, 3000); });
+    }
+    if (bar && text) { poll(); }
 
     update();
 })();
