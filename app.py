@@ -2306,6 +2306,10 @@ def _localize_readme_images(html, slug):
 _PROJECT_CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    'data', 'project_gh_cache.json')
 
+# 磁盘缓存读取快照：[最近一次命中 (mtime_ns,size), 已解析 key, 解析出的 dict]
+# 供 project_cache_snapshot 多进程回退时避免每个请求都读文件 + JSON 解析
+_PERSIST_CACHE_SNAP = [None, None, {}]
+
 
 def _persist_project_cache():
     """把内存缓存写盘（data/project_gh_cache.json），失败静默。"""
@@ -2333,9 +2337,41 @@ _load_project_cache()
 
 
 def project_cache_snapshot(slug):
-    """只读缓存快照（绝不触发网络请求）；无缓存返回 None。"""
-    hit = _PROJECT_GH_CACHE.get(slug)
-    return dict(hit) if hit else None
+    """只读缓存快照（绝不触发网络请求）；无缓存返回 None。
+
+    多进程部署（gunicorn/uwsgi 多 worker）下，各进程的内存缓存可能不一致：
+    管理员在某 worker 上同步后，其他 worker 内存里没有结果，导致「一会儿能
+    读到文档、一会儿提示未同步」。因此这里始终以磁盘缓存文件为权威：
+    内存 miss 时回退读磁盘；磁盘条目的 ts 比内存新时也取磁盘。磁盘文件小
+    （几个项目、几 KB），带 mtime 快照避免每个请求都做 IO + JSON 解析。
+    """
+    best = _PROJECT_GH_CACHE.get(slug)
+    # 读磁盘缓存（mtime+size 不变则复用上次解析结果，零开销）
+    try:
+        st = os.stat(_PROJECT_CACHE_FILE)
+        key = (st.st_mtime_ns, st.st_size)
+        if _PERSIST_CACHE_SNAP[0] != key:
+            if key != _PERSIST_CACHE_SNAP[1]:
+                with open(_PROJECT_CACHE_FILE, 'r', encoding='utf-8') as f:
+                    raw = json.load(f)
+                data = raw if isinstance(raw, dict) else {}
+                _PERSIST_CACHE_SNAP[1] = key
+            else:
+                data = _PERSIST_CACHE_SNAP[2]
+            _PERSIST_CACHE_SNAP[0] = key
+            _PERSIST_CACHE_SNAP[2] = data
+        else:
+            data = _PERSIST_CACHE_SNAP[2]
+    except (OSError, ValueError, TypeError):
+        data = {}
+    disk_entry = data.get(slug)
+    if not isinstance(disk_entry, dict):
+        disk_entry = None
+    if best and disk_entry:
+        best = best if (best.get('ts') or 0) >= (disk_entry.get('ts') or 0) else disk_entry
+    elif disk_entry:
+        best = disk_entry
+    return dict(best) if best else None
 
 
 def fetch_project_github(project_url):
