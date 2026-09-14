@@ -107,6 +107,10 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.36
+
+- **修复：项目同步触发 nginx 60s 上游超时**：同步单个项目需拉取 GitHub 数据并本地化 README 图片，耗时 1-2 分钟（一键同步全部更久），远超 nginx 默认 60s 上游超时，日志报 `upstream timed out ... POST /admin/projects/1/sync`。现在同步改为**后台线程执行**，POST 立即返回（实测 6.9ms），后台页面每 2 秒轮询 `/admin/projects/sync-status` 进度，完成后自动刷新列表；同步进行中重复提交会被拒绝并提示。
+
 ### v1.3.35
 
 - **修复：多进程部署下项目详情页文档「一会儿有一会儿没有」**：前台缓存此前只读进程内存，管理员在某 worker 上同步后，其他 worker 内存里没有结果，访客请求轮询到不同 worker 就时有时无。现在详情页缓存**以磁盘为权威**——内存 miss 自动回退 `data/project_gh_cache.json`，磁盘结果比内存新时也取磁盘，任何 worker 都能读到最新同步结果（带 mtime 快照，不增加每请求 IO）。
