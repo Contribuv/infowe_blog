@@ -143,19 +143,24 @@
     // 请求立即返回，这里每 2 秒查一次进度，见"正在同步→完成"则自动刷新列表。
     var bar = document.getElementById('syncStatusBar');
     var text = document.getElementById('syncStatusText');
+    // 仅当本次页面加载期间观测到「进行中→完成」的转变才自动刷新页面；
+    // 若打开页面时同步早已完成（finished 一直保持），刷新会再次看到 finished
+    // 又触发 reload → 页面陷入无限闪屏循环。
+    var sawRunning = false;
 
     function poll() {
         fetch('{{ url_for("admin_projects_sync_status") }}')
             .then(function (r) { return r.json(); })
             .then(function (s) {
                 if (s.running) {
+                    sawRunning = true;
                     bar.style.display = '';
                     text.textContent = '后台同步中 ' + s.done + '/' + s.total + '（当前：' + (s.current || '…') + '）…';
                     setTimeout(poll, 2000);
                 } else if (s.finished) {
                     bar.style.display = '';
                     text.textContent = s.summary || '同步完成';
-                    setTimeout(function () { location.reload(); }, 1200);
+                    if (sawRunning) { setTimeout(function () { location.reload(); }, 1200); }
                 }
             })
             .catch(function () { setTimeout(poll, 3000); });
