@@ -6,9 +6,7 @@
     <h2>{{ icon('github', 20) | safe }} 开源项目 <span class="badge">{{ projects|length }}</span></h2>
     <div class="page-actions">
         <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加项目</a>
-        <form method="POST" action="{{ url_for('admin_projects_sync_all') }}" style="display:inline" onsubmit="return confirm('确定从 GitHub 同步全部项目？重复仓库将自动跳过。')">
-            <button type="submit" class="btn btn-sm btn-secondary">{{ icon('refresh-cw', 14, 'icon-sm') | safe }} 一键同步全部</button>
-        </form>
+        <button type="button" id="syncAllBtn" class="btn btn-sm btn-secondary" data-sync-url="{{ url_for('admin_projects_sync_all') }}" title="从 GitHub 同步全部项目（重复仓库自动跳过）">{{ icon('refresh-cw', 14, 'icon-sm') | safe }} 一键同步全部</button>
     </div>
 </div>
 
@@ -76,7 +74,7 @@
                     <div class="btn-group">
                         <a href="/projects/{{ p.id }}" class="btn btn-sm" target="_blank" title="在前台查看项目详情页">前台</a>
                         <a href="{{ url_for('admin_project_edit', project_id=p.id) }}" class="btn btn-sm">编辑</a>
-                        <button type="submit" form="syncForm{{ p.id }}" class="btn btn-sm" title="重新从 GitHub 拉取实时数据与 README">{{ icon('refresh-cw', 14) | safe }} 同步</button>
+                        <button type="button" class="btn btn-sm" data-sync-url="{{ url_for('admin_project_sync', project_id=p.id) }}" title="重新从 GitHub 拉取实时数据与 README">{{ icon('refresh-cw', 14) | safe }} 同步</button>
                         <button type="submit" form="delForm{{ p.id }}" class="btn btn-sm btn-danger">删除</button>
                     </div>
                 </td>
@@ -86,11 +84,10 @@
     </table>
     </div>
     </form>
-    {# 同步/删除按钮归属的表单必须定义在批量操作表单之外：HTML 禁止嵌套 form，
+    {# 删除按钮归属的表单必须定义在批量操作表单之外：HTML 禁止嵌套 form，
        嵌套时浏览器会忽略内层 form 的 action，按钮归属外层批量表单，
-       导致点击「同步」提交到批量接口并报「无效的批量操作」。 #}
+       导致点击提交到批量接口并报「无效的批量操作」。同步已改 AJAX 不走表单。 #}
     {% for p in projects %}
-    <form id="syncForm{{ p.id }}" method="POST" action="{{ url_for('admin_project_sync', project_id=p.id) }}" style="display:none"></form>
     <form id="delForm{{ p.id }}" method="POST" action="{{ url_for('admin_project_delete', project_id=p.id) }}" style="display:none" onsubmit="return confirm('确定删除项目 {{ p.name }} ？')"></form>
     {% endfor %}
 </div>
@@ -139,15 +136,56 @@
         document.getElementById('bulkAction').value = action;
     });
 
-    // 后台同步进度轮询：同步（含 README 图片本地化）在后台线程执行，
-    // 请求立即返回，这里每 2 秒查一次进度。
+    // ── 后台同步：AJAX 提交 + 原地轮询进度 ──
+    // 同步（含 README 图片本地化）在后台线程执行，POST 立即返回 JSON（不跳转），
+    // 这里每 2 秒查一次 /admin/projects/sync-status 更新进度条；完成显示结果并刷新一次。
     var bar = document.getElementById('syncStatusBar');
     var text = document.getElementById('syncStatusText');
+    var syncBtns = Array.prototype.slice.call(document.querySelectorAll('[data-sync-url]'));
+    // 本次页面加载期间是否提交过同步（防止重复点击多个按钮多次提交）
+    var submitted = false;
     // 只在本页面加载期间观测到「进行中→完成」转变时才显示结果并自动刷新：
     // 若打开/刷新页面时同步早已完成（历史状态 finished 常驻），静默不提示、
     // 不刷新——否则提示条常驻或 reload 死循环（页面无限闪屏）。
     var sawRunning = false;
     var failures = 0;
+
+    function showBar(cls, msg, hideMs) {
+        bar.className = 'flash-msg ' + cls;
+        bar.style.display = '';
+        text.textContent = msg;
+        if (hideMs) { setTimeout(function () { bar.style.display = 'none'; }, hideMs); }
+    }
+
+    function setSyncBusy(busy) {
+        syncBtns.forEach(function (b) { b.disabled = busy; });
+    }
+
+    // 点击「同步 / 一键同步全部」：AJAX 提交，成功后原地开始轮询
+    syncBtns.forEach(function (b) {
+        b.addEventListener('click', function () {
+            if (submitted) return;
+            submitted = true;
+            setSyncBusy(true);
+            showBar('info', '正在提交同步任务…');
+            fetch(b.getAttribute('data-sync-url'), { method: 'POST' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (!res.started) {
+                        submitted = false;
+                        setSyncBusy(false);
+                        showBar('danger', res.error || '提交失败，请重试', 5000);
+                        return;
+                    }
+                    poll();
+                })
+                .catch(function () {
+                    submitted = false;
+                    setSyncBusy(false);
+                    showBar('danger', '提交失败（网络异常），请重试', 5000);
+                });
+        });
+    });
 
     function poll() {
         fetch('{{ url_for("admin_projects_sync_status") }}')
@@ -156,15 +194,14 @@
                 failures = 0;
                 if (s.running) {
                     sawRunning = true;
-                    bar.style.display = '';
-                    text.textContent = '后台同步中 ' + s.done + '/' + s.total + '（当前：' + (s.current || '…') + '）…';
+                    showBar('info', '后台同步中 ' + s.done + '/' + s.total + '（当前：' + (s.current || '…') + '）…');
                     setTimeout(poll, 2000);
                 } else if (s.finished && sawRunning) {
-                    bar.style.display = '';
-                    text.textContent = s.summary || '同步完成';
+                    // 全部成功显示绿色，有失败显示橙色/红色
+                    showBar(s.failed > 0 && s.ok === 0 ? 'danger' : 'success', (s.summary || '同步完成') + '，即将刷新…');
                     // 先消费完成状态（consume 清除 finished），避免刷新后页面仍挂旧提示
                     fetch('{{ url_for("admin_projects_sync_status") }}?consume=1').catch(function () {});
-                    setTimeout(function () { location.reload(); }, 1200);
+                    setTimeout(function () { location.reload(); }, 1500);
                 }
                 // 其余情况（空闲 / 历史完成）：无进行中任务，静默停止轮询
             })
@@ -174,7 +211,9 @@
                 setTimeout(poll, 3000);
             });
     }
-    if (bar && text) { poll(); }
+
+    // 页面加载时若已有同步在后台跑（他人触发/刷新页面），直接接续轮询
+    poll();
 
     update();
 })();

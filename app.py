@@ -4145,31 +4145,27 @@ def admin_projects_bulk():
 @admin_required
 def admin_project_sync(project_id):
     """同步单个项目：转入后台线程执行（含 README 图片本地化，可能耗时 1-2 分钟，
-    同步执行会超 nginx 60s 上游超时），进度经 /admin/projects/sync-status 轮询。"""
+    同步执行会超 nginx 60s 上游超时）。前端 AJAX 提交，立即返回 JSON（不再 302
+    跳转，避免页面闪跳），进度经 /admin/projects/sync-status 原地轮询。"""
     projects = db_load_projects()
     if not any(p['id'] == project_id for p in projects):
-        flash('项目不存在', 'error')
-        return redirect(url_for('admin_projects'))
+        return jsonify({'started': False, 'error': '项目不存在'})
     if not _start_project_sync(projects, single_id=project_id):
-        flash('已有同步任务正在后台执行，请等待完成后再次尝试', 'error')
-        return redirect(url_for('admin_projects'))
-    flash('已提交后台同步，正在拉取 GitHub 数据与 README 图片（约需几十秒）…', 'success')
-    return redirect(url_for('admin_projects'))
+        return jsonify({'started': False, 'error': '已有同步任务正在后台执行，请等待完成'})
+    return jsonify({'started': True, 'total': 1})
 
 
 @app.route('/admin/projects/sync-all', methods=['POST'])
 @admin_required
 def admin_projects_sync_all():
-    """批量同步全部项目（后台线程执行，按 GitHub 仓库去重，不重复请求）。"""
+    """批量同步全部项目（后台线程执行，按 GitHub 仓库去重，不重复请求）。
+    返回 JSON 供前端原地轮询进度。"""
     projects = db_load_projects()
     if not projects:
-        flash('没有可同步的项目', 'error')
-        return redirect(url_for('admin_projects'))
+        return jsonify({'started': False, 'error': '没有可同步的项目'})
     if not _start_project_sync(projects, single_id=None):
-        flash('已有同步任务正在后台执行，请等待完成后再次尝试', 'error')
-        return redirect(url_for('admin_projects'))
-    flash('已提交后台批量同步（共 %d 个项目，约需数分钟），完成后页面将自动刷新查看结果' % len(projects), 'success')
-    return redirect(url_for('admin_projects'))
+        return jsonify({'started': False, 'error': '已有同步任务正在后台执行，请等待完成'})
+    return jsonify({'started': True, 'total': len(projects)})
 
 
 @app.route('/admin/projects/sync-status')
