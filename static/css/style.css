@@ -1051,6 +1051,10 @@ html[data-theme-mode="auto"] .theme-toggle::after {
 }
 .proj-readme-tools { display: inline-flex; align-items: center; gap: var(--sp-3); }
 .proj-readme-age { font-size: var(--fz-xs); color: var(--text-tertiary); }
+.proj-feedback { font-size: var(--fz-xs); color: var(--text-tertiary); background: transparent; border: 1px solid var(--border-light); border-radius: 6px; padding: 4px 10px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; display: inline-flex; align-items: center; gap: 4px; }
+.proj-feedback:hover { color: var(--accent); border-color: var(--accent); background: var(--hover-bg); }
+.proj-feedback:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.proj-feedback-icon { display: inline-block; vertical-align: middle; }
 .proj-refresh-form { margin: 0; }
 .proj-refresh-btn {
   display: inline-flex; align-items: center; gap: 5px;

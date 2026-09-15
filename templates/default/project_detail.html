@@ -64,7 +64,7 @@
 <section class="proj-readme" id="readme">
     <div class="proj-readme-head">
         <h2 class="proj-readme-title">{{ icon('file-text', 18) | safe }} 项目文档</h2>
-        {% if gh.age_text %}<span class="proj-readme-age">{{ gh.age_text }}更新</span>{% endif %}
+        <button type="button" class="proj-feedback" data-feedback-to="#comments" aria-label="反馈或评论">{{ icon('message-circle', 14, 'proj-feedback-icon') | safe }} 反馈</button>
     </div>
     {% if gh.readme %}
     <div class="proj-readme-body markdown-body">{{ gh.readme | safe }}</div>

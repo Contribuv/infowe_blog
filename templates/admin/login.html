@@ -36,6 +36,7 @@
         <aside class="login-aside">
             <div class="login-aside-inner">
                 <div class="login-logo">
+                    <span class="logo-dot"></span>
                     <span class="logo-text">{% if home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}</span>
                 </div>
                 <h1 class="login-aside-title"> hey，<br>欢迎<span class="accent">回来</span></h1>
@@ -48,6 +49,9 @@
                     <li>分类、标签、全文搜索，帮自己找回旧文</li>
                     <li>有读者留言和友链，让这里不那么冷清</li>
                 </ul>
+                <div class="login-aside-foot">
+                    {% include '_footer_text.html' %}
+                </div>
             </div>
         </aside>
 
@@ -62,32 +66,32 @@
                 </div>
 
                 {% if error %}
-                <div class="login-error">{{ error }}</div>
+                <div class="login-error"><span>{{ error }}</span></div>
                 {% endif %}
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 {% for cat, msg in messages %}
-                <div class="login-error">{{ msg }}</div>
+                <div class="login-error"><span>{{ msg }}</span></div>
                 {% endfor %}
                 {% endif %}
                 {% endwith %}
 
-                <form method="POST" class="login-form" autocomplete="on">
-                    <div class="field">
+                <form method="POST" class="login-form" autocomplete="on" novalidate>
+                    <div class="field" data-field="username">
                         <label for="username">账号</label>
                         <input type="text" id="username" name="username" required
                                autocomplete="username" placeholder="请输入管理员账号">
                     </div>
-                    <div class="field">
+                    <div class="field" data-field="password">
                         <label for="password">密码</label>
                         <input type="password" id="password" name="password" required
                                autocomplete="current-password" placeholder="请输入登录密码">
                     </div>
 
                     {% if captcha_required %}
-                    <div class="field">
-                        <label for="captcha">安全验证<span class="req">*</span>（{{ captcha_question }} = ?）</label>
+                    <div class="field" data-field="captcha">
+                        <label for="captcha">安全验证（{{ captcha_question }} = ?）</label>
                         <input type="text" id="captcha" name="captcha" required inputmode="numeric"
                                autocomplete="off" placeholder="请输入计算结果">
                     </div>
@@ -97,7 +101,7 @@
                 </form>
 
                 <div class="login-hint">
-                    © 2026 infowe.site · Powered by Python &amp; Flask
+                    {% include '_footer_text.html' %}
                 </div>
             </div>
         </main>

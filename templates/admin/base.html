@@ -150,7 +150,7 @@
 
         <!-- 页脚 -->
         <footer class="admin-footer">
-            <span>© {{ now_year }} {{ blog_name }} 管理后台</span>
+            <span>© {% if footer_copyright_year %}{{ footer_copyright_year }}{% else %}{{ now_year }}{% endif %} {% if footer_copyright_owner %}{{ footer_copyright_owner }}{% else %}{{ blog_name }}{% endif %} · 管理后台</span>
             <a href="{{ url_for('admin_upgrade') }}">
                 infowe Blog <b>v{{ version }}</b>{% if upgrade_available %} · 发现新版{% endif %}
             </a>
@@ -160,6 +160,35 @@
 
 <script src="{{ url_for('static', filename='js/admin.js', t=admin_ver) }}"></script>
 <script src="{{ url_for('static', filename='js/disable-zoom.js', t=admin_ver) }}"></script>
+<script>
+// 主题选择：input 是 hidden 的 radio，原生视觉不可见。点击 label 后手动同步选中态：
+// 把 .active 移到当前选中的卡片，并把「使用中」徽章搬过去，提交前用户能清晰看到选谁。
+(function () {
+  var grid = document.querySelector('.theme-grid');
+  if (!grid) return;
+  var badgeHtml = '<span class="theme-badge">使用中</span>';
+  function sync() {
+    var items = grid.querySelectorAll('.theme-item');
+    items.forEach(function (item) {
+      var input = item.querySelector('input[type="radio"]');
+      var nameEl = item.querySelector('.theme-name');
+      var oldBadge = nameEl ? nameEl.querySelector('.theme-badge') : null;
+      if (input && input.checked) {
+        item.classList.add('active');
+        if (nameEl && !oldBadge) nameEl.insertAdjacentHTML('beforeend', badgeHtml);
+      } else {
+        item.classList.remove('active');
+        if (oldBadge) oldBadge.remove();
+      }
+    });
+  }
+  grid.addEventListener('change', sync);
+  grid.addEventListener('click', function (e) {
+    // 兜底：部分浏览器对 hidden radio 的 click 不触发 change，提交前再同步一次
+    setTimeout(sync, 0);
+  });
+})();
+</script>
 {% block admin_scripts %}{% endblock %}
 </body>
 </html>

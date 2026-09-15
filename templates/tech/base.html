@@ -112,7 +112,7 @@
     <footer class="tech-footer">
         <div class="tech-shell">
             <div class="tech-footer-inner">
-                <p class="tech-footer-copy">Powered by Flask &copy; {{ now_year }} {{ blog_name }}</p>
+                <p class="tech-footer-copy">{% include '_footer_text.html' %}</p>
                 <div class="tech-footer-links">
                     {% if nav_on.projects %}<a href="/projects">开源项目</a>{% endif %}
                     {% if nav_on.links %}<a href="/links">友情链接</a>{% endif %}
@@ -140,6 +140,30 @@
 
     <script src="{{ url_for('theme_static', filename='tech/theme.js', t='v' ~ version) }}" defer></script>
     <script src="{{ url_for('static', filename='js/disable-zoom.js', t='v' ~ version) }}"></script>
+    <script>
+    // 项目页「反馈」按钮：点击平滑滚动到评论区并聚焦输入框
+    (function () {
+      if (window.__techProjFeedbackBound) return; window.__techProjFeedbackBound = true;
+      document.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest && e.target.closest('.proj-feedback, .tech-proj-feedback');
+        if (!btn) return;
+        var sel = btn.getAttribute('data-feedback-to') || '#comments';
+        var target = document.querySelector(sel);
+        if (!target) return;
+        e.preventDefault();
+        var y = target.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || document.documentElement.scrollTop);
+        try { window.scrollTo({ top: y - 72, behavior: 'smooth' }); }
+        catch (err) { window.scrollTo(0, y - 72); }
+        var ta = target.querySelector('textarea');
+        if (ta) {
+          // 如果评论输入框在 <details> 里，先展开再聚焦（否则隐藏 textarea 无法 focus）
+          var box = ta.closest('details');
+          if (box) box.open = true;
+          try { ta.focus({ preventScroll: true }); } catch (e) { try { ta.focus(); } catch (e2) {} }
+        }
+      });
+    })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

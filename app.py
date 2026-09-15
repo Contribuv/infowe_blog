@@ -3689,10 +3689,22 @@ def project_detail(project_id):
         gh['cached'] = True
     else:
         gh = {'gh': None, 'readme': None, 'branch': '', 'ts': 0, 'error': '', 'cached': False}
-    # README 抓取时间 → 「更新于 X 分钟前」文案
+    # README 抓取时间 → 「更新于 X 前」文案：分钟超过阈值自动切换为小时/天/月/年，
+    # 避免出现「760 分钟前」这种长串数字。30 天按月，365 天按年取整数。
     if gh['ts']:
-        minutes = max(0, int((time.time() - gh['ts']) / 60))
-        gh['age_text'] = '刚刚' if minutes == 0 else ('%d 分钟前' % minutes)
+        diff = max(0, time.time() - gh['ts'])
+        if diff < 60:
+            gh['age_text'] = '刚刚'
+        elif diff < 3600:
+            gh['age_text'] = '%d 分钟前' % int(diff / 60)
+        elif diff < 86400:
+            gh['age_text'] = '%d 小时前' % int(diff / 3600)
+        elif diff < 86400 * 30:
+            gh['age_text'] = '%d 天前' % int(diff / 86400)
+        elif diff < 86400 * 365:
+            gh['age_text'] = '%d 个月前' % int(diff / (86400 * 30))
+        else:
+            gh['age_text'] = '%d 年前' % int(diff / (86400 * 365))
     else:
         gh['age_text'] = ''
 
@@ -3875,7 +3887,8 @@ def admin_login():
             else:
                 error = '用户名或密码错误' + ('（还可尝试 %d 次）' % max(remaining, 0) if remaining > 0 else '')
     return render_template('admin/login.html', error=error,
-                           captcha_required=captcha_required, captcha_question=captcha_question)
+                           captcha_required=captcha_required, captcha_question=captcha_question,
+                           now_year=time.strftime('%Y'))
 
 
 @app.route('/admin/logout')
@@ -4716,7 +4729,8 @@ def admin_settings():
                      'about_intro', 'skills', 'avatar', 'github_username',
                      'social_github', 'github_token', 'contact_email', 'home_title', 'icp_beian', 'police_beian',
                      'home_posts_count', 'posts_per_page',
-                     'smtp_host', 'smtp_sender_name', 'smtp_port', 'smtp_user', 'smtp_pass', 'notify_email']:
+                     'smtp_host', 'smtp_sender_name', 'smtp_port', 'smtp_user', 'smtp_pass', 'notify_email',
+                     'footer_copyright_year', 'footer_copyright_owner', 'footer_powered_by']:
             if key in request.form:
                 save_setting(key, request.form[key])
                 app.config[key] = request.form[key]

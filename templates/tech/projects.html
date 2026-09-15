@@ -38,7 +38,9 @@
                 </span>
                 {% endfor %}
                 {% if langs|length > 2 %}
-                <span class="tech-project-lang-more" data-more="{% for l in langs[2:] %}{% if not loop.first %}、{% endif %}{{ l[0] }}{% endfor %}">+{{ langs|length - 2 }} 种</span>
+                <span class="tech-project-lang-more" tabindex="0" role="button" aria-label="查看其余 {{ langs|length - 2 }} 种语言">+{{ langs|length - 2 }} 种
+                    <span class="tech-tip">{% for l in langs[2:] %}<span class="tech-tip-item"><span class="tech-lang-dot" style="background: {{ l[2] }};"></span>{{ l[0] }}</span>{% endfor %}</span>
+                </span>
                 {% endif %}
                 {% elif project.language %}
                 <span class="tech-project-lang">
@@ -66,29 +68,54 @@
     'use strict';
     var links = document.querySelectorAll('.tech-lang-link');
     var cards = document.querySelectorAll('.tech-project-card');
-    if (!links.length || !cards.length) return;
-    function applyFilter(lang) {
+    if (links.length && cards.length) {
+        function applyFilter(lang) {
+            links.forEach(function (b) {
+                b.classList.toggle('is-active', b.getAttribute('data-lang') === lang);
+            });
+            cards.forEach(function (c) {
+                var langs = (c.getAttribute('data-langs') || '').split(',').filter(Boolean);
+                var show = lang === '__all__' || langs.indexOf(lang) !== -1;
+                c.style.display = show ? '' : 'none';
+            });
+        }
         links.forEach(function (b) {
-            b.classList.toggle('is-active', b.getAttribute('data-lang') === lang);
-        });
-        cards.forEach(function (c) {
-            var langs = (c.getAttribute('data-langs') || '').split(',').filter(Boolean);
-            var show = lang === '__all__' || langs.indexOf(lang) !== -1;
-            c.style.display = show ? '' : 'none';
+            b.addEventListener('click', function () {
+                applyFilter(b.getAttribute('data-lang'));
+            });
+            /* 键盘可达：Enter / 空格触发筛选 */
+            b.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                    ev.preventDefault();
+                    applyFilter(b.getAttribute('data-lang'));
+                }
+            });
         });
     }
-    links.forEach(function (b) {
-        b.addEventListener('click', function () {
-            applyFilter(b.getAttribute('data-lang'));
+
+    /* 移动端：「+N 种」点击展开/收起隐藏语言列表。
+       PC 走 CSS hover/focus，无需 JS 介入；触摸设备 click 切换。点空白关闭。 */
+    var moreTips = document.querySelectorAll('.tech-project-lang-more');
+    if (!moreTips.length) return;
+    function closeAllTips() { moreTips.forEach(function (t) { t.classList.remove('is-open'); }); }
+    moreTips.forEach(function (tip) {
+        tip.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var wasOpen = tip.classList.contains('is-open');
+            closeAllTips();
+            if (!wasOpen) tip.classList.add('is-open');
         });
-        /* 键盘可达：Enter / 空格触发筛选 */
-        b.addEventListener('keydown', function (ev) {
+        /* 键盘可达：Enter/Space 切换 */
+        tip.addEventListener('keydown', function (ev) {
             if (ev.key === 'Enter' || ev.key === ' ') {
                 ev.preventDefault();
-                applyFilter(b.getAttribute('data-lang'));
+                tip.click();
+            } else if (ev.key === 'Escape') {
+                tip.classList.remove('is-open');
             }
         });
     });
+    document.addEventListener('click', closeAllTips);
 })();
 </script>
 {% endblock %}

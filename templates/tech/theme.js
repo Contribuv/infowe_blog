@@ -413,5 +413,7 @@
   }, { rootMargin: '-72px 0px -65% 0px', threshold: 0 });
 
   headings.forEach(function (h) { io.observe(h); });
+
+  // 项目页「反馈」按钮：监听由 base.html 末尾的内联脚本绑定（避开 theme.js IIFE 抛错时的副作用）
 })();
 

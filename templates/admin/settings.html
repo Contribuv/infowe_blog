@@ -215,6 +215,27 @@
                        value="{{ config.get('police_beian', '') }}"
                        placeholder="如: 京公网安备11010802000000号">
             </div>
+            <div class="form-group">
+                <label>版权年份</label>
+                <input type="text" name="footer_copyright_year" class="input-text"
+                       value="{{ config.get('footer_copyright_year', '') }}"
+                       placeholder="如: 2026">
+                <span class="form-hint">登录页/首页底部版权行显示的年份，留空则自动取服务器当前年份</span>
+            </div>
+            <div class="form-group">
+                <label>版权主体（站点名称）</label>
+                <input type="text" name="footer_copyright_owner" class="input-text"
+                       value="{{ config.get('footer_copyright_owner', '') }}"
+                       placeholder="如: infowe.site">
+                <span class="form-hint">会拼成「Powered by X © {年份} {站点名称}」，留空则回退到博客名称</span>
+            </div>
+            <div class="form-group">
+                <label>Powered by 文案</label>
+                <input type="text" name="footer_powered_by" class="input-text"
+                       value="{{ config.get('footer_powered_by', '') }}"
+                       placeholder="如: Python &amp; Flask">
+                <span class="form-hint">版权行右侧的 Powered by 部分，留空则隐藏该项</span>
+            </div>
         </div>
 
         <!-- 导航菜单：每项一行（页面名 + 开关） -->

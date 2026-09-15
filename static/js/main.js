@@ -525,4 +525,6 @@
       if (btn) { btn.disabled = true; btn.textContent = '提交中...'; }
     });
   }
+
+  /* 18. 项目页「反馈」按钮：监听由 default/base.html 末尾的内联脚本绑定（避开 main.js IIFE 抛错时的副作用） */
 })();
