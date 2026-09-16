@@ -47,12 +47,8 @@
                 <td data-label="URL"><a href="{{ l.url }}" target="_blank" class="link-url">{{ l.url[:60] }}</a></td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
                 <td class="actions-cell" data-label="操作">
-                    <form method="POST" action="{{ url_for('admin_link_approve', link_id=l.id) }}" style="display:inline">
-                        <button type="submit" class="btn btn-sm btn-primary">通过</button>
-                    </form>
-                    <form method="POST" action="{{ url_for('admin_link_reject', link_id=l.id) }}" style="display:inline" onsubmit="return confirm('拒绝并隐藏链接 {{ l.name }} ？')">
-                        <button type="submit" class="btn btn-sm btn-danger">拒绝</button>
-                    </form>
+                    <button type="submit" form="approveForm{{ l.id }}" class="btn btn-sm btn-primary">通过</button>
+                    <button type="submit" form="rejectForm{{ l.id }}" class="btn btn-sm btn-danger">拒绝</button>
                 </td>
             </tr>
             {% endfor %}
@@ -60,6 +56,12 @@
         </table>
         </div>
     </form>
+{# 单条操作表单定义在批量表单之外：HTML 禁止嵌套 form，否则浏览器丢弃内层 action，
+   按钮归属外层 bulk-form-pending，提交到批量接口并报「无效的批量操作」。 #}
+{% for l in pending %}
+    <form id="approveForm{{ l.id }}" method="POST" action="{{ url_for('admin_link_approve', link_id=l.id) }}" style="display:none"></form>
+    <form id="rejectForm{{ l.id }}" method="POST" action="{{ url_for('admin_link_reject', link_id=l.id) }}" style="display:none" onsubmit="return confirm('拒绝并隐藏链接 {{ l.name }} ？')"></form>
+{% endfor %}
 </div>
 {% endif %}
 
@@ -103,9 +105,7 @@
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
                 <td class="actions-cell" data-label="操作">
                     <a href="{{ url_for('admin_link_edit', link_id=l.id) }}" class="btn btn-sm">编辑</a>
-                    <form method="POST" action="{{ url_for('admin_link_delete', link_id=l.id) }}" style="display:inline" onsubmit="return confirm('确定删除链接 {{ l.name }} ？')">
-                        <button type="submit" class="btn btn-sm btn-danger">删除</button>
-                    </form>
+                    <button type="submit" form="delForm{{ l.id }}" class="btn btn-sm btn-danger">删除</button>
                 </td>
             </tr>
             {% endfor %}
@@ -113,6 +113,11 @@
         </table>
         </div>
     </form>
+{# 单条删除表单定义在批量表单之外：HTML 禁止嵌套 form，否则浏览器丢弃内层 action，
+   按钮归属外层 bulk-form-links，提交到批量接口并报「无效的批量操作」。 #}
+{% for l in links %}
+    <form id="delForm{{ l.id }}" method="POST" action="{{ url_for('admin_link_delete', link_id=l.id) }}" style="display:none" onsubmit="return confirm('确定删除链接 {{ l.name }} ？')"></form>
+{% endfor %}
 </div>
 {% else %}
 <div class="empty-state">

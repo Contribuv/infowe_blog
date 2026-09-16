@@ -78,10 +78,7 @@
                     <div class="btn-group">
                         <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="btn btn-sm">编辑</a>
                         <a href="/post/{{ post.id }}" target="_blank" class="btn btn-sm">查看</a>
-                        <form method="POST" action="{{ url_for('admin_post_delete', post_id=post.id) }}" style="display:inline"
-                              onsubmit="return confirm('确定删除《{{ post.title }}》？此操作不可恢复。')">
-                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
-                        </form>
+                        <button type="submit" form="delForm{{ post.id }}" class="btn btn-sm btn-danger">删除</button>
                     </div>
                 </td>
             </tr>
@@ -92,6 +89,11 @@
         </table>
         </div>
     </form>
+{# 单条删除表单定义在批量表单之外：HTML 禁止嵌套 form，否则浏览器丢弃内层 action，
+   按钮归属外层 bulkPosts，提交到批量接口并报「无效的批量操作」。 #}
+{% for post in posts %}
+    <form id="delForm{{ post.id }}" method="POST" action="{{ url_for('admin_post_delete', post_id=post.id) }}" style="display:none" onsubmit="return confirm('确定删除《{{ post.title }}》？此操作不可恢复。')"></form>
+{% endfor %}
 </div>
 
 <!-- 分页 -->

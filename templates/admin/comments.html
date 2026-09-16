@@ -76,13 +76,9 @@
                     <td data-label="时间">{{ c.created_at[:16] }}</td>
                     <td class="actions-cell" data-label="操作">
                         {% if c.status == 'pending' %}
-                        <form method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" style="display:inline">
-                            <button type="submit" class="btn btn-sm btn-success">通过</button>
-                        </form>
+                        <button type="submit" form="approveForm{{ c.id }}" class="btn btn-sm btn-success">通过</button>
                         {% endif %}
-                        <form method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" style="display:inline" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')">
-                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
-                        </form>
+                        <button type="submit" form="delForm{{ c.id }}" class="btn btn-sm btn-danger">删除</button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -90,6 +86,15 @@
         </table>
     </div>
 </form>
+{# 单条操作表单必须定义在批量表单之外：HTML 禁止嵌套 form，
+   嵌套时浏览器会忽略内层 action，按钮归属外层批量表单，
+   导致点单条删除报「无效的批量操作」。 #}
+{% for c in comments %}
+    {% if c.status == 'pending' %}
+    <form id="approveForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" style="display:none"></form>
+    {% endif %}
+    <form id="delForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" style="display:none" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')"></form>
+{% endfor %}
 </div>
 {% else %}
 <div class="empty-state">

@@ -44,10 +44,7 @@
                 <td data-label="操作">
                     <div class="btn-group">
                         <a href="{{ url_for('admin_timeline_edit', item_id=it.id) }}" class="btn btn-sm">编辑</a>
-                        <form method="POST" action="{{ url_for('admin_timeline_delete', item_id=it.id) }}"
-                              style="display:inline" onsubmit="return confirm('确定删除这条历程？')">
-                            <button type="submit" class="btn btn-sm btn-danger">删除</button>
-                        </form>
+                        <button type="submit" form="delForm{{ it.id }}" class="btn btn-sm btn-danger">删除</button>
                     </div>
                 </td>
             </tr>
@@ -56,6 +53,11 @@
     </table>
     </div>
     </form>
+{# 单条删除表单定义在批量表单之外：HTML 禁止嵌套 form，否则浏览器丢弃内层 action，
+   按钮归属外层 bulkTimeline，提交到批量接口并报「无效的批量操作」。 #}
+{% for it in items %}
+    <form id="delForm{{ it.id }}" method="POST" action="{{ url_for('admin_timeline_delete', item_id=it.id) }}" style="display:none" onsubmit="return confirm('确定删除这条历程？')"></form>
+{% endfor %}
 </div>
 {% else %}
 <div class="empty-state">

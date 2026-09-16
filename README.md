@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.41
+
+- **修复 admin 后台单条删除按钮报「无效的批量操作」bug（v1.3.38 残留）**：`comments.html` / `posts.html` / `categories.html` / `timeline.html` / `links.html` 单条操作 `<form>` 嵌套在批量表单 `<form>` 内，HTML 规范禁止嵌套，浏览器丢弃内层 action 导致按钮归属到批量接口；统一改为 projects.html 模式——表格内 button 加 `form="xxxForm{id}"` 归属，单条 form 定义在批量表单外 `display:none`，保留 `onsubmit` 确认弹窗
+- `app.py` VERSION 同步至 **1.3.41**
+
 ### v1.3.40
 
 - **tech 主题毛玻璃三连**：`.tech-nav` / `.tech-search-layer` / `.tech-toast` 统一半透明背景（`--nav-bg`，light 72% 白 / dark 72% 深）+ `backdrop-filter: saturate(180%) blur(14px)`；滚动内容在导航后柔和透出，toast 浮起反馈更明显
