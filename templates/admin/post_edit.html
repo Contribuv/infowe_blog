@@ -256,27 +256,28 @@
         renderChips();  // 刷新建议区，已自动添加的标签不再显示
         return true;
     }
-    // 根据标题+正文内容匹配已有标签 + 提取正文英文术语 → 自动识别区；全部已有标签按使用次数 → 常用区
+    // 自动识别区：纯基于本文（标题+正文）的高频术语 → 推荐新词，不混入历史标签
+    // 常用区：匹配本文的已有标签按频率排序 → 复用历史标签保证一致性，不再给整站 Top 6
     function renderChips() {
         if (!tagsInput || !tagsAuto || !tagsCommon) return;
         var source = tagsInput.value + ' ' +
             (document.getElementById('title') ? document.getElementById('title').value : '') + ' ' +
             (typeof vditor !== 'undefined' && vditor ? vditor.getValue() : '');
         var byFreq = Object.keys(ALL_TAGS).sort(function (a, b) { return ALL_TAGS[b] - ALL_TAGS[a]; });
-        // 已有标签中匹配正文的：词典可靠，可自动填入输入框
-        var autoKnown = byFreq.filter(function (t) { return !hasTag(t) && isMatch(t, source); });
-        var auto = autoKnown.slice();
-        // 正文中高频英文术语只进建议区（代码噪声词如 trim/const 自动写入会污染标签数据）
+        // 匹配本文的已有标签（去重当前已选）→ 常用区候选 + 自动填入来源
+        var matchedKnown = byFreq.filter(function (t) { return !hasTag(t) && isMatch(t, source); });
+        // 自动识别区：仅正文术语提取（≥3字符、非停用词、出现≥2次），不再混入历史标签，避免老标签污染新文章
         var seen = {};
-        auto.forEach(function (t) { seen[t.toLowerCase()] = 1; });
+        var auto = [];
         extractEnglishTerms(source).forEach(function (t) {
             var k = t.toLowerCase();
             if (!seen[k] && !hasTag(t)) { seen[k] = 1; auto.push(t); }
         });
         auto = auto.slice(0, 6);   // 上限 6：窄侧栏一组一行到两行，防拥挤（常用区同理）
-        // 自动填入仅限已有标签；若已自动填充，渲染已由内部递归完成，直接结束避免旧列表覆盖
-        if (autoAddTags(autoKnown)) return;
-        var common = byFreq.filter(function (t) { return !hasTag(t); }).slice(0, 6);
+        // 自动填入仅限匹配本文的已有标签；若已自动填充，渲染已由内部递归完成，直接结束避免旧列表覆盖
+        if (autoAddTags(matchedKnown)) return;
+        // 常用区：匹配本文的已有标签按频率展示，不再给整站 Top 6 无关标签
+        var common = matchedKnown.slice(0, 6);
         paintChips(tagsAuto, auto);
         paintChips(tagsCommon, common);
         tagsAuto.hidden = auto.length === 0;

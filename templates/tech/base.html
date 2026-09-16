@@ -51,7 +51,7 @@
     <nav class="tech-nav" aria-label="主导航">
         <div class="tech-shell">
             <div class="tech-nav-inner">
-                <a href="/" class="tech-logo"><span class="tech-logo-bracket">&lt;</span>{{ blog_name }}<span class="tech-logo-bracket tech-logo-blink">/&gt;</span></a><div class="tech-nav-links">
+                <a href="/" class="tech-logo">{{ blog_name }}<span class="tech-logo-cursor tech-logo-blink">|</span></a><div class="tech-nav-links">
                     <a href="/" class="tech-nav-link {% if request.path == '/' %}active{% endif %}">首页</a>
                     {# 可开关页面：由后台「导航菜单」控制，关闭后不渲染 #}
                     {% for item in nav_pages %}
@@ -75,17 +75,18 @@
                 </div>
             </div>
         </div>
-        <!-- 全局搜索下拉面板（导航随窗口粘性定位，面板随导航常驻顶部） -->
-        <div class="tech-search-layer" id="tech-search-layer">
-            <div class="tech-shell">
-                <form class="tech-search-form" action="/" method="GET" role="search">
-                    <input type="search" name="q" id="tech-search-input" class="tech-search-input" placeholder="搜索文章标题、标签、内容…" autocomplete="off" aria-label="搜索文章">
-                    <button type="submit" class="tech-search-btn">搜索</button>
-                    <button type="button" class="tech-search-close" id="tech-search-close" aria-label="关闭搜索" title="关闭">&times;</button>
-                </form>
-            </div>
-        </div>
     </nav>
+
+    <!-- 全局搜索下拉面板（独立 sticky：移出 nav 避免 backdrop-filter 嵌套失效；top 紧贴 nav 下方，视觉无缝衔接） -->
+    <div class="tech-search-layer" id="tech-search-layer">
+        <div class="tech-shell">
+            <form class="tech-search-form" action="/" method="GET" role="search">
+                <input type="search" name="q" id="tech-search-input" class="tech-search-input" placeholder="搜索文章标题、标签、内容…" autocomplete="off" aria-label="搜索文章">
+                <button type="submit" class="tech-search-btn">搜索</button>
+                <button type="button" class="tech-search-close" id="tech-search-close" aria-label="关闭搜索" title="关闭">&times;</button>
+            </form>
+        </div>
+    </div>
 
     <!-- 移动端抽屉 -->
     <div class="tech-drawer-overlay" id="tech-drawer-overlay"></div>

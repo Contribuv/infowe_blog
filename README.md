@@ -107,6 +107,18 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.40
+
+- **tech 主题毛玻璃三连**：`.tech-nav` / `.tech-search-layer` / `.tech-toast` 统一半透明背景（`--nav-bg`，light 72% 白 / dark 72% 深）+ `backdrop-filter: saturate(180%) blur(14px)`；滚动内容在导航后柔和透出，toast 浮起反馈更明显
+- **iOS Safari sticky 1px 漏出修复**：nav 顶部加 `box-shadow: 0 -1px 0 0 var(--nav-bg)` 兜底，滚动时上方不再漏 1px 缝
+- **search-layer 移出 nav**：原嵌于 nav 内部时 backdrop-filter 嵌套失效（CSS Filter Effects 规范行为），移出后改 `position: fixed; top: 56px; left/right: 0; z-index: 99`，紧贴 nav 下方吸顶
+- **首页格言纯本地化**：移除远程「一言 API」调用（`https://v1.hitokoto.cn/`），刷新按钮仅随机抽取本地 `FALLBACK` 数组；首屏秒出、无超时控制、零网络依赖；同时清理 `theme.js` / `index.html` 中过时的「一言 API」注释
+- **后台文章标签推荐重构（tech 主题）**：自动识别区改为纯基于本文（标题+正文）的高频英文术语提取，不再混入历史标签，避免老标签污染新文章；常用区改为匹配本文的已有标签按频率展示，不再给整站 Top 6 无关标签；自动填入来源改为匹配本文的历史标签
+- **后台 admin 移动端禁止缩放**：admin base viewport meta 加 `maximum-scale=1.0, user-scalable=no`，iPhone Safari 无法双指缩放 admin 页面
+- **logo 改为闪动光标样式**：`<infowe.site/>` 改为 `infowe.site|`（`|` 蓝色闪动，hover 变紫），纯 CSS 动画、无 JS 依赖
+- **文章 TOC 点击后自动关闭**：点选目录节点后 `<details>` 自动收起，移动端体验更顺，桌面端连续浏览也避免遮挡正文
+- `app.py` VERSION 同步至 **1.3.40**
+
 ### v1.3.38
 
 - **优化：同步流程前端反馈**：项目列表页同步改为 AJAX 提交 + 原地轮询进度（不再 302 整页跳转）——点击「同步 / 一键同步全部」立即出现进度条「后台同步中 N/M（当前：xx）…」，每 2 秒更新；完成后按结果显示绿色（成功）或红色（失败）提示并自动刷新一次；运行中重复提交会被拒绝并提示；若打开页面时已有同步在后台执行，也会直接接续显示进度。

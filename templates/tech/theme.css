@@ -10,6 +10,8 @@
 [data-theme="light"] {
   color-scheme: light;
   --bg: #ffffff;
+  /* 导航毛玻璃半透明背景：72% 不透明保留底色识别，blur 14px + saturate 180% 让背后内容更鲜亮 */
+  --nav-bg: rgba(255, 255, 255, .72);
   --bg-subtle: #f6f8fa;
   --bg-code: #f6f8fa;
   --border: #d0d7de;
@@ -44,6 +46,8 @@
 [data-theme="dark"] {
   color-scheme: dark;
   --bg: #0d1117;
+  /* 暗色导航毛玻璃：与底色同源同透明度，背景透出更自然 */
+  --nav-bg: rgba(13, 17, 23, .72);
   --bg-subtle: #161b22;
   --bg-code: #161b22;
   --border: #30363d;
@@ -109,17 +113,22 @@ img { max-width: 100%; }
   margin: 0 auto;
   padding: 0 20px;
 }
-/* ── 主内容统一单列 940px：页头、横线、列表、卡片共用同一列宽，
-      与 1000px 导航/页脚同心居中；窄屏自动退化为全宽 ── */
+/* ── 主内容与导航/页脚同宽 1000px：消除滚动时导航底边线与正文左右不齐的视觉割裂；
+   940px→1000px 每行仅多 ~3 字符，仍在最佳阅读区间（55-65 中文字符） ── */
 .tech-main .tech-shell {
-  max-width: 940px;
+  max-width: 1000px;
 }
 
 /* ── 导航 ── */
 .tech-nav {
   position: sticky; top: 0; z-index: 100;
-  background: var(--bg);
+  background: var(--nav-bg);
   border-bottom: 1px solid var(--border);
+  /* 毛玻璃：blur 14px + saturate 180% 让滚动内容在 nav 后方柔和透出 */
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  /* iOS Safari sticky 滚动时上方偶尔漏 1px：顶部画 1px 同色外阴影遮盖（不占盒模型空间） */
+  box-shadow: 0 -1px 0 0 var(--nav-bg);
 }
 .tech-nav-inner {
   display: flex; align-items: center; justify-content: flex-start;
@@ -130,12 +139,17 @@ img { max-width: 100%; }
   font-size: 18px; font-weight: 700; color: var(--text);
   text-decoration: none; white-space: nowrap;
 }
-.tech-logo-bracket {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 16px; font-weight: 400; color: var(--accent);
-}
 .tech-logo:hover { color: var(--accent); }
-.tech-logo:hover .tech-logo-bracket { color: var(--hl-title); }
+.tech-logo-cursor {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 400;
+  font-size: 0.95em;
+  line-height: 1;
+  color: var(--accent);
+  margin-left: 1px;
+  transform: translateY(-1px);
+}
+.tech-logo:hover .tech-logo-cursor { color: var(--hl-title); }
 .tech-logo-blink {
   animation: tech-blink 1.2s steps(2, start) infinite;
 }
@@ -356,10 +370,14 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 
 /* ── 全局搜索：导航下拉面板（入口为导航栏放大镜） ── */
 .tech-search-layer {
+  /* 独立 fixed：body 是 flex 容器，sticky 在 flex 子元素中失效；top 56px 紧贴 nav 下方 */
+  position: fixed; top: 56px; left: 0; right: 0; z-index: 99;
   display: none;
   padding: 12px 0 14px;
   border-top: 1px solid var(--border);
-  background: var(--bg-subtle);
+  background: var(--nav-bg);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
 }
 .tech-search-layer.open { display: block; animation: tech-search-drop .18s ease; }
 @keyframes tech-search-drop {
@@ -774,8 +792,11 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   max-width: min(86vw, 420px);
   padding: 9px 18px;
   font-size: 13px; font-weight: 500; line-height: 1.5;
-  color: var(--text); background: var(--bg);
+  color: var(--text); background: var(--nav-bg);
   border: 1px solid var(--border-strong); border-radius: 8px;
+  /* toast 毛玻璃：浮起反馈更明显，复用 nav-bg 保持视觉一致 */
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   opacity: 0; visibility: hidden; pointer-events: none;
@@ -921,7 +942,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-stat span { font-size: 12px; color: var(--text-secondary); }
 
 /* 正文叙事区 */
-.tech-about { max-width: 940px; margin: 36px auto 0; }
+.tech-about { max-width: 1000px; margin: 36px auto 0; }
 /* 叙事区块：无装饰线，仅靠留白分层 */
 .tech-about-section { margin-bottom: 24px; }
 .tech-about-section > h2 {
@@ -990,6 +1011,10 @@ html[data-theme-mode="auto"] #theme-toggle::after {
     padding-top: 20px;
     padding-bottom: 20px;
   }
+/* 宽屏 ≥1024px：项目网格三列，充分利用 1000px 容器空间，减少纵向滚动 */
+@media (min-width: 1024px) {
+  .tech-project-grid { grid-template-columns: repeat(3, 1fr); }
+}
 .tech-project-card {
   display: flex; flex-direction: column; gap: 8px;
   padding: 24px; min-width: 0;
@@ -1156,7 +1181,7 @@ html { touch-action: manipulation; }
 }
 
 /* ── 友链页 ── */
-.tech-links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.tech-links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .tech-link-card {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px; min-width: 0;

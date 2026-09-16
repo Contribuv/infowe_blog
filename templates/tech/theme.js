@@ -95,7 +95,7 @@
   }
 })();
 
-/* ── 首页终端格言：本地句子库优先（秒出），一言 API 仅作在线增强，失败静默不回退 ── */
+/* ── 首页终端格言：本地句子库（FALLBACK 数组），刷新按钮换下一句 ── */
 (function () {
   'use strict';
   var quoteText = document.getElementById('tech-quote-text');
@@ -129,7 +129,6 @@
   ];
 
   var timers = [];
-  var seq = 0;      // 取句序号：防止异步请求乱序覆盖
   var MAX_LEN = 120;
 
   function clearTimers() {
@@ -161,39 +160,15 @@
     typeQuote(item.text, item.src);
   }
 
-  /* 一言更多是彩蛋：连上就用在线句，连不上/超时就保持已出的本地句，不打断首屏 */
-  function enhanceOnline() {
-    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var guard = setTimeout(function () { if (ctrl) ctrl.abort(); }, 5000);
-    fetch('https://v1.hitokoto.cn/?encode=json&lang=cn', { signal: ctrl && ctrl.signal })
-      .then(function (res) {
-        clearTimeout(guard);
-        if (!res.ok) return;
-        return res.json();
-      })
-      .then(function (d) {
-        clearTimeout(guard);
-        var text = d && d.hitokoto ? String(d.hitokoto) : '';
-        if (!text) return;
-        var from = '';
-        if (d.from_who && d.from) from = d.from_who + ' · ' + d.from;
-        else if (d.from) from = d.from;
-        typeQuote(text, from); // 覆盖本地句，乱序由 seq 拆解
-      })
-      .catch(function () { clearTimeout(guard); });
-  }
-
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function () {
       refreshBtn.classList.add('spin');
       setTimeout(function () { refreshBtn.classList.remove('spin'); }, 300);
-      renderLocal();      // 点击立即换本地句，弱网也不空窗
-      enhanceOnline();    // 在线句带 5s 超时兜底，成功才覆盖
+      renderLocal();
     });
   }
 
-  renderLocal();      // 首屏先出本地句
-  enhanceOnline();    // 在线增强在后台，成功才替换
+  renderLocal();
 })();
 
 /* ── 全局搜索：导航放大镜按钮展开 / 收起下拉面板 ── */
@@ -371,7 +346,7 @@
   var content = document.querySelector('.tech-post-body');
   if (!tocBody || !content) return;
 
-  // 点击委托：拦截 #id 锚点，改用平滑滚动
+  // 点击委托：拦截 #id 锚点，改用平滑滚动 + 点完即关（移动端抽屉式 TOC 必关；桌面端连续浏览也建议收起避免遮挡正文）
   tocBody.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#"]');
     if (!a) return;
@@ -379,6 +354,9 @@
     var target = id && document.getElementById(id);
     if (!target) return;
     e.preventDefault();
+    // 让外层 <details> 收起：统一行为，桌面/移动都关
+    var details = tocBody.closest('details');
+    if (details) details.open = false;
     var headerOffset = 60; // 顶部导航高度预留
     var top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
     window.scrollTo({ top: top, behavior: 'smooth' });

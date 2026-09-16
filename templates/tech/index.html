@@ -14,7 +14,7 @@
         {% else %}共 {{ total }} 篇文章 · {{ all_tags|length }} 个标签 · {{ total_categories }} 个分类{% endif %}
     </p>
     {% if not current_tag and not search_query %}
-    <!-- 首页终端格言：一言 API + 本地兜底，仅首页展示；交互逻辑见 theme.js -->
+    <!-- 首页终端格言：本地句子库，仅首页展示；交互逻辑见 theme.js -->
     <div class="tech-quote">
         <!-- prompt 为人名路径（~/haozi $），避免与导航 / 页脚中的站点名重复；如需自动跟随站点名可改回 {{ blog_name|lower }} -->
         <span class="tech-quote-prompt" aria-hidden="true">~/haozi $</span>
