@@ -107,6 +107,15 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.44
+
+- **DB 新数据不再走 CURRENT_TIMESTAMP UTC，Python INSERT/UPDATE 全部显式写本地 CST**
+  - app.py 新增 `_now()` 辅助函数（`datetime.now().strftime()` 本地 CST）
+  - 所有 INSERT INTO 显式写 created_at/updated_at，不再依赖 `DEFAULT CURRENT_TIMESTAMP`
+  - 所有 UPDATE 显式写 updated_at
+- **自动迁移钩子**：init_db() 检查 settings.schema_version，<2 时首次启动自动跑 UTC→CST 迁移（posts 纯日期/12:00:00 跳过，其余 +8h；其它表全 +8h）
+- `app.py` VERSION 同步至 **1.3.44**
+
 ### v1.3.43
 
 - **彻底统一时区：数据库只存 CST（中国时区 +8），模板直接切片显示，不再有 UTC→CST 转换层**

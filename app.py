@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.43'
+VERSION = '1.3.44'
 
 import os
 import re
@@ -221,6 +221,12 @@ class ThemedFlask(Flask):
     @property
     def jinja_loader(self):
         return ThemeLoader(self)
+
+
+def _now():
+    """返回本地 CST 时间字符串（YYYY-MM-DD HH:MM:SS）。
+    所有 INSERT/UPDATE 统一用这个显式写 DB，不再依赖 SQLite DEFAULT CURRENT_TIMESTAMP（UTC）。"""
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
 app = ThemedFlask(__name__)
@@ -488,8 +494,8 @@ def init_db():
     # 默认管理员
     admin_exists = db.execute("SELECT id FROM users WHERE username='admin'").fetchone()
     if not admin_exists:
-        db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                   ('admin', hash_password('admin123')))
+        db.execute("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)",
+                   ('admin', hash_password('admin123'), _now()))
 
     # 默认设置
     defaults = [
@@ -539,6 +545,59 @@ def init_db():
     ]
     for k, v in defaults:
         db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
+
+    # ── v1.3.43 自动迁移：DB 时区统一 UTC→CST ──
+    # 之前表定义 DEFAULT CURRENT_TIMESTAMP 存 UTC，部分历史数据（导入脚本 datetime.now、
+    # Hexo 迁移占位 12:00:00）是本地 CST。schema_version<2 时首次启动自动跑一次。
+    try:
+        _sv = db.execute("SELECT value FROM settings WHERE key='schema_version'").fetchone()
+        _ver = int(_sv[0]) if _sv else 0
+    except Exception:
+        _ver = 0
+    if _ver < 2:
+        print(f'[时区迁移] schema_version {_ver} → 2，开始 UTC→CST (+8h) 迁移……')
+
+        def _shift_utc(s):
+            """UTC 时间字符串 +8h → CST，解析失败原样返回。"""
+            if not s:
+                return s
+            try:
+                return (datetime.strptime(s[:19], '%Y-%m-%d %H:%M:%S') +
+                        _td(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                return s
+
+        # posts.created_at：纯日期/12:00:00 整点跳过（CST 导入/Hexo 占位），其余 +8h
+        for pid, ca, ua in db.execute("SELECT id, created_at, updated_at FROM posts").fetchall():
+            new_ca = ca
+            if ca and len(ca) >= 19 and ' 12:00:00' not in ca:
+                new_ca = _shift_utc(ca)
+            new_ua = _shift_utc(ua) if ua else ua
+            if new_ca != ca or new_ua != ua:
+                db.execute("UPDATE posts SET created_at=?, updated_at=? WHERE id=?", (new_ca, new_ua, pid))
+
+        # 其它表：全 CURRENT_TIMESTAMP UTC → +8h
+        for _tbl in ('comments', 'projects', 'timeline', 'links', 'categories', 'memories'):
+            try:
+                for row in db.execute(f"SELECT rowid, created_at FROM {_tbl} WHERE created_at IS NOT NULL").fetchall():
+                    new_v = _shift_utc(row[1])
+                    if new_v != row[1]:
+                        db.execute(f"UPDATE {_tbl} SET created_at=? WHERE rowid=?", (new_v, row[0]))
+            except sqlite3.OperationalError:
+                pass  # 表不存在（老版本 DB）
+
+        # projects / timeline 还有 updated_at
+        for _tbl in ('projects', 'timeline'):
+            try:
+                for row in db.execute(f"SELECT rowid, updated_at FROM {_tbl} WHERE updated_at IS NOT NULL").fetchall():
+                    new_v = _shift_utc(row[1])
+                    if new_v != row[1]:
+                        db.execute(f"UPDATE {_tbl} SET updated_at=? WHERE rowid=?", (new_v, row[0]))
+            except sqlite3.OperationalError:
+                pass
+
+        db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_version', '2')")
+        print('[时区迁移] 完成，schema_version=2')
 
     db.commit()
     _migrate_comments(db)
@@ -1869,18 +1928,18 @@ def db_save_post(form_data, post_id=None):
         db.execute(
             """UPDATE posts SET title=?, slug=?, content=?, excerpt=?, tags=?,
                is_featured=?, read_time=?, status=?, category_id=?,
-               created_at=COALESCE(?, created_at), updated_at=CURRENT_TIMESTAMP WHERE id=?""",
+               created_at=COALESCE(?, created_at), updated_at=? WHERE id=?""",
             (form_data.get('title', ''), slug, content, excerpt,
              tags, is_featured, read_time, form_data.get('status', 'published'), category_id,
-             created_at, post_id)
+             created_at, _now(), post_id)
         )
     else:
         db.execute(
-            """INSERT INTO posts (title, slug, content, excerpt, tags, is_featured, read_time, status, category_id, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))""",
+            """INSERT INTO posts (title, slug, content, excerpt, tags, is_featured, read_time, status, category_id, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, ?), ?)""",
             (form_data.get('title', ''), slug, content, excerpt,
              tags, is_featured, read_time, form_data.get('status', 'published'), category_id,
-             created_at)
+             created_at, _now(), _now())
         )
     db.commit()
     db.close()
@@ -2626,13 +2685,13 @@ def db_save_project(form_data, project_id=None, keep_name=False):
 
     if project_id:
         db.execute(
-            "UPDATE projects SET name=?, description=?, url=?, stars=?, language=?, languages=?, topics=?, sort_order=?, featured=?, github_repo=?, custom_name=? WHERE id=?",
+            "UPDATE projects SET name=?, description=?, url=?, stars=?, language=?, languages=?, topics=?, sort_order=?, featured=?, github_repo=?, custom_name=?, updated_at=? WHERE id=?",
             (name, description, url, stars, language, languages, topics,
-             int(form_data.get('sort_order', 0) or 0), 1 if form_data.get('featured') == '1' else 0, github_repo or '', is_custom, project_id)
+             int(form_data.get('sort_order', 0) or 0), 1 if form_data.get('featured') == '1' else 0, github_repo or '', is_custom, _now(), project_id)
         )
     else:
         db.execute(
-            "INSERT INTO projects (name, description, url, stars, language, languages, topics, sort_order, featured, github_repo, custom_name) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO projects (name, description, url, stars, language, languages, topics, sort_order, featured, github_repo, custom_name, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (name, description, url, stars, language, languages, topics,
              int(form_data.get('sort_order', 0) or 0), 1 if form_data.get('featured') == '1' else 0, github_repo or '', is_custom)
         )
@@ -2928,8 +2987,8 @@ def db_save_comment(post_id, author, email, email_hash, website, content, parent
     project_id 与 post_id 二选一：项目详情页评论传 project_id（文章评论保持传 post_id）。"""
     db = get_db()
     cur = db.execute(
-        "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, website, content, status, is_private, qq, ip_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-        (post_id, project_id, parent_id, author, email, email_hash, website, content, status, 1 if is_private else 0, qq, ip_text)
+        "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, website, content, status, is_private, qq, ip_text, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (post_id, project_id, parent_id, author, email, email_hash, website, content, status, 1 if is_private else 0, qq, ip_text, _now())
     )
     db.commit()
     db.close()
@@ -4322,7 +4381,7 @@ def admin_timeline_new():
             return render_template('admin/timeline_edit.html', item=None)
         db = get_db()
         db.execute(
-            "INSERT INTO timeline (date, content, sort_order) VALUES (?, ?, ?)",
+            "INSERT INTO timeline (date, content, sort_order, created_at) VALUES (?, ?, ?, ?)",
             (date, content, sort_order),
         )
         db.commit()

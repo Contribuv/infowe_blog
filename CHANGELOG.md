@@ -2,6 +2,20 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.44] - 2026-09-17
+
+### 修复
+- **DB 新数据不再走 CURRENT_TIMESTAMP UTC，Python INSERT/UPDATE 全部显式写本地 CST**
+  - 根因：v1.3.43 只迁移了存量 UTC 行，但 INSERT/UPDATE 还在依赖 `DEFAULT CURRENT_TIMESTAMP`（SQLite 永远 UTC）。服务器上部署后新插入的评论/文章又会变成 UTC，过几天新老数据分裂
+  - 修复：app.py 加 `_now()` 辅助函数（`datetime.now().strftime('%Y-%m-%d %H:%M:%S')`，本地 CST）；所有 INSERT INTO（users / posts / categories / projects / links / timeline / comments）显式写 created_at/updated_at；所有 UPDATE（posts / categories / projects / links / timeline）显式写 updated_at
+- **自动迁移钩子**：init_db() 里检查 settings.schema_version，<2 时首次启动自动跑 UTC→CST 数据迁移（分类逻辑：posts 纯日期/12:00:00 跳过，其余 +8h；comments/projects/timeline/links/categories/memories 全 +8h）。部署到任何新服务器或旧 DB 上都能一次性修正
+
+### 影响文件
+- `app.py` VERSION → 1.3.44，新增 `_now()` + 自动迁移钩子 + 所有 SQL 改写
+- DB：`settings.schema_version` 自动写入 2
+
+---
+
 ## [v1.3.43] - 2026-09-17
 
 ### 修复
