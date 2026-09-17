@@ -17,7 +17,7 @@
     <header class="post-header">
         <div class="post-header-meta">
             <div class="post-meta-row">
-                <time datetime="{{ post.created_at[:10] }}">{{ icon('calendar', 14, 'icon-sm') | safe }} {{ post.created_at[:10] }}</time>
+                <time datetime="{{ post.created_at | cstdate }}">{{ icon('calendar', 14, 'icon-sm') | safe }} {{ post.created_at | cstdate }}</time>
                 {% if post.category_name %}
                 <span>{{ icon('folder', 14, 'icon-sm') | safe }} {{ post.category_name }}</span>
                 {% endif %}
@@ -109,7 +109,7 @@
             <div class="card-glow"></div>
             <div class="card-inner">
                 <div class="card-meta">
-                    <time class="card-date">{{ rp.created_at[:10] }}</time>
+                    <time class="card-date">{{ rp.created_at | cstdate }}</time>
                     <span class="card-read-time">{{ rp.read_time }} 分钟</span>
                 </div>
                 <h3 class="card-title">

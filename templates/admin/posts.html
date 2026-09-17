@@ -73,7 +73,7 @@
                     <span class="badge badge-warning">草稿</span>
                     {% endif %}
                 </td>
-                <td class="text-muted" data-label="日期">{{ post.created_at[:10] }}</td>
+                <td class="text-muted" data-label="日期">{{ post.created_at | cstdate }}</td>
                 <td data-label="操作">
                     <div class="btn-group">
                         <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="btn btn-sm">编辑</a>

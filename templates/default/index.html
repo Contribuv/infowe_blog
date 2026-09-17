@@ -55,9 +55,9 @@
             <span class="featured-badge">精选</span>
             <div class="card-inner">
                 <div class="card-meta">
-                    <time class="card-date" datetime="{{ post.created_at[:10] }}">
+                    <time class="card-date" datetime="{{ post.created_at | cstdate }}">
                         {{ icon('calendar', 14, 'icon-sm') | safe }}
-                        {{ post.created_at[:10] }}
+                        {{ post.created_at | cstdate }}
                     </time>
                     <span class="card-read-time">
                         {{ icon('clock', 14, 'icon-sm') | safe }}
@@ -116,9 +116,9 @@
             <div class="card-glow"></div>
             <div class="card-inner">
                 <div class="card-meta">
-                    <time class="card-date" datetime="{{ post.created_at[:10] }}">
+                    <time class="card-date" datetime="{{ post.created_at | cstdate }}">
                         {{ icon('calendar', 14, 'icon-sm') | safe }}
-                        {{ post.created_at[:10] }}
+                        {{ post.created_at | cstdate }}
                     </time>
                     <span class="card-read-time">
                         {{ icon('clock', 14, 'icon-sm') | safe }}

@@ -50,9 +50,9 @@
 <!-- 文章列表 -->
 <ul class="tech-post-list" id="postsList">
     {% for post in posts %}
-    <li class="tech-post-item" data-date="{{ post.created_at[:10] }}" data-read="{{ post.read_time }}">
+    <li class="tech-post-item" data-date="{{ post.created_at | cstdate }}" data-read="{{ post.read_time }}">
         <div class="tech-post-meta">
-            <time datetime="{{ post.created_at[:10] }}">{{ post.created_at[:10] }}</time>
+            <time datetime="{{ post.created_at | cstdate }}">{{ post.created_at | cstdate }}</time>
             {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
             <span>{{ post.read_time }} 分钟</span>
         </div>

@@ -107,6 +107,13 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.42
+
+- **时区修复：UTC 存储 → 中国时区（CST +8）显示**：SQLite `CURRENT_TIMESTAMP` 存 UTC，此前模板里硬切 `[:10]` / `[:16]` 得到的时间是 UTC 不是中国时区——凌晨 0-8 点发布的文章会被显示成"前一天"，年份筛选也会错。现：app.py 注册两个 Jinja filter `csttime`（`YYYY-MM-DD HH:MM`）和 `cstdate`（`YYYY-MM-DD`），内部把 UTC 字符串 `strptime` 补 `timezone.utc`，`.astimezone(timezone(timedelta(hours=8)))` 后输出；模板层全部改用 filter（admin posts/comments/post_edit + default/index/post/posts/_comments + tech/index/post/posts，共 10 个模板、27 处替换）
+- **年份筛选 SQL 修复**：`db_load_posts(year=...)` 原 `created_at LIKE 'YYYY%'` 对 UTC 存值不准，改 `substr(datetime(created_at, '+8 hours'), 1, 4) = ?`；`db_get_all_years()` 同步改
+- **RSS pubDate 转 CST RFC822**：`rss_feed()` 原直接输出 UTC `created_at` 字符串，RSS pubDate 必须带时区；现转 CST 后用 `email.utils.format_datetime()` 输出 RFC822，解析失败安全降级原值
+- `app.py` VERSION 同步至 **1.3.42**
+
 ### v1.3.41
 
 - **修复 admin 后台单条删除按钮报「无效的批量操作」bug（v1.3.38 残留）**：`comments.html` / `posts.html` / `categories.html` / `timeline.html` / `links.html` 单条操作 `<form>` 嵌套在批量表单 `<form>` 内，HTML 规范禁止嵌套，浏览器丢弃内层 action 导致按钮归属到批量接口；统一改为 projects.html 模式——表格内 button 加 `form="xxxForm{id}"` 归属，单条 form 定义在批量表单外 `display:none`，保留 `onsubmit` 确认弹窗

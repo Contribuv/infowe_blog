@@ -2,6 +2,21 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.42] - 2026-09-17
+
+### 修复
+- **时区：UTC 存值被直接截断显示，凌晨 0-8 点发布显示成"前一天"**：SQLite `CURRENT_TIMESTAMP` 存 UTC，模板里 `created_at[:10]` / `[:16]` 直接截字符串得到 UTC 日期/时间。现注册 `cstdate` / `csttime` Jinja filter，UTC 字符串补 `timezone.utc` 后 `.astimezone(+8h)` 输出，模板全部改用 filter（admin + default + tech 三套主题共 10 个模板 27 处）。
+- **年份筛选 SQL 对 UTC 存值不准**：`db_load_posts(year)` 原 `created_at LIKE 'YYYY%'`，改 `substr(datetime(created_at, '+8 hours'), 1, 4) = ?`；`db_get_all_years()` 同步改。
+- **RSS pubDate 输出 UTC 字符串不合规**：pubDate 必须 RFC822 带时区，现转 CST 用 `email.utils.format_datetime()` 输出，解析失败降级原值避免 RSS 500。
+
+### 影响文件
+- `app.py`（新增 2 个 Jinja filter + 改 3 处 SQL/RSS + VERSION → 1.3.42）
+- `templates/admin/comments.html` / `post_edit.html` / `posts.html`
+- `templates/default/_comments.html` / `index.html` / `post.html` / `posts.html`
+- `templates/tech/index.html` / `post.html` / `posts.html`
+
+---
+
 ## [v1.3.39] - 2026-09-14
 
 ### 修复

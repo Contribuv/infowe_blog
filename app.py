@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.41'
+VERSION = '1.3.42'
 
 import os
 import re
@@ -32,7 +32,7 @@ import urllib.parse
 import smtplib
 import email.utils
 import ipaddress
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.header import Header
 from email.mime.text import MIMEText
 from email.utils import formataddr
@@ -279,6 +279,34 @@ def icon_svg(name, size=20, class_name=''):
     return svg
 
 app.jinja_env.globals['icon'] = icon_svg
+
+# SQLite 的 CURRENT_TIMESTAMP 存的是 UTC；模板里显示时间统一 +8h（中国时区）。
+_CST = timezone(timedelta(hours=8))
+
+def _csttime(value):
+    """把 UTC 时间字符串（YYYY-MM-DD HH:MM:SS）转成中国时区显示，格式 YYYY-MM-DD HH:MM。
+    解析失败时安全回退原始截断值，避免页面崩溃。"""
+    if not value:
+        return ''
+    try:
+        dt = datetime.strptime(value[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+        return dt.astimezone(_CST).strftime('%Y-%m-%d %H:%M')
+    except Exception:
+        return value[:16] if len(value) >= 16 else value
+
+app.jinja_env.filters['csttime'] = _csttime
+
+def _cstdate(value):
+    """UTC 时间字符串 → 中国时区日期 YYYY-MM-DD。仅取日期，解析失败安全回退。"""
+    if not value:
+        return ''
+    try:
+        dt = datetime.strptime(value[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+        return dt.astimezone(_CST).strftime('%Y-%m-%d')
+    except Exception:
+        return value[:10] if len(value) >= 10 else value
+
+app.jinja_env.filters['cstdate'] = _cstdate
 
 PAGE_SIZE = 20  # 每页文章数
 
@@ -1598,8 +1626,10 @@ def db_load_posts(status='published', tag=None, search=None, year=None, page=1, 
         s = f'%{search}%'
         params.extend([s, s, s])
     if year:
-        conditions.append("created_at LIKE ?")
-        params.append(f'{year}%')
+        # SQLite 存的 created_at 是 UTC；按年筛选按用户本地时区（CST +8）归类，
+        # 否则凌晨 0-8 点发布的文章会归到上一年。
+        conditions.append("substr(datetime(created_at, '+8 hours'), 1, 4) = ?")
+        params.append(year)
 
     where = "WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -1628,7 +1658,8 @@ def db_get_all_years():
     """获取所有已发布文章的年份集合（降序）"""
     db = get_db()
     rows = db.execute(
-        "SELECT DISTINCT substr(created_at,1,4) as year FROM posts WHERE status='published' ORDER BY year DESC"
+        "SELECT DISTINCT substr(datetime(created_at, '+8 hours'), 1, 4) as year "
+        "FROM posts WHERE status='published' ORDER BY year DESC"
     ).fetchall()
     db.close()
     return [r['year'] for r in rows]
@@ -3798,7 +3829,14 @@ def rss_feed():
         SubElement(item, 'title').text = p['title']
         SubElement(item, 'link').text = request.url_root + 'post/' + str(p['id'])
         SubElement(item, 'description').text = p['excerpt'] or ''
-        SubElement(item, 'pubDate').text = p['created_at']
+        # RSS pubDate 必须是 RFC822 格式且带时区；将 UTC 存的 created_at 转到中国时区后输出。
+        try:
+            dt = datetime.strptime(p['created_at'][:19], '%Y-%m-%d %H:%M:%S') \
+                .replace(tzinfo=timezone.utc).astimezone(_CST)
+            pub = email.utils.format_datetime(dt)
+        except Exception:
+            pub = p['created_at']  # 解析失败时降级为原值，避免 RSS 整体 500
+        SubElement(item, 'pubDate').text = pub
         SubElement(item, 'guid').text = request.url_root + 'post/' + str(p['id'])
 
     xml_str = minidom.parseString(tostring(rss, 'utf-8')).toprettyxml(indent='  ')

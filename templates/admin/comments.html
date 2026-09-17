@@ -73,7 +73,7 @@
                         {% if c.ip_text %}<div class="cell-sub">{{ c.ip_text }}</div>{% endif %}
                         {% if not c.ip_location and not c.ip_text %}<span class="cell-muted">—</span>{% endif %}
                     </td>
-                    <td data-label="时间">{{ c.created_at[:16] }}</td>
+                    <td data-label="时间">{{ c.created_at | csttime }}</td>
                     <td class="actions-cell" data-label="操作">
                         {% if c.status == 'pending' %}
                         <button type="submit" form="approveForm{{ c.id }}" class="btn btn-sm btn-success">通过</button>
