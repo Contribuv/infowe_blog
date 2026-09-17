@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.44'
+VERSION = '1.3.45'
 
 import os
 import re
@@ -3095,6 +3095,8 @@ def inject_globals():
         'comments_enabled': app.config.get('comments_enabled', '1'),
         'icp_beian': app.config.get('icp_beian', ''),
         'police_beian': app.config.get('police_beian', ''),
+        # 统计代码：原样注入前台 </body> 前（仅管理员可配置）
+        'stats_code': app.config.get('stats_code', ''),
         'author': app.config.get('author', ''),
         'author_bio': app.config.get('author_bio', ''),
         'about_intro': app.config.get('about_intro', ''),
@@ -4798,7 +4800,8 @@ def admin_settings():
                      'social_github', 'github_token', 'contact_email', 'home_title', 'icp_beian', 'police_beian',
                      'home_posts_count', 'posts_per_page',
                      'smtp_host', 'smtp_sender_name', 'smtp_port', 'smtp_user', 'smtp_pass', 'notify_email',
-                     'footer_copyright_year', 'footer_copyright_owner', 'footer_powered_by']:
+                     'footer_copyright_year', 'footer_copyright_owner', 'footer_powered_by',
+                     'stats_code']:
             if key in request.form:
                 save_setting(key, request.form[key])
                 app.config[key] = request.form[key]

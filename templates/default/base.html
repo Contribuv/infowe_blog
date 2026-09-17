@@ -168,5 +168,7 @@
     })();
     </script>
     {% block scripts %}{% endblock %}
+    {# 统计代码：后台「统计代码」原样注入，仅管理员可填 #}
+    {{ stats_code | safe }}
 </body>
 </html>

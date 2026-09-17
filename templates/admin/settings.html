@@ -261,6 +261,19 @@
                 <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
             </div>
         </div>
+
+        <!-- 统计代码：原样注入前台页面 </body> 前 -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>统计代码</h3>
+                <span class="card-hint">原样注入前台页面底部，可粘贴百度统计 / Google Analytics / Umami 等脚本</span>
+            </div>
+            <div class="form-group">
+                <textarea name="stats_code" class="textarea-sm textarea-code" rows="6"
+                          placeholder='&lt;script defer src="https://example.com/analytics.js"&gt;&lt;/script&gt;'>{{ config.get('stats_code', '') }}</textarea>
+                <span class="form-hint">内容按 HTML 原样输出到前台，请只填可信任代码；留空则不注入</span>
+            </div>
+        </div>
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">保存所有设置</button>
         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">取消</a>

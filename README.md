@@ -107,6 +107,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.45
+
+- **给博客接统计脚本，终于不用手改模板了。** 以前想挂个百度统计得自己往 base 模板里塞代码，一升级就丢，还得记着哪个文件改过。现在后台设置页加了一栏「统计代码」：把百度统计（或 Google Analytics、Umami 这类）给你的一整段脚本粘进去保存，全站每个前台页面都会在底部自动带上这段代码——tech / default 两套主题都覆盖，以后换主题也不丢。留空就什么都不注入，平时打开页面一点痕迹都没有，也不拖慢加载。
+- `app.py` VERSION 同步至 **1.3.45**
+
 ### v1.3.44
 
 - **DB 新数据不再走 CURRENT_TIMESTAMP UTC，Python INSERT/UPDATE 全部显式写本地 CST**

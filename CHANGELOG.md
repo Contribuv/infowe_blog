@@ -2,6 +2,18 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.45] - 2026-09-17
+
+### 新增
+- **后台设置页新增「统计代码」**：想挂第三方统计（百度统计 / Google Analytics / Umami 等）再也不用手改模板了——设置页多了一个文本框，把脚本整段粘进去保存，全站前台页面自动在 `</body>` 前原样带上这段代码，tech / default 两套主题都覆盖，换主题不丢；留空则不注入，不影响任何页面加载。字段仅管理员可填，按 HTML 原样输出（跟主流 CMS 的「自定义代码」同一套路）。
+
+### 影响文件
+- `app.py`（VERSION → 1.3.45；保存数组加 `stats_code`；context_processor 注入）
+- `templates/admin/settings.html`（新增「统计代码」卡片）
+- `templates/tech/base.html` / `templates/default/base.html`（`</body>` 前注入 `{{ stats_code | safe }}`）
+
+---
+
 ## [v1.3.44] - 2026-09-17
 
 ### 修复
