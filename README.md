@@ -114,20 +114,15 @@ sudo systemctl restart blog
 
 ### v1.3.44
 
-- **DB 新数据不再走 CURRENT_TIMESTAMP UTC，Python INSERT/UPDATE 全部显式写本地 CST**
-  - app.py 新增 `_now()` 辅助函数（`datetime.now().strftime()` 本地 CST）
-  - 所有 INSERT INTO 显式写 created_at/updated_at，不再依赖 `DEFAULT CURRENT_TIMESTAMP`
-  - 所有 UPDATE 显式写 updated_at
-- **自动迁移钩子**：init_db() 检查 settings.schema_version，<2 时首次启动自动跑 UTC→CST 迁移（posts 纯日期/12:00:00 跳过，其余 +8h；其它表全 +8h）
+- **时区又补了一刀**。v1.3.43 只把存量 UTC 行搬到了 CST，写入端还在吃 SQLite `DEFAULT CURRENT_TIMESTAMP`（永远是 UTC），新数据照样会偏。现在 app.py 加 `_now()`，所有 INSERT / UPDATE 显式写本地时间，不再依赖默认值
+- **自动迁移钩子**：init_db() 检查 settings.schema_version，小于 2 时首次启动自动跑一次 UTC→CST 转换（posts 纯日期和 12:00:00 整点是历史 CST 数据，跳过；其余表 +8h），换服务器或旧库都能自己修回来
 - `app.py` VERSION 同步至 **1.3.44**
 
 ### v1.3.43
 
-- **彻底统一时区：数据库只存 CST（中国时区 +8），模板直接切片显示，不再有 UTC→CST 转换层**
-  - 根因：SQLite `DEFAULT CURRENT_TIMESTAMP` 存 UTC，但部分历史数据（导入脚本用 `datetime.now()`、Hexo 迁移占位）是本地 CST，造成 posts 表内两套时区并存；v1.3.42 一刀切 `csttime`/`cstdate` filter 导致已存 CST 的行被二次 +8h
-  - 修复：数据迁移脚本 `_migrate_tz.py` 对全库分类处理——posts 表纯日期跳过（CST 导入）、`12:00:00` 整点跳过（Hexo CST 占位）、其余 CURRENT_TIMESTAMP 产生的 UTC 行 +8h；comments / projects / timeline / links 全是 UTC 全部 +8h
-  - 代码回滚：删除 `_csttime` / `_cstdate` 两个 Jinja filter 和注册；10 个模板 19 处 `| csttime` / `| cstdate` 还原成 `[:16]` / `[:10]` 直接切片；年份筛选 SQL 去掉 `datetime(created_at, '+8 hours')` 偏移；RSS pubDate 改把 DB CST 字符串补 `+08:00` timezone 后 `format_datetime()` 输出 RFC822
-  - **备份**：迁移前已 `data/blog.db` → `data/blog.db.bak`
+- **时区彻底收拢成一层**：库里只存 CST，模板直接切片显示，不再有 UTC→CST 转换层。起因是 v1.3.42 那套 filter 一刀切 +8h，但 posts 表里混着三套时区（早期导入脚本存的是 CST、Hexo 迁移是 12:00:00 整点、34 号之后 CURRENT_TIMESTAMP 才是 UTC），filter 对前两类二次 +8h，时间直接跑飞
+  - 数据迁移 `_migrate_tz.py`：posts 纯日期和 12:00:00 整点原样保留，其余 UTC 行 +8h；comments / projects / timeline / links 全是 UTC 统一 +8h。迁移前备份了 `data/blog.db.bak`
+  - 代码回滚：删掉两个 Jinja filter，10 个模板 19 处 `| csttime` / `| cstdate` 还原成 `[:16]` / `[:10]`；年份筛选 SQL 去掉 `+8 hours`；RSS pubDate 改成给 CST 字符串补 `+08:00` 后按 RFC822 输出
 - `app.py` VERSION 同步至 **1.3.43**
 
 ### v1.3.42
@@ -137,7 +132,7 @@ sudo systemctl restart blog
 
 ### v1.3.41
 
-- **修复 admin 后台单条删除按钮报「无效的批量操作」bug（v1.3.38 残留）**：`comments.html` / `posts.html` / `categories.html` / `timeline.html` / `links.html` 单条操作 `<form>` 嵌套在批量表单 `<form>` 内，HTML 规范禁止嵌套，浏览器丢弃内层 action 导致按钮归属到批量接口；统一改为 projects.html 模式——表格内 button 加 `form="xxxForm{id}"` 归属，单条 form 定义在批量表单外 `display:none`，保留 `onsubmit` 确认弹窗
+- **整理后台删除按钮的 bug**。v1.3.38 留下的坑：单条删除的 `<form>` 被套在批量表单里，HTML 不允许 form 嵌套，浏览器把内层丢掉，按钮就报「无效的批量操作」。comments / posts / categories / timeline / links 五个模板统一改成 projects.html 的写法——按钮用 `form="xxxForm{id}"` 归属，单条 form 移到批量表单外藏起来，确认弹窗保留。
 - `app.py` VERSION 同步至 **1.3.41**
 
 ### v1.3.40

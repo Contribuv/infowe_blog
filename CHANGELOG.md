@@ -5,58 +5,42 @@
 ## [v1.3.45] - 2026-09-17
 
 ### 新增
-- **后台设置页新增「统计代码」**：想挂第三方统计（百度统计 / Google Analytics / Umami 等）再也不用手改模板了——设置页多了一个文本框，把脚本整段粘进去保存，全站前台页面自动在 `</body>` 前原样带上这段代码，tech / default 两套主题都覆盖，换主题不丢；留空则不注入，不影响任何页面加载。字段仅管理员可填，按 HTML 原样输出（跟主流 CMS 的「自定义代码」同一套路）。
+- 后台设置页加了一栏「统计代码」，想挂百度统计或者 Google Analytics 不用再手改模板了。以前得自己往 base 里塞脚本，升级一次丢一次，还得记着哪个文件动过。现在把整段脚本粘进设置页保存，前台每个页面都会在底部自动带上，tech 和 default 两套主题都覆盖，以后换主题也不丢；留空就什么都不注入。
+- 只有管理员能填，按 HTML 原样输出，跟主流 CMS 的「自定义代码」是同一套路。
 
-### 影响文件
-- `app.py`（VERSION → 1.3.45；保存数组加 `stats_code`；context_processor 注入）
-- `templates/admin/settings.html`（新增「统计代码」卡片）
-- `templates/tech/base.html` / `templates/default/base.html`（`</body>` 前注入 `{{ stats_code | safe }}`）
+改动：`app.py`（VERSION、保存字段、全局注入）、`templates/admin/settings.html`、`templates/tech/base.html` 和 `templates/default/base.html`。
 
 ---
 
 ## [v1.3.44] - 2026-09-17
 
 ### 修复
-- **DB 新数据不再走 CURRENT_TIMESTAMP UTC，Python INSERT/UPDATE 全部显式写本地 CST**
-  - 根因：v1.3.43 只迁移了存量 UTC 行，但 INSERT/UPDATE 还在依赖 `DEFAULT CURRENT_TIMESTAMP`（SQLite 永远 UTC）。服务器上部署后新插入的评论/文章又会变成 UTC，过几天新老数据分裂
-  - 修复：app.py 加 `_now()` 辅助函数（`datetime.now().strftime('%Y-%m-%d %H:%M:%S')`，本地 CST）；所有 INSERT INTO（users / posts / categories / projects / links / timeline / comments）显式写 created_at/updated_at；所有 UPDATE（posts / categories / projects / links / timeline）显式写 updated_at
-- **自动迁移钩子**：init_db() 里检查 settings.schema_version，<2 时首次启动自动跑 UTC→CST 数据迁移（分类逻辑：posts 纯日期/12:00:00 跳过，其余 +8h；comments/projects/timeline/links/categories/memories 全 +8h）。部署到任何新服务器或旧 DB 上都能一次性修正
+- 时区又出问题了。v1.3.43 只把库里已有的 UTC 行搬到了 CST，但写入端还在吃 SQLite 的 `DEFAULT CURRENT_TIMESTAMP`——那玩意存的永远是 UTC。部署上去以后新评论、新文章照样按 UTC 落库，过几天新老数据又分成两套。
+- 这回从写入端解决：app.py 加了 `_now()`（`datetime.now().strftime()`，本地 CST），所有 INSERT 和 UPDATE 都自己显式写 created_at / updated_at，不再依赖默认值。
+- 顺手在 init_db() 里挂了个自动迁移钩子，读 `settings.schema_version`，小于 2 就在首次启动时跑一次 UTC→CST 转换（posts 里的纯日期和 12:00:00 整点是历史 CST 数据，跳过；其余表全部 +8h）。换服务器或者拿旧库启动都能自己修回来。
 
-### 影响文件
-- `app.py` VERSION → 1.3.44，新增 `_now()` + 自动迁移钩子 + 所有 SQL 改写
-- DB：`settings.schema_version` 自动写入 2
+改动：`app.py`（VERSION、`_now()`、迁移钩子、所有 SQL），写完把 `settings.schema_version` 置为 2。
 
 ---
 
 ## [v1.3.43] - 2026-09-17
 
 ### 修复
-- **彻底统一时区存储：数据库只存 CST（中国时区 +8h），模板直接切片显示，不再有 UTC→CST 转换层**
-  - 根因：v1.3.42 一刀切 `csttime`/`cstdate` filter 在 UTC 存值上 +8h 是对的，但 posts 表存在三套时区——id=2~5 导入脚本用 `datetime.now()` 存 CST、id=7~33 Hexo 迁移占位 `12:00:00` 整点（实际是 CST）、id=34+ CURRENT_TIMESTAMP 存 UTC；filter 对前两类错误二次 +8h 导致显示 +16h
-  - 数据迁移（`_migrate_tz.py`）：posts.created_at 分类——纯日期行跳过、`12:00:00` 整点跳过、其余 CURRENT_TIMESTAMP 产生的 UTC 行 +8h；comments/projects/timeline/links 全 UTC +8h；**已备份 data/blog.db → data/blog.db.bak**
-- **回滚 v1.3.42 模板 filter**：10 个模板 19 处 `| csttime` / `| cstdate` 还原为 `[:16]` / `[:10]`；删除 app.py `_csttime` / `_cstdate` 函数和 Jinja filter 注册；年份筛选 SQL 去掉 `+8 hours` 偏移；RSS pubDate 改把 DB CST 字符串补 `+08:00` timezone 后 `format_datetime()` 输出 RFC822
+- 把时区彻底收拢到一层：库里只存 CST，模板直接切片显示，中间不再有 UTC→CST 的转换层。
+- 起因是 v1.3.42 那套 filter 一刀切加 8 小时，可 posts 表里其实混着三套时区：早期导入脚本用 `datetime.now()` 存的是 CST，Hexo 迁移的占位是 12:00:00 整点（也是 CST），id 34 之后 `CURRENT_TIMESTAMP` 存的才是 UTC。filter 对前两类又加了一次 8 小时，时间直接跑飞。
+- 数据用 `_migrate_tz.py` 分类处理：纯日期行和 12:00:00 整点原样保留，其余 UTC 行 +8h；comments / projects / timeline / links 全是 UTC，统一 +8h。迁移前备份了 `data/blog.db.bak`。
+- 代码层退回去：10 个模板里 19 处 `| csttime` / `| cstdate` 还原成 `[:16]` / `[:10]`，删掉那两个 Jinja filter 和注册；年份筛选 SQL 去掉 `+8 hours`；RSS 的 pubDate 改成先给 CST 字符串补 `+08:00` 再按 RFC822 输出。
 
-### 影响文件
-- `app.py` VERSION → 1.3.43
-- `templates/admin/comments.html` / `post_edit.html` / `posts.html`
-- `templates/default/_comments.html` / `index.html` / `post.html` / `posts.html`
-- `templates/tech/index.html` / `post.html` / `posts.html`
-- DB：`data/blog.db`（已迁移，备份同目录 `.bak`）
+改动：`app.py` 和三套主题共 10 个模板，另外动了 `data/blog.db` 数据本身。
 
 ---
 
 ## [v1.3.42] - 2026-09-17（已在 v1.3.43 回滚）
 
 ### 修复
-- **时区：UTC 存值被直接截断显示，凌晨 0-8 点发布显示成"前一天"**：SQLite `CURRENT_TIMESTAMP` 存 UTC，模板里 `created_at[:10]` / `[:16]` 直接截字符串得到 UTC 日期/时间。现注册 `cstdate` / `csttime` Jinja filter，UTC 字符串补 `timezone.utc` 后 `.astimezone(+8h)` 输出，模板全部改用 filter（admin + default + tech 三套主题共 10 个模板 27 处）。
-- **年份筛选 SQL 对 UTC 存值不准**：`db_load_posts(year)` 原 `created_at LIKE 'YYYY%'`，改 `substr(datetime(created_at, '+8 hours'), 1, 4) = ?`；`db_get_all_years()` 同步改。
-- **RSS pubDate 输出 UTC 字符串不合规**：pubDate 必须 RFC822 带时区，现转 CST 用 `email.utils.format_datetime()` 输出，解析失败降级原值避免 RSS 500。
-
-### 影响文件
-- `app.py`（新增 2 个 Jinja filter + 改 3 处 SQL/RSS + VERSION → 1.3.42）
-- `templates/admin/comments.html` / `post_edit.html` / `posts.html`
-- `templates/default/_comments.html` / `index.html` / `post.html` / `posts.html`
-- `templates/tech/index.html` / `post.html` / `posts.html`
+- 凌晨 0 点到 8 点发的文章，日期显示成前一天。库里存的是 UTC，模板拿 `created_at[:10]` / `[:16]` 直接截字符串，截出来的自然是 UTC 时间。
+- 当时的做法是注册 `cstdate` / `csttime` 两个 Jinja filter，把字符串补上 `timezone.utc` 再转 `+8h` 输出，三套主题 10 个模板共 27 处改走 filter；年份筛选 SQL 也改成先 `datetime(created_at, '+8 hours')` 再取年；RSS 的 pubDate 按 RFC822 带时区输出，解析失败就退回原值，避免整个 RSS 500。
+- 这个方案后来在 v1.3.43 里被换掉了，原因见上面的记录。
 
 ---
 
