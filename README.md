@@ -107,11 +107,18 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.43
+
+- **彻底统一时区：数据库只存 CST（中国时区 +8），模板直接切片显示，不再有 UTC→CST 转换层**
+  - 根因：SQLite `DEFAULT CURRENT_TIMESTAMP` 存 UTC，但部分历史数据（导入脚本用 `datetime.now()`、Hexo 迁移占位）是本地 CST，造成 posts 表内两套时区并存；v1.3.42 一刀切 `csttime`/`cstdate` filter 导致已存 CST 的行被二次 +8h
+  - 修复：数据迁移脚本 `_migrate_tz.py` 对全库分类处理——posts 表纯日期跳过（CST 导入）、`12:00:00` 整点跳过（Hexo CST 占位）、其余 CURRENT_TIMESTAMP 产生的 UTC 行 +8h；comments / projects / timeline / links 全是 UTC 全部 +8h
+  - 代码回滚：删除 `_csttime` / `_cstdate` 两个 Jinja filter 和注册；10 个模板 19 处 `| csttime` / `| cstdate` 还原成 `[:16]` / `[:10]` 直接切片；年份筛选 SQL 去掉 `datetime(created_at, '+8 hours')` 偏移；RSS pubDate 改把 DB CST 字符串补 `+08:00` timezone 后 `format_datetime()` 输出 RFC822
+  - **备份**：迁移前已 `data/blog.db` → `data/blog.db.bak`
+- `app.py` VERSION 同步至 **1.3.43**
+
 ### v1.3.42
 
-- **时区修复：UTC 存储 → 中国时区（CST +8）显示**：SQLite `CURRENT_TIMESTAMP` 存 UTC，此前模板里硬切 `[:10]` / `[:16]` 得到的时间是 UTC 不是中国时区——凌晨 0-8 点发布的文章会被显示成"前一天"，年份筛选也会错。现：app.py 注册两个 Jinja filter `csttime`（`YYYY-MM-DD HH:MM`）和 `cstdate`（`YYYY-MM-DD`），内部把 UTC 字符串 `strptime` 补 `timezone.utc`，`.astimezone(timezone(timedelta(hours=8)))` 后输出；模板层全部改用 filter（admin posts/comments/post_edit + default/index/post/posts/_comments + tech/index/post/posts，共 10 个模板、27 处替换）
-- **年份筛选 SQL 修复**：`db_load_posts(year=...)` 原 `created_at LIKE 'YYYY%'` 对 UTC 存值不准，改 `substr(datetime(created_at, '+8 hours'), 1, 4) = ?`；`db_get_all_years()` 同步改
-- **RSS pubDate 转 CST RFC822**：`rss_feed()` 原直接输出 UTC `created_at` 字符串，RSS pubDate 必须带时区；现转 CST 后用 `email.utils.format_datetime()` 输出 RFC822，解析失败安全降级原值
+- **时区修复：UTC 存储 → 中国时区（CST +8）显示**（后发现与历史导入数据冲突，v1.3.43 回滚 filter 层，改为 DB 层统一）
 - `app.py` VERSION 同步至 **1.3.42**
 
 ### v1.3.41

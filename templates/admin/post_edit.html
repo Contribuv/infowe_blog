@@ -38,7 +38,7 @@
                 <div class="form-group">
                     <label>发布日期</label>
                     <input type="datetime-local" name="created_at" id="created_at" class="input-text"
-                           value="{{ post.created_at | csttime | replace(' ', 'T') if post and post.created_at else '' }}">
+                           value="{{ post.created_at [:16] | replace(' ', 'T') if post and post.created_at else '' }}">
                     <small class="form-hint">留空则使用当前日期时间</small>
                 </div>
                 <div class="form-group">

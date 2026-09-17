@@ -14,7 +14,7 @@
     <header class="tech-post-header">
         <h1 class="tech-post-title-lg">{{ post.title }}</h1>
         <div class="tech-post-meta-lg">
-            <time datetime="{{ post.created_at | cstdate }}">{{ post.created_at | cstdate }}</time>
+            <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
             {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
             <span>{{ post.read_time }} 分钟阅读</span>
             <span>{{ post.views }} 次浏览</span>
@@ -85,7 +85,7 @@
         {% for rp in related %}
         <li class="tech-related-item">
             <a href="/post/{{ rp.id }}">{{ rp.title }}</a>
-            <div class="tech-related-meta">{{ rp.created_at | cstdate }} · {{ rp.read_time }} 分钟</div>
+            <div class="tech-related-meta">{{ rp.created_at [:10] }} · {{ rp.read_time }} 分钟</div>
         </li>
         {% endfor %}
     </ul>

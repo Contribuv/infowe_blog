@@ -42,7 +42,7 @@
                 {% if c.is_private %}<span class="cmt-badge cmt-badge--private">私密</span>{% endif %}
                 {% if c.status == 'pending' %}<span class="cmt-badge cmt-badge--pending">待审核</span>{% endif %}
                 {% if reply_to %}<a class="cmt-at" href="#comment-{{ c.parent_id }}">@{{ reply_to }}</a>{% endif %}
-                <time class="cmt-time">{{ c.created_at | csttime }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}
+                <time class="cmt-time">{{ c.created_at [:16] }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}
             </header>
             <p class="cmt-text">{{ c.content }}</p>
             <footer class="cmt-actions">

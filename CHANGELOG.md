@@ -2,7 +2,24 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-## [v1.3.42] - 2026-09-17
+## [v1.3.43] - 2026-09-17
+
+### 修复
+- **彻底统一时区存储：数据库只存 CST（中国时区 +8h），模板直接切片显示，不再有 UTC→CST 转换层**
+  - 根因：v1.3.42 一刀切 `csttime`/`cstdate` filter 在 UTC 存值上 +8h 是对的，但 posts 表存在三套时区——id=2~5 导入脚本用 `datetime.now()` 存 CST、id=7~33 Hexo 迁移占位 `12:00:00` 整点（实际是 CST）、id=34+ CURRENT_TIMESTAMP 存 UTC；filter 对前两类错误二次 +8h 导致显示 +16h
+  - 数据迁移（`_migrate_tz.py`）：posts.created_at 分类——纯日期行跳过、`12:00:00` 整点跳过、其余 CURRENT_TIMESTAMP 产生的 UTC 行 +8h；comments/projects/timeline/links 全 UTC +8h；**已备份 data/blog.db → data/blog.db.bak**
+- **回滚 v1.3.42 模板 filter**：10 个模板 19 处 `| csttime` / `| cstdate` 还原为 `[:16]` / `[:10]`；删除 app.py `_csttime` / `_cstdate` 函数和 Jinja filter 注册；年份筛选 SQL 去掉 `+8 hours` 偏移；RSS pubDate 改把 DB CST 字符串补 `+08:00` timezone 后 `format_datetime()` 输出 RFC822
+
+### 影响文件
+- `app.py` VERSION → 1.3.43
+- `templates/admin/comments.html` / `post_edit.html` / `posts.html`
+- `templates/default/_comments.html` / `index.html` / `post.html` / `posts.html`
+- `templates/tech/index.html` / `post.html` / `posts.html`
+- DB：`data/blog.db`（已迁移，备份同目录 `.bak`）
+
+---
+
+## [v1.3.42] - 2026-09-17（已在 v1.3.43 回滚）
 
 ### 修复
 - **时区：UTC 存值被直接截断显示，凌晨 0-8 点发布显示成"前一天"**：SQLite `CURRENT_TIMESTAMP` 存 UTC，模板里 `created_at[:10]` / `[:16]` 直接截字符串得到 UTC 日期/时间。现注册 `cstdate` / `csttime` Jinja filter，UTC 字符串补 `timezone.utc` 后 `.astimezone(+8h)` 输出，模板全部改用 filter（admin + default + tech 三套主题共 10 个模板 27 处）。

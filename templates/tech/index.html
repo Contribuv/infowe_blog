@@ -36,7 +36,7 @@
         {% for post in featured %}
         <li class="tech-post-item">
             <div class="tech-post-meta">
-                <time datetime="{{ post.created_at | cstdate }}">{{ post.created_at | cstdate }}</time>
+                <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
                 {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
                 <span>{{ post.read_time }} 分钟</span>
                 <span class="tech-badge-featured">★ 精选</span>
@@ -59,7 +59,7 @@
     {% for post in posts %}
     <li class="tech-post-item">
         <div class="tech-post-meta">
-            <time datetime="{{ post.created_at | cstdate }}">{{ post.created_at | cstdate }}</time>
+            <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
             {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
             <span>{{ post.read_time }} 分钟</span>
         </div>
