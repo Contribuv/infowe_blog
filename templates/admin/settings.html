@@ -88,6 +88,51 @@
                 </label>
             </div>
         </div>
+        <!-- 图片水印：正文/灯箱图片叠加角落水印，无痕原图备份在 uploads/.originals（公网不可达） -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>图片水印</h3>
+                <span class="card-hint">修改文本/位置/开关后保存，历史图片自动后台刷新</span>
+            </div>
+            <div class="form-group">
+                <label>启用水印</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="watermark_enabled" value="1"{{ ' checked' if watermark_enabled|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后上传图片自动叠加水印；关闭时仅保留无痕原图。</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>水印文本</label>
+                <input type="text" name="watermark_text" class="input-text"
+                       value="{{ watermark_text|default('') }}" placeholder="留空则用「站点名 · 域名」">
+                <span class="form-hint">支持中文；留空自动取当前站点名 + 域名（如 infowe.site · example.com）。</span>
+            </div>
+            <div class="form-group">
+                <label>水印位置</label>
+                <select name="watermark_position" class="input-text">
+                    <option value="br"{{ ' selected' if watermark_position|default('br') == 'br' else '' }}>右下角</option>
+                    <option value="bl"{{ ' selected' if watermark_position|default('br') == 'bl' else '' }}>左下角</option>
+                    <option value="tr"{{ ' selected' if watermark_position|default('br') == 'tr' else '' }}>右上角</option>
+                    <option value="tl"{{ ' selected' if watermark_position|default('br') == 'tl' else '' }}>左上角</option>
+                    <option value="bc"{{ ' selected' if watermark_position|default('br') == 'bc' else '' }}>底部居中</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>历史图片刷新状态</label>
+                <span class="form-hint">
+                {% if wm_refresh.state == 'running' %}
+                    正在后台刷新全部历史图片…（完成后本页自动显示结果）
+                {% elif wm_refresh.state == 'done' %}
+                    上次已于 {{ wm_refresh.time }} 完成：刷新 {{ wm_refresh.done }} 张，失败 {{ wm_refresh.errs }}，耗时 {{ wm_refresh.seconds|default(0) }} 秒
+                {% else %}
+                    尚未触发过；保存水印配置变化时自动刷新。
+                {% endif %}
+                </span>
+            </div>
+        </div>
         <!-- 评论邮件通知：SMTP 配置，仅通知博主（不存评论者明文邮箱，无法通知评论者） -->
         <div class="card">
             <div class="card-header card-header--hint">

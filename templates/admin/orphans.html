@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}文件清理{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('trash-2', 20) | safe }} 孤儿文件清理</h2>
+</div>
+
+<div class="card">
+    <div class="card-hint">
+        这里列出 <b>uploads</b> 中未被任何文章引用（标题/正文/摘要/标签）的上传文件。
+        例如：新建文章时传了图后放弃、删除文章时的漏网文件。
+        头像、项目文件与无痕原图目录（.originals）不在此列，不会误删。
+    </div>
+
+    {% if not orphans %}
+    <div class="empty-state">
+        {{ icon('check-circle', 28) | safe }}
+        <p class="text-muted">没有孤儿文件，uploads 中的文件均被文章引用。</p>
+    </div>
+    {% else %}
+    <form method="POST" action="{{ url_for('admin_orphans') }}" id="orphanForm">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkAll"> 全选
+            </label>
+            <span class="bulk-count">共 <b>{{ orphans|length }}</b> 个文件 · {{ total_size }}</span>
+            <button type="submit" class="btn btn-sm btn-danger">删除所选</button>
+        </div>
+        <div class="table-wrap">
+        <table class="table">
+        <thead>
+            <tr>
+                <th class="col-check">选择</th>
+                <th>文件</th>
+                <th>大小</th>
+                <th>上传时间</th>
+                <th>备注</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in orphans %}
+            <tr>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="path" value="{{ o.rel }}" aria-label="选择 {{ o.rel }}">
+                </td>
+                <td data-label="文件">
+                    <a href="{{ o.url }}" target="_blank" class="post-link" title="在新窗口打开">{{ o.rel }}</a>
+                </td>
+                <td class="text-muted" data-label="大小">{{ o.size }}</td>
+                <td class="text-muted" data-label="上传时间">{{ o.mtime }}</td>
+                <td data-label="备注">
+                    {% if o.has_origin %}
+                    <span class="badge">含无痕原图</span>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('orphanForm');
+    if (!form) return;
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+    form.addEventListener('submit', function (e) {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) { e.preventDefault(); alert('请先勾选要清理的文件'); return; }
+        if (!confirm('确定删除选中的 ' + n + ' 个孤儿文件？删除后不可恢复。')) { e.preventDefault(); return; }
+    });
+    update();
+})();
+</script>
+{% endblock %}

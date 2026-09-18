@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.45'
+VERSION = '1.3.46'
 
 import os
 import re
@@ -235,6 +235,9 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 # secret_key 优先从环境变量读取（部署时务必设置 BLOG_SECRET_KEY），
 # 避免源码中硬编码导致 session 被伪造。fallback 仅在本地开发时使用。
 app.secret_key = os.environ.get('BLOG_SECRET_KEY', 'infowe-blog-secret-key-2024')
+# 请求体上限 32MB：上传单文件限制 20MB（见 _save_upload），此处为 Flask 级兜底，
+# 防止无 Content-Length 的分块上传或超大附件挤爆临时目录/磁盘；超限自动返回 413。
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
 
 
 # 在 Nginx 反代后运行时，让 request.remote_addr 自动还原为真实客户端 IP。
@@ -291,13 +294,16 @@ PAGE_SIZE = 20  # 每页文章数
 # ─────────────── 数据库初始化 ───────────────
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     # 不再在此处逐连接执行 PRAGMA journal_mode=WAL：该 PRAGMA 要拿数据库锁，
     # 高并发下新连接执行会撞锁抛 database is locked。WAL 模式已在 init_db 一次性
     # 激活并持久化到库文件，后续连接无需重设。
     # foreign_keys=ON 保留：posts 表存在外键级联删除（L368），依赖此连接级开关。
     conn.execute("PRAGMA foreign_keys=ON")
+    # 写锁短暂碰撞时自动等待（最长 ~15s），而非立刻抛 database is locked：
+    # 多 gunicorn worker + 监控线程并发写同一 WAL 库时避免偶发 500。
+    conn.execute("PRAGMA busy_timeout=15000")
     return conn
 
 
@@ -542,6 +548,9 @@ def init_db():
         ('expiry_aliyun', ''),       # 手动兜底：阿里云到期日期 YYYY-MM-DD
         ('expiry_tencent', ''),      # 手动兜底：腾讯云域名到期日期 YYYY-MM-DD
         ('monitor_services', '[]'),  # 监控的 HTTP/HTTPS 服务列表 JSON
+        ('watermark_enabled', '1'),      # 图片水印开关
+        ('watermark_text', ''),          # 水印文本（空则用「站点名 · 域名」）
+        ('watermark_position', 'br'),    # 水印位置 br/bl/tr/tl
     ]
     for k, v in defaults:
         db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
@@ -1543,6 +1552,7 @@ def _client_ip():
 
 # ── 评论显示 IP 归属地（省份）──
 _IP_LOC_CACHE = {}
+_IP_LOC_CACHE_MAX = 2000  # 缓存上限：超过后淘汰最早条目，防长期运行内存无限增长
 
 
 def _fmt_loc(loc):
@@ -1585,6 +1595,12 @@ def _ip_location(ip):
                 break
         except Exception:
             continue
+    # 容量上限控制：dict 保持插入序，超限时淘汰最早一条（dict.popitem(last=False)）
+    if len(_IP_LOC_CACHE) >= _IP_LOC_CACHE_MAX:
+        try:
+            _IP_LOC_CACHE.popitem(last=False)
+        except (KeyError, StopIteration):
+            pass
     _IP_LOC_CACHE[ip] = loc
     return loc
 
@@ -1612,7 +1628,20 @@ def _login_blocked(ip):
     return False
 
 
+def _prune_login_attempts():
+    """清理过期的登录失败记录，防止内存被爆破日志撑爆。
+    逻辑：解锁已超过 1 天的记录直接删除；总量超过上限（异常 flood）时整表重置。"""
+    now = time.time()
+    stale = [k for k, rec in _LOGIN_ATTEMPTS.items()
+             if rec.get('lock_until', 0) < now - 86400]
+    for k in stale:
+        _LOGIN_ATTEMPTS.pop(k, None)
+    if len(_LOGIN_ATTEMPTS) > 2000:
+        _LOGIN_ATTEMPTS.clear()
+
+
 def _register_fail(ip):
+    _prune_login_attempts()  # 写入前先清理，控制无界增长
     rec = _LOGIN_ATTEMPTS.get(ip) or {'fails': 0, 'lock_until': 0}
     rec['fails'] += 1
     # 递增失败延迟：0.5s, 1s, 2s, 4s ...
@@ -1947,9 +1976,25 @@ def db_save_post(form_data, post_id=None):
 
 def db_delete_post(post_id):
     db = get_db()
+    # 删除前先收集本文引用的上传文件 URL，供删除后做清理判定
+    row = db.execute("SELECT title, content, excerpt, tags FROM posts WHERE id=?", (post_id,)).fetchone()
+    gone_urls = _extract_upload_urls(*tuple(row)) if row else set()
     db.execute("DELETE FROM posts WHERE id=?", (post_id,))
     db.commit()
+    removed = []
+    if gone_urls:
+        # 共享引用保护：删除后仍被其他文章引用的文件一律保留。
+        # 剩余文章的正文可能存百分号编码 URL，须同样归一为解码 URL 集合再比对。
+        rows = db.execute("SELECT title, content, excerpt, tags FROM posts").fetchall()
+        survivor_urls = set()
+        for r in rows:
+            survivor_urls |= _extract_upload_urls(*tuple(r))
+        for url in sorted(gone_urls):
+            if url and url not in survivor_urls:
+                if _delete_upload_file(url):
+                    removed.append(url)
     db.close()
+    return removed
 
 
 # ─────────────── 文章分类数据层 ───────────────
@@ -4122,8 +4167,11 @@ def admin_post_edit(post_id):
 @app.route('/admin/posts/<int:post_id>/delete', methods=['POST'])
 @admin_required
 def admin_post_delete(post_id):
-    db_delete_post(post_id)
-    flash('文章已删除', 'success')
+    removed = db_delete_post(post_id)
+    if removed:
+        flash('文章已删除，并清理 %d 个不再被引用的上传文件' % len(removed), 'success')
+    else:
+        flash('文章已删除（引用的上传文件仍被其他内容使用，已保留）', 'success')
     return redirect(url_for('admin_posts'))
 
 
@@ -4601,6 +4649,189 @@ def _optimize_image(stream, ext):
         return None, None, None
 
 
+# ─────────────── 图片水印（正文/灯箱展示带水印，.originals 保留无痕原图） ───────────────
+
+# 候选水印字体（支持中文，按序取第一个存在的；都无则用 Pillow 默认字体）
+_WM_FONT_CANDIDATES = [
+    'C:/Windows/Fonts/msyh.ttc',        # 微软雅黑
+    'C:/Windows/Fonts/simhei.ttf',      # 黑体
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+]
+_WM_FONT = None
+for _c in _WM_FONT_CANDIDATES:
+    if os.path.exists(_c):
+        try:
+            from PIL import ImageFont
+            _WM_FONT = ImageFont.truetype(_c, 16)
+            break
+        except Exception:
+            _WM_FONT = None
+
+
+def _apply_watermark(img, text, position='br'):
+    """给 img 指定角落画「站点名 · 域名」半透明水印（文字单枚）。
+    绘制失败或文字为空时返回原图，不阻断上传。"""
+    if not text or not _HAS_PIL:
+        return img
+    try:
+        from PIL import ImageDraw, ImageFont
+        w, h = img.size
+        font_size = max(14, min(28, int(w * 0.02)))
+        font = None
+        try:
+            if _WM_FONT:
+                font = ImageFont.truetype(_WM_FONT.path, font_size)
+            else:
+                font = ImageFont.load_default()
+        except Exception:
+            font = ImageFont.load_default()
+        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+        d = ImageDraw.Draw(overlay)
+        # 先量文字尺寸：ImageDraw.textbbox 是 Pillow 8+ 的标准接口
+        try:
+            bbox = d.textbbox((0, 0), text, font=font)
+            tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        except Exception:
+            tw, th = font.getsize(text)
+        pad = max(10, int(w * 0.01))
+        # 角落坐标：br 右下 / bl 左下 / tr 右上 / tl 左上 / bc 底部居中
+        pos = {
+            'br': (w - tw - pad, h - th - pad),
+            'bl': (pad, h - th - pad),
+            'tr': (w - tw - pad, pad),
+            'tl': (pad, pad),
+            'bc': ((w - tw) // 2, h - th - pad),
+        }
+        x, y = pos.get(position, pos['br'])
+        # 深色阴影 + 半透明白字，深浅图片上都可读
+        d.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, 150))
+        d.text((x, y), text, font=font, fill=(255, 255, 255, 180))
+        if img.mode == 'RGBA':
+            return Image.alpha_composite(img, overlay)
+        base = img.convert('RGBA')
+        return Image.alpha_composite(base, overlay).convert(img.mode or 'RGB')
+    except Exception:
+        return img
+
+
+def _watermark_text():
+    """水印文案：优先取后台自定义文本，空则回退「站点名 · 域名」。"""
+    custom = (app.config.get('watermark_text') or '').strip()
+    if custom:
+        return custom
+    blog_name = app.config.get('blog_name') or ''
+    host = request.host if request and hasattr(request, 'host') else ''
+    return (blog_name + ' · ' + host).strip(' ·') if (blog_name or host) else ''
+
+
+def _watermark_position():
+    """水印位置：br 右下 / bl 左下 / tr 右上 / tl 左上 / bc 底部居中（默认右下）。"""
+    p = (app.config.get('watermark_position') or '').strip()
+    return p if p in ('br', 'bl', 'tr', 'tl', 'bc') else 'br'
+
+
+def _safe_stem(name):
+    """宽松安全化文件名主干：保留中文等可读字符，剔除路径分隔与控制字符。
+
+    相对 werkzeug.secure_filename（非 ASCII 一律丢弃，产生 docx.docx 式结果），
+    这里保留中文/字母/数字/中划线/点，仅把其余符号折叠为下划线：
+    '微信图片_2020-01-29_114456.jpg' -> '微信图片_2020-01-29_114456'
+    '我的毕业设计.docx'               -> '我的毕业设计'
+    """
+    stem = os.path.splitext(name or '')[0]
+    stem = re.sub(r'[^\w\u4e00-\u9fff.-]', '_', stem, flags=re.UNICODE)
+    stem = re.sub(r'_+', '_', stem)
+    stem = re.sub(r'\.{2,}', '_', stem)  # 连续点折叠，避免 ../ 类路径穿越被误拒或误判
+    stem = stem.strip('_. ')
+    # Windows 保留设备名兜底，避免写入失败
+    if stem.upper() in ('CON', 'PRN', 'AUX', 'NUL',
+                        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+                        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'):
+        stem = '_' + stem
+    return stem[:80] or 'file'
+
+
+# 文章正文对上传文件的引用形如 /uploads/2026/09/xxx.jpg，据此提取用于清理判定。
+# 命名保留中文后，正文里可能是原始中文 URL，也可能是 url_for 生成的百分号编码 URL
+# （含 % 字符），正则须同时兼容中文(\w)与 %，否则编码 URL 会被 % 截断漏判。
+_UPLOAD_URL_RE = re.compile(r'/uploads/[/\w%.\-]+')
+
+
+def _extract_upload_urls(*texts):
+    """从一段或多段文本中提取所有 /uploads/ 相对 URL（去重，并按 URL 解码归一）。
+
+    磁盘文件名是中文原始字符，而 url_for 生成的 URL 是百分号编码，
+    必须 unquote 归一后两者才能互相匹配。
+    """
+    urls = set()
+    for t in texts:
+        if not t:
+            continue
+        for m in _UPLOAD_URL_RE.finditer(str(t)):
+            urls.add(urllib.parse.unquote(m.group(0)))
+    return urls
+
+
+def _load_referenced_urls():
+    """收集全库文章文本中引用的 /uploads/ URL 集合（孤儿清理判定基准）。"""
+    db = get_db()
+    rows = db.execute("SELECT title, content, excerpt, tags FROM posts").fetchall()
+    db.close()
+    urls = set()
+    for r in rows:
+        urls |= _extract_upload_urls(*tuple(r))
+    return urls
+
+
+def _prune_empty_dirs(start):
+    """自底向上删除空目录（不越过 UPLOAD_DIR）。"""
+    d = start
+    while d and d != UPLOAD_DIR and os.path.abspath(d).startswith(os.path.abspath(UPLOAD_DIR)):
+        try:
+            os.rmdir(d)
+        except OSError:
+            break
+        d = os.path.dirname(d)
+
+
+def _delete_upload_file(url):
+    """按 /uploads/ 相对 URL 删除正式文件与其 .originals 无痕原图，并清理空目录。
+
+    入参可能是百分号编码 URL（正文引用即编码形式），先解码归一为磁盘路径。
+    拒绝 avatar / projects / 隐藏路径等非文章上传目录，防误删。
+    返回是否真的删除了文件。
+    """
+    rel = urllib.parse.unquote(url.split('/uploads/', 1)[-1])
+    segs = rel.split('/')
+    if (not rel or '..' in rel or rel.startswith('.') or not segs[0]
+            or segs[0].startswith('.') or segs[0] in ('avatar', 'projects')):
+        return False
+    abs_path = os.path.join(UPLOAD_DIR, *segs)
+    if not os.path.isfile(abs_path):
+        return False
+    try:
+        os.remove(abs_path)
+        orig = os.path.join(UPLOAD_DIR, '.originals', *segs)
+        if os.path.isfile(orig):
+            os.remove(orig)
+        _prune_empty_dirs(os.path.dirname(abs_path))
+        return True
+    except OSError:
+        return False
+
+
+def _fmt_size(n):
+    """字节数转人类可读尺寸。"""
+    n = float(n or 0)
+    for unit in ('B', 'KB', 'MB', 'GB'):
+        if n < 1024 or unit == 'GB':
+            return ('%d B' % n) if unit == 'B' else ('%.1f %s' % (n, unit))
+        n /= 1024.0
+    return '%.1f TB' % n
+
+
 def _save_upload(file, allowed_ext):
     if not file or not file.filename:
         return None, '未选择文件'
@@ -4614,8 +4845,8 @@ def _save_upload(file, allowed_ext):
     sub = now.strftime('%Y/%m')
     target_dir = os.path.join(UPLOAD_DIR, sub)
     os.makedirs(target_dir, exist_ok=True)
-    # 避免重名覆盖
-    base = secure_filename(os.path.splitext(file.filename)[0]) or 'file'
+    # 避免重名覆盖（保留中文等可读文件名）
+    base = _safe_stem(file.filename)
     filename = base + ext
     counter = 1
     while os.path.exists(os.path.join(target_dir, filename)):
@@ -4630,8 +4861,14 @@ def _save_upload(file, allowed_ext):
                 while os.path.exists(os.path.join(target_dir, filename)):
                     filename = f'{base}_{counter}{new_ext}'
                     counter += 1
-            with open(os.path.join(target_dir, filename), 'wb') as f:
-                f.write(data)
+            # 无痕原图（压缩后、加水印前）备份到 .originals，公网不可达；
+            # 展示层一律用带水印版本（后台可自定义文本/位置，未启用则纯无痕）
+            orig_abs = os.path.join(UPLOAD_DIR, '.originals', sub, filename)
+            if new_ext in ('.jpg', '.jpeg', '.png', '.webp', '.bmp'):
+                _write_file(orig_abs, data)
+                if app.config.get('watermark_enabled', '1') in ('1', 'on', 'true', 'yes'):
+                    data = _watermark_bytes(data, new_ext, _watermark_text(), _watermark_position())
+            _write_file(os.path.join(target_dir, filename), data)
         elif ext in ('.heic', '.heif'):
             # err 由 _optimize_heic 提供（含真实异常信息）
             return None, err or 'HEIC 图片解码失败'
@@ -4644,9 +4881,132 @@ def _save_upload(file, allowed_ext):
     return url, None
 
 
+def _write_file(path, data):
+    """带父目录创建的写文件。"""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'wb') as f:
+        f.write(data)
+
+
+def _watermark_bytes(data, ext, text, position='br'):
+    """字节级水印：data(压缩后)→ 加角落水印 → 新 bytes。失败返回原 data。"""
+    if not text or not _HAS_PIL:
+        return data
+    try:
+        from PIL import Image
+        img = Image.open(io.BytesIO(data))
+        wm = _apply_watermark(img, text, position)
+        out = io.BytesIO()
+        if ext == '.png':
+            wm.save(out, 'PNG', optimize=True)
+        else:
+            wm.save(out, 'JPEG', quality=82, optimize=True, progressive=True)
+        return out.getvalue()
+    except Exception:
+        return data
+
+
+# ---------------------------------------------------------------------------
+# 历史图片水印批量重做（后台保存设置后自动触发 + 手动 CLI 共用同一份逻辑）
+# ---------------------------------------------------------------------------
+# 后台线程调度锁与运行标记：避免重复启动刷新线程（仅进程内有效，多 worker 并发重做幂等无害）
+_WM_RUN_LOCK = threading.Lock()
+_WM_REF_DONE = threading.Event()          # 置位=空闲可接收新任务；开始刷新时清除
+_WM_REF_DONE.set()                        # 进程启动即处于空闲态
+_WM_REFRESH_STATE = {'state': 'idle', 'time': '', 'done': 0, 'errs': 0}
+
+# 与 watermark_backfill.py 保持一致：可处理的位图扩展名
+WM_EXT = ('.jpg', '.jpeg', '.png', '.webp', '.bmp')
+
+
+def wm_refresh_state():
+    """返回最近一次历史图刷新的状态(dict)，供设置页展示。"""
+    return dict(_WM_REFRESH_STATE)
+
+
+def _wm_redo_all(text, position='br', force=True):
+    """遍历 uploads 全部位图重做水印（自动刷新 / backfill 共用核心）。
+
+    某图已有 .originals 无痕原图 → 从原图重新叠当前水印写回正式路径(force)。
+    从未处理过 → 先把正式文件备份为无痕原图，再叠水印写回。
+    avatar / projects / 隐藏目录一律跳过。
+    返回 (完成数, 跳过数, 失败数)。
+    """
+    global _WM_REF_DONE
+    started = time.time()
+    count = skipped = errs = 0
+    state = {'state': 'running', 'time': datetime.now().strftime('%H:%M:%S'), 'done': 0, 'errs': 0}
+    _WM_REFRESH_STATE.update(state)
+    try:
+        for root, dirs, files in os.walk(UPLOAD_DIR):
+            dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('projects', 'avatar')]
+            if root == UPLOAD_DIR:
+                continue
+            for fn in sorted(files):
+                ext = os.path.splitext(fn)[1].lower()
+                src = os.path.join(root, fn)
+                if ext not in WM_EXT or not os.path.isfile(src):
+                    continue
+                sub = os.path.relpath(root, UPLOAD_DIR).replace('\\', '/')
+                orig = os.path.join(UPLOAD_DIR, '.originals', sub, fn)
+                if os.path.exists(orig):
+                    if not force:
+                        skipped += 1
+                        continue
+                    try:
+                        with open(orig, 'rb') as f:
+                            data = f.read()
+                    except Exception as e:
+                        errs += 1
+                        print(' ! 读取无痕原图失败:', sub + '/' + fn, e)
+                        continue
+                else:
+                    # 首次处理：把当前文件备份为无痕原图
+                    try:
+                        with open(src, 'rb') as f:
+                            data = f.read()
+                        os.makedirs(os.path.dirname(orig), exist_ok=True)
+                        with open(orig, 'wb') as f:
+                            f.write(data)
+                    except Exception as e:
+                        errs += 1
+                        print(' ! 备份无痕原图失败:', sub + '/' + fn, e)
+                        continue
+                try:
+                    with open(src, 'wb') as f:
+                        f.write(_watermark_bytes(data, ext, text, position))
+                    count += 1
+                except Exception as e:
+                    errs += 1
+                    print(' ! 重做失败:', sub + '/' + fn, e)
+        _WM_REFRESH_STATE.update({
+            'state': 'done',
+            'time': datetime.now().strftime('%H:%M:%S'),
+            'done': count, 'errs': errs, 'seconds': int(time.time() - started),
+        })
+    finally:
+        _WM_REF_DONE.set()
+    print('水印批量刷新完成：%d 张，失败 %d，耗时 %ds' % (count, errs, int(time.time() - started)))
+    return count, skipped, errs
+
+
+def _start_wm_refresh(text, position='br'):
+    """后台线程启动历史图水印重做；已有刷新在跑则跳过本次（下次保存设置仍会触发）。"""
+    global _WM_REF_DONE
+    with _WM_RUN_LOCK:
+        if not _WM_REF_DONE.is_set():
+            return False
+        _WM_REF_DONE.clear()
+    threading.Thread(target=_wm_redo_all, args=(text, position, True), daemon=True).start()
+    return True
+
+
 # 根目录 /uploads 静态文件服务（v1.0.6 起上传目录移至项目根）
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
+    # 点开头的隐藏目录（如 .originals 无痕原图）一律不可达，防公网取原图
+    if filename.startswith('.') or '/.' in filename:
+        abort(404)
     return send_from_directory(UPLOAD_DIR, filename)
 
 
@@ -4681,6 +5041,75 @@ def admin_upload_file():
     if err:
         return jsonify({'error': err}), 400
     return jsonify({'url': url, 'name': os.path.basename(url)})
+
+
+# ─────────────── 后台: 孤儿文件清理 ───────────────
+
+@app.route('/admin/orphans', methods=['GET', 'POST'])
+@admin_required
+def admin_orphans():
+    """粘贴上传但从未（或不再）被任何文章引用的文件清理。
+
+    判定基准：全库文章的 title/content/excerpt/tags 文本中是否出现过该文件的
+    /uploads/ 相对 URL。avatar / projects / 隐藏目录（如 .originals 无痕原图）
+    不属于文章上传目录，一律不列出、不可清理。
+    """
+    if request.method == 'POST':
+        selected = request.form.getlist('path')
+        deleted = failed = 0
+        for rel in selected:
+            rel = urllib.parse.unquote(rel.replace('\\', '/'))
+            segs = rel.split('/')
+            if (not rel or rel.startswith('.') or rel.startswith('/') or '..' in rel
+                    or not segs[0] or segs[0].startswith('.')
+                    or segs[0] in ('avatar', 'projects')):
+                continue
+            abs_path = os.path.join(UPLOAD_DIR, *segs)
+            if not os.path.isfile(abs_path):
+                continue
+            try:
+                os.remove(abs_path)
+                orig = os.path.join(UPLOAD_DIR, '.originals', *segs)
+                if os.path.isfile(orig):
+                    os.remove(orig)
+                _prune_empty_dirs(os.path.dirname(abs_path))
+                deleted += 1
+            except OSError:
+                failed += 1
+        if deleted and not failed:
+            flash('已清理 %d 个孤儿文件' % deleted, 'success')
+        elif deleted and failed:
+            flash('已清理 %d 个孤儿文件，%d 个删除失败' % (deleted, failed), 'error')
+        elif failed:
+            flash('%d 个文件删除失败' % failed, 'error')
+        else:
+            flash('没有可清理的文件', 'success')
+        return redirect(url_for('admin_orphans'))
+
+    refs = _load_referenced_urls()
+    orphans = []
+    for root, dirs, files in os.walk(UPLOAD_DIR):
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('avatar', 'projects')]
+        if root == UPLOAD_DIR:
+            continue
+        for fn in sorted(files):
+            rel = os.path.relpath(os.path.join(root, fn), UPLOAD_DIR).replace('\\', '/')
+            if ('/uploads/' + rel) in refs:
+                continue
+            p = os.path.join(root, fn)
+            try:
+                size = os.path.getsize(p)
+                mtime = datetime.fromtimestamp(os.path.getmtime(p)).strftime('%Y-%m-%d %H:%M')
+            except OSError:
+                continue
+            orphans.append({'rel': rel, 'url': '/uploads/' + rel,
+                            'size': _fmt_size(size), 'mtime': mtime,
+                            'has_origin': os.path.isfile(os.path.join(UPLOAD_DIR, '.originals', rel))})
+    orphans.sort(key=lambda x: x['mtime'], reverse=True)
+    total_size = sum(os.path.getsize(os.path.join(UPLOAD_DIR, o['rel'])) for o in orphans
+                     if os.path.isfile(os.path.join(UPLOAD_DIR, o['rel'])))
+    return render_template('admin/orphans.html', orphans=orphans,
+                           total_size=_fmt_size(total_size))
 
 
 # ─────────────── 后台: 设置 ───────────────
@@ -4805,6 +5234,29 @@ def admin_settings():
             if key in request.form:
                 save_setting(key, request.form[key])
                 app.config[key] = request.form[key]
+        # 图片水印设置（开关为复选框，未勾选即为关闭）
+        wm_on = '1' if request.form.get('watermark_enabled') else '0'
+        # 先记录旧配置，用于判断“文本/位置/开关”是否变化（变化才触发历史图后台刷新）
+        wm_old_on = (app.config.get('watermark_enabled', '1') or '').strip() in ('1', 'on', 'true', 'yes')
+        wm_old_text = _watermark_text()
+        wm_old_pos = _watermark_position()
+        save_setting('watermark_enabled', wm_on)
+        app.config['watermark_enabled'] = wm_on
+        for key in ('watermark_text', 'watermark_position'):
+            if key in request.form:
+                save_setting(key, request.form[key])
+                app.config[key] = request.form[key]
+        # 水印开关/文本/位置任一变化 → 后台线程自动重做全部历史图（无需手动跑脚本）；
+        # 首次启用或换文本/位置，历史图都要按最新配置重画
+        wm_new_on = wm_on in ('1', 'on', 'true', 'yes')
+        wm_new_text = _watermark_text()
+        wm_new_pos = _watermark_position()
+        if (wm_new_on and wm_new_text
+                and (wm_new_on != wm_old_on or wm_new_text != wm_old_text or wm_new_pos != wm_old_pos)):
+            if _start_wm_refresh(wm_new_text, wm_new_pos):
+                flash('水印配置已变化，历史图片正在后台自动刷新…', 'success')
+            else:
+                flash('水印配置已保存（上一轮刷新仍在进行，完成后即按新配置生效）', 'success')
         # 复选框未勾选时不会随表单提交，需单独处理为关闭态
         comments_on = '1' if request.form.get('comments_enabled') else '0'
         save_setting('comments_enabled', comments_on)
@@ -4904,7 +5356,11 @@ def admin_settings():
                            smtp_pass=app.config.get('smtp_pass', ''),
                            notify_email=app.config.get('notify_email', ''),
                            smtp_sender_name=app.config.get('smtp_sender_name', ''),
-                           comment_notify=app.config.get('comment_notify', '0'))
+                           comment_notify=app.config.get('comment_notify', '0'),
+                           watermark_enabled=app.config.get('watermark_enabled', '1'),
+                           watermark_text=app.config.get('watermark_text', ''),
+                           watermark_position=app.config.get('watermark_position', 'br'),
+                           wm_refresh=wm_refresh_state())
 
 
 @app.route('/admin/settings/test-email', methods=['POST'])

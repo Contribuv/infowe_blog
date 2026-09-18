@@ -612,7 +612,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   border-bottom-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
-.tech-post-body img { max-width: 100%; border-radius: 6px; display: block; margin: 0 auto 16px; }
+.tech-post-body img { max-width: 100%; border-radius: 6px; display: block; margin: 12px auto; cursor: zoom-in; }
 .tech-post-body blockquote {
   margin: 0 0 16px; padding: 10px 16px;
   border-left: 3px solid var(--accent);
@@ -1399,3 +1399,66 @@ html { touch-action: manipulation; }
 .tech-project-card:hover,
 .tech-link-card:hover { transform: translateY(-3px); }
 .tech-tag-cloud-item:hover { transform: translateY(-2px); }
+
+/* ── 图片画廊：连续纯图由 JS 合并为网格，点击进灯箱 ── */
+.img-gallery {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 8px; margin: 0 0 16px;
+}
+.img-gallery img {
+  width: 100%; margin: 0; display: block;
+  aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: 6px; cursor: zoom-in;
+  transition: filter .18s ease, transform .18s ease;
+}
+.img-gallery img:hover { filter: brightness(.94); }
+@media (min-width: 768px) {
+  .img-gallery { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+}
+
+/* ── 灯箱（点击正文任意图片打开，左右箭头 / 键盘 / 滑屏切换） ── */
+.lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(6, 8, 12, .92); padding: 24px;
+  opacity: 0; transition: opacity 200ms ease;
+}
+.lightbox.open { display: flex; opacity: 1; }
+.lightbox-media {
+  max-width: 92vw; max-height: 88vh;
+  display: flex; align-items: center; justify-content: center;
+}
+.lightbox-media img,
+.lightbox-media video {
+  max-width: 92vw; max-height: 88vh; border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .5); object-fit: contain;
+  background: #000;
+}
+.lightbox-close, .lightbox-nav {
+  position: absolute; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .12); color: #fff;
+  transition: background .15s ease;
+}
+.lightbox-close:hover, .lightbox-nav:hover { background: rgba(255, 255, 255, .25); }
+.lightbox-close {
+  top: 16px; right: 16px; width: 40px; height: 40px;
+  border-radius: 50%; font-size: 22px; line-height: 1;
+}
+.lightbox-nav {
+  top: 50%; transform: translateY(-50%);
+  width: 46px; height: 46px; border-radius: 50%;
+  font-size: 24px; line-height: 1;
+}
+.lightbox-nav[hidden] { display: none; }
+.lightbox-prev { left: 16px; }
+.lightbox-next { right: 16px; }
+.lightbox-count {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  color: rgba(255, 255, 255, .7); font-size: 13px;
+}
+@media (max-width: 768px) {
+  .lightbox-nav { width: 38px; height: 38px; font-size: 20px; }
+  .lightbox-prev { left: 8px; }
+  .lightbox-next { right: 8px; }
+}

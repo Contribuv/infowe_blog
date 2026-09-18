@@ -81,6 +81,9 @@
                     <a href="{{ url_for('admin_status') }}" class="admin-nav-item {% if request.path.startswith('/admin/status') %}active{% endif %}">
                         {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>服务时效</span>
                     </a>
+                    <a href="{{ url_for('admin_orphans') }}" class="admin-nav-item {% if request.path.startswith('/admin/orphans') %}active{% endif %}">
+                        {{ icon('trash-2', 20, 'admin-nav-icon') | safe }}<span>文件清理</span>
+                    </a>
                 </div>
 
                 <div class="admin-nav-group">

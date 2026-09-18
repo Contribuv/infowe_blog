@@ -2,6 +2,19 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.46] - 2026-09-18
+
+### 修复
+- 给 SQLite 连接加上了 `busy_timeout=15000`（连接级，每条新连接都设）。之前多 worker 部署 + 服务监控线程同时写库时，写锁短暂碰撞会立刻抛 `database is locked`，高峰时偶发 500；现在 SQLite 会自动等待最长 15 秒再报错，把这种窗口期内的抖动消化掉。
+- 加了 Flask 级请求体上限 32MB（`MAX_CONTENT_LENGTH`）。原来上传只靠 `_save_upload` 里的 20MB 检查兜底，但那是读 `Content-Length` 头——分块上传没有这个头就直接跳过检查了，超大文件能一路写进临时目录和 uploads。现在超限在解析阶段就被拒（413），贴地保护磁盘和内存。
+- 两处内存缓存加了上限，防止跑久了内存悄悄涨上去：
+  - IP 归属地缓存（`_IP_LOC_CACHE`）最多留 2000 条，超了淘汰最早一条。评论 IP 少的时候没感觉，但长年累月跑不清理迟早堆积。
+  - 登录失败记录（`_LOGIN_ATTEMPTS`）在每次记录失败前清理：解锁超过 1 天的直接删，总量超 2000（异常爆破 flood）整表重置。
+
+改动：`app.py`（VERSION、`get_db()` busy_timeout、`MAX_CONTENT_LENGTH`、IP 归属地与登录失败缓存清理）。
+
+---
+
 ## [v1.3.45] - 2026-09-17
 
 ### 新增
