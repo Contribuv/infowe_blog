@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.51'
+VERSION = '1.3.52'
 
 import os
 import re
@@ -6160,6 +6160,9 @@ def admin_export_markdown():
 
 UPGRADE_REPO = 'Contribuv/infowe_blog'
 UPGRADE_RELEASE_URL = f'https://github.com/{UPGRADE_REPO}/releases/latest'
+# Gitee 镜像仓库：GitHub 检测/下载不稳定时自动回退源（发版后需在 Gitee 同步 tag）
+# 可用环境变量 UPGRADE_GITEE_REPO 覆盖
+UPGRADE_GITEE_REPO = (os.environ.get('UPGRADE_GITEE_REPO', 'infowe/infowe_blog') or '').strip('/')
 # 升级时跳过、绝不覆盖的目录/文件（用户数据与运行时数据）
 UPGRADE_SKIP = {
     'data', 'static/uploads', 'uploads', 'backups', 'posts',
@@ -6219,14 +6222,16 @@ def parse_version(v):
 
 
 def check_latest_version(force=False):
-    """查询 GitHub Releases 最新版本。失败静默返回 None（不阻塞页面），结果缓存到磁盘。
-    返回 {'tag','version','html_url','body','published_at'} 或 None。"""
+    """查询最新版本：GitHub Releases 优先，失败自动回退 Gitee 镜像仓库。
+    失败静默返回 None（不阻塞页面），结果缓存到磁盘。
+    返回 {'tag','version','html_url','body','published_at','source'} 或 None。"""
     now = time.time()
     cached = UPGRADE_CACHE.get('info')
     # 成功/失败都缓存 10 分钟（国内服务器访问 GitHub 慢，避免反复打 API）
     if not force and UPGRADE_CACHE.get('t', 0) and now - UPGRADE_CACHE['t'] < 600:
         return cached
     info = None
+    # 源 1：GitHub Releases API
     try:
         req = urllib.request.Request(
             f'https://api.github.com/repos/{UPGRADE_REPO}/releases/latest',
@@ -6234,16 +6239,41 @@ def check_latest_version(force=False):
         with urllib.request.urlopen(req, timeout=6, context=_github_ssl_context()) as resp:
             data = json.loads(resp.read().decode('utf-8'))
         tag = (data.get('tag_name') or '').strip().lstrip('v')
-        if tag and parse_version(tag):
+        ver = parse_version(tag)
+        if ver:
+            # 规范化 tag（Gitee 建发行版易把标题填进标签名，如 'v1.3.51：安全加固'），
+            # 升级下载 URL 只认规范 tag
             info = {
-                'tag': tag,
-                'version': parse_version(tag),
+                'tag': '.'.join(map(str, ver)),
+                'version': ver,
                 'html_url': data.get('html_url') or UPGRADE_RELEASE_URL,
                 'body': (data.get('body') or '').strip()[:2000],
                 'published_at': (data.get('published_at') or '')[:10],
+                'source': 'github',
             }
     except Exception:
         pass
+    # 源 2：Gitee 镜像（GitHub 超时/限流/被墙时的回退，国内直连稳定）
+    if info is None and UPGRADE_GITEE_REPO:
+        try:
+            req = urllib.request.Request(
+                f'https://gitee.com/api/v5/repos/{UPGRADE_GITEE_REPO}/releases/latest',
+                headers={'User-Agent': 'infowe-Blog-updater'})
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            tag = (data.get('tag_name') or '').strip().lstrip('v')
+            ver = parse_version(tag)
+            if ver:
+                info = {
+                    'tag': '.'.join(map(str, ver)),
+                    'version': ver,
+                    'html_url': data.get('html_url') or f'https://gitee.com/{UPGRADE_GITEE_REPO}/releases',
+                    'body': (data.get('body') or '').strip()[:2000],
+                    'published_at': (data.get('published_at') or data.get('created_at') or '')[:10],
+                    'source': 'gitee',
+                }
+        except Exception:
+            pass
     UPGRADE_CACHE['t'] = now
     UPGRADE_CACHE['ok'] = info is not None
     UPGRADE_CACHE['info'] = info
@@ -6251,11 +6281,11 @@ def check_latest_version(force=False):
     return info
 
 
-def _upgrade_download(url, dest, max_bytes=None):
+def _upgrade_download(url, dest, max_bytes=None, alt_urls=None):
     """流式下载文件到 dest，超过大小上限则中断。
 
-    优先直连原始 URL；连接失败/超时后自动按 UPGRADE_MIRRORS 列表逐个尝试镜像，
-    全部失败则抛出最后一个错误。"""
+    尝试顺序：直连原始 URL → UPGRADE_MIRRORS 加速镜像 → alt_urls 完整备用源
+    （如 Gitee 归档包，国内直连稳定）。全部失败抛出最后一个错误。"""
     max_bytes = max_bytes or UPGRADE_MAX_BYTES
 
     def _stream_download(u, target):
@@ -6271,7 +6301,7 @@ def _upgrade_download(url, dest, max_bytes=None):
                     if os.path.getsize(target) > max_bytes:
                         raise RuntimeError('下载内容超过大小上限，已取消')
 
-    attempts = [url] + [m + url for m in UPGRADE_MIRRORS]
+    attempts = [url] + [m + url for m in UPGRADE_MIRRORS] + list(alt_urls or [])
     last_err = None
     for i, u in enumerate(attempts):
         try:
@@ -6341,9 +6371,11 @@ def do_upgrade(tag):
         if os.path.isdir(UPLOAD_DIR):
             shutil.copytree(UPLOAD_DIR, os.path.join(bak_dir, 'uploads'), dirs_exist_ok=True)
 
-        # 2. 下载源码压缩包（直连优先，失败自动降级镜像）
+        # 2. 下载源码压缩包（直连优先 → 加速镜像 → Gitee 镜像仓库）
         zip_url = f'https://github.com/{UPGRADE_REPO}/archive/refs/tags/v{tag}.zip'
-        zip_path = _upgrade_download(zip_url, os.path.join(tmp, 'release.zip'))
+        alt_urls = ([f'https://gitee.com/{UPGRADE_GITEE_REPO}/archive/v{tag}.zip']
+                    if UPGRADE_GITEE_REPO else [])
+        zip_path = _upgrade_download(zip_url, os.path.join(tmp, 'release.zip'), alt_urls=alt_urls)
 
         # 3. 安全解压（拒绝路径穿越、超限文件）
         with zipfile.ZipFile(zip_path) as zf:
@@ -6438,6 +6470,7 @@ def admin_upgrade_check():
         'body': body,
         'body_html': _md_to_safe_html(body) if body else '',
         'release_url': (info['html_url'] if info else UPGRADE_RELEASE_URL),
+        'source': (info.get('source', 'github') if info else ''),
     })
 
 

@@ -69,14 +69,15 @@
             resultBox.innerHTML =
                 '<div class="card">' +
                 '<div class="card-header"><h3>' + svgIcon('history', 18) + ' 未能获取版本信息</h3></div>' +
-                '<p class="text-muted">无法连接 GitHub（可能网络受限或触发了 API 限流）。可稍后重试，或直接访问最新 Releases 页面。</p>' +
+                '<p class="text-muted">无法连接 GitHub / Gitee（可能网络受限或触发了 API 限流）。可稍后重试，或直接访问最新 Releases 页面。</p>' +
                 '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 打开 Releases 页面</a>' +
                 '</div>';
             return;
         }
         if (d.upgradable) {
             var notes = '';
-            if (d.published_at) notes += '<p class="text-muted">发布于 ' + esc(d.published_at) + '</p>';
+            var srcName = d.source === 'gitee' ? 'Gitee 镜像' : 'GitHub';
+            if (d.published_at) notes += '<p class="text-muted">发布于 ' + esc(d.published_at) + ' · 来源 ' + esc(srcName) + '</p>';
             if (d.body) notes += '<div class="upgrade-notes"><h4>更新内容</h4><div class="upgrade-body">' + (d.body_html || esc(d.body)) + '</div></div>';
             resultBox.innerHTML =
                 '<div class="card">' +
@@ -86,7 +87,7 @@
                 '<div class="upgrade-actions">' +
                 '<form method="POST" action="' + UPGRADE_URLS.upgrade + '" onsubmit="return confirm(\'升级将自动备份数据（数据库与上传文件），然后用 v' + esc(d.latest_version) + ' 覆盖程序代码（文章、上传、备份目录不受影响）。完成后需重启服务。确定升级吗？\')">' +
                 '<button type="submit" class="btn btn-primary">' + svgIcon('download', 16, 'icon-sm') + ' 备份数据并一键升级</button></form>' +
-                '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 在 GitHub 查看</a>' +
+                '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 在 ' + esc(srcName) + ' 查看</a>' +
                 '</div></div>';
         } else {
             resultBox.innerHTML =
@@ -102,7 +103,7 @@
         latestBox.textContent = '…';
         resultBox.innerHTML =
             '<div class="card"><div class="card-header"><h3>' + svgIcon('history', 18) + ' 正在检测新版本…</h3></div>' +
-            '<p class="text-muted">正在连接 GitHub 查询最新版本，请稍候。</p></div>';
+            '<p class="text-muted">正在连接 GitHub 查询最新版本（失败自动切换 Gitee 镜像），请稍候。</p></div>';
         fetch(UPGRADE_URLS.check + (force ? '?force=1' : ''))
             .then(function (r) { return r.json(); })
             .then(render)

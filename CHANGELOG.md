@@ -2,6 +2,16 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.52] - 2026-09-20
+
+### 新增
+- **系统升级双源检测**：新增 Gitee 镜像仓库 `infowe/infowe_blog` 作为回退源。版本检测优先 GitHub Releases，超时/限流/不可达时自动切换 Gitee API（6 秒超时，10 分钟结果缓存不变）；升级包下载链路扩展为「GitHub 直连 → 加速镜像 → Gitee 归档包」，任一环节失败自动降级。检测成功时升级卡片显示来源（GitHub / Gitee 镜像），查看按钮文案随来源变化
+- **tag 规范化防御**：Gitee 建发行版时易把标题填进标签名（如 `v1.3.51：安全加固`），双源检测统一从 tag_name 解析出语义版本并重构规范 tag，保证下载 URL 始终有效；脏 tag 不再影响升级链路
+- `UPGRADE_GITEE_REPO` 环境变量可覆盖 Gitee 仓库地址
+
+### 说明
+- Gitee 仓库需与 GitHub 保持同步（发版后在 Gitee「管理 → 强制同步」或本地 `git push` 双远端），且发行版标签名须为规范 `vX.Y.Z` 格式，否则归档包 404
+
 ## [v1.3.51] - 2026-09-20
 
 ### 新增

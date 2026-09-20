@@ -107,6 +107,12 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.52
+
+- **系统升级双源检测**：新增 Gitee 镜像仓库 `infowe/infowe_blog` 回退源——版本检测优先 GitHub Releases，超时/限流时自动切换 Gitee API；升级包下载链路「GitHub 直连 → 加速镜像 → Gitee 归档包」逐级降级。升级卡片显示检测来源，查看按钮随来源变化
+- **tag 规范化防御**：Gitee 发行版标签名误填标题（如 `v1.3.51：安全加固`）时，自动解析语义版本重构规范 tag，下载 URL 不受脏 tag 影响；`UPGRADE_GITEE_REPO` 环境变量可覆盖镜像仓库
+- `app.py` VERSION 同步至 **1.3.52**
+
 ### v1.3.51
 
 - **单管理员硬保证（数据库层）**：仅支持 1 个管理员账号。schema_version=3 迁移自动清理多账号（保留最早创建的账号），SQLite 触发器 `users_single_admin_guard` 拦截一切 users 表 INSERT；忘记密码找回同步简化为唯一管理员（无需输入账号名）
