@@ -1157,3 +1157,106 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
   .login-aside-foot { display: block; }
   .login-hint { display: none; }
 }
+
+/* ==========================================================
+   26. 孤儿文件清理页（/admin/orphans）专用增强
+   ========================================================== */
+
+/* 说明条：卡内贴顶，与下方批量条分隔 */
+.orphan-hint {
+  padding: var(--sp-3) var(--sp-5);
+  line-height: 1.6;
+  border-bottom: 1px solid var(--border);
+}
+
+/* 预览列固定窄宽 */
+.col-preview { width: 56px; white-space: nowrap; }
+
+/* 图片缩略图 */
+.orphan-thumb {
+  display: block;
+  width: 42px; height: 42px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-surface-2);
+  cursor: zoom-in;
+  transition: transform var(--transition), border-color var(--transition);
+}
+.orphan-thumb:hover { border-color: var(--accent); transform: scale(1.06); }
+
+/* 非图片：扩展名方块 */
+.orphan-ext {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700; letter-spacing: .02em;
+  color: var(--text-tertiary);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+/* 批量态：行整体可点击；选中行整行高亮（td 背景压过 tr hover） */
+body.bulk-on #orphanTable tbody tr { cursor: pointer; }
+#orphanTable tbody tr.row-on td { background: var(--accent-soft); }
+#orphanTable tbody tr.row-on:hover td { background: var(--accent-soft); }
+#orphanTable tbody tr.row-on .main-td a { color: var(--text); }
+
+/* 可排序表头 */
+.sort-th { cursor: pointer; user-select: none; }
+.sort-th:hover { color: var(--accent); }
+.sort-th::after { font-size: 11px; color: var(--accent); }
+.sort-th.sort-asc::after { content: ' \2191'; }
+.sort-th.sort-desc::after { content: ' \2193'; }
+
+/* 删除中：行内容淡出右移；失败：行底标红 */
+#orphanTable tbody tr.row-removing td {
+  opacity: 0;
+  transform: translateX(14px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+#orphanTable tbody tr.row-failed td {
+  background: var(--danger-soft);
+  animation: orphan-shake .35s ease;
+}
+@keyframes orphan-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* 按钮提交中 / 动态提示图标 */
+.btn.btn-loading { opacity: .65; pointer-events: none; }
+.flash-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; flex: none;
+  font-size: 13px; font-weight: 700;
+}
+.flash-msg.danger .flash-icon { color: var(--danger); }
+.flash-msg.success .flash-icon { color: var(--success); }
+
+/* 悬停大图浮层（桌面端，pointer-events 穿透） */
+.orphan-zoom {
+  position: fixed; z-index: 2000;
+  pointer-events: none;
+  opacity: 0; visibility: hidden;
+  transform: scale(.96);
+  transition: opacity .14s ease, transform .14s ease, visibility .14s;
+}
+.orphan-zoom.show { opacity: 1; visibility: visible; transform: scale(1); }
+.orphan-zoom img {
+  display: block;
+  max-width: min(420px, 88vw);
+  max-height: 68vh;
+  border-radius: var(--r);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 12px 40px rgba(0,0,0,.45);
+  background: var(--bg-surface);
+}
+
+/* 移动端卡片化时：预览块与卡片同行排列，不占整行 */
+@media (max-width: 767.98px) {
+  #orphanTable td.col-preview { padding-bottom: 10px; }
+  .orphan-thumb, .orphan-ext { width: 56px; height: 56px; }
+}

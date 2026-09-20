@@ -1,58 +1,86 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}文件清理{% endblock %}
 {% block admin_content %}
+{% set image_exts = ('jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico') %}
 <div class="page-header">
-    <h2>{{ icon('trash-2', 20) | safe }} 孤儿文件清理</h2>
+    <h2>{{ icon('trash-2', 20) | safe }} 孤儿文件清理 <span class="badge">{{ orphans|length }}</span></h2>
+</div>
+
+<!-- 操作结果提示（AJAX 删除后动态插入） -->
+<div id="orphanNotice"></div>
+
+{% if not orphans %}
+<div class="empty-state">
+    {{ icon('check-circle', 28) | safe }}
+    <p class="text-muted">没有孤儿文件，uploads 中的文件均被文章引用。</p>
+</div>
+{% else %}
+<!-- 类型筛选 + 文件名搜索（纯前端即时生效） -->
+<div class="filter-bar orphan-filter-bar">
+    <div class="filter-tabs" id="typeTabs" role="tablist">
+        <button type="button" class="filter-tag active" data-type="all">全部</button>
+        <button type="button" class="filter-tag" data-type="image">图片</button>
+        <button type="button" class="filter-tag" data-type="other">其他</button>
+    </div>
+    <div class="filter-search">
+        <input type="text" id="orphanSearch" class="search-input-sm" placeholder="搜索文件名..." aria-label="搜索文件名">
+    </div>
 </div>
 
 <div class="card">
-    <div class="card-hint">
+    <div class="card-hint orphan-hint">
         这里列出 <b>uploads</b> 中未被任何文章引用（标题/正文/摘要/标签）的上传文件。
         例如：新建文章时传了图后放弃、删除文章时的漏网文件。
         头像、项目文件与无痕原图目录（.originals）不在此列，不会误删。
     </div>
 
-    {% if not orphans %}
-    <div class="empty-state">
-        {{ icon('check-circle', 28) | safe }}
-        <p class="text-muted">没有孤儿文件，uploads 中的文件均被文章引用。</p>
-    </div>
-    {% else %}
-    <form method="POST" action="{{ url_for('admin_orphans') }}" id="orphanForm">
+    <form id="orphanForm">
         <div class="bulk-bar">
             <label class="checkbox-label">
                 <input type="checkbox" id="checkAll"> 全选
             </label>
-            <span class="bulk-count">共 <b>{{ orphans|length }}</b> 个文件 · {{ total_size }}</span>
-            <button type="submit" class="btn btn-sm btn-danger">删除所选</button>
+            <span class="bulk-count">已选 <b id="selCount">0</b> 个 · <b id="selSize">0 B</b></span>
+            <span class="bulk-count" id="totalInfo">共 {{ orphans|length }} 个 · {{ total_size }}</span>
+            <button type="button" id="deleteBtn" class="btn btn-sm btn-danger" disabled>删除所选</button>
         </div>
         <div class="table-wrap">
-        <table class="table">
+        <table class="table" id="orphanTable">
         <thead>
             <tr>
                 <th class="col-check">选择</th>
-                <th>文件</th>
-                <th>大小</th>
-                <th>上传时间</th>
+                <th class="col-preview">预览</th>
+                <th class="sort-th" data-sort="name">文件</th>
+                <th class="sort-th" data-sort="size">大小</th>
+                <th class="sort-th sort-desc" data-sort="mtime">上传时间</th>
                 <th>备注</th>
             </tr>
         </thead>
         <tbody>
             {% for o in orphans %}
-            <tr>
+            <tr data-rel="{{ o.rel }}" data-size="{{ o.size_bytes }}"
+                data-mtime="{{ o.mtime }}" data-img="{{ 1 if o.ext in image_exts else 0 }}">
                 <td class="col-check" data-label="选择">
-                    <input type="checkbox" class="row-check" name="path" value="{{ o.rel }}" aria-label="选择 {{ o.rel }}">
+                    <input type="checkbox" class="row-check" value="{{ o.rel }}" aria-label="选择 {{ o.rel }}">
                 </td>
-                <td data-label="文件">
-                    <a href="{{ o.url }}" target="_blank" class="post-link" title="在新窗口打开">{{ o.rel }}</a>
+                <td class="col-preview" data-label="预览">
+                    {% if o.ext in image_exts %}
+                    <img class="orphan-thumb" src="{{ o.url }}" alt="{{ o.rel }}" loading="lazy">
+                    {% elif o.ext %}
+                    <span class="orphan-ext">{{ o.ext[:4]|upper }}</span>
+                    {% else %}
+                    <span class="orphan-ext">FILE</span>
+                    {% endif %}
                 </td>
-                <td class="text-muted" data-label="大小">{{ o.size }}</td>
-                <td class="text-muted" data-label="上传时间">{{ o.mtime }}</td>
+                <td class="main-td" data-label="文件">
+                    <a href="{{ o.url }}" target="_blank" rel="noopener" class="post-link orphan-file-link" title="在新窗口打开">{{ o.rel }}</a>
+                </td>
+                <td data-label="大小" class="cell-muted">{{ o.size }}</td>
+                <td data-label="上传时间" class="cell-muted">{{ o.mtime }}</td>
                 <td data-label="备注">
                     {% if o.has_origin %}
-                    <span class="badge">含无痕原图</span>
+                    <span class="badge badge-warning">含无痕原图</span>
                     {% else %}
-                    <span class="text-muted">—</span>
+                    <span class="cell-muted">—</span>
                     {% endif %}
                 </td>
             </tr>
@@ -61,8 +89,17 @@
         </table>
         </div>
     </form>
-    {% endif %}
 </div>
+
+<!-- 全部清理完后显示 -->
+<div class="empty-state" id="emptyState" style="display:none">
+    {{ icon('check-circle', 28) | safe }}
+    <p class="text-muted">清理完成，当前没有孤儿文件了。</p>
+</div>
+
+<!-- 悬停大图浮层（桌面端） -->
+<div class="orphan-zoom" id="orphanZoom" aria-hidden="true"><img alt="预览大图"></div>
+{% endif %}
 {% endblock %}
 
 {% block admin_scripts %}
@@ -71,28 +108,255 @@
     'use strict';
     var form = document.getElementById('orphanForm');
     if (!form) return;
+
+    /* ─── 本页唯一操作即清理：默认进入批量态，并同步 admin.js 注入的「批量操作」按钮 ─── */
+    document.body.classList.add('bulk-on');
+    var toggleBtn = document.querySelector('.bulk-toggle');
+    if (toggleBtn) {
+        toggleBtn.textContent = '退出批量';
+        toggleBtn.classList.add('btn-primary');
+        toggleBtn.setAttribute('aria-pressed', 'true');
+    }
+
+    var tbody = document.querySelector('#orphanTable tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
     var checkAll = document.getElementById('checkAll');
-    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
-    function update() {
-        var n = document.querySelectorAll('.row-check:checked').length;
-        if (checkAll) {
-            checkAll.checked = boxes.length > 0 && n === boxes.length;
-            checkAll.indeterminate = n > 0 && n < boxes.length;
+    var selCount = document.getElementById('selCount');
+    var selSize = document.getElementById('selSize');
+    var totalInfo = document.getElementById('totalInfo');
+    var deleteBtn = document.getElementById('deleteBtn');
+    var searchInput = document.getElementById('orphanSearch');
+    var typeTabs = document.getElementById('typeTabs');
+    var zoom = document.getElementById('orphanZoom');
+    var zoomImg = zoom.querySelector('img');
+
+    var state = { type: 'all', kw: '', sort: 'mtime', desc: true };
+
+    function fmtSize(n) {
+        n = Number(n) || 0;
+        var units = ['B', 'KB', 'MB', 'GB'];
+        for (var i = 0; i < units.length; i++) {
+            if (n < 1024 || i === units.length - 1) {
+                return i === 0 ? n + ' B' : n.toFixed(1) + ' ' + units[i];
+            }
+            n /= 1024;
         }
+        return n.toFixed(1) + ' TB';
     }
-    if (checkAll) {
-        checkAll.addEventListener('change', function () {
-            boxes.forEach(function (b) { b.checked = checkAll.checked; });
-            update();
+
+    function rowVisible(row) {
+        var isImg = row.dataset.img === '1';
+        if (state.type === 'image' && !isImg) return false;
+        if (state.type === 'other' && isImg) return false;
+        if (state.kw && row.dataset.rel.toLowerCase().indexOf(state.kw) === -1) return false;
+        return true;
+    }
+
+    /* 筛选 + 搜索：隐藏的行取消勾选，保证「所见即所删」 */
+    function applyFilter() {
+        rows.forEach(function (row) {
+            var show = rowVisible(row);
+            row.style.display = show ? '' : 'none';
+            if (!show) {
+                var box = row.querySelector('.row-check');
+                if (box.checked) box.checked = false;
+            }
         });
+        updateSelection();
     }
-    boxes.forEach(function (b) { b.addEventListener('change', update); });
-    form.addEventListener('submit', function (e) {
-        var n = document.querySelectorAll('.row-check:checked').length;
-        if (!n) { e.preventDefault(); alert('请先勾选要清理的文件'); return; }
-        if (!confirm('确定删除选中的 ' + n + ' 个孤儿文件？删除后不可恢复。')) { e.preventDefault(); return; }
+
+    /* 排序：对整表行重排（筛选只影响显隐） */
+    function applySort() {
+        var sorted = rows.slice().sort(function (a, b) {
+            var va, vb, r;
+            if (state.sort === 'size') {
+                va = Number(a.dataset.size); vb = Number(b.dataset.size);
+                r = va - vb;
+            } else if (state.sort === 'mtime') {
+                va = a.dataset.mtime; vb = b.dataset.mtime;
+                r = va < vb ? -1 : (va > vb ? 1 : 0);
+            } else {
+                va = a.dataset.rel.toLowerCase(); vb = b.dataset.rel.toLowerCase();
+                r = va < vb ? -1 : (va > vb ? 1 : 0);
+            }
+            return state.desc ? -r : r;
+        });
+        sorted.forEach(function (row) { tbody.appendChild(row); });
+    }
+
+    /* 实时选中统计 + 按钮/全选状态 */
+    function updateSelection() {
+        var n = 0, bytes = 0, visibleRows = 0, visibleChecked = 0;
+        rows.forEach(function (row) {
+            var box = row.querySelector('.row-check');
+            if (row.style.display !== 'none') visibleRows++;
+            if (box.checked) {
+                n++; bytes += Number(row.dataset.size);
+                row.classList.add('row-on');
+                if (row.style.display !== 'none') visibleChecked++;
+            } else {
+                row.classList.remove('row-on');
+            }
+        });
+        selCount.textContent = n;
+        selSize.textContent = fmtSize(bytes);
+        deleteBtn.disabled = n === 0;
+        if (checkAll) {
+            checkAll.checked = visibleRows > 0 && visibleChecked === visibleRows;
+            checkAll.indeterminate = visibleChecked > 0 && visibleChecked < visibleRows;
+        }
+        return { n: n, bytes: bytes };
+    }
+
+    /* ─── 事件：搜索 / 类型切换 ─── */
+    searchInput.addEventListener('input', function () {
+        state.kw = searchInput.value.trim().toLowerCase();
+        applyFilter();
     });
-    update();
+    typeTabs.addEventListener('click', function (e) {
+        var tag = e.target.closest('.filter-tag');
+        if (!tag) return;
+        state.type = tag.dataset.type;
+        typeTabs.querySelectorAll('.filter-tag').forEach(function (t) { t.classList.toggle('active', t === tag); });
+        applyFilter();
+    });
+
+    /* ─── 事件：表头排序（再点一次切换升降序） ─── */
+    Array.prototype.forEach.call(document.querySelectorAll('.sort-th'), function (th) {
+        th.addEventListener('click', function () {
+            var key = th.dataset.sort;
+            if (state.sort === key) { state.desc = !state.desc; }
+            else { state.sort = key; state.desc = key === 'mtime'; }
+            document.querySelectorAll('.sort-th').forEach(function (t) { t.classList.remove('sort-asc', 'sort-desc'); });
+            th.classList.add(state.desc ? 'sort-desc' : 'sort-asc');
+            applySort();
+        });
+    });
+
+    /* ─── 事件：全选只作用于当前可见行 ─── */
+    checkAll.addEventListener('change', function () {
+        rows.forEach(function (row) {
+            if (row.style.display !== 'none') row.querySelector('.row-check').checked = checkAll.checked;
+        });
+        updateSelection();
+    });
+
+    /* ─── 事件：点击行任意位置勾选（链接/复选框本身除外） ─── */
+    rows.forEach(function (row) {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('a, input, button, label')) return;
+            var box = row.querySelector('.row-check');
+            box.checked = !box.checked;
+            updateSelection();
+        });
+        row.querySelector('.row-check').addEventListener('click', function (e) { e.stopPropagation(); });
+    });
+
+    /* ─── 桌面端：缩略图悬停大图浮层，跟随鼠标并自动避开视口边缘 ─── */
+    function placeZoom(e) {
+        var pad = 18, w = zoom.offsetWidth, h = zoom.offsetHeight;
+        var x = e.clientX + pad, y = e.clientY + pad;
+        if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+        if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+        zoom.style.left = Math.max(8, x) + 'px';
+        zoom.style.top = Math.max(8, y) + 'px';
+    }
+    rows.forEach(function (row) {
+        var thumb = row.querySelector('.orphan-thumb');
+        if (!thumb) return;
+        thumb.addEventListener('mouseenter', function (e) {
+            zoomImg.src = thumb.src;
+            zoom.classList.add('show');
+            placeZoom(e);
+        });
+        thumb.addEventListener('mousemove', placeZoom);
+        thumb.addEventListener('mouseleave', function () { zoom.classList.remove('show'); });
+    });
+
+    /* ─── 顶部提示条（复用 flash-msg 视觉） ─── */
+    function notify(msg, ok) {
+        var box = document.getElementById('orphanNotice');
+        var el = document.createElement('div');
+        el.className = 'flash-msg ' + (ok ? 'success' : 'danger');
+        el.innerHTML = '<span class="flash-icon">' + (ok ? '✓' : '!') + '</span><div></div>';
+        el.querySelector('div').textContent = msg;
+        box.appendChild(el);
+        setTimeout(function () {
+            el.style.transition = 'opacity .3s, transform .3s';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-8px)';
+            setTimeout(function () { el.remove(); }, 300);
+        }, 4000);
+    }
+
+    /* ─── AJAX 删除：成功行动画移除，失败行标红，计数实时更新 ─── */
+    deleteBtn.addEventListener('click', function () {
+        var sel = updateSelection();
+        if (!sel.n) return;
+        var picked = rows.filter(function (row) { return row.querySelector('.row-check').checked; });
+        if (!confirm('确定删除选中的 ' + sel.n + ' 个孤儿文件（' + fmtSize(sel.bytes) + '）？\n文件及其无痕原图将被永久删除，不可恢复。')) return;
+
+        deleteBtn.disabled = true;
+        deleteBtn.classList.add('btn-loading');
+
+        var body = new URLSearchParams();
+        picked.forEach(function (row) { body.append('path', row.dataset.rel); });
+
+        fetch(form.action || window.location.pathname, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: body,
+            credentials: 'same-origin'
+        }).then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+        }).then(function (data) {
+            var byRel = {};
+            (data.results || []).forEach(function (r) { byRel[r.rel] = r; });
+            var freed = 0;
+            picked.forEach(function (row) {
+                var r = byRel[row.dataset.rel];
+                if (r && r.ok) {
+                    freed += Number(row.dataset.size);
+                    row.classList.add('row-removing');
+                    setTimeout(function () { row.remove(); }, 280);
+                } else {
+                    row.classList.add('row-failed');
+                    row.title = (r && r.reason) || '删除失败';
+                    var box = row.querySelector('.row-check');
+                    if (box) box.checked = false;
+                }
+            });
+            rows = rows.filter(function (row) { return document.body.contains(row); });
+
+            if (data.deleted) notify('已清理 ' + data.deleted + ' 个孤儿文件，释放 ' + fmtSize(freed) + (data.failed ? '，' + data.failed + ' 个删除失败' : ''), !data.failed);
+            else notify((data.failed || 0) + ' 个文件删除失败', false);
+
+            if (!rows.length) {
+                /* 一个不剩：隐藏筛选区与卡片，显示完成态 */
+                document.querySelector('.orphan-filter-bar').style.display = 'none';
+                document.getElementById('emptyState').style.display = '';
+                var card = deleteBtn.closest('.card');
+                if (card) card.style.display = 'none';
+            } else {
+                applyFilter();
+            }
+        }).catch(function () {
+            notify('网络错误，删除未完成，请重试', false);
+            picked.forEach(function (row) {
+                var box = row.querySelector('.row-check');
+                if (box) box.checked = false;
+            });
+            updateSelection();
+        }).finally(function () {
+            deleteBtn.classList.remove('btn-loading');
+            deleteBtn.disabled = rows.length === 0;
+        });
+    });
+
+    applySort();
+    applyFilter();
+    updateSelection();
 })();
 </script>
 {% endblock %}

@@ -121,6 +121,15 @@
                 </select>
             </div>
             <div class="form-group">
+                <label>水印大小</label>
+                <select name="watermark_size" class="input-text">
+                    <option value="s"{{ ' selected' if watermark_size|default('m') == 's' else '' }}>小（图宽 2%）</option>
+                    <option value="m"{{ ' selected' if watermark_size|default('m') == 'm' else '' }}>标准（图宽 3%）</option>
+                    <option value="l"{{ ' selected' if watermark_size|default('m') == 'l' else '' }}>大（图宽 4%）</option>
+                </select>
+                <span class="form-hint">文字按图片宽度自动缩放，不同尺寸图片观感一致；修改后保存，历史图片自动后台刷新。</span>
+            </div>
+            <div class="form-group">
                 <label>历史图片刷新状态</label>
                 <span class="form-hint">
                 {% if wm_refresh.state == 'running' %}

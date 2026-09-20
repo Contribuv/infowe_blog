@@ -39,3 +39,9 @@ gunicorn.pid
 .DS_Store
 .idea/
 .vscode/
+
+# ── PHP 重构工具链（便携 PHP / MySQL 本地数据，勿入库）──
+.toolchain/
+
+# ── 重构前备份快照（本地留存，勿入库）──
+.backup/

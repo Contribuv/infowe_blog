@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.46'
+VERSION = '1.3.47'
 
 import os
 import re
@@ -551,6 +551,7 @@ def init_db():
         ('watermark_enabled', '1'),      # 图片水印开关
         ('watermark_text', ''),          # 水印文本（空则用「站点名 · 域名」）
         ('watermark_position', 'br'),    # 水印位置 br/bl/tr/tl
+        ('watermark_size', 'm'),         # 水印字号档位 s 小 / m 标准 / l 大
     ]
     for k, v in defaults:
         db.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
@@ -4670,7 +4671,16 @@ for _c in _WM_FONT_CANDIDATES:
             _WM_FONT = None
 
 
-def _apply_watermark(img, text, position='br'):
+# 水印字号档位：按图宽比例缩放，min/max 为像素上下限。
+# s 小（沿用旧值）/ m 标准（默认，修正旧版偏小）/ l 大（强防盗场景）
+_WM_SIZE_LEVELS = {
+    's': {'ratio': 0.02, 'min': 14, 'max': 28},
+    'm': {'ratio': 0.03, 'min': 18, 'max': 52},
+    'l': {'ratio': 0.04, 'min': 24, 'max': 76},
+}
+
+
+def _apply_watermark(img, text, position='br', size='m'):
     """给 img 指定角落画「站点名 · 域名」半透明水印（文字单枚）。
     绘制失败或文字为空时返回原图，不阻断上传。"""
     if not text or not _HAS_PIL:
@@ -4678,7 +4688,8 @@ def _apply_watermark(img, text, position='br'):
     try:
         from PIL import ImageDraw, ImageFont
         w, h = img.size
-        font_size = max(14, min(28, int(w * 0.02)))
+        lv = _WM_SIZE_LEVELS.get(size, _WM_SIZE_LEVELS['m'])
+        font_size = max(lv['min'], min(lv['max'], int(w * lv['ratio'])))
         font = None
         try:
             if _WM_FONT:
@@ -4695,7 +4706,7 @@ def _apply_watermark(img, text, position='br'):
             tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
         except Exception:
             tw, th = font.getsize(text)
-        pad = max(10, int(w * 0.01))
+        pad = max(10, int(font_size * 0.45))
         # 角落坐标：br 右下 / bl 左下 / tr 右上 / tl 左上 / bc 底部居中
         pos = {
             'br': (w - tw - pad, h - th - pad),
@@ -4730,6 +4741,12 @@ def _watermark_position():
     """水印位置：br 右下 / bl 左下 / tr 右上 / tl 左上 / bc 底部居中（默认右下）。"""
     p = (app.config.get('watermark_position') or '').strip()
     return p if p in ('br', 'bl', 'tr', 'tl', 'bc') else 'br'
+
+
+def _watermark_size():
+    """水印字号档位：s 小 / m 标准（默认）/ l 大。"""
+    s = (app.config.get('watermark_size') or '').strip().lower()
+    return s if s in ('s', 'm', 'l') else 'm'
 
 
 def _safe_stem(name):
@@ -4867,7 +4884,8 @@ def _save_upload(file, allowed_ext):
             if new_ext in ('.jpg', '.jpeg', '.png', '.webp', '.bmp'):
                 _write_file(orig_abs, data)
                 if app.config.get('watermark_enabled', '1') in ('1', 'on', 'true', 'yes'):
-                    data = _watermark_bytes(data, new_ext, _watermark_text(), _watermark_position())
+                    data = _watermark_bytes(data, new_ext, _watermark_text(),
+                                            _watermark_position(), _watermark_size())
             _write_file(os.path.join(target_dir, filename), data)
         elif ext in ('.heic', '.heif'):
             # err 由 _optimize_heic 提供（含真实异常信息）
@@ -4888,14 +4906,14 @@ def _write_file(path, data):
         f.write(data)
 
 
-def _watermark_bytes(data, ext, text, position='br'):
+def _watermark_bytes(data, ext, text, position='br', size='m'):
     """字节级水印：data(压缩后)→ 加角落水印 → 新 bytes。失败返回原 data。"""
     if not text or not _HAS_PIL:
         return data
     try:
         from PIL import Image
         img = Image.open(io.BytesIO(data))
-        wm = _apply_watermark(img, text, position)
+        wm = _apply_watermark(img, text, position, size)
         out = io.BytesIO()
         if ext == '.png':
             wm.save(out, 'PNG', optimize=True)
@@ -4924,7 +4942,7 @@ def wm_refresh_state():
     return dict(_WM_REFRESH_STATE)
 
 
-def _wm_redo_all(text, position='br', force=True):
+def _wm_redo_all(text, position='br', size='m', force=True):
     """遍历 uploads 全部位图重做水印（自动刷新 / backfill 共用核心）。
 
     某图已有 .originals 无痕原图 → 从原图重新叠当前水印写回正式路径(force)。
@@ -4974,7 +4992,7 @@ def _wm_redo_all(text, position='br', force=True):
                         continue
                 try:
                     with open(src, 'wb') as f:
-                        f.write(_watermark_bytes(data, ext, text, position))
+                        f.write(_watermark_bytes(data, ext, text, position, size))
                     count += 1
                 except Exception as e:
                     errs += 1
@@ -4990,14 +5008,15 @@ def _wm_redo_all(text, position='br', force=True):
     return count, skipped, errs
 
 
-def _start_wm_refresh(text, position='br'):
+def _start_wm_refresh(text, position='br', size='m'):
     """后台线程启动历史图水印重做；已有刷新在跑则跳过本次（下次保存设置仍会触发）。"""
     global _WM_REF_DONE
     with _WM_RUN_LOCK:
         if not _WM_REF_DONE.is_set():
             return False
         _WM_REF_DONE.clear()
-    threading.Thread(target=_wm_redo_all, args=(text, position, True), daemon=True).start()
+    threading.Thread(target=_wm_redo_all, args=(text, position, size),
+                     kwargs={'force': True}, daemon=True).start()
     return True
 
 
@@ -5056,16 +5075,22 @@ def admin_orphans():
     """
     if request.method == 'POST':
         selected = request.form.getlist('path')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         deleted = failed = 0
-        for rel in selected:
-            rel = urllib.parse.unquote(rel.replace('\\', '/'))
+        results = []  # AJAX：逐项结果，供前端移除成功行 / 标记失败行
+        for raw in selected:
+            rel = urllib.parse.unquote(raw.replace('\\', '/'))
             segs = rel.split('/')
             if (not rel or rel.startswith('.') or rel.startswith('/') or '..' in rel
                     or not segs[0] or segs[0].startswith('.')
                     or segs[0] in ('avatar', 'projects')):
+                if is_ajax:
+                    results.append({'rel': rel, 'ok': False, 'reason': '非法路径'})
                 continue
             abs_path = os.path.join(UPLOAD_DIR, *segs)
             if not os.path.isfile(abs_path):
+                if is_ajax:
+                    results.append({'rel': rel, 'ok': False, 'reason': '文件不存在'})
                 continue
             try:
                 os.remove(abs_path)
@@ -5074,8 +5099,14 @@ def admin_orphans():
                     os.remove(orig)
                 _prune_empty_dirs(os.path.dirname(abs_path))
                 deleted += 1
+                if is_ajax:
+                    results.append({'rel': rel, 'ok': True})
             except OSError:
                 failed += 1
+                if is_ajax:
+                    results.append({'rel': rel, 'ok': False, 'reason': '删除失败'})
+        if is_ajax:
+            return jsonify({'deleted': deleted, 'failed': failed, 'results': results})
         if deleted and not failed:
             flash('已清理 %d 个孤儿文件' % deleted, 'success')
         elif deleted and failed:
@@ -5102,8 +5133,10 @@ def admin_orphans():
                 mtime = datetime.fromtimestamp(os.path.getmtime(p)).strftime('%Y-%m-%d %H:%M')
             except OSError:
                 continue
+            ext = os.path.splitext(fn)[1].lstrip('.').lower()
             orphans.append({'rel': rel, 'url': '/uploads/' + rel,
-                            'size': _fmt_size(size), 'mtime': mtime,
+                            'size': _fmt_size(size), 'size_bytes': size,
+                            'ext': ext, 'mtime': mtime,
                             'has_origin': os.path.isfile(os.path.join(UPLOAD_DIR, '.originals', rel))})
     orphans.sort(key=lambda x: x['mtime'], reverse=True)
     total_size = sum(os.path.getsize(os.path.join(UPLOAD_DIR, o['rel'])) for o in orphans
@@ -5236,24 +5269,27 @@ def admin_settings():
                 app.config[key] = request.form[key]
         # 图片水印设置（开关为复选框，未勾选即为关闭）
         wm_on = '1' if request.form.get('watermark_enabled') else '0'
-        # 先记录旧配置，用于判断“文本/位置/开关”是否变化（变化才触发历史图后台刷新）
+        # 先记录旧配置，用于判断“文本/位置/字号/开关”是否变化（变化才触发历史图后台刷新）
         wm_old_on = (app.config.get('watermark_enabled', '1') or '').strip() in ('1', 'on', 'true', 'yes')
         wm_old_text = _watermark_text()
         wm_old_pos = _watermark_position()
+        wm_old_size = _watermark_size()
         save_setting('watermark_enabled', wm_on)
         app.config['watermark_enabled'] = wm_on
-        for key in ('watermark_text', 'watermark_position'):
+        for key in ('watermark_text', 'watermark_position', 'watermark_size'):
             if key in request.form:
                 save_setting(key, request.form[key])
                 app.config[key] = request.form[key]
-        # 水印开关/文本/位置任一变化 → 后台线程自动重做全部历史图（无需手动跑脚本）；
-        # 首次启用或换文本/位置，历史图都要按最新配置重画
+        # 水印开关/文本/位置/字号任一变化 → 后台线程自动重做全部历史图（无需手动跑脚本）；
+        # 首次启用或换文本/位置/字号，历史图都要按最新配置重画
         wm_new_on = wm_on in ('1', 'on', 'true', 'yes')
         wm_new_text = _watermark_text()
         wm_new_pos = _watermark_position()
+        wm_new_size = _watermark_size()
         if (wm_new_on and wm_new_text
-                and (wm_new_on != wm_old_on or wm_new_text != wm_old_text or wm_new_pos != wm_old_pos)):
-            if _start_wm_refresh(wm_new_text, wm_new_pos):
+                and (wm_new_on != wm_old_on or wm_new_text != wm_old_text
+                     or wm_new_pos != wm_old_pos or wm_new_size != wm_old_size)):
+            if _start_wm_refresh(wm_new_text, wm_new_pos, wm_new_size):
                 flash('水印配置已变化，历史图片正在后台自动刷新…', 'success')
             else:
                 flash('水印配置已保存（上一轮刷新仍在进行，完成后即按新配置生效）', 'success')
@@ -5360,6 +5396,7 @@ def admin_settings():
                            watermark_enabled=app.config.get('watermark_enabled', '1'),
                            watermark_text=app.config.get('watermark_text', ''),
                            watermark_position=app.config.get('watermark_position', 'br'),
+                           watermark_size=app.config.get('watermark_size', 'm'),
                            wm_refresh=wm_refresh_state())
 
 

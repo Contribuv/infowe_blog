@@ -28,15 +28,17 @@ def main():
     text = (app.config.get('watermark_text') or '').strip() or (name + ' · ' + domain).strip(' ·')
     position = (app.config.get('watermark_position') or '').strip()
     position = position if position in ('br', 'bl', 'tr', 'tl', 'bc') else 'br'
+    size = (app.config.get('watermark_size') or 'm').strip().lower()
+    size = size if size in ('s', 'm', 'l') else 'm'
     if (app.config.get('watermark_enabled', '1') or '1') not in ('1', 'on', 'true', 'yes'):
         print('后台已关闭水印，跳过处理')
         return
     if not text:
         print('水印文字为空：请检查后台水印文本配置')
         return
-    print('水印文字:', text, '| 位置:', position)
+    print('水印文字:', text, '| 位置:', position, '| 大小档位:', size)
 
-    count, skipped, errs = _wm_redo_all(text, position, force=force)
+    count, skipped, errs = _wm_redo_all(text, position, size, force=force)
     print('完成：新增水印 %d，已处理跳过 %d，失败 %d' % (count, skipped, errs))
 
 
