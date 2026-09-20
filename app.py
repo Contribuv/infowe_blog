@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.47'
+VERSION = '1.3.48'
 
 import os
 import re
@@ -4652,23 +4652,81 @@ def _optimize_image(stream, ext):
 
 # ─────────────── 图片水印（正文/灯箱展示带水印，.originals 保留无痕原图） ───────────────
 
-# 候选水印字体（支持中文，按序取第一个存在的；都无则用 Pillow 默认字体）
+# 水印字体发现，三级策略：
+#   1) 已知候选路径（Win 中文字体 / 各发行版常见包路径），命中即用
+#   2) 动态扫描系统字体目录，CJK 命名的字体优先（避免拿到不含中文的西文字体）
+#   3) 仓库自带 fonts/wqy-microhei.ttc（文泉驿微米黑，Apache-2.0，随代码部署）
+# 以前只硬编码了 3 个 Linux 路径，宝塔之类的精简系统一个都没有，
+# 最终落到 load_default() 的 9px 固定字——水印档位完全失效。
 _WM_FONT_CANDIDATES = [
-    'C:/Windows/Fonts/msyh.ttc',        # 微软雅黑
-    'C:/Windows/Fonts/simhei.ttf',      # 黑体
-    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+    'C:/Windows/Fonts/msyh.ttc',                    # 微软雅黑
+    'C:/Windows/Fonts/simhei.ttf',                  # 黑体
+    'C:/Windows/Fonts/simsun.ttc',                  # 宋体
+    '/System/Library/Fonts/PingFang.ttc',           # macOS 苹方
     '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
     '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
 ]
-_WM_FONT = None
-for _c in _WM_FONT_CANDIDATES:
-    if os.path.exists(_c):
+_WM_FONT_SCAN_DIRS = [
+    '/usr/share/fonts', '/usr/local/share/fonts',
+    os.path.expanduser('~/.local/share/fonts'), os.path.expanduser('~/.fonts'),
+    '/Library/Fonts', '/System/Library/Fonts',
+    'C:/Windows/Fonts',
+]
+# 文件名命中这些关键字的优先当 CJK 字体（排序靠前）
+_WM_CJK_HINTS = ('notosanscjk', 'notoserifcjk', 'sourcehan', 'wqy', 'microhei',
+                 'zenhei', 'msyh', 'simhei', 'simsun', 'pingfang', 'hiragino',
+                 'droidsansfallback', 'uming', 'ukai', 'cjk')
+
+
+def _find_watermark_font():
+    """返回可用字体文件路径；三级策略全部落空时返回 None。"""
+    from PIL import ImageFont
+
+    def _usable(p):
         try:
-            from PIL import ImageFont
-            _WM_FONT = ImageFont.truetype(_c, 16)
-            break
+            ImageFont.truetype(p, 16)
+            return True
         except Exception:
-            _WM_FONT = None
+            return False
+
+    for p in _WM_FONT_CANDIDATES:
+        if os.path.exists(p) and _usable(p):
+            return p
+    found = []
+    for d in _WM_FONT_SCAN_DIRS:
+        if d and os.path.isdir(d):
+            for root, _dirs, files in os.walk(d):
+                for fn in files:
+                    if fn.lower().endswith(('.ttf', '.ttc', '.otf')):
+                        found.append(os.path.join(root, fn))
+
+    def _rank(p):
+        n = os.path.basename(p).lower()
+        for i, hint in enumerate(_WM_CJK_HINTS):
+            if hint in n:
+                return i
+        return len(_WM_CJK_HINTS)
+
+    for p in sorted(found, key=_rank):
+        if _usable(p):
+            return p
+    bundled = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           'fonts', 'wqy-microhei.ttc')
+    if os.path.exists(bundled) and _usable(bundled):
+        return bundled
+    return None
+
+
+_WM_FONT_PATH = _find_watermark_font()
+_WM_FONT = None
+if _WM_FONT_PATH:
+    try:
+        from PIL import ImageFont
+        _WM_FONT = ImageFont.truetype(_WM_FONT_PATH, 16)
+    except Exception:
+        _WM_FONT = None
 
 
 # 水印字号档位：按图宽比例缩放，min/max 为像素上下限。
@@ -4692,12 +4750,20 @@ def _apply_watermark(img, text, position='br', size='m'):
         font_size = max(lv['min'], min(lv['max'], int(w * lv['ratio'])))
         font = None
         try:
-            if _WM_FONT:
-                font = ImageFont.truetype(_WM_FONT.path, font_size)
+            if _WM_FONT_PATH:
+                font = ImageFont.truetype(_WM_FONT_PATH, font_size)
             else:
-                font = ImageFont.load_default()
+                # Pillow 10.1+ 的 load_default 支持 size，按档位缩放；
+                # 旧版不接受参数，退回固定字号（英文仍可正常显示）
+                try:
+                    font = ImageFont.load_default(font_size)
+                except TypeError:
+                    font = ImageFont.load_default()
         except Exception:
-            font = ImageFont.load_default()
+            try:
+                font = ImageFont.load_default(font_size)
+            except TypeError:
+                font = ImageFont.load_default()
         overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
         d = ImageDraw.Draw(overlay)
         # 先量文字尺寸：ImageDraw.textbbox 是 Pillow 8+ 的标准接口
