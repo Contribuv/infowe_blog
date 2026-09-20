@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双重验证 · {{ blog_name }} 后台</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <meta name="theme-color" content="#0f1117">
+    <style>html{background:#0f1117}html[data-theme="light"]{background:#f5f6fa}</style>
+    <script>
+    (function(){var t;try{t=localStorage.getItem('infowe-theme');}catch(e){}if(t!=='light'&&t!=='dark'&&t!=='auto')t='auto';var d=t==='dark'||(t==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var h=document.documentElement;h.setAttribute('data-theme-mode',t);h.setAttribute('data-theme',d?'dark':'light');h.style.colorScheme=d?'dark':'light';var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#0f1117':'#f5f6fa');})();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t=admin_ver) }}">
+</head>
+<body class="login-page">
+    <!-- 主题切换 -->
+    <button type="button" id="theme-toggle" class="login-theme-toggle" title="切换主题" aria-label="切换主题">
+        <svg class="icon-auto" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>
+        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>
+    </button>
+
+    <!-- 返回登录 -->
+    <a href="{{ url_for('admin_login') }}" class="login-home-btn" title="重新登录" aria-label="重新登录">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path></svg>
+    </a>
+
+    <div class="login-shell login-shell--single" style="min-height:100vh">
+        <main class="login-main" style="width:100%">
+            <div class="login-card" style="width:100%">
+                <div class="login-brand">
+                    <div class="brand">
+                        <span class="logo-bracket">&lt;</span><span class="logo-text">{{ blog_name }}</span><span class="logo-bracket">/&gt;</span>
+                    </div>
+                    <div class="subtitle">双重验证 · 账号密码已通过，请完成第二步验证</div>
+                </div>
+
+                {% if error %}
+                <div class="login-error"><span>{{ error }}</span></div>
+                {% endif %}
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for cat, msg in messages %}
+                <div class="login-error"><span>{{ msg }}</span></div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form method="POST" class="login-form" novalidate>
+                    <div class="field">
+                        <label for="code">验证码 / 恢复码</label>
+                        <input type="text" id="code" name="code" required autocomplete="off" autofocus
+                               inputmode="text" placeholder="输入 6 位验证码或 8 位恢复码"
+                               pattern="[A-Za-z0-9 -]{6,10}">
+                        <span class="form-hint">打开验证器 App 查看 6 位动态码</span>
+                    </div>
+
+                    <div class="login-hint otp-hint-row">
+                        {% if recovery_left %}
+                        <span>验证器丢失？输入恢复码 XXXX-XXXX（剩 {{ recovery_left }} 个）</span>
+                        {% else %}
+                        <span>验证器与恢复码都丢失？</span>
+                        {% endif %}
+                        {% if mail_ok %}
+                        <a href="{{ url_for('admin_otp_recover') }}" class="link-plain">通过邮箱找回</a>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="login-submit">验 证 并 登 录</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ── 主题切换按钮：三模式循环 ──
+        (function () {
+            var btn = document.getElementById('theme-toggle');
+            if (!btn) return;
+            var ORDER = ['auto', 'light', 'dark'];
+            var LABEL = { auto: '跟随系统', light: '浅色', dark: '深色' };
+            function saved() { var t; try { t = localStorage.getItem('infowe-theme'); } catch (e) {} return ORDER.indexOf(t) !== -1 ? t : 'auto'; }
+            function apply(mode) {
+                var dark = mode === 'dark' || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                var root = document.documentElement;
+                root.setAttribute('data-theme-mode', mode);
+                root.setAttribute('data-theme', dark ? 'dark' : 'light');
+                root.style.colorScheme = dark ? 'dark' : 'light';
+                var m = document.querySelector('meta[name="theme-color"]');
+                if (m) m.setAttribute('content', dark ? '#0f1117' : '#f5f6fa');
+                btn.title = '当前：' + LABEL[mode] + '，点击切换主题';
+            }
+            btn.addEventListener('click', function () {
+                var mode = ORDER[(ORDER.indexOf(saved()) + 1) % ORDER.length];
+                apply(mode);
+                try { localStorage.setItem('infowe-theme', mode); } catch (e) {}
+            });
+            apply(saved());
+        })();
+    </script>
+</body>
+</html>

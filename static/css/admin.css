@@ -517,6 +517,14 @@ input[type="checkbox"], input[type="radio"] {
 .switch input:checked + .slider { background: var(--accent); border-color: var(--accent); }
 .switch input:checked + .slider::before { transform: translate(16px, -50%); background: #fff; }
 .switch-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+/* 开关 22px / 文字首行 18px：上移 2px 使开关中心与首行文字中心重合（全局开关行对齐） */
+.switch-label .switch { margin-top: -2px; }
+/* 开关行上间距补偿：
+   ① label + 开关行同组时，组内 gap 6px 贴得太近，补 4px；
+   ② 纯开关行（无 label，如 OTP/SMTP 通知首行）自身较矮（22px），
+      上下各补 4px padding，行有厚度且扩大点击热区 */
+.form-group > label + .switch-label { margin-top: 4px; }
+.form-group > .switch-label:first-child { padding: 4px 0; }
 .switch-text { font-size: var(--fz-xs); color: var(--text-tertiary); line-height: 1.5; }
 
 /* ─────────── 12. 筛选栏（列表页：状态 Tab + 搜索） ─────────── */
@@ -835,10 +843,12 @@ button.tag-chip:hover { border-color: var(--accent); color: var(--accent); backg
 
 /* ─────────── 23. 卡片裸内容补偿（form-group / p / 按钮直接放 card 内） ─────────── */
 .card > .edit-form { padding: var(--sp-5); }
-.card > .form-group { margin-bottom: 0; padding: 6px var(--sp-5); }
+.card > .form-group { margin-bottom: 0; padding: 10px var(--sp-5); }
 .card > .form-group:first-of-type { padding-top: var(--sp-4); }
 .card > .form-group:last-of-type { padding-bottom: var(--sp-4); }
 .card > p { padding: var(--sp-4) var(--sp-5) 0; font-size: var(--fz-sm); color: var(--text-secondary); }
+/* p 是卡片最后一个子元素时（如升级页「检查中」状态）补底部留白，避免文字贴卡底 */
+.card > p:last-child { padding-bottom: var(--sp-4); }
 .card > .btn, .card > a.btn { margin: var(--sp-4) var(--sp-5) var(--sp-5); }
 /* 全宽按钮（卡直接子级）：width:100% 按父内容盒计算不扣 margin，与上面水平 margin
    叠加导致溢出 21px。且 <button> 的 width:auto 是 shrink-to-fit（按内容收缩），
@@ -1159,6 +1169,31 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
 }
 
 /* ==========================================================
+   25.5 设置页「账号安全」分组：管理员 + 安全验证两卡紧贴成组
+   ========================================================== */
+/* 分组容器参与双栏瀑布流（break-inside 防止整组被劈裂），
+   组内卡片去圆角/阴影合并成一体，仅首尾保留卡片外观 */
+.card-group {
+  break-inside: avoid;
+  margin-bottom: var(--sp-5);
+}
+.card-group > .card {
+  margin-bottom: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.card-group > .card + .card { margin-top: -1px; }  /* 叠掉相邻边框 → 仅剩单分隔线 */
+.card-group > .card:first-child {
+  border-top-left-radius: var(--r-lg);
+  border-top-right-radius: var(--r-lg);
+}
+.card-group > .card:last-child {
+  border-bottom-left-radius: var(--r-lg);
+  border-bottom-right-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* ==========================================================
    26. 孤儿文件清理页（/admin/orphans）专用增强
    ========================================================== */
 
@@ -1259,4 +1294,149 @@ body.bulk-on #orphanTable tbody tr { cursor: pointer; }
 @media (max-width: 767.98px) {
   #orphanTable td.col-preview { padding-bottom: 10px; }
   .orphan-thumb, .orphan-ext { width: 56px; height: 56px; }
+}
+
+/* ==========================================================
+   27. OTP 双重验证（设置页卡片 + 验证页 / 找回页）
+   ========================================================== */
+
+/* ── 设置页：紧急禁用告警 ── */
+.otp-emergency {
+  margin: var(--sp-3) var(--sp-5) var(--sp-2);
+  padding: 10px 14px;
+  font-size: var(--fz-sm);
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 36%, transparent);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--r);
+}
+.otp-emergency strong { display: block; margin-bottom: 4px; }
+.otp-emergency code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* ── 设置页：绑定区（已开启的重绑 / 未开启的首次绑定统一外观） ── */
+.otp-bind {
+  margin: var(--sp-3) var(--sp-5) var(--sp-2);
+  padding: var(--sp-4);
+  background: color-mix(in srgb, var(--bg-surface-2) 55%, transparent);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r);
+}
+
+/* 二维码行与容器（容器跟随主题；二维码 img 生成的 GIF 自带白底黑码，白底仅在图片区域内，
+   不再强制整个容器白底 —— 深色主题下容器与界面一致，浅色主题下同样可扫） */
+.otp-qr-row { display: flex; justify-content: center; padding-top: var(--sp-2); }
+.otp-qr-box {
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.otp-qr-box img {
+  display: block;
+  width: 168px; height: 168px;
+  padding: 8px;
+  background: #fff;                        /* 图片区域固定白底保证可扫 */
+  border-radius: 4px;
+}
+.otp-manual {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px;
+  font-size: var(--fz-xs); color: var(--text-tertiary);
+}
+.otp-secret-text {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: .06em;
+  color: var(--text);
+  padding: 2px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  user-select: all;                      /* 单击即可全选复制 */
+}
+
+/* ── 设置页：已启用信息区 ── */
+.otp-enabled {
+  margin: var(--sp-3) var(--sp-5) var(--sp-2);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  font-size: var(--fz-sm); color: var(--text-secondary);
+  line-height: 1.6;
+}
+.otp-enabled p { margin: 0; }
+.otp-enabled code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.otp-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+  color: var(--success);
+  background: var(--success-soft);
+  border: 1px solid color-mix(in srgb, var(--success) 40%, transparent);
+  border-radius: 50%;
+  margin-right: 4px;
+}
+
+/* ── 设置页：恢复码一次性展示卡片 ── */
+.otp-codes-card .card-header { border-bottom: none; }
+.otp-codes-card .form-hint, .otp-codes-card > p {
+  margin: 0 var(--sp-5) var(--sp-3);
+  font-size: var(--fz-sm); color: var(--text-secondary);
+}
+.otp-codes-list {
+  list-style: none;
+  margin: 0 var(--sp-5) var(--sp-4);
+  padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+.otp-codes-list li {
+  padding: 9px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fz-md); font-weight: 600; letter-spacing: .08em;
+  color: var(--text);
+  text-align: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+}
+.otp-codes-card .btn { margin: 0 var(--sp-5) var(--sp-5); }
+
+/* ── 验证页 / 找回页：提示行（覆盖登录页 .login-hint 桌面端隐藏规则） ── */
+/* 单栏认证页（/admin/otp、/admin/otp/recover）：无品牌侧区，
+   覆盖 ≥900px 的双列 grid —— 容器收窄为卡片宽并整体屏幕居中 */
+.login-shell--single { grid-template-columns: 1fr; width: min(480px, 100% - 48px); }
+.login-hint.otp-hint-row,
+.login-hint.otp-login-hint {
+  display: flex !important;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  justify-content: center;
+}
+.link-plain {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--transition);
+}
+.link-plain:hover { color: var(--accent-hover); }
+.otp-hint-row { flex-wrap: wrap; }
+.otp-hint-row code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 5px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
 }

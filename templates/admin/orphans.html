@@ -109,14 +109,8 @@
     var form = document.getElementById('orphanForm');
     if (!form) return;
 
-    /* ─── 本页唯一操作即清理：默认进入批量态，并同步 admin.js 注入的「批量操作」按钮 ─── */
-    document.body.classList.add('bulk-on');
-    var toggleBtn = document.querySelector('.bulk-toggle');
-    if (toggleBtn) {
-        toggleBtn.textContent = '退出批量';
-        toggleBtn.classList.add('btn-primary');
-        toggleBtn.setAttribute('aria-pressed', 'true');
-    }
+    /* ─── 批量态由 admin.js 注入的「批量操作」按钮统一管理，本页默认浏览态 ─── */
+    function bulkOn() { return document.body.classList.contains('bulk-on'); }
 
     var tbody = document.querySelector('#orphanTable tbody');
     var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
@@ -241,14 +235,18 @@
         updateSelection();
     });
 
-    /* ─── 事件：点击行任意位置勾选（链接/复选框本身除外） ─── */
+    /* ─── 事件：点击行任意位置勾选（仅批量态；链接/复选框本身除外） ─── */
     rows.forEach(function (row) {
         row.addEventListener('click', function (e) {
+            if (!bulkOn()) return;
             if (e.target.closest('a, input, button, label')) return;
             var box = row.querySelector('.row-check');
             box.checked = !box.checked;
             updateSelection();
         });
+        /* 直接点复选框：change 后刷新选中统计与按钮状态（此前只 stopPropagation
+           未刷新，导致勾选后「删除所选」一直 disabled） */
+        row.querySelector('.row-check').addEventListener('change', updateSelection);
         row.querySelector('.row-check').addEventListener('click', function (e) { e.stopPropagation(); });
     });
 
@@ -350,7 +348,7 @@
             updateSelection();
         }).finally(function () {
             deleteBtn.classList.remove('btn-loading');
-            deleteBtn.disabled = rows.length === 0;
+            updateSelection();   /* 按实际选中数恢复按钮态（全删空时禁用） */
         });
     });
 

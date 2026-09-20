@@ -6,9 +6,10 @@
 </div>
 
 <form method="POST" enctype="multipart/form-data" class="settings-form">
-        <!-- 管理员：账号 + 头像 + 密码 -->
+        <!-- 账号安全分组：管理员账号 + OTP 双重验证（分组容器保证两卡在双栏瀑布流中始终紧挨同列） -->
+        <div class="card-group">
         <div class="card">
-            <div class="card-header"><h3>管理员</h3></div>
+            <div class="card-header"><h3>账号安全</h3></div>
             <div class="form-group">
                 <label>账号名</label>
                 <input type="text" name="admin_username" class="input-text"
@@ -46,6 +47,85 @@
                        placeholder="如: hello@yourdomain.com">
             </div>
         </div>
+
+        <!-- 安全验证：OTP 双重验证（id 供 OTP 邮箱找回后定位跳转） -->
+        <div class="card" id="otp-card">
+            <div class="card-header card-header--hint">
+                <h3>安全验证</h3>
+                <span class="card-hint">开启后登录后台需额外输入 6 位动态验证码，防止密码泄露后被直接入侵</span>
+            </div>
+
+            {% if otp_emergency %}
+            <div class="otp-emergency">
+                <strong>检测到 OTP 紧急禁用标记（data/.otp_disable）</strong>
+                <p>当前 OTP 验证已被临时跳过。已确认可以正常登录后，请清除该标记以恢复保护。</p>
+                <form method="POST" action="{{ url_for('admin_otp_clear_emergency') }}">
+                    <button type="submit" class="btn btn-outline btn-sm">我已处理，清除标记并恢复</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="otp_enabled" id="otp_enabled" value="1"{{ ' checked' if otp_enabled else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后登录后台需要「密码 + 动态验证码」双重验证；首次开启请在下方完成扫码绑定。</span>
+                </label>
+            </div>
+
+            <!-- 绑定区：未启用时勾选开关展开；已启用时点「重新绑定」展开 -->
+            <div id="otp_bind_section" class="otp-bind" style="display:none">
+                <div class="form-group">
+                    <button type="button" id="otp_gen_qr" class="btn btn-outline btn-sm">生成二维码</button>
+                    <div class="otp-qr-row">
+                        <div id="otp_qr_box" class="otp-qr-box" style="display:none">
+                            <div id="otp_qr"></div>
+                            <div class="otp-manual"><span>或手动输入密钥</span><code id="otp_secret_show" class="otp-secret-text"></code></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="otp_confirm_code">验证码确认</label>
+                    <input type="text" id="otp_confirm_code" name="otp_confirm_code" class="input-text" inputmode="numeric"
+                           autocomplete="off" maxlength="6" pattern="[0-9]{6}"
+                           placeholder="用验证器 App 扫码后，输入当前 6 位动态码">
+                    <span class="form-hint" id="otp_bind_hint">输入正确验证码并点击「保存所有设置」后才正式生效</span>
+                </div>
+                <input type="hidden" name="otp_secret" id="otp_secret" value="">
+                <input type="hidden" name="otp_rotate" id="otp_rotate" value="">
+            </div>
+
+            <!-- 已启用信息区 -->
+            <div id="otp_enabled_section" class="otp-enabled"{% if not otp_enabled %} style="display:none"{% endif %}>
+                <p><span class="otp-dot"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> 双重验证已开启，登录后台需输入动态验证码。</p>
+                <p>剩余恢复码：<strong>{{ otp_recovery_left }}</strong> 个
+                    {%- if otp_recovery_left <= 3 %}（即将用完，建议重新绑定并保存新恢复码）{% endif %}</p>
+                {% if otp_mail_ok %}
+                <p>找回保障：已配置 SMTP，验证器/恢复码都丢失时可<strong>邮箱重置</strong>。</p>
+                {% endif %}
+                {% if not otp_mail_ok %}
+                <p>找回提示：未配置 SMTP，请务必妥善保存恢复码；验证器与恢复码都丢失时可在服务器执行 <code>touch data/.otp_disable</code> 临时跳过。</p>
+                {% endif %}
+                <button type="button" id="otp_rotate_btn" class="btn btn-outline btn-sm">重新绑定（换新密钥 + 新恢复码）</button>
+            </div>
+        </div>
+
+        {% if otp_new_codes %}
+        <!-- 恢复码一次性展示：启用/重绑成功后的唯一展示机会 -->
+        <div class="card otp-codes-card">
+            <div class="card-header"><h3>保存你的恢复码（仅显示这一次）</h3></div>
+            <p>每个恢复码只能使用一次，用于验证器丢失时登录后台。请立即保存（打印 / 拍照 / 点击下载），刷新页面后将不再显示。</p>
+            <ul class="otp-codes-list">
+                {% for c in otp_new_codes %}
+                <li>{{ c[:4] }}-{{ c[4:] }}</li>
+                {% endfor %}
+            </ul>
+            <button type="button" id="otp_download_codes" class="btn btn-primary btn-sm">下载恢复码 .txt</button>
+        </div>
+        {% endif %}
+        </div><!-- /.card-group -->
 
         <!-- 站点信息：前台展示配置 -->
         <div class="card">
@@ -328,12 +408,14 @@
                 <span class="form-hint">内容按 HTML 原样输出到前台，请只填可信任代码；留空则不注入</span>
             </div>
         </div>
+
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">保存所有设置</button>
         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">取消</a>
     </div>
 </form>
 
+<script src="{{ url_for('static', filename='vendor/qrcode/qrcode.min.js') }}"></script>
 <script>
   var _avatarInput = document.getElementById('avatar_file');
   if (_avatarInput) {
@@ -429,5 +511,111 @@
         .then(function () { btnTest.disabled = false; });
     });
   }
+  // ── OTP 双重验证：二维码 / 绑定 / 重绑 / 恢复码下载 ──
+  (function () {
+    var cb = document.getElementById('otp_enabled');
+    if (!cb) return;
+    var bindSec = document.getElementById('otp_bind_section');
+    var enabledSec = document.getElementById('otp_enabled_section');
+    var genBtn = document.getElementById('otp_gen_qr');
+    var rotateBtn = document.getElementById('otp_rotate_btn');
+    var qrBox = document.getElementById('otp_qr_box');
+    var qrEl = document.getElementById('otp_qr');
+    var secretEl = document.getElementById('otp_secret');
+    var secretShow = document.getElementById('otp_secret_show');
+    var rotateEl = document.getElementById('otp_rotate');
+    var confirmEl = document.getElementById('otp_confirm_code');
+    var bindHint = document.getElementById('otp_bind_hint');
+    var wasEnabled = {{ 'true' if otp_enabled else 'false' }};
+    var secret = '';   // 当前待确认的新密钥（页面未提交前不落库）
+
+    function renderQr(uri) {
+      if (!qrEl) return;
+      qrEl.innerHTML = '';
+      if (window.qrcode) {
+        try {
+          var qr = qrcode(0, 'M');   // qrcode-generator：typeNumber 0=自适应，容错 M
+          qr.addData(uri);
+          qr.make();
+          qrEl.innerHTML = qr.createImgTag(5, 2);
+        } catch (e) {
+          qrEl.innerHTML = '<span class="form-hint">二维码渲染失败，请使用下方密钥手动输入</span>';
+        }
+      } else {
+        qrEl.innerHTML = '<span class="form-hint">二维码组件未加载，请使用下方密钥手动输入</span>';
+      }
+    }
+
+    function fetchSecret() {
+      bindHint.textContent = '正在生成密钥…';
+      fetch('/admin/otp/setup')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (j) {
+          secret = j.secret || '';
+          secretEl.value = secret;
+          secretShow.textContent = secret;
+          renderQr(j.uri);
+          qrBox.style.display = 'flex';
+          bindHint.textContent = '输入正确验证码并点击「保存所有设置」后才正式生效';
+          if (confirmEl) confirmEl.focus();
+        })
+        .catch(function () {
+          secret = ''; secretEl.value = '';
+          bindHint.textContent = '密钥生成失败，请重试';
+        });
+    }
+
+    // 勾选开关：展开/收起绑定区
+    cb.addEventListener('change', function () {
+      if (cb.checked) {
+        bindSec.style.display = 'block';
+        if (enabledSec && enabledSec.style.display !== 'none') enabledSec.style.display = 'none';
+      } else {
+        bindSec.style.display = 'none';
+        if (enabledSec && wasEnabled) enabledSec.style.display = 'block';
+        // 丢弃尚未确认的绑定数据
+        secret = ''; secretEl.value = ''; secretShow.textContent = '';
+        rotateEl.value = ''; if (confirmEl) confirmEl.value = '';
+        qrBox.style.display = 'none'; if (qrEl) qrEl.innerHTML = '';
+      }
+    });
+
+    // 生成二维码
+    if (genBtn) genBtn.addEventListener('click', fetchSecret);
+
+    // OTP 邮箱找回后自动进入重绑流程（后端 redirect 带 otp_rebind=1）：
+    // 勾选开关展开绑定区 + 直接生成新密钥与二维码，扫码确认即可完成重绑
+    if (new URLSearchParams(location.search).get('otp_rebind') === '1') {
+      if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+      fetchSecret();
+    }
+
+    // 重新绑定：替换 skey + 新恢复码
+    if (rotateBtn) rotateBtn.addEventListener('click', function () {
+      rotateEl.value = '1';
+      bindSec.style.display = 'block';
+      enabledSec.style.display = 'none';
+      fetchSecret();
+    });
+
+    // 恢复码下载
+    var dlBtn = document.getElementById('otp_download_codes');
+    if (dlBtn) dlBtn.addEventListener('click', function () {
+      var items = document.querySelectorAll('.otp-codes-list li');
+      var text = 'infowe 博客后台 OTP 恢复码\n生成时间: ' + new Date().toLocaleString('zh-CN') +
+                 '\n每个恢复码仅可使用一次，验证器丢失时用它登录后台。\n\n';
+      for (var i = 0; i < items.length; i++) text += items[i].textContent + '\n';
+      var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'otp-recovery-codes.txt';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 100);
+    });
+  })();
 </script>
 {% endblock %}

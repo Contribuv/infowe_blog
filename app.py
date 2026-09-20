@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.48'
+VERSION = '1.3.51'
 
 import os
 import re
@@ -25,6 +25,7 @@ import math
 import socket
 import base64
 import hmac
+import struct
 import uuid
 import threading
 import concurrent.futures
@@ -497,11 +498,11 @@ def init_db():
         db.execute("ALTER TABLE projects ADD COLUMN languages TEXT DEFAULT '[]'")
         print('[迁移] 添加列: projects.languages')
 
-    # 默认管理员
-    admin_exists = db.execute("SELECT id FROM users WHERE username='admin'").fetchone()
-    if not admin_exists:
-        db.execute("INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)",
-                   ('admin', hash_password('admin123'), _now()))
+    # 默认管理员：仅当 users 表为空时创建（表非空时由下方触发器硬保证不再新增）
+    users_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    if users_count == 0:
+        db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                   ('admin', hash_password('admin123')))
 
     # 默认设置
     defaults = [
@@ -608,6 +609,32 @@ def init_db():
 
         db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_version', '2')")
         print('[时区迁移] 完成，schema_version=2')
+
+    # ── v1.3.51 单管理员迁移：users 表硬保证恰好 1 条 ──
+    # 本博客仅支持单个管理员账号。历史库可能残留多余账号（如手工插入的 admin/liuhao 并存），
+    # 多账号会让「忘记密码找回」「账号名修改」等功能目标不明。迁移做两件事：
+    # 1) 多于 1 条时保留最早创建的账号（id 最小），删除其余；
+    # 2) 建触发器拦截一切 INSERT —— 数据库层面硬保证，任何代码 bug / 手工插库都会被拒绝。
+    try:
+        _sv3 = db.execute("SELECT value FROM settings WHERE key='schema_version'").fetchone()
+        _ver3 = int(_sv3[0]) if _sv3 else 0
+    except Exception:
+        _ver3 = 0
+    if _ver3 < 3:
+        _users_cnt = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        if _users_cnt > 1:
+            _keeper = db.execute("SELECT username FROM users ORDER BY id LIMIT 1").fetchone()[0]
+            db.execute("DELETE FROM users WHERE username != ?", (_keeper,))
+            print(f'[单管理员迁移] 检测到 {_users_cnt} 个账号，保留最早创建的「{_keeper}」，其余已删除')
+        db.execute("""
+            CREATE TRIGGER IF NOT EXISTS users_single_admin_guard
+            BEFORE INSERT ON users
+            WHEN (SELECT COUNT(*) FROM users) >= 1
+            BEGIN
+                SELECT RAISE(ABORT, '博客仅支持单个管理员账号（users 表已有账号，禁止新增）');
+            END;""")
+        db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_version', '3')")
+        print('[单管理员迁移] 完成，schema_version=3（users 表单账号触发器已就位）')
 
     db.commit()
     _migrate_comments(db)
@@ -1507,6 +1534,9 @@ def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('admin_logged_in'):
+            # 账号密码已通过、尚在 OTP 验证中间态时，强制回到 OTP 页，避免绕过
+            if session.get('_otp_user'):
+                return redirect(url_for('admin_otp'))
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated
@@ -1655,6 +1685,132 @@ def _register_fail(ip):
 
 def _register_success(ip):
     _LOGIN_ATTEMPTS.pop(ip, None)
+
+
+# ─────────────── OTP 双重验证（TOTP，RFC 6238，零外部依赖）───────────────
+# 标准 TOTP：HMAC-SHA1 + 6 位 + 30 秒步长，与 Google Authenticator / 1Password / Authy 等通用。
+# 密钥以无填充的 base32 存 settings 表（与 smtp_pass / github_token 同策略）；恢复码只存哈希。
+_OTP_STEP = 30              # 30 秒一个时间窗口
+_OTP_DIGITS = 6             # 6 位验证码
+_OTP_WINDOW = 1             # 前后各容差 1 步，抗设备时钟漂移
+_OTP_RECOVERY_N = 10        # 启用 OTP 时生成的恢复码数量
+_OTP_RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  # 去掉易混淆的 0/O/1/I
+_OTP_EMERGENCY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', '.otp_disable')
+
+
+def _b32_pad(raw):
+    """base32 密钥存储时不带 '=' 填充，读取时按需补齐。"""
+    raw = (raw or '').strip().upper()
+    return raw + '=' * ((8 - len(raw) % 8) % 8)
+
+
+def _otp_secret():
+    return (app.config.get('otp_secret') or '').strip()
+
+
+def _otp_emergency_off():
+    """是否存在 OTP 紧急禁用标记文件。部署者可在服务器上执行 `touch data/.otp_disable`
+    临时跳过 OTP 验证（兜底自救），登录后到设置页「清除标记」恢复。"""
+    return os.path.isfile(_OTP_EMERGENCY_FILE)
+
+
+def _otp_configured():
+    """用户是否在设置中打开了 OTP 开关。"""
+    return (app.config.get('otp_enabled', '0') or '').strip() in ('1', 'on', 'true', 'yes')
+
+
+def _otp_enabled():
+    """OTP 是否实际生效：开关打开、已绑定密钥，且不存在紧急禁用标记。"""
+    if _otp_emergency_off():
+        return False
+    return _otp_configured() and bool(_otp_secret())
+
+
+def _totp_code(secret_b32, t=None):
+    """RFC 6238 TOTP 计算：HMAC-SHA1(counter) 动态截断出 6 位码。"""
+    key = base64.b32decode(_b32_pad(secret_b32))
+    now = int(time.time()) if t is None else int(t)
+    counter = struct.pack('>Q', now // _OTP_STEP)
+    mac = hmac.new(key, counter, hashlib.sha1).digest()
+    offset = mac[-1] & 0x0F
+    code = (struct.unpack('>I', mac[offset:offset + 4])[0] & 0x7FFFFFFF) % (10 ** _OTP_DIGITS)
+    return '%0*d' % (_OTP_DIGITS, code)
+
+
+def _totp_verify(secret_b32, code):
+    """校验用户输入的 6 位验证码，允许前后各 _OTP_WINDOW 步的时间窗口。"""
+    code = (code or '').strip().replace(' ', '')
+    if not (code.isdigit() and len(code) == _OTP_DIGITS):
+        return False
+    now = int(time.time())
+    for i in range(-_OTP_WINDOW, _OTP_WINDOW + 1):
+        if hmac.compare_digest(_totp_code(secret_b32, now + i * _OTP_STEP), code):
+            return True
+    return False
+
+
+def _otpauth_uri(secret_b32, username):
+    """生成 otpauth:// URI，供验证器扫码绑定。"""
+    issuer = (app.config.get('blog_name') or 'infowe').strip()
+    acct = username or 'admin'
+    return ('otpauth://totp/%s:%s?secret=%s&issuer=%s&algorithm=SHA1&digits=%d&period=%d'
+            % (urllib.parse.quote(issuer), urllib.parse.quote(acct), secret_b32,
+               urllib.parse.quote(issuer), _OTP_DIGITS, _OTP_STEP))
+
+
+def _gen_recovery_codes(n=_OTP_RECOVERY_N):
+    """生成 n 个 8 位恢复码，返回 (明文列表, sha256 哈希列表)。
+    明文仅生成时展示这一次，数据库只存哈希，用于校验时一次性消费。"""
+    rng = random.SystemRandom()
+    seen = set()
+    while len(seen) < n:
+        seen.add(''.join(rng.choice(_OTP_RECOVERY_ALPHABET) for _ in range(8)))
+    codes = list(seen)
+    hashes = [hashlib.sha256(c.encode()).hexdigest() for c in codes]
+    return codes, hashes
+
+
+def _norm_recovery(code):
+    """恢复码归一化：去分隔符/空白并转大写（兼容 XXXX-XXXX / XXXXXXXX / 夹空格三种输入）。"""
+    return (code or '').strip().upper().replace('-', '').replace(' ', '')
+
+
+def _otp_recovery_remaining():
+    """当前剩余未使用的恢复码数量。"""
+    cur = app.config.get('otp_recovery_codes') or ''
+    try:
+        lst = json.loads(cur) if cur else []
+    except (ValueError, TypeError):
+        lst = []
+    return len(lst) if isinstance(lst, list) else 0
+
+
+def _consume_recovery(code):
+    """校验并一次性消费一个恢复码；成功返回 True。哈希比对通过后从库中移除。"""
+    norm = _norm_recovery(code)
+    if len(norm) != 8:
+        return False
+    digest = hashlib.sha256(norm.encode()).hexdigest()
+    cur = app.config.get('otp_recovery_codes') or ''
+    try:
+        hashes = json.loads(cur) if cur else []
+    except (ValueError, TypeError):
+        hashes = []
+    if not isinstance(hashes, list) or digest not in hashes:
+        return False
+    hashes = [h for h in hashes if h != digest]
+    payload = json.dumps(hashes)
+    db = get_db()
+    db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ('otp_recovery_codes', payload))
+    db.commit()
+    db.close()
+    app.config['otp_recovery_codes'] = payload
+    return True
+
+
+def _otp_new_secret():
+    """生成新的 base32 密钥（160bit，标准字符集 A-Z2-7，无填充）。"""
+    return base64.b32encode(os.urandom(20)).decode().rstrip('=')
 
 
 
@@ -3940,6 +4096,9 @@ def server_error(e):
 def admin_index():
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))
+    # 账号密码已通过、OTP 尚未验证时直达 /admin → 直接进 OTP 验证页
+    if session.get('_otp_user'):
+        return redirect(url_for('admin_otp'))
     return redirect(url_for('admin_login'))
 
 
@@ -3947,6 +4106,9 @@ def admin_index():
 def admin_login():
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))
+    # 账号密码已通过、正等 OTP 时若回到登录页，转去 OTP 验证
+    if session.get('_otp_user'):
+        return redirect(url_for('admin_otp'))
     ip = _client_ip()
     error = None
     if _login_blocked(ip):
@@ -3987,6 +4149,16 @@ def admin_login():
                 db.close()
             _register_success(ip)
             session.pop('captcha_answer', None)
+            if _otp_emergency_off():
+                # 服务器上存在紧急禁用标记：临时跳过 OTP（登录后设置页会提示处理）
+                session['admin_logged_in'] = True
+                session['admin_username'] = username
+                flash('检测到 OTP 紧急禁用标记（data/.otp_disable），本次登录已跳过 OTP 验证，请尽快到设置页处理', 'error')
+                return redirect(url_for('admin_settings'))
+            if _otp_enabled():
+                # OTP 已开启：先进入第二因子验证页，验证通过才真正登录
+                session['_otp_user'] = username
+                return redirect(url_for('admin_otp'))
             session['admin_logged_in'] = True
             session['admin_username'] = username
             return redirect(url_for('admin_dashboard'))
@@ -4011,6 +4183,278 @@ def admin_login():
 def admin_logout():
     session.clear()
     return redirect(url_for('admin_login'))
+
+
+# ─────────────── 后台: OTP 双重验证 ───────────────
+
+@app.route('/admin/otp', methods=['GET', 'POST'])
+def admin_otp():
+    """OTP 第二因子验证页：账号密码通过后进入，输入 6 位验证码或 8 位恢复码。"""
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_dashboard'))
+    username = session.get('_otp_user')
+    if not username:
+        return redirect(url_for('admin_login'))
+    if not _otp_enabled():
+        # OTP 中途被关闭/重置（如邮箱找回）时直接放行，并清掉中间态
+        session.pop('_otp_user', None)
+        session['admin_logged_in'] = True
+        session['admin_username'] = username
+        return redirect(url_for('admin_dashboard'))
+
+    error = None
+    mail_ok = bool((app.config.get('smtp_host') or '').strip())
+    if request.method == 'POST':
+        code = (request.form.get('code') or '').strip()
+        if not code:
+            error = '请输入验证码或恢复码'
+        elif _otp_emergency_off():
+            # 管理员已在服务器放了紧急标记：本次验证直接放行
+            session.pop('_otp_user', None)
+            session['admin_logged_in'] = True
+            session['admin_username'] = username
+            flash('检测到 OTP 紧急禁用标记（data/.otp_disable），本次登录已跳过 OTP 验证，请尽快到设置页处理', 'error')
+            return redirect(url_for('admin_settings'))
+        elif _consume_recovery(code):
+            session.pop('_otp_user', None)
+            session['admin_logged_in'] = True
+            session['admin_username'] = username
+            return redirect(url_for('admin_dashboard'))
+        elif _totp_verify(_otp_secret(), code):
+            session.pop('_otp_user', None)
+            session['admin_logged_in'] = True
+            session['admin_username'] = username
+            return redirect(url_for('admin_dashboard'))
+        else:
+            _register_fail(_client_ip())  # 复用登录防爆破：失败延迟 + 锁定，拖慢爆破
+            error = '验证码或恢复码错误'
+
+    return render_template('admin/otp.html',
+                           error=error,
+                           user=username,
+                           recovery_left=_otp_recovery_remaining(),
+                           mail_ok=mail_ok,
+                           now_year=time.strftime('%Y'))
+
+
+@app.route('/admin/otp/recover', methods=['GET', 'POST'])
+def admin_otp_recover():
+    """OTP 丢失找回：向绑定邮箱发 6 位一次性验证码，验证通过后重置 OTP（需重新绑定）。"""
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_dashboard'))
+    username = session.get('_otp_user')
+    if not username:
+        return redirect(url_for('admin_login'))
+
+    target = (app.config.get('notify_email') or '').strip() or (app.config.get('contact_email') or '').strip()
+    if not (app.config.get('smtp_host') or '').strip():
+        return render_template('admin/otp_recover.html', user=username, step='unavailable', target='',
+                               sent=False, error='服务器未配置 SMTP，无法邮件找回。可用恢复码登录，'
+                                                 '或由服务器管理员执行 touch data/.otp_disable 临时跳过。',
+                               now_year=time.strftime('%Y'))
+
+    error = None
+    sent = False
+    step = 'send'
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+        if action == 'send':
+            if not target:
+                error = '管理员未设置联系邮箱（notify_email / contact_email），无法接收验证码'
+            else:
+                last = session.get('_otp_mail_ts') or 0
+                if time.time() - last < 60:
+                    error = '发送过于频繁，请 %d 秒后再试' % int(60 - (time.time() - last))
+                else:
+                    mail_code = '%06d' % random.randint(0, 999999)
+                    try:
+                        _smtp_send(
+                            target,
+                            '[%s] OTP 找回验证码' % (app.config.get('blog_name') or 'Blog'),
+                            ('<!doctype html><html><head><meta charset="utf-8"><style>%s</style></head><body>'
+                             '<div class="wrap"><div class="card">'
+                             '<div class="head">OTP 找回验证码</div>'
+                             '<div class="meta">你的博客后台 OTP 双重验证已丢失，请使用以下验证码重置：</div>'
+                             '<div class="code" style="font-size:28px;letter-spacing:4px;font-weight:bold;margin:12px 0;">%s</div>'
+                             '<div class="meta">10 分钟内有效。验证通过后 OTP 会被关闭，请重新登录并绑定新密钥。</div>'
+                             '</div></div></body></html>') % (_NOTIFY_CSS, mail_code))
+                        session['_otp_mail_code'] = mail_code
+                        session['_otp_mail_ts'] = int(time.time())
+                        sent = True
+                        step = 'verify'
+                    except Exception as e:
+                        session.pop('_otp_mail_code', None)
+                        error = '邮件发送失败：%s' % e
+        elif action == 'verify':
+            step = 'verify'
+            code = (request.form.get('mail_code') or '').strip()
+            issued = session.get('_otp_mail_code')
+            issued_ts = session.get('_otp_mail_ts') or 0
+            if not issued or time.time() - issued_ts > 600:
+                error = '验证码已过期，请重新发送'
+                step = 'send'
+            elif not code or not hmac.compare_digest(issued, code):
+                _register_fail(_client_ip())
+                error = '验证码错误'
+            else:
+                # 通过：重置 OTP（关闭开关 + 清空密钥/恢复码），随后进入后台引导重新绑定
+                session.pop('_otp_mail_code', None)
+                session.pop('_otp_mail_ts', None)
+                session.pop('_otp_user', None)
+                db = get_db()
+                for k in ('otp_enabled', 'otp_secret', 'otp_recovery_codes'):
+                    db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, '')", (k,))
+                db.commit()
+                db.close()
+                for k in ('otp_enabled', 'otp_secret', 'otp_recovery_codes'):
+                    app.config[k] = ''
+                session['admin_logged_in'] = True
+                session['admin_username'] = username
+                flash('邮箱验证通过，OTP 已临时关闭。已为你打开重新绑定流程，扫码确认即可重新开启；'
+                      '如暂不使用 OTP 保持现状即可', 'success')
+                # 直接定位到设置页「安全验证」卡片并自动展开绑定流程（otp_rebind=1 触发前端钩子）
+                return redirect(url_for('admin_settings', _anchor='otp-card', otp_rebind='1'))
+    # 邮箱仅掩码展示（ow***@example.com），防验证页泄露完整绑定邮箱
+    return render_template('admin/otp_recover.html', user=username, step=step, target=target,
+                           masked=_mask_email(target), sent=sent, error=error,
+                           now_year=time.strftime('%Y'))
+
+
+def _mask_email(addr):
+    """邮箱掩码：ab***@domain.com（本地部分保留前 2 位）。空/无效地址返回空串，由模板走未设置分支。"""
+    addr = (addr or '').strip()
+    if not addr or '@' not in addr:
+        return ''
+    local, domain = addr.split('@', 1)
+    return (local[:2] if local else '**') + '***@' + domain
+
+
+@app.route('/admin/forgot', methods=['GET', 'POST'])
+def admin_forgot():
+    """忘记密码找回：向绑定邮箱发 6 位一次性验证码，验证通过后设置新密码（无需登录）。"""
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_dashboard'))
+    target = (app.config.get('notify_email') or '').strip() or (app.config.get('contact_email') or '').strip()
+    if not (app.config.get('smtp_host') or '').strip():
+        return render_template('admin/forgot.html', step='unavailable', masked='',
+                               error='服务器未配置 SMTP，无法通过邮件找回密码。'
+                                     '请由服务器管理员在数据库中重置，或联系部署者处理。',
+                               now_year=time.strftime('%Y'))
+
+    error = None
+    step = 'send'
+    if request.method == 'POST':
+        action = request.form.get('action', '')
+        if action == 'send':
+            # 单管理员（users 表由触发器硬保证恰好 1 条）：重置目标即唯一账号
+            db = get_db()
+            row = db.execute("SELECT username FROM users LIMIT 1").fetchone()
+            db.close()
+            if not row:
+                error = '未找到管理员账号，无法找回'
+            elif not target:
+                error = '管理员未设置联系邮箱（notify_email / contact_email），无法接收验证码'
+            else:
+                last = session.get('_fp_ts') or 0
+                if time.time() - last < 60:
+                    error = '发送过于频繁，请 %d 秒后再试' % int(60 - (time.time() - last))
+                else:
+                    fp_user = row['username']
+                    mail_code = '%06d' % random.randint(0, 999999)
+                    try:
+                        _smtp_send(
+                            target,
+                            '[%s] 后台密码找回验证码' % (app.config.get('blog_name') or 'Blog'),
+                            ('<!doctype html><html><head><meta charset="utf-8"><style>%s</style></head><body>'
+                             '<div class="wrap"><div class="card">'
+                             '<div class="head">后台密码找回验证码</div>'
+                             '<div class="meta">收到本邮件说明有人请求重置博客后台账号「%s」的登录密码。验证码：</div>'
+                             '<div class="code" style="font-size:28px;letter-spacing:4px;font-weight:bold;margin:12px 0;">%s</div>'
+                             '<div class="meta">10 分钟内有效。若非本人操作，请忽略本邮件并检查后台安全设置。</div>'
+                             '</div></div></body></html>') % (_NOTIFY_CSS, fp_user, mail_code))
+                        session['_fp_code'] = mail_code
+                        session['_fp_ts'] = int(time.time())
+                        session['_fp_user'] = fp_user   # 重置目标锁定到该账号
+                        session.pop('_fp_ok', None)     # 新码作废旧的验证通过态
+                        step = 'verify'
+                    except Exception as e:
+                        session.pop('_fp_code', None)
+                        error = '邮件发送失败：%s' % e
+        elif action == 'verify':
+            step = 'verify'
+            code = (request.form.get('mail_code') or '').strip()
+            issued = session.get('_fp_code')
+            issued_ts = session.get('_fp_ts') or 0
+            if not issued or time.time() - issued_ts > 600:
+                error = '验证码已过期，请重新发送'
+                step = 'send'
+            elif not code or not hmac.compare_digest(issued, code):
+                _register_fail(_client_ip())
+                error = '验证码错误'
+            else:
+                # 码正确：进入设置新密码步骤（10 分钟内完成）
+                session['_fp_ok'] = True
+                step = 'newpass'
+        elif action == 'newpass':
+            fp_user = session.get('_fp_user') or ''
+            issued_ts = session.get('_fp_ts') or 0
+            if not session.get('_fp_ok') or not session.get('_fp_code') or time.time() - issued_ts > 600:
+                error = '操作已超时，请重新走找回流程'
+                step = 'send'
+            else:
+                new_password = request.form.get('new_password') or ''
+                new_password2 = request.form.get('new_password2') or ''
+                if len(new_password) < 6:
+                    error = '新密码至少 6 位字符'
+                    step = 'newpass'
+                elif new_password != new_password2:
+                    error = '两次输入的密码不一致'
+                    step = 'newpass'
+                else:
+                    # 重置精确锁定到发码时校验过的账号
+                    db = get_db()
+                    row = db.execute("SELECT username FROM users WHERE username=?", (fp_user,)).fetchone()
+                    if not row:
+                        error = '账号不存在，无法重置'
+                        step = 'newpass'
+                    else:
+                        db.execute("UPDATE users SET password_hash=? WHERE username=?",
+                                   (hash_password(new_password), fp_user))
+                        db.commit()
+                        db.close()
+                        for k in ('_fp_code', '_fp_ts', '_fp_ok', '_fp_user'):
+                            session.pop(k, None)
+                        flash('密码已重置，请使用新密码登录', 'success')
+                        return redirect(url_for('admin_login'))
+    masked = _mask_email(target)
+    # 展示用唯一账号名（模板只读显示）
+    db = get_db()
+    _row = db.execute("SELECT username FROM users LIMIT 1").fetchone()
+    db.close()
+    fp_user_display = _row['username'] if _row else ''
+    return render_template('admin/forgot.html', step=step, masked=masked, fp_user=fp_user_display,
+                           error=error, now_year=time.strftime('%Y'))
+
+
+@app.route('/admin/otp/setup')
+@admin_required
+def admin_otp_setup():
+    """设置页「生成二维码」：返回全新 base32 密钥与 otpauth URI（JSON）。"""
+    secret = _otp_new_secret()
+    username = session.get('admin_username', 'admin')
+    return jsonify(secret=secret, uri=_otpauth_uri(secret, username))
+
+
+@app.route('/admin/otp/clear-emergency', methods=['POST'])
+@admin_required
+def admin_otp_clear_emergency():
+    """清除 OTP 紧急禁用标记文件，恢复双重验证。"""
+    try:
+        os.remove(_OTP_EMERGENCY_FILE)
+        flash('OTP 紧急禁用标记已清除，双重验证已恢复', 'success')
+    except OSError:
+        flash('标记文件不存在或无法删除', 'error')
+    return redirect(url_for('admin_settings'))
 
 
 # ─────────────── 后台: 仪表盘 ───────────────
@@ -4653,12 +5097,13 @@ def _optimize_image(stream, ext):
 # ─────────────── 图片水印（正文/灯箱展示带水印，.originals 保留无痕原图） ───────────────
 
 # 水印字体发现，三级策略：
-#   1) 已知候选路径（Win 中文字体 / 各发行版常见包路径），命中即用
-#   2) 动态扫描系统字体目录，CJK 命名的字体优先（避免拿到不含中文的西文字体）
-#   3) 仓库自带 fonts/wqy-microhei.ttc（文泉驿微米黑，Apache-2.0，随代码部署）
-# 以前只硬编码了 3 个 Linux 路径，宝塔之类的精简系统一个都没有，
-# 最终落到 load_default() 的 9px 固定字——水印档位完全失效。
+#   1) 仓库自带 fonts/wqy-microhei.ttc（文泉驿微米黑，Apache-2.0，随代码部署）——首选，
+#      跨平台一致且杜绝「服务器命中西文字体导致中文方块」（DejaVu 几乎所有发行版都预装）
+#   2) 已知候选路径（Win 中文字体 / 各发行版常见包路径），命中即用
+#   3) 动态扫描系统字体目录，仅接受 CJK 命名的字体（纯西文字体对中文水印无意义）
+_APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 _WM_FONT_CANDIDATES = [
+    os.path.join(_APP_ROOT, 'fonts', 'wqy-microhei.ttc'),  # 仓库自带，跨平台保底
     'C:/Windows/Fonts/msyh.ttc',                    # 微软雅黑
     'C:/Windows/Fonts/simhei.ttf',                  # 黑体
     'C:/Windows/Fonts/simsun.ttc',                  # 宋体
@@ -4666,7 +5111,6 @@ _WM_FONT_CANDIDATES = [
     '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
     '/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc',
     '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
-    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
 ]
 _WM_FONT_SCAN_DIRS = [
     '/usr/share/fonts', '/usr/local/share/fonts',
@@ -4709,13 +5153,10 @@ def _find_watermark_font():
                 return i
         return len(_WM_CJK_HINTS)
 
+    # 扫描只收 CJK 命名命中者：不含中文的字体（如 DejaVu）只会把水印画成方块
     for p in sorted(found, key=_rank):
-        if _usable(p):
+        if _rank(p) < len(_WM_CJK_HINTS) and _usable(p):
             return p
-    bundled = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           'fonts', 'wqy-microhei.ttc')
-    if os.path.exists(bundled) and _usable(bundled):
-        return bundled
     return None
 
 
@@ -5444,10 +5885,45 @@ def admin_settings():
                 save_setting('avatar', avatar_url)
                 app.config['avatar'] = avatar_url
                 flash('头像已更新', 'success')
+        # ── OTP 双重验证：开关 / 绑定 / 重绑 / 关闭（开关即绑定）──
+        want_otp = '1' if request.form.get('otp_enabled') else '0'
+        cur_otp = _otp_enabled()
+        new_secret = (request.form.get('otp_secret') or '').strip().upper()
+        confirm_code = (request.form.get('otp_confirm_code') or '').strip()
+        if want_otp and not cur_otp:
+            # 启用：必须扫码并输入正确验证码才落库生效，同时生成一次性恢复码
+            if new_secret and _totp_verify(new_secret, confirm_code):
+                codes, hashes = _gen_recovery_codes()
+                for k, v in (('otp_enabled', '1'), ('otp_secret', new_secret),
+                             ('otp_recovery_codes', json.dumps(hashes))):
+                    db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (k, v))
+                    app.config[k] = v
+                session['_otp_new_codes'] = codes  # 仅本次 GET 展示
+                flash('OTP 双重验证已启用，请立即保存恢复码', 'success')
+            else:
+                flash('OTP 启用失败：请先点击「生成二维码」扫码，再输入验证码确认绑定', 'error')
+        elif not want_otp and _otp_configured():
+            # 关闭：清空密钥与恢复码，下次启用走全新绑定
+            for k in ('otp_enabled', 'otp_secret', 'otp_recovery_codes'):
+                db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, '')", (k,))
+                app.config[k] = ''
+            flash('OTP 双重验证已关闭', 'success')
+        elif want_otp and cur_otp and request.form.get('otp_rotate') and new_secret:
+            # 已启用状态下重新绑定（换新密钥 + 新恢复码）
+            if _totp_verify(new_secret, confirm_code):
+                codes, hashes = _gen_recovery_codes()
+                for k, v in (('otp_secret', new_secret), ('otp_recovery_codes', json.dumps(hashes))):
+                    db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (k, v))
+                    app.config[k] = v
+                session['_otp_new_codes'] = codes
+                flash('OTP 已重新绑定，恢复码已更新，请保存新恢复码', 'success')
+            else:
+                flash('重新绑定失败：请用新二维码扫码并输入对应验证码', 'error')
         db.commit()
         db.close()
         flash('设置已保存', 'success')
         return redirect(url_for('admin_settings'))
+    otp_new_codes = session.pop('_otp_new_codes', None)
     return render_template('admin/settings.html',
                            admin_username=session.get('admin_username', 'admin'),
                            admin_avatar=app.config.get('avatar', ''),
@@ -5463,7 +5939,13 @@ def admin_settings():
                            watermark_text=app.config.get('watermark_text', ''),
                            watermark_position=app.config.get('watermark_position', 'br'),
                            watermark_size=app.config.get('watermark_size', 'm'),
-                           wm_refresh=wm_refresh_state())
+                           wm_refresh=wm_refresh_state(),
+                           otp_enabled=_otp_configured(),
+                           otp_secret_set=bool(_otp_secret()),
+                           otp_emergency=_otp_emergency_off(),
+                           otp_recovery_left=_otp_recovery_remaining(),
+                           otp_new_codes=otp_new_codes,
+                           otp_mail_ok=bool((app.config.get('smtp_host') or '').strip()))
 
 
 @app.route('/admin/settings/test-email', methods=['POST'])
