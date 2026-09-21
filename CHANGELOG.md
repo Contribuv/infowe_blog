@@ -2,6 +2,11 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.55] - 2026-09-21
+
+### 修复
+- **后台登录族页面移动端可被缩放**：`/admin/login`、`/admin/otp`、`/admin/otp/recover`、`/admin/forgot` 为不继承 base.html 的独立页面，viewport 缺少 `maximum-scale=1.0, user-scalable=no`（iPhone 双击/捏合可放大）——补齐为与 admin/base.html 完全一致的禁缩放配置，并统一 `viewport-fit=cover` 刘海屏安全区
+
 ## [v1.3.54] - 2026-09-21
 
 ### 新增
