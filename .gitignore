@@ -18,6 +18,10 @@ _nav_check.txt
 .env
 .codebuddy/
 _tmp_*.py
+# 升级检测运行时缓存（检测时自动刷新，勿入库）
+._gh_*.json
+# 一次性修补 / 分析脚本
+_patch_*.py
 
 # ── 数据库与运行时数据（含 blog.db / posts.json，勿入库）──
 *.db
