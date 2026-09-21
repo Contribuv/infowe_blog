@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.55'
+VERSION = '1.3.56'
 
 import os
 import re
@@ -230,22 +230,7 @@ def _now():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
-app = ThemedFlask(__name__)
-# 模板按文件 mtime 自动重载：后台切换主题无需重启，生产环境同样生效
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-# secret_key 优先从环境变量读取（部署时务必设置 BLOG_SECRET_KEY），
-# 避免源码中硬编码导致 session 被伪造。fallback 仅在本地开发时使用。
-app.secret_key = os.environ.get('BLOG_SECRET_KEY', 'infowe-blog-secret-key-2024')
-# 请求体上限 32MB：上传单文件限制 20MB（见 _save_upload），此处为 Flask 级兜底，
-# 防止无 Content-Length 的分块上传或超大附件挤爆临时目录/磁盘；超限自动返回 413。
-app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
-
-
-# 在 Nginx 反代后运行时，让 request.remote_addr 自动还原为真实客户端 IP。
-# x_for=1 表示信任来自 1 层可信代理（Nginx）转发过来的 X-Forwarded-For 第一个值。
-# 只有经过 Nginx 转发的请求才会被改写，直接访问本机的伪造头无效，避免 IP 欺骗。
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
-
+# 项目根目录与核心路径常量：必须最先定义——下方 secret_key 逻辑（data/.secret_key）就要用 BASE_DIR
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'data', 'blog.db')
 POSTS_DIR = os.path.join(BASE_DIR, 'posts')
@@ -258,6 +243,40 @@ ALLOWED_IMAGE_EXT = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.heic', 
 ALLOWED_MEDIA_EXT = {'.mp4', '.webm', '.ogg', '.mov', '.avi'}
 ALLOWED_FILE_EXT = {'.zip', '.rar', '.pdf', '.doc', '.docx', '.xls', '.xlsx',
                     '.ppt', '.pptx', '.txt', '.md', '.py', '.js', '.json'}
+
+
+app = ThemedFlask(__name__)
+# 模板按文件 mtime 自动重载：后台切换主题无需重启，生产环境同样生效
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+# secret_key：优先从环境变量读取（部署时务必设置 BLOG_SECRET_KEY），
+# 避免源码中硬编码导致 session 被伪造。未设置时生成随机密钥持久化到文件。
+_secret_file = os.path.join(BASE_DIR, 'data', '.secret_key')
+if os.environ.get('BLOG_SECRET_KEY'):
+    app.secret_key = os.environ['BLOG_SECRET_KEY']
+else:
+    if os.path.isfile(_secret_file):
+        app.secret_key = open(_secret_file, 'r').read().strip()
+    else:
+        import secrets
+        _generated = secrets.token_hex(32)
+        os.makedirs(os.path.dirname(_secret_file), exist_ok=True)
+        with open(_secret_file, 'w') as _f:
+            _f.write(_generated)
+        try:
+            os.chmod(_secret_file, 0o600)
+        except (OSError, NotImplementedError):
+            pass  # Windows 不支持 chmod
+        app.secret_key = _generated
+    print(f'[安全提示] 未设置 BLOG_SECRET_KEY，已生成随机密钥并保存到 data/.secret_key')
+# 请求体上限 32MB：上传单文件限制 20MB（见 _save_upload），此处为 Flask 级兜底，
+# 防止无 Content-Length 的分块上传或超大附件挤爆临时目录/磁盘；超限自动返回 413。
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024
+
+
+# 在 Nginx 反代后运行时，让 request.remote_addr 自动还原为真实客户端 IP。
+# x_for=1 表示信任来自 1 层可信代理（Nginx）转发过来的 X-Forwarded-For 第一个值。
+# 只有经过 Nginx 转发的请求才会被改写，直接访问本机的伪造头无效，避免 IP 欺骗。
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 # Preload all SVG icons into memory for fast template rendering
 _ICON_CACHE = {}
@@ -498,11 +517,16 @@ def init_db():
         db.execute("ALTER TABLE projects ADD COLUMN languages TEXT DEFAULT '[]'")
         print('[迁移] 添加列: projects.languages')
 
-    # 默认管理员：仅当 users 表为空时创建（表非空时由下方触发器硬保证不再新增）
+    # 默认管理员：仅当 users 表为空时创建（表非空时由下方触发器硬保证不再新增）。
+    # 密码随机生成并打印到日志，首次登录后必须在后台修改。
     users_count = db.execute("SELECT COUNT(*) FROM users").fetchone()[0]
     if users_count == 0:
+        import secrets as _secrets
+        _default_pwd = _secrets.token_hex(8)
         db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                   ('admin', hash_password('admin123')))
+                   ('admin', hash_password(_default_pwd)))
+        print(f'[初始化] 默认管理员账号: admin / 密码: {_default_pwd}')
+        print(f'[初始化] 请首次登录后立即修改密码！')
 
     # 默认设置
     defaults = [
@@ -802,12 +826,22 @@ def load_settings():
 # - 服务监控：守护线程每 5 分钟轮询，结果写入 service_checks 表，前台读聚合。
 
 def _clean_monitor_url(url):
-    """清洗监控 URL：去首尾空白与反引号（用户常误粘 markdown 反引号）。"""
+    """清洗监控 URL：去首尾空白与反引号，并禁止内网/回环地址（防 SSRF）。"""
     if not url:
         return ''
     s = str(url).strip()
     if s.startswith('`') and s.endswith('`') and len(s) >= 2:
         s = s[1:-1].strip()
+    # 禁止内网/回环地址（防 SSRF）
+    try:
+        parsed = urllib.parse.urlparse(s)
+        hostname = parsed.hostname or ''
+        if hostname:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_reserved:
+                return ''
+    except ValueError:
+        pass  # 域名不做 IP 检查，由后续探测决定
     return s
 
 
@@ -1597,8 +1631,17 @@ def _fmt_loc(loc):
 
 def _ip_location(ip):
     """在线查 IP 归属地并缓存；查不到返回 ''（前台不展示，不打扰）。"""
-    if not ip or ip == 'unknown' or ip.startswith('127.') or ip in _IP_LOC_CACHE:
-        return _IP_LOC_CACHE.get(ip, '')
+    if not ip or ip == 'unknown':
+        return ''
+    # 回环/私网 IP 不查询归属地（避免无效请求）
+    try:
+        _ip_obj = ipaddress.ip_address(ip)
+        if _ip_obj.is_loopback or _ip_obj.is_private or _ip_obj.is_link_local:
+            return ''
+    except ValueError:
+        pass
+    if ip in _IP_LOC_CACHE:
+        return _IP_LOC_CACHE[ip]
     loc = ''
     prov = city = ''
     for url in ('https://ip.useragentinfo.com/json?ip=%s' % ip,
@@ -2073,14 +2116,17 @@ def render_post_content(content):
             extra = ' loading="lazy" decoding="async"'
         return tag.replace('<img', f'<img{extra} alt="{alt_text}"', 1)
     html = re.sub(r'<img\b[^>]*>', _img_repl, html)
-    # 超链接新窗口打开，但页内锚点（href 以 # 开头）除外
+    # 超链接新窗口打开，但页内锚点（href 以 # 开头）除外，过滤 javascript: 协议
     def _a_repl(m):
         tag = m.group(0)
         if re.search(r'href="#', tag):
             return tag  # 页内定位锚点，当前窗口跳转
+        if re.search(r'href\s*=\s*["\']\s*javascript:', tag, re.I):
+            # 危险伪协议：href 整体置为 #，彻底移除可执行内容（仅加 rel 挡不住 XSS）
+            return re.sub(r'href\s*=\s*["\'][^"\']*["\']', 'href="#"', tag, count=1)
         if 'target=' in tag:
             return tag
-        return tag.replace('<a', '<a target="_blank" rel="noopener"', 1)
+        return tag.replace('<a', '<a target="_blank" rel="noopener noreferrer"', 1)
     html = re.sub(r'<a\b[^>]*>', _a_repl, html)
     return html, toc
 
@@ -3119,14 +3165,13 @@ def db_load_comments(post_id=None, project_id=None, include_private=False, my_co
         sql = "SELECT * FROM comments WHERE %s=? AND (status='approved' OR is_private=1)" % target_col
         params = [target_val]
     else:
-        sql = "SELECT * FROM comments WHERE %s=? AND (status='approved' AND is_private=0" % target_col
+        sql = "SELECT * FROM comments WHERE %s=? AND (status='approved' AND is_private=0)" % target_col
         params = [target_val]
         if my_comments:
             ids = [i for i in my_comments if str(i).isdigit()]
             if ids:
-                sql += " OR (id IN (%s) AND is_private=0)" % ','.join('?' * len(ids))
+                sql += " OR id IN (%s)" % ','.join('?' * len(ids))
                 params += ids
-        sql += ")"
     sql += " ORDER BY created_at ASC, id ASC"
     rows = db.execute(sql, params).fetchall()
     db.close()
@@ -3280,6 +3325,30 @@ def _before_theme_sync():
     _sync_theme_cache()
 
 
+@app.after_request
+def _security_headers(response):
+    """统一设置安全响应头，防止 XSS、点击劫持、MIME 嗅探等。"""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    csp = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+           "img-src 'self' data: https:; font-src 'self' data:; "
+           "connect-src 'self' https:; frame-ancestors 'none';")
+    response.headers['Content-Security-Policy'] = csp
+    if request.is_secure:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
+
+# ─── 会话安全配置 ───────────────────────────────────────────
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+if os.environ.get('FLASK_DEBUG', '0') != '1':
+    app.config['SESSION_COOKIE_SECURE'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = 3600
+
+
 # ─── 导航菜单开关 ───
 # (配置 key 后缀, 显示名, 链接)；首页、写作入口为固定导航，不参与开关
 NAV_PAGES = [
@@ -3311,8 +3380,8 @@ def inject_globals():
         'comments_enabled': app.config.get('comments_enabled', '1'),
         'icp_beian': app.config.get('icp_beian', ''),
         'police_beian': app.config.get('police_beian', ''),
-        # 统计代码：原样注入前台 </body> 前（仅管理员可配置）
-        'stats_code': app.config.get('stats_code', ''),
+        # 统计代码：消毒后注入前台 </body> 前（仅管理员可配置）
+        'stats_code': _sanitize_stats_code(app.config.get('stats_code', '')),
         'author': app.config.get('author', ''),
         'author_bio': app.config.get('author_bio', ''),
         'about_intro': app.config.get('about_intro', ''),
@@ -3520,6 +3589,15 @@ def post_detail(post_id):
 # 浏览计数去重：同一 IP 对同一文章在窗口期内只计一次（兜底防刷新/多端刷次数）
 _VIEW_COOLDOWN = {}
 _VIEW_COOLDOWN_WINDOW = 60  # 秒
+_VIEW_MAX_ENTRIES = 10000  # 防止内存无限增长
+
+
+def _prune_cooldown(cooldown_dict, window):
+    """清理过期的冷却记录，防止内存无限增长。"""
+    now = time.time()
+    stale = [k for k, v in cooldown_dict.items() if now - v >= window]
+    for k in stale:
+        cooldown_dict.pop(k, None)
 
 
 @app.route('/post/<int:post_id>/view', methods=['POST'])
@@ -3528,10 +3606,14 @@ def post_view(post_id):
     ip = request.remote_addr
     key = (ip, post_id)
     now = time.time()
+    _prune_cooldown(_VIEW_COOLDOWN, _VIEW_COOLDOWN_WINDOW)
     last = _VIEW_COOLDOWN.get(key, 0)
     if now - last < _VIEW_COOLDOWN_WINDOW:
         return ('', 204)
     _VIEW_COOLDOWN[key] = now
+    # 条目数超限时强制清理
+    if len(_VIEW_COOLDOWN) > _VIEW_MAX_ENTRIES:
+        _prune_cooldown(_VIEW_COOLDOWN, 0)  # 清理全部过期条目
     db = get_db()
     db.execute("UPDATE posts SET views = views + 1 WHERE id = ?", (post_id,))
     db.commit()
@@ -3542,6 +3624,7 @@ def post_view(post_id):
 # 评论限流：同一 IP 在窗口期内只允许提交一条（防脚本刷评）
 _COMMENT_COOLDOWN = {}
 _COMMENT_COOLDOWN_WINDOW = 30  # 秒
+_COMMENT_MAX_ENTRIES = 5000
 
 
 def _comments_open():
@@ -3560,9 +3643,10 @@ def _handle_new_comment(post=None, project=None):
     title = project['name'] if is_project else post['title']
     back = url_for('project_detail', project_id=target_id) if is_project else url_for('post_detail', post_id=target_id)
 
-    # 限流：同一 IP 30 秒内只能发一条
+    # 限流：同一 IP 30 秒内只能发一条（定期清理过期条目防内存泄漏）
     ip = _client_ip()
     now = time.time()
+    _prune_cooldown(_COMMENT_COOLDOWN, _COMMENT_COOLDOWN_WINDOW)
     if now - _COMMENT_COOLDOWN.get(ip, 0) < _COMMENT_COOLDOWN_WINDOW:
         flash('评论太频繁，请稍后再试', 'error')
         return redirect(back)
@@ -3638,6 +3722,9 @@ def _handle_new_comment(post=None, project=None):
         pid, is_private, qq, ip, status=status,
         project_id=target_id if is_project else None)
     _COMMENT_COOLDOWN[ip] = now
+    # 条目数超限时强制清理
+    if len(_COMMENT_COOLDOWN) > _COMMENT_MAX_ENTRIES:
+        _prune_cooldown(_COMMENT_COOLDOWN, 0)
     # 评论邮件通知：配置了 SMTP 时后台线程发送（通知博主 + 被回复者），不阻塞提交、失败静默
     detail_path = ('/projects/%d#comments' if is_project else '/post/%d#comments') % target_id
     if str(app.config.get('comment_notify', '0')) in ('1', 'on', 'true', 'yes'):
@@ -3675,7 +3762,7 @@ def _handle_new_comment(post=None, project=None):
     resp = make_response(redirect(back + '#comments'))
     resp.set_cookie('blog_commenter',
                     json.dumps(commenter_data, ensure_ascii=False),
-                    max_age=365 * 24 * 3600, httponly=True, samesite='Lax')
+                    max_age=30 * 24 * 3600, httponly=True, samesite='Lax')
     flash('私密评论已提交，仅管理员可见' if is_private else ('博主评论已直接显示' if status == 'approved' else '评论已提交，审核通过后显示'), 'success')
     return resp
 
@@ -5505,8 +5592,6 @@ def _wm_redo_all(text, position='br', size='m', force=True):
     try:
         for root, dirs, files in os.walk(UPLOAD_DIR):
             dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('projects', 'avatar')]
-            if root == UPLOAD_DIR:
-                continue
             for fn in sorted(files):
                 ext = os.path.splitext(fn)[1].lower()
                 src = os.path.join(root, fn)
@@ -5885,8 +5970,11 @@ def admin_settings():
                      'footer_copyright_year', 'footer_copyright_owner', 'footer_powered_by',
                      'stats_code']:
             if key in request.form:
-                save_setting(key, request.form[key])
-                app.config[key] = request.form[key]
+                val = request.form[key]
+                if key == 'stats_code':
+                    val = _sanitize_stats_code(val)
+                save_setting(key, val)
+                app.config[key] = val
         # 图片水印设置（开关为复选框，未勾选即为关闭）
         wm_on = '1' if request.form.get('watermark_enabled') else '0'
         # 先记录旧配置，用于判断“文本/位置/字号/开关”是否变化（变化才触发历史图后台刷新）
@@ -5949,22 +6037,34 @@ def admin_settings():
 
         db = get_db()
         cur_user = session.get('admin_username', 'admin')
-        # 修改管理员账号名
+        # 修改管理员账号名（校验：非空、仅含安全字符、长度限制）
         new_username = request.form.get('admin_username', '').strip()
         if new_username and new_username != cur_user:
-            exist = db.execute("SELECT id FROM users WHERE username=?", (new_username,)).fetchone()
-            if exist:
-                flash('账号名已存在，未修改', 'error')
+            if not re.match(r'^[a-zA-Z0-9_\u4e00-\u9fff-]{2,30}$', new_username):
+                flash('账号名格式不合法（仅支持中英文、数字、下划线、连字符，2-30 字符）', 'error')
             else:
-                db.execute("UPDATE users SET username=? WHERE username=?", (new_username, cur_user))
-                session['admin_username'] = new_username
-                flash('管理员账号名已修改为：' + new_username, 'success')
-        # 修改密码
+                exist = db.execute("SELECT id FROM users WHERE username=?", (new_username,)).fetchone()
+                if exist:
+                    flash('账号名已存在，未修改', 'error')
+                else:
+                    db.execute("UPDATE users SET username=? WHERE username=?", (new_username, cur_user))
+                    session['admin_username'] = new_username
+                    flash('管理员账号名已修改为：' + new_username, 'success')
+        # 修改密码：需验证旧密码
         new_pwd = request.form.get('new_password', '')
         if new_pwd and len(new_pwd) >= 6:
-            db.execute("UPDATE users SET password_hash=? WHERE username=?",
-                       (hash_password(new_pwd), session.get('admin_username', 'admin')))
-            flash('密码已修改', 'success')
+            old_pwd = request.form.get('old_password', '')
+            if old_pwd:
+                cur_hash = db.execute("SELECT password_hash FROM users WHERE username=?",
+                                      (session.get('admin_username', 'admin'),)).fetchone()
+                if cur_hash and verify_password(cur_hash['password_hash'], old_pwd):
+                    db.execute("UPDATE users SET password_hash=? WHERE username=?",
+                               (hash_password(new_pwd), session.get('admin_username', 'admin')))
+                    flash('密码已修改', 'success')
+                else:
+                    flash('旧密码错误，密码未修改', 'error')
+            else:
+                flash('请先输入旧密码', 'error')
         # 头像上传 -> 固定存到 uploads/avatar/（项目根）
         avatar_file = request.files.get('avatar_file') if 'avatar_file' in request.files else None
         if avatar_file and avatar_file.filename:
@@ -6552,10 +6652,25 @@ def admin_upgrade():
 
 
 def _sanitize_html(html):
-    """剥离 script/iframe/object/embed、事件属性与 javascript:，抵消 Markdown→HTML 后的注入风险。"""
-    html = re.sub(r'<(script|iframe|object|embed)\b[^>]*>.*?</\1>', '', html, flags=re.S | re.I)
+    """剥离 script/iframe/object/embed、svg、事件属性与 javascript:，抵消 Markdown→HTML 后的注入风险。"""
+    html = re.sub(r'<(script|iframe|object|embed|svg)\b[^>]*>.*?</\1>', '', html, flags=re.S | re.I)
+    html = re.sub(r'<(script|iframe|object|embed|svg)\b[^>]*/?>', '', html, flags=re.S | re.I)
     html = re.sub(r'\son\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)', '', html, flags=re.I)
     html = re.sub(r'javascript\s*:', '', html, flags=re.I)
+    html = re.sub(r'data\s*:\s*text/html', '', html, flags=re.I)
+    html = re.sub(r'<form\b[^>]*>.*?</form>', '', html, flags=re.S | re.I)
+    return html
+
+
+def _sanitize_stats_code(html):
+    """统计代码消毒：仅允许 <script> 标签保留（去除 on* 事件和 javascript:），
+    其他所有 HTML 标签和事件属性均剥离。用于 admin_settings 中的 stats_code 存储前消毒。"""
+    if not html:
+        return ''
+    html = re.sub(r'\son\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)', '', html, flags=re.I)
+    html = re.sub(r'javascript\s*:', '', html, flags=re.I)
+    html = re.sub(r'<(?!(script\b|/script>)).*?>', '', html, flags=re.I)
+    html = re.sub(r'\n\s*\n+', '\n', html).strip()
     return html
 
 

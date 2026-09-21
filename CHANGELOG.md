@@ -2,6 +2,34 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.56] - 2026-09-21
+
+### 安全修复
+- **硬编码 Secret Key 漏洞**：移除源码中的默认 `infowe-blog-secret-key-2024`，未设置 `BLOG_SECRET_KEY` 时自动生成随机密钥并持久化到 `data/.secret_key`（权限 600），重启后 session 不失效
+- **默认管理员密码漏洞**：首次初始化不再使用 `admin123`，改为 `secrets.token_hex` 随机生成 16 位密码并输出到启动日志（仅 users 表为空时创建默认账号，触发器保证不会重复生成），日志同步提示「请首次登录后立即修改密码」
+- **密码修改无旧密码验证**：后台设置页修改密码需先输入旧密码并通过 `verify_password` 校验后才允许修改
+- **管理员用户名格式校验**：修改管理员用户名时添加正则校验 `^[a-zA-Z0-9_\u4e00-\u9fff-]{2,30}$`，防止恶意用户名
+- **登录防爆破内存泄漏**：`_VIEW_COOLDOWN` 和 `_COMMENT_COOLDOWN` 字典添加定期清理机制和最大条目限制，防止长时间运行后内存无限增长
+
+### 功能修复
+- **IP 归属地查询逻辑**：修复 `_ip_location` 中 `ip.startswith('127.')` 的粗粒度判断，改用 `ipaddress` 模块精确检测 loopback/private/link-local 地址，避免 `127.0.0.x` 网段误判
+- **评论 SQL 结构**：修复 `db_load_comments` 中 SQL 字符串拼接的括号闭合问题，改为安全的 SQL 构造模式，避免后续编辑引入语法错误
+- **水印批量重做遗漏根目录**：`_wm_redo_all` 中 `if root == UPLOAD_DIR: continue` 导致 `uploads/` 根目录文件永远不被加水印，已移除该跳过逻辑
+- **评论限流清理**：`_COMMENT_COOLDOWN` 在每次评论提交时添加过期条目清理
+
+### 安全加固
+- **安全响应头**：添加 `@app.after_request` 中间件，统一设置 `X-Content-Type-Options`、`X-Frame-Options`、`X-XSS-Protection`、`Content-Security-Policy`、`Referrer-Policy`，HTTPS 下自动添加 `Strict-Transport-Security`
+- **Session Cookie 安全**：设置 `SESSION_COOKIE_SAMESITE=Lax`、`SESSION_COOKIE_HTTPONLY=True`，非调试模式启用 `SESSION_COOKIE_SECURE`，`PERMANENT_SESSION_LIFETIME=3600`
+- **统计代码 XSS 防护**：`stats_code` 在保存和注入前台前双重消毒（`_sanitize_stats_code`），仅保留 `<script>` 标签，剥离所有事件属性和 `javascript:` 协议
+- **Markdown `javascript:` 链接过滤**：`render_post_content` 的 `_a_repl` 新增 `javascript:` 协议检测并添加 `rel="noopener noreferrer"`
+- **HTML 消毒增强**：`_sanitize_html` 增加 `svg`、`form`、`data:text/html` 过滤
+- **SSRF 防护**：`_clean_monitor_url` 添加内网 IP 检测，禁止 `127.0.0.1`、`192.168.x.x`、`169.254.169.254` 等内网地址作为监控 URL
+- **Secret Key 文件权限**：`data/.secret_key` 创建时设置 `chmod 0o600`
+
+### 部署修复
+- **requirements.txt 补充 gunicorn**：添加 `gunicorn>=21.0.0`，确保 `pip install -r requirements.txt` 后包含生产 WSGI 服务器
+- **Cookie 过期时间**：`blog_commenter` Cookie `max_age` 从 1 年缩短为 30 天
+
 ## [v1.3.55] - 2026-09-21
 
 ### 修复

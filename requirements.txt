@@ -3,3 +3,4 @@ markdown==3.5.1
 Pillow>=10.0.0
 pillow-heif>=0.15.0
 certifi>=2023.7.22
+gunicorn>=21.0.0
