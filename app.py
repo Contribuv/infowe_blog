@@ -354,6 +354,17 @@ def hash_password(password):
     return ws.generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)
 
 
+def _clear_initial_pwd_file():
+    """删除初始密码文件 data/.initial_admin_password。
+    管理员真正改密（后台改密 / 忘记密码重置）后初始密码即失效，调用本函数避免明文残留磁盘。"""
+    try:
+        _p = os.path.join(BASE_DIR, 'data', '.initial_admin_password')
+        if os.path.isfile(_p):
+            os.remove(_p)
+    except OSError:
+        pass  # 删不掉不影响主流程，下次改密会再试
+
+
 def init_db():
     db = get_db()
     # 建库/启动时一次性激活 WAL 模式并持久化（此后所有连接无需重设，见 get_db）
@@ -523,10 +534,22 @@ def init_db():
     if users_count == 0:
         import secrets as _secrets
         _default_pwd = _secrets.token_hex(8)
-        db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                   ('admin', hash_password(_default_pwd)))
-        print(f'[初始化] 默认管理员账号: admin / 密码: {_default_pwd}')
-        print(f'[初始化] 请首次登录后立即修改密码！')
+        try:
+            db.execute("INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                       ('admin', hash_password(_default_pwd)))
+            # 初始密码同步落盘到文件（600 权限）：日志滚动/没盯终端也能随时查看，改密后自动删除
+            _init_pwd_file = os.path.join(BASE_DIR, 'data', '.initial_admin_password')
+            with open(_init_pwd_file, 'w', encoding='utf-8') as _f:
+                _f.write(_default_pwd)
+            try:
+                os.chmod(_init_pwd_file, 0o600)
+            except (OSError, NotImplementedError):
+                pass  # Windows / 部分文件系统不支持 chmod，尽力而为
+            print(f'[初始化] 默认管理员账号: admin / 密码: {_default_pwd}')
+            print(f'[初始化] 初始密码已写入 data/.initial_admin_password，首次登录修改密码后自动删除')
+        except sqlite3.IntegrityError:
+            # gunicorn 多 worker 并发首启竞态：账号已被其他 worker 抢先创建（单管理员触发器拦截），忽略即可
+            pass
 
     # 默认设置
     defaults = [
@@ -4544,6 +4567,7 @@ def admin_forgot():
                         for k in ('_fp_code', '_fp_ts', '_fp_ok', '_fp_user'):
                             session.pop(k, None)
                         flash('密码已重置，请使用新密码登录', 'success')
+                        _clear_initial_pwd_file()  # 初始密码已完成使命，删除明文文件
                         return redirect(url_for('admin_login'))
     masked = _mask_email(target)
     # 展示用唯一账号名（模板只读显示）
@@ -6066,6 +6090,7 @@ def admin_settings():
                 if cur_hash and verify_password(cur_hash['password_hash'], old_pwd):
                     db.execute("UPDATE users SET password_hash=? WHERE username=?",
                                (hash_password(new_pwd), session.get('admin_username', 'admin')))
+                    _clear_initial_pwd_file()  # 初始密码已完成使命，删除明文文件
                     flash('密码已修改', 'success')
                 else:
                     flash('旧密码错误，密码未修改', 'error')

@@ -59,10 +59,24 @@ python app.py
 
 ```text
 [初始化] 默认管理员账号: admin / 密码: xxxxxxxxxxxxxxxx
-[初始化] 请首次登录后立即修改密码！
+[初始化] 初始密码已写入 data/.initial_admin_password，首次登录修改密码后自动删除
 ```
 
-⚠️ **首次登录后请务必到后台「设置」中修改账号名与密码**；日志中的随机密码仅用于首次登录。
+⚠️ **首次登录后请务必到后台「设置」中修改账号名与密码**；修改成功后初始密码文件会被自动删除。
+
+**初始密码在哪里看**（两处，内容相同）：
+
+1. **密码文件（推荐）**：`data/.initial_admin_password`（权限 600）——宝塔「文件」管理器直接打开看，或 SSH `cat data/.initial_admin_password`；首次登录修改密码后自动删除
+2. **启动日志**（`print` 输出到进程 stdout）：
+   - 本地开发（`python app.py`）：直接显示在当前终端窗口
+   - 服务器（systemd + gunicorn）：
+     ```bash
+     journalctl -u blog | grep 初始化        # 历史全量
+     journalctl -u blog -b | grep 初始化     # 本次开机以来
+     ```
+   - 宝塔 Python 项目管理器：该项目「日志」标签；也可 SSH 停掉项目后前台 `python app.py` 直接看输出
+
+> 注意：初始密码**只在 users 表为空的首次启动生成一次**（全新部署才会出现）。错过且密码未修改过，可通过登录页「忘记密码」（需配置 SMTP）邮箱找回；全新部署也可删除 `data/blog.db` 后重启重新初始化。
 
 ## 后台管理
 
