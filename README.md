@@ -52,12 +52,17 @@ python app.py
 
 ### 默认管理员账号
 
-> 仅当 `users` 表中不存在 `admin` 时自动创建。
+> 仅当 `users` 表为空时自动创建（SQLite 触发器保证整个系统只有 1 个管理员）。
 
 - 用户名：`admin`
-- 密码：`admin123`
+- 密码：**首次启动时随机生成**（`secrets.token_hex` 16 位），打印在启动日志中：
 
-⚠️ 这是弱密码，**首次登录后请务必到后台「设置」中修改账号名与密码**。
+```text
+[初始化] 默认管理员账号: admin / 密码: xxxxxxxxxxxxxxxx
+[初始化] 请首次登录后立即修改密码！
+```
+
+⚠️ **首次登录后请务必到后台「设置」中修改账号名与密码**；日志中的随机密码仅用于首次登录。
 
 ## 后台管理
 
@@ -77,7 +82,7 @@ python app.py
 要点：
 
 1. 安装依赖并安装 `gunicorn`。
-2. **务必设置环境变量 `BLOG_SECRET_KEY`** 为强随机串，否则会 fallback 到源码默认值（存在 session 伪造风险）。
+2. **建议设置环境变量 `BLOG_SECRET_KEY`** 为强随机串；未设置时启动会自动生成随机密钥并持久化到 `data/.secret_key`（权限 600，重启后 session 不失效），源码中已无硬编码默认值。
 3. 用 `gunicorn -c gunicorn.conf.py app:app` 启动，并通过 `blog.service`（systemd）守护。
 4. 配置 `deploy_infowe.site.conf`（Nginx 反代 + 可选 HTTPS）。
 
@@ -106,6 +111,23 @@ sudo systemctl restart blog
 - 评论、上传等文件保存在根目录 `uploads/` 下。
 
 ## 版本更新日志
+
+### v1.3.56
+
+- **安全加固**：移除源码硬编码 Secret Key（未设置 `BLOG_SECRET_KEY` 时自动生成随机密钥持久化到 `data/.secret_key`，权限 600，重启 session 不失效）；初始管理员密码由固定 `admin123` 改为随机 16 位并打印到启动日志；后台修改密码需先验证旧密码；管理员账号名格式校验
+- **XSS/SSRF 防御**：新增安全响应头（nosniff / DENY / CSP / HSTS）；Session Cookie 加固（SameSite=Lax / HttpOnly / Secure）；统计代码保存前消毒（仅保留 `<script>`）；Markdown 链接过滤 `javascript:` 伪协议；服务监控 URL 拒绝内网/回环地址
+- **修复**：启动崩溃（`BASE_DIR` 未定义先使用）；登录/评论防爆破字典内存泄漏；IP 归属地内网判断改用 `ipaddress` 精确检测；水印批量重做遗漏 uploads 根目录；评论 Cookie 有效期 1 年 → 30 天
+- `app.py` VERSION 同步至 **1.3.56**
+
+### v1.3.55
+
+- **后台登录族页面移动端禁缩放**：`/admin/login`、`/admin/otp`、`/admin/otp/recover`、`/admin/forgot` 四个独立页面补齐 `maximum-scale=1.0, user-scalable=no, viewport-fit=cover`（iPhone 双击/捏合不再放大页面）
+- `app.py` VERSION 同步至 **1.3.55**
+
+### v1.3.54
+
+- **文章页公众号式排版（移动端 ≤767px）**：16px 字号、1.6 行高、24px 段距、两端对齐（含 `<br>` 段落自动排除）；正文标题字号体系重建（桌面 h1 26 / h2 22 / h3 19，移动 h1 23 / h2 20 / h3 18，字重 700），修复 H 标签与正文层级倒挂；复合选择器对抗 markdown-body.css 加载顺序覆盖；tech 主题条目标题/表格字号全站协调
+- `app.py` VERSION 同步至 **1.3.54**
 
 ### v1.3.53
 
