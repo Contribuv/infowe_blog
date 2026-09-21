@@ -18,7 +18,7 @@
 - **评论限流清理**：`_COMMENT_COOLDOWN` 在每次评论提交时添加过期条目清理
 
 ### 安全加固
-- **安全响应头**：添加 `@app.after_request` 中间件，统一设置 `X-Content-Type-Options`、`X-Frame-Options`、`X-XSS-Protection`、`Content-Security-Policy`、`Referrer-Policy`，HTTPS 下自动添加 `Strict-Transport-Security`
+- **安全响应头**：`@app.after_request` 统一设置 `X-Content-Type-Options`、`X-Frame-Options`、`X-XSS-Protection`、`Referrer-Policy`、`Content-Security-Policy`（CSP 放行内联脚本与 https 外链脚本——本站模板内联脚本是既定形态且后台统计代码需注入外域脚本；保留 object-src 'none' / base-uri / frame-ancestors 实质防护），HTTPS 下自动添加 `Strict-Transport-Security`
 - **Session Cookie 安全**：设置 `SESSION_COOKIE_SAMESITE=Lax`、`SESSION_COOKIE_HTTPONLY=True`，非调试模式启用 `SESSION_COOKIE_SECURE`，`PERMANENT_SESSION_LIFETIME=3600`
 - **统计代码 XSS 防护**：`stats_code` 在保存和注入前台前双重消毒（`_sanitize_stats_code`），仅保留 `<script>` 标签，剥离所有事件属性和 `javascript:` 协议
 - **Markdown `javascript:` 链接过滤**：`render_post_content` 的 `_a_repl` 新增 `javascript:` 协议检测并添加 `rel="noopener noreferrer"`

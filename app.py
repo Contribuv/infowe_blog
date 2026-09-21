@@ -3332,9 +3332,15 @@ def _security_headers(response):
     response.headers['X-Frame-Options'] = 'DENY'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    csp = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-           "img-src 'self' data: https:; font-src 'self' data:; "
-           "connect-src 'self' https:; frame-ancestors 'none';")
+    # CSP 说明：本站为无构建管线的 SSR 博客，前台/后台模板大量内联 <script>，
+    # 后台「统计代码」功能需注入外域脚本（百度统计/GA 等均为 https）——
+    # 因此 script-src 必须含 'unsafe-inline' 与 https:，否则全站交互脚本被浏览器拦截（v1.3.56 首版教训）。
+    # 保留的实质防护：object-src 'none'（禁 object/embed）、base-uri 'self'（防 base 劫持）、
+    # frame-ancestors 'none'（禁被嵌套，与 X-Frame-Options 双保险）。
+    csp = ("default-src 'self'; script-src 'self' 'unsafe-inline' https:; "
+           "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; "
+           "font-src 'self' data:; connect-src 'self' https:; "
+           "object-src 'none'; base-uri 'self'; frame-ancestors 'none';")
     response.headers['Content-Security-Policy'] = csp
     if request.is_secure:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
