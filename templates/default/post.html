@@ -7,8 +7,8 @@
 {% block og_description %}{{ (post.summary or blog_subtitle) }}{% endblock %}
 {% block tw_description %}{{ (post.summary or blog_subtitle) }}{% endblock %}
 {% block og_url %}{{ request.url }}{% endblock %}
-{% if post.cover %}{% block og_image %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% endblock %}{% endif %}
-{% if post.cover %}{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% endblock %}{% endif %}
+{% block og_image %}{{ request.url_root.rstrip('/') }}{{ og_image_path }}{% endblock %}
+{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ og_image_path }}{% endblock %}
 {% block content %}
 <div class="post-page{% if not comments_enabled %} comments-off{% endif %}">
 {{ breadcrumb([{"url":"/posts","text":"文章"},{"text":post.title,"title":post.title}]) }}

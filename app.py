@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.52'
+VERSION = '1.3.53'
 
 import os
 import re
@@ -2044,6 +2044,10 @@ def render_post_content(content):
     if '<li>' not in toc:
         toc = ''
     # 图片性能优化：懒加载 + 异步解码 + 自动填充空 alt（消除 CLS）
+    # 首图特殊处理：微信等分享爬虫从页面首张 <img> 取卡片图，
+    # 注入真实 width/height（无尺寸图可能被跳过）且禁用 lazy，避免爬虫抓不到
+    _img_seen = [False]
+
     def _img_repl(m):
         tag = m.group(0)
         if 'loading=' in tag:
@@ -2057,7 +2061,17 @@ def render_post_content(content):
             alt_text = os.path.basename(src.group(1)) if src else ''
         # 移除已有 alt 属性（避免重复 alt="x" alt=""）
         tag = re.sub(r'\s+alt="[^"]*"', '', tag)
-        return tag.replace('<img', f'<img loading="lazy" decoding="async" alt="{alt_text}"', 1)
+        is_first = not _img_seen[0]
+        _img_seen[0] = True
+        if is_first:
+            extra = ' decoding="async"'
+            if src and src.group(1).startswith('/uploads/'):
+                dims = _upload_image_dims(urllib.parse.unquote(src.group(1)))
+                if dims:
+                    extra += f' width="{dims[0]}" height="{dims[1]}"'
+        else:
+            extra = ' loading="lazy" decoding="async"'
+        return tag.replace('<img', f'<img{extra} alt="{alt_text}"', 1)
     html = re.sub(r'<img\b[^>]*>', _img_repl, html)
     # 超链接新窗口打开，但页内锚点（href 以 # 开头）除外
     def _a_repl(m):
@@ -3433,6 +3447,17 @@ def post_detail(post_id):
     else:
         post['category_name'] = ''
     content_html, toc_html = render_post_content(post['content'])
+    # 分享卡片图（og:image / twitter:image）：封面 > 正文首图（4:3 缩略图）> 默认站图。
+    # 微信等爬虫不执行 JS，直接读 SSR 的 meta 与首张 img；原图经 /share-thumb/ 转 4:3 轻量图
+    share_src = (post.get('cover') or '').strip()
+    if not share_src:
+        share_src = _first_upload_url(post.get('content'))
+    if share_src.startswith('/uploads/'):
+        og_image_path = '/share-thumb/' + urllib.parse.quote(share_src.split('/uploads/', 1)[1])
+    elif share_src:
+        og_image_path = share_src  # 封面为外链等非 uploads 图时原样使用
+    else:
+        og_image_path = url_for('static', filename='images/og-image.png')
     # 字数统计（去空白，供 "共 x 字 / 约 x 分钟" 元信息）
     post['word_count'] = len(re.sub(r'\s', '', post['content']))
     related = db_get_related_posts(post['id'], post['tags'])
@@ -3485,6 +3510,7 @@ def post_detail(post_id):
                            related=related, comments=comments, comment_total=comment_total,
                            prev_post=prev_post, next_post=next_post,
                            comments_enabled=comments_enabled,
+                           og_image_path=og_image_path,
                            commenter=commenter, is_admin=is_admin,
                            admin_avatar=admin_avatar,
                            my_pending=my_pending,
@@ -5284,6 +5310,7 @@ _UPLOAD_URL_RE = re.compile(r'/uploads/[/\w%.\-]+')
 
 
 def _extract_upload_urls(*texts):
+
     """从一段或多段文本中提取所有 /uploads/ 相对 URL（去重，并按 URL 解码归一）。
 
     磁盘文件名是中文原始字符，而 url_for 生成的 URL 是百分号编码，
@@ -5296,6 +5323,19 @@ def _extract_upload_urls(*texts):
         for m in _UPLOAD_URL_RE.finditer(str(t)):
             urls.add(urllib.parse.unquote(m.group(0)))
     return urls
+
+
+def _first_upload_url(*texts):
+    """按正文出现顺序返回第一个 /uploads/ 相对 URL（保序，供分享卡片图取首图）。
+
+    与 _extract_upload_urls（集合去重、无序）不同，这里只取正则命中的第一处。"""
+    for t in texts:
+        if not t:
+            continue
+        m = _UPLOAD_URL_RE.search(str(t))
+        if m:
+            return urllib.parse.unquote(m.group(0))
+    return ''
 
 
 def _load_referenced_urls():
@@ -5534,6 +5574,79 @@ def uploaded_file(filename):
     if filename.startswith('.') or '/.' in filename:
         abort(404)
     return send_from_directory(UPLOAD_DIR, filename)
+
+
+# ─────────────── 分享卡片缩略图（4:3，微信朋友圈 / Twitter 卡片图）───────────────
+# 需求背景：微信等分享爬虫不执行 JS，卡片图来自 og:image 或页面首张 <img>；
+# 原图多为手机直出（3~8MB、比例不一），直接喂给卡片加载慢且显示差。
+# /share-thumb/2026/09/xxx.jpg -> uploads 同路径图片的 4:3 居中裁切缩略图，
+# 首次访问懒生成 + 磁盘缓存（data/share_thumbs/，不在 uploads/ 下以避开孤儿清理）。
+_THUMB_DIR = os.path.join(BASE_DIR, 'data', 'share_thumbs')
+_THUMB_SIZE = (800, 600)   # 4:3，对微信卡片与 Twitter summary 卡均友好
+_IMG_DIMS_CACHE = {}       # 首图尺寸注入缓存: {相对路径: (mtime, w, h)}
+
+
+def _upload_image_dims(rel_url):
+    """读取 uploads 图片真实尺寸（供首图 width/height 注入），按 mtime 缓存。"""
+    rel = rel_url.split('/uploads/', 1)[-1]
+    src = os.path.normpath(os.path.join(UPLOAD_DIR, rel))
+    if not os.path.abspath(src).startswith(os.path.abspath(UPLOAD_DIR) + os.sep) \
+            or not os.path.isfile(src):
+        return None
+    try:
+        mtime = os.path.getmtime(src)
+    except OSError:
+        return None
+    cached = _IMG_DIMS_CACHE.get(rel)
+    if cached and cached[0] == mtime:
+        return cached[1:]
+    try:
+        with Image.open(src) as im:
+            dims = im.size
+    except Exception:
+        return None
+    _IMG_DIMS_CACHE[rel] = (mtime,) + dims
+    return dims
+
+
+@app.route('/share-thumb/<path:filename>')
+def share_thumb(filename):
+    # 与 /uploads 同级安全策略：点开头的隐藏目录（.originals 无痕原图）不可达
+    if filename.startswith('.') or '/.' in filename:
+        abort(404)
+    src = os.path.normpath(os.path.join(UPLOAD_DIR, filename))
+    if not os.path.abspath(src).startswith(os.path.abspath(UPLOAD_DIR) + os.sep) \
+            or not os.path.isfile(src):
+        abort(404)
+    if os.path.splitext(src)[1].lower() not in ALLOWED_IMAGE_EXT:
+        abort(404)
+    cache_path = os.path.splitext(os.path.join(_THUMB_DIR, filename))[0] + '.jpg'
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    # 缓存失效：源图更新（重新上传/水印重刷）后自动重新生成
+    if not (os.path.isfile(cache_path)
+            and os.path.getmtime(cache_path) >= os.path.getmtime(src)):
+        try:
+            with Image.open(src) as im:
+                im = im.convert('RGB')  # PNG 透明通道 / GIF 动图取首帧
+                tw, th = _THUMB_SIZE
+                target = tw / th
+                w, h = im.size
+                if w and h:
+                    if w / h > target:      # 过宽：左右居中裁切
+                        nw = max(1, int(h * target))
+                        box = ((w - nw) // 2, 0, (w + nw) // 2, h)
+                    else:                   # 过窄（竖图）：上下居中裁切
+                        nh = max(1, int(w / target))
+                        box = (0, (h - nh) // 2, w, (h + nh) // 2)
+                    im = im.crop(box).resize(_THUMB_SIZE, Image.LANCZOS)
+                im.save(cache_path, 'JPEG', quality=85, optimize=True)
+        except Exception:
+            # 生成失败（源图损坏等）退回原图，保证分享图不至 404
+            return send_from_directory(UPLOAD_DIR, filename)
+    # 缓存文件与 filename 同构（正斜杠相对路径）——werkzeug safe_join 拒绝反斜杠路径
+    resp = send_from_directory(_THUMB_DIR, os.path.splitext(filename)[0] + '.jpg')
+    resp.headers['Cache-Control'] = 'public, max-age=86400'
+    return resp
 
 
 @app.route('/admin/upload/image', methods=['POST'])

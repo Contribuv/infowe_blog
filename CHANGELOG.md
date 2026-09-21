@@ -2,6 +2,17 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.53] - 2026-09-21
+
+### 新增
+- **分享卡片图：文章首图自动成为 og:image**（微信朋友圈 / Twitter 等）。图片优先级：文章封面 > 正文第一张本站图 > 默认站图；此前仅封面文章有独立卡片图，未设封面（大多数）一律用默认图
+- **/share-thumb/ 4:3 缩略图路由**：uploads 图片按需生成 800×600 居中裁切 JPEG（约 100KB，源图常为 3~8MB 手机直出），首次访问懒生成 + 磁盘缓存（data/share_thumbs/，避开孤儿清理），源图更新自动失效重生成，响应带 Cache-Control 供爬虫缓存；生成失败自动回退原图；隐藏目录（.originals 无痕原图）与路径穿越同样被拒绝
+- **正文首图 img 增强**：注入真实 width/height（此前无尺寸属性，微信等爬虫可能跳过无尺寸图）且不加 loading="lazy"，其余图片保持懒加载
+- 默认分享图 og-image.png 重制为 4:3（1200×900，此前 1200×630 与微信卡片比例不符），品牌同步为 infowe.site
+
+### 调整
+- twitter:card 由 summary_large_image 改为 summary（方卡，4:3 图裁切最小；og:image 与 twitter:image 同源）
+
 ## [v1.3.52] - 2026-09-20
 
 ### 新增

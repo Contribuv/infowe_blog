@@ -6,8 +6,8 @@
 {% block og_description %}{{ (post.excerpt or blog_subtitle) }}{% endblock %}
 {% block tw_description %}{{ (post.excerpt or blog_subtitle) }}{% endblock %}
 {% block og_url %}{{ request.url }}{% endblock %}
-{% block og_image %}{% if post.cover %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% else %}{{ super() }}{% endif %}{% endblock %}
-{% block tw_image %}{% if post.cover %}{{ request.url_root.rstrip('/') }}{{ post.cover }}{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block og_image %}{{ request.url_root.rstrip('/') }}{{ og_image_path }}{% endblock %}
+{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ og_image_path }}{% endblock %}
 {% block content %}
 <article data-post-id="{{ post.id }}">
     <!-- 文章头部 -->
