@@ -545,10 +545,11 @@ html[data-theme-mode="auto"] .theme-toggle::after {
   font-size: var(--fz-3xl); font-weight: 800; line-height: 1.2;
   letter-spacing: -0.3px; margin-bottom: var(--sp-4);
 }
-/* ——— 文章正文排版（.post-content 与 .post-body 兼容）——— */
-.post-content, .post-body {
-  font-size: var(--fz-lg); line-height: 1.85; color: var(--text);
-  word-break: break-word; letter-spacing: 0.01em;
+/* ——— 文章正文排版（.post-content 与 .post-body 兼容；复合选择器压过 markdown-body 基准）——— */
+.post-content, .post-body,
+.post-content.markdown-body {
+  font-size: var(--fz-lg); line-height: 1.75; color: var(--text);
+  word-break: break-word; letter-spacing: 0.02em;
 }
 .post-content > :first-child, .post-body > :first-child { margin-top: 0; }
 
@@ -564,7 +565,7 @@ html[data-theme-mode="auto"] .theme-toggle::after {
 .post-content h4, .post-body h4 { font-size: var(--fz-lg); font-weight: 700; margin: var(--sp-6) 0 var(--sp-2); color: var(--text-strong); }
 .post-content h5, .post-body h5 { font-size: var(--fz-base); font-weight: 700; margin: var(--sp-5) 0 var(--sp-2); }
 .post-content h6, .post-body h6 { font-size: var(--fz-sm); font-weight: 700; margin: var(--sp-4) 0 var(--sp-2); color: var(--text-secondary); }
-.post-content p, .post-body p { margin: 0 0 var(--sp-4); }
+.post-content p, .post-body p, .post-content.markdown-body p { margin: 0 0 var(--sp-5); }
 .post-content ul, .post-content ol, .post-body ul, .post-body ol { padding-left: var(--sp-6); margin: 0 0 var(--sp-4); }
 .post-content li, .post-body li { margin-bottom: var(--sp-2); }
 .post-content li::marker, .post-body li::marker { color: var(--accent); }
@@ -592,6 +593,7 @@ html[data-theme-mode="auto"] .theme-toggle::after {
   margin: var(--sp-6) 0; font-size: 0.875rem; line-height: 1.7;
   position: relative;
 }
+.post-content pre, .post-body pre { text-align: left; line-height: 1.5; }
 .post-content pre code, .post-body pre code { background: none; padding: 0; color: inherit; font-size: inherit; line-height: inherit; }
 /* ——— 代码块复制按钮 ——— */
 .code-copy-btn {

@@ -455,7 +455,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   color: var(--accent);
   font-size: 12px; font-weight: 600;
 }
-.tech-post-title { font-size: 20px; font-weight: 600; line-height: 1.5; margin: 0 0 6px; }
+.tech-post-title { font-size: 18px; font-weight: 600; line-height: 1.5; margin: 0 0 6px; }
 .tech-post-title a { color: var(--text); text-decoration: none; transition: color .15s; }
 .tech-post-excerpt {
   font-size: 15px; color: var(--text-secondary);
@@ -580,23 +580,31 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   border-left: 2px solid var(--accent); padding-left: 8px; margin-left: -10px;
 }
 
-/* 正文：容器全宽 */
-.tech-post-body {
-  font-size: 16px; line-height: 1.8; word-wrap: break-word;
+/* 正文：容器全宽（公众号式节奏：行内紧、段间松；复合选择器压过 markdown-body 基准） */
+.tech-post-body,
+.tech-post-body.markdown-body {
+  font-size: 15.5px; line-height: 1.75; word-wrap: break-word;
+  letter-spacing: 0.02em;
 }
 .tech-post-body h1, .tech-post-body h2, .tech-post-body h3,
-.tech-post-body h4, .tech-post-body h5, .tech-post-body h6 {
-  font-weight: 600; line-height: 1.4; margin: 28px 0 14px;
+.tech-post-body h4, .tech-post-body h5, .tech-post-body h6,
+.tech-post-body.markdown-body h1, .tech-post-body.markdown-body h2,
+.tech-post-body.markdown-body h3, .tech-post-body.markdown-body h4,
+.tech-post-body.markdown-body h5, .tech-post-body.markdown-body h6 {
+  font-weight: 700; line-height: 1.4; margin: 28px 0 14px;
 }
-.tech-post-body h1 { font-size: 24px; }
-.tech-post-body h2 {
-  font-size: 21px; padding-bottom: 8px;
+/* 桌面标题梯度：26/22/19/17/16.5/16，均高于正文 15.5px；字重 700 压过 strong 600 */
+.tech-post-body h1, .tech-post-body.markdown-body h1 { font-size: 26px; }
+.tech-post-body h2, .tech-post-body.markdown-body h2 {
+  font-size: 22px; padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
-.tech-post-body h3 { font-size: 18px; }
-.tech-post-body h4 { font-size: 16px; }
-.tech-post-body p { margin: 0 0 18px; }
-.tech-post-body strong { font-weight: 700; }
+.tech-post-body h3, .tech-post-body.markdown-body h3 { font-size: 19px; }
+.tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 17px; }
+.tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 16.5px; }
+.tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 16px; }
+.tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 20px; }
+.tech-post-body strong, .tech-post-body.markdown-body strong { font-weight: 600; }
 .tech-post-body em { font-style: italic; }
 .tech-post-body s, .tech-post-body del { color: var(--text-secondary); }
 .tech-post-body sub, .tech-post-body sup { font-size: 12px; }
@@ -631,7 +639,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-post-body pre {
   background: var(--code-bg); border: 1px solid var(--border);
   border-radius: 8px; padding: 16px; overflow-x: auto;
-  margin: 0 0 16px; line-height: 1.6;
+  margin: 0 0 16px; line-height: 1.5; text-align: left;
 }
 .tech-post-body pre code { background: none; padding: 0; font-size: 13.5px; }
 
@@ -649,7 +657,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .code-copy:hover { color: var(--accent); border-color: var(--accent); }
 @media (hover: none) { .code-copy { opacity: 1; } }
 .tech-post-body table {
-  width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: 14px;
+  width: 100%; border-collapse: collapse; margin: 0 0 16px; font-size: inherit;
   display: block; overflow-x: auto;
 }
 .tech-post-body th, .tech-post-body td {
@@ -1025,7 +1033,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-project-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0, 0, 0, .08); }
 .tech-project-card-head { display: flex; align-items: center; gap: 8px; }
 .tech-project-name {
-  font-size: 17px; font-weight: 600; color: var(--text); text-decoration: none;
+  font-size: 18px; font-weight: 600; color: var(--text); text-decoration: none;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tech-project-name:hover { color: var(--accent); }
@@ -1195,7 +1203,7 @@ html { touch-action: manipulation; }
   background: var(--bg-subtle); color: var(--text-secondary); font-size: 18px; font-weight: 700;
 }
 .tech-link-info { flex: 1; min-width: 0; }
-.tech-link-name { display: block; font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+.tech-link-name { display: block; font-size: 16px; font-weight: 600; margin: 0 0 2px; }
 .tech-link-desc {
   display: block; font-size: 13px; color: var(--text-secondary); margin: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1283,10 +1291,31 @@ html { touch-action: manipulation; }
   .tech-skill-list { grid-template-columns: 1fr; }
 }
 
+/* ≤767px：文章页公众号式排版（手机与平板统一，桌面窄窗预览同样生效）：
+   16px / 1.6 行高 / 24px 段距 / 两端对齐；含 <br> 的段落自动排除，避免短行被拉伸 */
+@media (max-width: 767px) {
+  .tech-post-title { font-size: 18px; }
+  .tech-post-body, .tech-post-body.markdown-body {
+    font-size: 16px; line-height: 1.6; letter-spacing: 0.03em;
+  }
+  /* 移动标题梯度：23/20/18/17/16.5/16，均高于正文 16px */
+  .tech-post-body h1, .tech-post-body.markdown-body h1 { font-size: 23px; }
+  .tech-post-body h2, .tech-post-body.markdown-body h2 {
+    font-size: 20px; padding-bottom: 7px;
+  }
+  .tech-post-body h3, .tech-post-body.markdown-body h3 { font-size: 18px; }
+  .tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 17px; }
+  .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 16.5px; }
+  .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 16px; }
+  .tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 24px; }
+  .tech-post-body p:not(:has(br)), .tech-post-body.markdown-body p:not(:has(br)),
+  .tech-post-body li:not(:has(br)), .tech-post-body.markdown-body li:not(:has(br)) {
+    text-align: justify;
+  }
+}
+
 @media (max-width: 480px) {
   .tech-shell { padding: 0 16px; }
-  .tech-post-title { font-size: 18px; }
-  .tech-post-body { font-size: 15.5px; }
   .tech-post-body pre { padding: 12px; }
   /* ≤480px：标签/年份占半行并排，排序独占第二行并与第一排等宽对齐 */
   .tech-cs { flex: 1 1 calc(50% - 4px); max-width: calc(50% - 4px); }
