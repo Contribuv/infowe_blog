@@ -1296,7 +1296,8 @@ html { touch-action: manipulation; }
 @media (max-width: 767px) {
   .tech-post-title { font-size: 18px; }
   .tech-post-body, .tech-post-body.markdown-body {
-    font-size: 16px; line-height: 1.6; letter-spacing: 0.03em;
+    /* 中文正文不加字间距：0.03em 在 16px 下约 0.5px/字，移动端视觉明显发「散」（用户反馈） */
+    font-size: 16px; line-height: 1.6; letter-spacing: normal;
   }
   /* 移动标题梯度：23/20/18/17/16.5/16，均高于正文 16px */
   .tech-post-body h1, .tech-post-body.markdown-body h1 { font-size: 23px; }
@@ -1308,10 +1309,7 @@ html { touch-action: manipulation; }
   .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 16.5px; }
   .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 16px; }
   .tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 24px; }
-  .tech-post-body p:not(:has(br)), .tech-post-body.markdown-body p:not(:has(br)),
-  .tech-post-body li:not(:has(br)), .tech-post-body.markdown-body li:not(:has(br)) {
-    text-align: justify;
-  }
+  /* 不使用两端对齐：justify 会拉伸含短行的段落字距，移动端观感发「散」（用户反馈，justify 移除） */
 }
 
 @media (max-width: 480px) {
