@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.57'
+VERSION = '1.3.58'
 
 import os
 import re
@@ -3193,8 +3193,13 @@ def db_load_comments(post_id=None, project_id=None, include_private=False, my_co
         if my_comments:
             ids = [i for i in my_comments if str(i).isdigit()]
             if ids:
-                sql += " OR id IN (%s)" % ','.join('?' * len(ids))
-                params += ids
+                # 本人待审核评论回显必须圈定在当前文章/项目内：id 是全局自增序列，
+                # 若 OR 分支不加目标约束，其他文章/项目页提交的待审核评论会被串台到本页
+                # （SQL 中 AND 优先级高于 OR，(post_id=? AND ...) OR id IN (...) 的后半段不受 post_id 限制）；
+                # 同时排除 rejected：被拒评论不应再回显（此前会顶着"待审核"徽标误导用户）
+                sql += (" OR (id IN (%s) AND %s=? AND status != 'rejected')"
+                        % (','.join('?' * len(ids)), target_col))
+                params += ids + [target_val]
     sql += " ORDER BY created_at ASC, id ASC"
     rows = db.execute(sql, params).fetchall()
     db.close()
