@@ -2,6 +2,15 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.59] - 2026-09-27
+
+### 修复
+- **项目详情页提交评论 HTTP 500**：老库 `comments` 表建表时 `post_id INTEGER NOT NULL`（早期评论只挂文章的遗留约束），项目评论插入 `post_id=NULL` 直接违反约束（线上日志 `sqlite3.IntegrityError: comments.post_id may not be NULL`）——项目评论功能上线以来从未成功过一次。修复：启动迁移新增表重建步骤（SQLite 无法 ALTER 放宽列约束：建新表 → 拷数据 → 换名），幂等可重复执行，老评论数据零丢失；新库建表语句同步修正（post_id 可空 + 内置 project_id 列）。部署后重启服务即自动迁移，无需手工操作
+- 验证：线上同款 NOT NULL 模拟库迁移后约束放宽、老数据保留、重复启动幂等；端到端 POST /projects/<id>/comment 与 /post/<id>/comment 均 302 落库，本地真实服务复测通过
+
+### 优化
+- 项目详情页按钮重设计（default / tech 双主题一致）：「访问 GitHub」改用 GitHub 品牌深色实底（#24292f），hover 轻微上浮 + 柔和阴影（替换生硬的 brightness 滤镜）；「反馈」更名为「反馈 Bug」，改为柔和浅底次级按钮，hover 文字边框转主题色微染上浮
+
 ## [v1.3.58] - 2026-09-24
 
 ### 修复

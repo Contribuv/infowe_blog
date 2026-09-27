@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.58'
+VERSION = '1.3.59'
 
 import os
 import re
@@ -426,7 +426,8 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS comments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            post_id INTEGER NOT NULL,
+            post_id INTEGER DEFAULT NULL,
+            project_id INTEGER DEFAULT NULL,
             parent_id INTEGER DEFAULT NULL,
             author TEXT NOT NULL DEFAULT 'Anonymous',
             email_hash TEXT DEFAULT '',
@@ -731,6 +732,45 @@ def _migrate_comments(db):
     db.execute("UPDATE comments SET status='approved' WHERE status IS NULL OR status=''")
     if added:
         print('[迁移] comments 表新增列：' + ', '.join(added))
+
+    # post_id NOT NULL 是早期"评论只挂文章"的遗留约束；项目评论 post_id 必须为 NULL。
+    # SQLite 无法 ALTER 放宽列约束，走标准流程：建新表→拷数据→换名。
+    # 幂等：PRAGMA notnull=0 时跳过。新表列与旧表列取交集拷贝，兼容任何手工加列的库。
+    _info = db.execute("PRAGMA table_info(comments)").fetchall()
+    _post_col = next((r for r in _info if r['name'] == 'post_id'), None)
+    if _post_col is not None and _post_col['notnull']:
+        _new_cols = ('id', 'post_id', 'project_id', 'parent_id', 'author', 'email',
+                     'email_hash', 'website', 'content', 'status', 'is_private',
+                     'qq', 'ip_text', 'ip_location', 'created_at')
+        _old_cols = {r['name'] for r in _info}
+        _copy = [c for c in _new_cols if c in _old_cols]
+        _col_list = ', '.join('"%s"' % c for c in _copy)
+        _n = db.execute("SELECT COUNT(*) FROM comments").fetchone()[0]
+        db.execute("DROP TABLE IF EXISTS comments_rebuild")
+        db.execute("""
+            CREATE TABLE comments_rebuild (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER DEFAULT NULL,
+                project_id INTEGER DEFAULT NULL,
+                parent_id INTEGER DEFAULT NULL,
+                author TEXT NOT NULL DEFAULT 'Anonymous',
+                email TEXT DEFAULT '',
+                email_hash TEXT DEFAULT '',
+                website TEXT DEFAULT '',
+                content TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                is_private INTEGER DEFAULT 0,
+                qq TEXT DEFAULT '',
+                ip_text TEXT DEFAULT '',
+                ip_location TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+            )""")
+        db.execute("INSERT INTO comments_rebuild (%s) SELECT %s FROM comments" % (_col_list, _col_list))
+        db.execute("DROP TABLE comments")
+        db.execute("ALTER TABLE comments_rebuild RENAME TO comments")
+        db.commit()
+        print('[迁移] comments.post_id 已放宽为可空（支持项目评论），表重建完成，迁移 %d 条评论' % _n)
 
 
 def migrate_from_json(db):

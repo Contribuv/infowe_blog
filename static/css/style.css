@@ -1031,10 +1031,11 @@ html[data-theme-mode="auto"] .theme-toggle::after {
   display: inline-flex; align-items: center; gap: var(--sp-2);
   padding: var(--sp-3) var(--sp-5); border-radius: var(--r);
   font-size: var(--fz-sm); font-weight: 600; white-space: nowrap;
-  color: #fff; background: var(--accent); border: 1px solid var(--accent);
-  transition: all var(--transition);
+  color: #fff; background: #24292f; border: 1px solid #24292f;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
 }
-.proj-btn-github:hover { filter: brightness(1.08); box-shadow: var(--shadow-md); }
+.proj-btn-github:hover { background: #32383f; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(36, 41, 47, .28); }
+.proj-btn-github:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(36, 41, 47, .22); }
 
 /* 项目文档（README）区 */
 .proj-readme {
@@ -1053,8 +1054,9 @@ html[data-theme-mode="auto"] .theme-toggle::after {
 }
 .proj-readme-tools { display: inline-flex; align-items: center; gap: var(--sp-3); }
 .proj-readme-age { font-size: var(--fz-xs); color: var(--text-tertiary); }
-.proj-feedback { font-size: var(--fz-xs); color: var(--text-tertiary); background: transparent; border: 1px solid var(--border-light); border-radius: 6px; padding: 4px 10px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; display: inline-flex; align-items: center; gap: 4px; }
-.proj-feedback:hover { color: var(--accent); border-color: var(--accent); background: var(--hover-bg); }
+.proj-feedback { font-size: var(--fz-sm); font-weight: 500; color: var(--text-secondary); background: var(--bg-surface, rgba(0,0,0,.03)); border: 1px solid var(--border); border-radius: 8px; padding: 5px 14px; cursor: pointer; transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease; display: inline-flex; align-items: center; gap: 5px; }
+.proj-feedback:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft, rgba(91,108,245,.08)); transform: translateY(-1px); }
+.proj-feedback:active { transform: translateY(0); }
 .proj-feedback:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .proj-feedback-icon { display: inline-block; vertical-align: middle; }
 .proj-refresh-form { margin: 0; }
