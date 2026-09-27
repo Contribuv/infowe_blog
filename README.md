@@ -126,6 +126,11 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.60
+
+- **消除控制台 unload Violation 警告**：新增响应头 `Permissions-Policy: unload=*` 显式允许 unload（百度统计等老式脚本需要），Chrome 127+ 不再报 `[Violation] Permissions policy violation`；统计功能行为不变。控制台里 `chrome-extension://` 开头的报错是浏览器自身扩展产生，与网站无关
+- `app.py` VERSION 同步至 **1.3.60**
+
 ### v1.3.59
 
 - **修复项目详情页提交评论 HTTP 500**：老库 `comments.post_id` 是 NOT NULL（早期评论只挂文章的遗留约束），项目评论插入 `post_id=NULL` 直接违反约束——项目评论上线以来从未成功过。启动迁移自动重建表放宽约束（幂等、老数据零丢失），部署后**重启服务即生效**，无需手工操作

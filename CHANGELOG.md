@@ -2,6 +2,11 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.60] - 2026-09-27
+
+### 修复
+- **消除控制台 `[Violation] Permissions policy violation: unload is not allowed` 警告**：百度统计 hm.js 等老式脚本注册 unload 事件，Chrome 127+ 默认禁用并报 Violation。安全响应头统一新增 `Permissions-Policy: unload=*` 显式允许（Chrome 官方过渡机制），警告消失、统计行为恢复原样。浏览器自身的 `chrome-extension://` 报错与网站无关，无需处理
+
 ## [v1.3.59] - 2026-09-27
 
 ### 修复

@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.59'
+VERSION = '1.3.60'
 
 import os
 import re
@@ -3410,6 +3410,10 @@ def _security_headers(response):
            "font-src 'self' data:; connect-src 'self' https:; "
            "object-src 'none'; base-uri 'self'; frame-ancestors 'none';")
     response.headers['Content-Security-Policy'] = csp
+    # unload 白名单：百度统计等老式脚本注册 unload 事件，Chrome 127+ 默认禁用并报
+    # "[Violation] Permissions policy violation: unload is not allowed"。
+    # 显式允许 unload 消除控制台警告（Chrome 最终删除该 API 前的过渡方案）。
+    response.headers['Permissions-Policy'] = 'unload=*'
     if request.is_secure:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     return response
