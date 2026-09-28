@@ -2,6 +2,16 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.62] - 2026-09-28
+
+### 修复
+- **消除 `tech/` 模板 CSS lint 警告**：模板内联样式 `style="background: {{ l[2] }};"` 与 `style="width: {{ skill.level }}%;"` 中的 Jinja 占位符被 Trae / VS Code CSS 校验器误判为非法 CSS（`css-propertyvalueexpected` / `css-ruleorselectorexpected`）。改为 CSS 自定义属性 `--lang-color` / `--sl`（其值允许任意 token 序列），CSS 通过 `var()` 读取，与 `default` / `admin` 主题既有写法一致。视觉行为完全不变
+
+---
+
+<details>
+<summary>历史版本日志（v1.3.61 及更早）</summary>
+
 ## [v1.3.61] - 2026-09-28
 
 ### 修复
@@ -15,8 +25,6 @@
 
 ---
 
-<details>
-<summary>历史版本日志（v1.3.60 及更早）</summary>
 
 ## [v1.3.60] - 2026-09-27
 

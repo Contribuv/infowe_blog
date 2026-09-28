@@ -128,6 +128,14 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.62
+
+- **消除 `tech/` 模板 CSS lint 警告**：模板内联样式 `style="background: {{ l[2] }};"` 与 `style="width: {{ skill.level }}%;"` 中的 Jinja 占位符被 Trae / VS Code CSS 校验器误判为非法 CSS。改为 CSS 自定义属性 `--lang-color` / `--sl`（值允许任意 token 序列），CSS 通过 `var()` 读取，与 `default` / `admin` 主题既有写法一致。视觉行为完全不变
+- `app.py` VERSION 同步至 **1.3.62**
+
+<details>
+<summary>历史版本日志（v1.3.61 及更早）</summary>
+
 ### v1.3.61
 
 - **修复评论 IP 归属地城市显示错误**：原实现调用 3 个免费在线接口（ip.useragentinfo.com / api.vore.top / ip-api.com），数据不准且受网络波动影响。实测 `220.192.40.209`（重庆电信）被标为「北京市 西城区」、`14.117.243.23`（江门电信）被标为「广东 广州」。改为内置 [ip2region](https://github.com/lionsoul2014/ip2region) 离线库（Apache-2.0），约 0.1ms/次，零网络请求、零新增 pip 依赖
@@ -137,8 +145,6 @@ sudo systemctl restart blog
 - `pyrightconfig.json` 补 `extraPaths`，消除 vendor 内联绑定的导入误报；`.vscode/settings.json` 关闭模板内联样式误报
 - `app.py` VERSION 同步至 **1.3.61**
 
-<details>
-<summary>历史版本日志（v1.3.60 及更早）</summary>
 
 ### v1.3.60
 
