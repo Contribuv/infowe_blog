@@ -2,6 +2,22 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.61] - 2026-09-28
+
+### 修复
+- **评论 IP 归属地城市显示错误**：原实现依赖 3 个免费在线接口（ip.useragentinfo.com / api.vore.top / ip-api.com）查询，数据不准且有超时风险。实测 `220.192.40.209`（重庆电信）被标为「北京市 西城区」、`14.117.243.23`（江门电信）被标为「广东 广州」。改为内置 [ip2region](https://github.com/lionsoul2014/ip2region) 离线库（Apache-2.0）：v4/v6 双库存放 `vendor/ip2region/`，纯 Python 绑定随项目分发，约 0.1ms/次，零网络请求、零新增 pip 依赖
+- 历史评论已用离线库重查回填，5 条修正：4 条「北京 西城区」→「重庆」，1 条「广东 广州」→「广东 江门」
+- 归属地展示统一去行政区划后缀（重庆市→重庆、四川省→四川、广西壮族自治区→广西）；回环 / 私网 / 链路本地 / 畸形 IP 及 IPv4-mapped 地址（`::ffff:a.b.c.d`）统一归一处理，查不到则不展示
+
+### 调整
+- `pyrightconfig.json` 补 `extraPaths: ["vendor"]`：app.py 通过 `sys.path.insert` 动态加载内联绑定，静态分析需显式告知，否则误报「无法解析导入 ip2region」
+- 新增 `.vscode/settings.json` 关闭内置 HTML 校验：模板 `style` 属性内的 Jinja 占位符会被该校验器当 CSS 解析，全库 10 处误报（编辑器噪音，不影响渲染）
+
+---
+
+<details>
+<summary>历史版本日志（v1.3.60 及更早）</summary>
+
 ## [v1.3.60] - 2026-09-27
 
 ### 修复
@@ -261,3 +277,5 @@
 
 ## [v1.3.38] - 之前
 项目同步前端反馈优化（AJAX 原地轮询 + 实时进度 + 完成状态可视化）。
+
+</details>

@@ -8,66 +8,69 @@
 {% block content %}
 {# gh.gh 为 GitHub 实时元数据（拉取失败时为 None，回退到库内数据） #}
 {% set gh_meta = gh.gh or {} %}
+{# owner 从仓库地址解析：github.com/<owner>/<repo> → 面包屑用 #}
+{% set gh_path = (project.url or '').split('github.com/')[-1].strip('/') %}
+{% set gh_owner = gh_path.split('/')[0] if '/' in gh_path else '' %}
 <article class="tech-proj">
-    <!-- 顶部项目卡片：简介 + 实时统计 + 访问 GitHub 入口 -->
-    <section class="tech-proj-hero">
-        <div class="tech-proj-hero-main">
-            <h1 class="tech-proj-name">
-                {{ project.name }}
-                {% if project.featured %}<span class="tech-proj-badge">精选</span>{% endif %}
-            </h1>
-            {% set desc = gh_meta.description or project.description %}
-            {% if desc %}<p class="tech-proj-desc">{{ desc }}</p>{% endif %}
-
-            <div class="tech-proj-meta">
-                <span class="tech-proj-meta-item">★ {{ gh_meta.stars or project.stars }} Stars</span>
-                {% if project.lang_list %}
-                <span class="tech-proj-meta-item">{{ project.lang_list | length }} 种语言</span>
-                {% endif %}
-                {% if gh.age_text %}
-                <span class="tech-proj-meta-item">文档更新于 {{ gh.age_text }}</span>
-                {% endif %}
-            </div>
-
-            {% if project.lang_list %}
-            <div class="tech-proj-langs">
-                {% for l in project.lang_list %}
-                <span class="tech-project-lang">
-                    <span class="tech-lang-dot" style="background: {{ l[2] }};"></span>
-                    {{ l[0] }}<span class="tech-project-lang-pct"> {{ l[1] }}%</span>
-                </span>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            {% if project.topics %}
-            <div class="tech-proj-topics">
-                {% for t in project.topics %}<span class="tech-proj-topic">{{ t }}</span>{% endfor %}
-            </div>
+    <!-- GitHub 仓库页式标题行：owner / repo 面包屑 + 右侧操作按钮组 -->
+    <section class="tech-proj-head">
+        <h1 class="tech-proj-crumb">
+            {% if gh_owner %}<a class="tech-proj-owner" href="https://github.com/{{ gh_owner }}" target="_blank" rel="noopener">{{ gh_owner }}</a><span class="tech-proj-sep">/</span>{% endif %}
+            <a class="tech-proj-repo" href="{{ project.url or request.url }}" {% if project.url %}target="_blank" rel="noopener"{% endif %}>{{ project.name }}</a>
+            {% if project.featured %}<span class="tech-proj-badge">精选</span>{% endif %}
+        </h1>
+        <div class="tech-proj-actions">
+            <a class="tech-proj-btn" href="{{ project.url or request.url }}" {% if project.url %}target="_blank" rel="noopener"{% endif %}>
+                {{ icon('star', 14, 'tech-proj-btn-icon') | safe }} {{ gh_meta.stars or project.stars }} Star
+            </a>
+            {% if project.url %}
+            <a class="tech-proj-btn tech-proj-btn--gh" href="{{ project.url }}" target="_blank" rel="noopener">
+                {{ icon('github', 14, 'tech-proj-btn-icon') | safe }} 访问 GitHub
+            </a>
             {% endif %}
         </div>
-
-        {% if project.url %}
-        <a class="tech-btn tech-proj-gh" href="{{ project.url }}" target="_blank" rel="noopener">访问 GitHub ↗</a>
-        {% endif %}
     </section>
 
-    <!-- 项目文档：展示管理员后台同步的 GitHub README（前台零 GitHub 请求） -->
-    <section class="tech-proj-readme" id="readme">
-        <div class="tech-proj-readme-head">
-            <h2 class="tech-proj-readme-title">项目文档</h2>
-            <button type="button" class="tech-proj-feedback" data-feedback-to="#comments" aria-label="反馈 Bug 或评论">{{ icon('message-circle', 14, 'tech-proj-feedback-icon') | safe }} 反馈 Bug</button>
-        </div>
-        {% if gh.readme %}
-        <div class="tech-proj-readme-body markdown-body">{{ gh.readme | safe }}</div>
-        {% else %}
-        <div class="tech-proj-readme-empty">
-            <p>{% if gh.error %}{{ gh.error }}{% else %}项目文档尚未同步，请管理员在后台「项目 → 同步」中拉取 README。{% endif %}</p>
-            {% if project.url %}
-            <p>可前往 <a href="{{ project.url }}" target="_blank" rel="noopener">GitHub 仓库</a> 查看完整说明</p>
-            {% endif %}
+    <!-- 项目信息行：简介 + topics + 语言（单栏紧凑排版，标题行下方） -->
+    {% set desc = gh_meta.description or project.description %}
+    {% if desc or project.topics or project.lang_list %}
+    <section class="tech-proj-info">
+        {% if desc %}<p class="tech-proj-about-desc">{{ desc }}</p>{% endif %}
+        {% if project.topics %}
+        <div class="tech-proj-topics">
+            {% for t in project.topics %}<span class="tech-proj-topic">{{ t }}</span>{% endfor %}
         </div>
         {% endif %}
+        {% if project.lang_list %}
+        <div class="tech-proj-langs">
+            {% for l in project.lang_list %}
+            <span class="tech-project-lang">
+                <span class="tech-lang-dot" style="background: {{ l[2] }};"></span>
+                {{ l[0] }}<span class="tech-project-lang-pct"> {{ l[1] }}%</span>
+            </span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- 项目文档：全宽单栏（展示管理员后台同步的 GitHub README，前台零 GitHub 请求） -->
+    <section class="tech-proj-readme" id="readme">
+            <div class="tech-proj-readme-head">
+                <h2 class="tech-proj-readme-title">项目文档</h2>
+                {% if gh.age_text %}<span class="tech-proj-readme-age">文档更新于 {{ gh.age_text }}</span>{% endif %}
+                <button type="button" class="tech-proj-feedback" data-feedback-to="#comments" aria-label="反馈 Bug 或评论">{{ icon('message-circle', 14, 'tech-proj-feedback-icon') | safe }} 反馈 Bug</button>
+            </div>
+            {% if gh.readme %}
+            <div class="tech-proj-readme-body markdown-body">{{ gh.readme | safe }}</div>
+            {% else %}
+            <div class="tech-proj-readme-empty">
+                <p>{% if gh.error %}{{ gh.error }}{% else %}项目文档尚未同步，请管理员在后台「项目 → 同步」中拉取 README。{% endif %}</p>
+                {% if project.url %}
+                <p>可前往 <a href="{{ project.url }}" target="_blank" rel="noopener">GitHub 仓库</a> 查看完整说明</p>
+                {% endif %}
+            </div>
+            {% endif %}
     </section>
 
     <!-- 评论区（与文章页共用同一片段，表单指向项目评论接口；关闭评论时整块不显示） -->

@@ -1,6 +1,8 @@
 {
   // 基础检查档位（关闭 basedpyright 默认 recommended 档的严格类型推断噪音）
   "typeCheckingMode": "standard",
+  // app.py 用 sys.path.insert 把 vendor 加入路径，静态分析需显式告知
+  "extraPaths": ["vendor"],
   // 本项目为无类型注解的单文件 Flask 应用，以下规则噪音过大，全部关闭：
   "reportConstantRedefinition": "none",       // try/except 可选依赖重复赋值（_HAS_PIL 等）
   "reportPossiblyUnboundVariable": "none",    // 可选依赖 import 后在分支中使用（Image 等）

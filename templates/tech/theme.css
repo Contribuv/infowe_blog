@@ -609,8 +609,14 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-post-body s, .tech-post-body del { color: var(--text-secondary); }
 .tech-post-body sub, .tech-post-body sup { font-size: 12px; }
 .tech-post-body abbr { border-bottom: 1px dotted var(--border-strong); cursor: help; }
-.tech-post-body details { margin: 0 0 16px; }
-.tech-post-body summary { cursor: pointer; font-weight: 600; }
+/* details 折叠块（GitHub README 常用）：文章页与项目详情页 README 同款
+   summary 加三角箭头占位 + 嵌套内容内边距，修复项目页 tab 展开无样式/内容贴边 */
+.tech-post-body details, .tech-proj-readme-body details { margin: 0 0 16px; }
+.tech-post-body summary, .tech-proj-readme-body summary { cursor: pointer; font-weight: 600; }
+.tech-post-body summary::marker, .tech-proj-readme-body summary::marker { color: var(--text-secondary); }
+.tech-post-body details[open] > summary, .tech-proj-readme-body details[open] > summary { margin-bottom: 8px; }
+.tech-post-body details > *, .tech-proj-readme-body details > * { margin-left: 0; }
+.tech-post-body details > :last-child, .tech-proj-readme-body details > :last-child { margin-bottom: 0; }
 .tech-post-body a {
   color: var(--accent); text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
@@ -1095,49 +1101,66 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 /* 禁用双击缩放 / 捏合缩放的 CSS 兜底（disable-zoom.js 为 iOS 主力拦截） */
 html { touch-action: manipulation; }
 
-.tech-proj { padding: 12px 0 8px; }
+.tech-proj { padding: 0 0 8px; }
+/* 项目详情页顶部收紧：无 page-head，GitHub 仓库页 nav 到标题仅约 24px */
+.tech-main:has(.tech-proj) { padding-top: 16px; }
 
-/* 顶部项目卡片：与列表卡片同款圆角描边 */
-.tech-proj-hero {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
-  margin-bottom: 20px; padding: 24px;
-  border: 1px solid var(--border); border-radius: 10px;
-  background: var(--bg);
+/* GitHub 仓库页式标题行：owner / repo 面包屑 + 右侧操作按钮组 */
+.tech-proj-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
 }
-.tech-proj-hero-main {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.tech-proj-name {
+.tech-proj-crumb {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  margin: 0; font-size: 28px; font-weight: 700; line-height: 1.4;
+  margin: 0; min-width: 0;
+  font-size: 20px; font-weight: 400; line-height: 1.4;
 }
+.tech-proj-owner { color: var(--accent); text-decoration: none; min-width: 0; }
+.tech-proj-owner:hover { text-decoration: underline; }
+.tech-proj-sep { color: var(--text-secondary); }
+.tech-proj-repo { color: var(--accent); font-weight: 600; text-decoration: none; min-width: 0; }
+.tech-proj-repo:hover { text-decoration: underline; }
 .tech-proj-badge {
   font-size: 11px; font-weight: 500; color: var(--warning);
   border: 1px solid var(--warning); border-radius: 10px; padding: 1px 8px;
   flex-shrink: 0;
 }
-.tech-proj-desc {
-  margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.7;
+/* GitHub 式描边小按钮组：Star 计数 + 访问仓库 */
+.tech-proj-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.tech-proj-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 6px;
+  font-size: 12px; font-weight: 500; line-height: 1.4;
+  color: var(--text); background: var(--bg-subtle);
+  border: 1px solid var(--border); text-decoration: none;
+  transition: background .15s, border-color .15s, color .15s;
 }
-.tech-proj-meta {
-  display: flex; flex-wrap: wrap; gap: 14px;
-  font-size: 13px; color: var(--text-secondary);
+.tech-proj-btn:hover { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+.tech-proj-btn-icon { display: inline-block; vertical-align: middle; }
+.tech-proj-btn--gh { color: #fff; background: var(--accent); border-color: var(--accent); }
+.tech-proj-btn--gh:hover { color: #fff; filter: brightness(1.1); background: var(--accent); }
+
+/* 项目信息行：简介 + topics + 语言（单栏，标题行下方紧凑排版） */
+.tech-proj-info {
+  margin-bottom: 16px; padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
-.tech-proj-meta-item { display: inline-flex; align-items: center; gap: 4px; }
-.tech-proj-langs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tech-proj-about-desc {
+  margin: 0 0 10px; font-size: 14px;
+  color: var(--text-secondary); line-height: 1.7;
+}
+/* Topics：GitHub 蓝色圆角标签（原灰底描边改为 accent-weak） */
 .tech-proj-topics { display: flex; flex-wrap: wrap; gap: 6px; }
 .tech-proj-topic {
-  padding: 2px 10px; border-radius: 10px;
-  background: var(--bg-subtle); border: 1px solid var(--border);
-  font-size: 12px; color: var(--text-secondary);
+  padding: 3px 12px; border-radius: 12px;
+  background: var(--accent-weak);
+  font-size: 12px; font-weight: 500; color: var(--accent);
 }
-/* 访问 GitHub 主按钮：tech-btn 基类 + 实底强调 */
-.tech-proj-gh { flex-shrink: 0; background: #24292f; border-color: #24292f; color: #fff; transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
-.tech-proj-gh:hover { background: #32383f; border-color: #32383f; color: #fff; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(36, 41, 47, .28); }
-.tech-proj-gh:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(36, 41, 47, .22); }
+.tech-proj-langs { display: flex; flex-wrap: wrap; gap: 8px; }
+.tech-proj-topics + .tech-proj-langs { margin-top: 10px; }
+.tech-proj-info .tech-proj-langs:first-child { margin-top: 0; }
 
-/* 项目文档（README）区 */
+/* 项目文档（README）区：全宽单栏卡片 */
 .tech-proj-readme {
   padding: 24px; min-width: 0;
   border: 1px solid var(--border); border-radius: 10px;
@@ -1152,15 +1175,12 @@ html { touch-action: manipulation; }
   display: inline-flex; align-items: center; gap: 8px;
   margin: 0; font-size: 18px; font-weight: 600;
 }
-.tech-proj-readme-tools { display: inline-flex; align-items: center; gap: 12px; }
 .tech-proj-readme-age { font-size: 12px; color: var(--text-secondary); }
-.tech-proj-feedback { font-size: 13px; font-weight: 500; color: var(--text-secondary); background: var(--bg-surface, rgba(0,0,0,.03)); border: 1px solid var(--border); border-radius: 8px; padding: 5px 14px; cursor: pointer; transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease; display: inline-flex; align-items: center; gap: 5px; }
-.tech-proj-feedback:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft, rgba(0,0,0,.05)); transform: translateY(-1px); }
+.tech-proj-feedback { font-size: 13px; font-weight: 500; color: var(--text-secondary); background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 5px 14px; cursor: pointer; transition: color .18s ease, border-color .18s ease, transform .18s ease; display: inline-flex; align-items: center; gap: 5px; }
+.tech-proj-feedback:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-1px); }
 .tech-proj-feedback:active { transform: translateY(0); }
 .tech-proj-feedback:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tech-proj-feedback-icon { display: inline-block; vertical-align: middle; }
-.tech-proj-refresh { height: 32px; padding: 0 12px; font-size: 13px; }
-.tech-proj-refresh:disabled { opacity: .55; cursor: default; }
 .tech-proj-readme-body { min-width: 0; }
 .tech-proj-readme-empty {
   padding: 48px 0; text-align: center;
@@ -1182,12 +1202,10 @@ html { touch-action: manipulation; }
 .markdown-body .code-wrap .code-copy:hover { color: var(--accent); border-color: var(--accent); }
 @media (hover: none) { .markdown-body .code-wrap .code-copy { opacity: 1; } }
 
-/* 详情页移动端：卡片纵向排布、GitHub 按钮整行 */
+/* 详情页移动端：信息行与 README 卡片间距收紧 */
 @media (max-width: 720px) {
-  .tech-proj-hero { flex-direction: column; gap: 16px; padding: 20px; }
-  .tech-proj-gh { align-self: stretch; justify-content: center; }
   .tech-proj-readme { padding: 20px; }
-  .tech-proj-name { font-size: 24px; }
+  .tech-proj-crumb { font-size: 18px; }
 }
 
 /* ── 友链页 ── */
@@ -1269,6 +1287,7 @@ html { touch-action: manipulation; }
   .tech-main { padding: 24px 0 48px; }
   .tech-main:has(.tech-page-head--center) { padding-top: 0; }
   .tech-main:has(.tech-about-hero) { padding-top: 24px; }
+  .tech-main:has(.tech-proj) { padding-top: 16px; }
   /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（scrolled 压缩态同样覆盖） */
   .tech-top, .tech-top.scrolled { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .tech-post-title-lg { font-size: 24px; }

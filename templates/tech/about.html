@@ -17,7 +17,8 @@
         <div class="tech-avatar-placeholder">{{ (author[0] | upper) if author else '?' }}</div>
         {% endif %}
     </div>
-    <h1 class="tech-page-title">{{ author or '关于我' }}</h1>
+    <!-- p 而非 h1：页面唯一 h1 保留给上方页头「关于我」，作者名是展示性大字而非大纲标题（消除 IDE 重复 h1 告警，类名保留视觉不变） -->
+    <p class="tech-page-title">{{ author or '关于我' }}</p>
     {% if author_bio %}
     <p class="tech-about-bio">{{ author_bio | replace('\n', '<br>') | safe }}</p>
     {% endif %}

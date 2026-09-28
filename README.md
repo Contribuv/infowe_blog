@@ -7,7 +7,7 @@
 - 文章发布（Markdown）、分类、标签、精选、阅读时长
 - 前台：首页、文章详情、分类/标签筛选、搜索、分页、关于页、时间线
 - 后台：文章管理、设置、友情链接、项目（GitHub）管理、评论管理
-- 评论系统（可开关）
+- 评论系统（可开关），IP 归属地由内置 ip2region 离线库解析（无外部请求）
 - 友情链接申请与审核
 - GitHub 项目页抓取与展示
 - 登录防爆破（基于 IP 的失败计数 + 验证码）
@@ -26,6 +26,7 @@ blog/
 ├── data/                   # 数据库与数据（blog.db、posts.json）
 ├── posts/                  # Markdown 文章源文件
 ├── static/                 # 静态资源（CSS / JS / 图片）
+├── vendor/ip2region/       # IP 归属地离线库（xdb v4/v6 + 纯 Python 绑定，Apache-2.0）
 └── templates/              # Jinja2 模板（default 为内置默认主题，新主题放独立子目录）
 ```
 
@@ -123,8 +124,21 @@ sudo systemctl restart blog
 - `data/` 目录需存在，`sqlite3.connect` 不会自动创建父目录。
 - 若 `data/posts.json` 存在且数据库为空，首次启动会自动迁移其中的文章。
 - 评论、上传等文件保存在根目录 `uploads/` 下。
+- `vendor/ip2region/` 随项目分发（约 48MB），**不可遗漏**：缺失时评论归属地静默不展示，不影响其他功能。若上传体积受限，可单独上传 `ip2region_v4.xdb` / `ip2region_v6.xdb` 补齐。
 
 ## 版本更新日志
+
+### v1.3.61
+
+- **修复评论 IP 归属地城市显示错误**：原实现调用 3 个免费在线接口（ip.useragentinfo.com / api.vore.top / ip-api.com），数据不准且受网络波动影响。实测 `220.192.40.209`（重庆电信）被标为「北京市 西城区」、`14.117.243.23`（江门电信）被标为「广东 广州」。改为内置 [ip2region](https://github.com/lionsoul2014/ip2region) 离线库（Apache-2.0），约 0.1ms/次，零网络请求、零新增 pip 依赖
+- 历史评论已用离线库重查回填，5 条修正：4 条「北京 西城区」→「重庆」，1 条「广东 广州」→「广东 江门」
+- 归属地展示统一去行政区划后缀（重庆市→重庆、四川省→四川、广西壮族自治区→广西）；回环 / 私网 / 链路本地 / 畸形 IP 及 `::ffff:a.b.c.d` 形式统一归一处理，查不到则不展示
+- 项目详情页改为 GitHub 仓库页式头部（owner / repo 面包屑 + 操作按钮组），README 内 `details` 折叠块补样式
+- `pyrightconfig.json` 补 `extraPaths`，消除 vendor 内联绑定的导入误报；`.vscode/settings.json` 关闭模板内联样式误报
+- `app.py` VERSION 同步至 **1.3.61**
+
+<details>
+<summary>历史版本日志（v1.3.60 及更早）</summary>
 
 ### v1.3.60
 
@@ -704,3 +718,5 @@ sudo systemctl restart blog
 - 后台仪表盘「友情链接」统计修正：仅计入已通过审核（`approved`）的链接，排除已拒绝/待审核项
 - 后台侧边栏底部新增版本号显示（`infowe Blog v1.0.1`），并链接至开源仓库（新窗口打开）
 - GitHub 同步支持 Token 认证 + certifi SSL 校验 + 精确错误提示
+
+</details>

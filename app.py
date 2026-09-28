@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.60'
+VERSION = '1.3.61'
 
 import os
 import re
@@ -26,6 +26,7 @@ import socket
 import base64
 import hmac
 import struct
+import sys
 import uuid
 import threading
 import concurrent.futures
@@ -69,7 +70,7 @@ except Exception as _heif_err:
 import werkzeug.security as ws
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask import Flask, render_template, abort, request, redirect, url_for, session, flash, jsonify, send_from_directory, send_file, make_response, g, has_request_context
+from flask import Flask, render_template, abort, request, redirect, url_for, session, flash, jsonify, send_from_directory, send_file, make_response, g, has_request_context, has_app_context
 from jinja2 import FileSystemLoader
 
 
@@ -313,7 +314,7 @@ PAGE_SIZE = 20  # 每页文章数
 
 # ─────────────── 数据库初始化 ───────────────
 
-def get_db():
+def _new_db_conn():
     conn = sqlite3.connect(DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     # 不再在此处逐连接执行 PRAGMA journal_mode=WAL：该 PRAGMA 要拿数据库锁，
@@ -327,25 +328,35 @@ def get_db():
     return conn
 
 
-def _request_db():
-    """请求上下文内复用同一连接（g 缓存，teardown 统一关闭）：
-    把每请求多次开 SQLite 连接压成 1 次，减少连接开销与锁争用。
-    非请求上下文（模块导入期 load_settings、守护线程等）退回独立连接。"""
-    if has_request_context():
-        db = getattr(g, '_request_db', None)
-        if db is None:
-            db = get_db()
-            g._request_db = db
-        return db
-    return get_db()
+def _conn_alive(conn):
+    try:
+        conn.execute('SELECT 1')
+        return True
+    except sqlite3.ProgrammingError:
+        return False
+    except Exception:
+        return True
 
+def get_db():
+    if has_app_context():
+        conn = g.get('_db_conn')
+        if conn is None or not _conn_alive(conn):
+            conn = _new_db_conn()
+            g._db_conn = conn
+        return conn
+    return _new_db_conn()
 
 @app.teardown_appcontext
-def _close_request_db(exc=None):
-    """请求结束统一关闭 g 缓存的连接，避免连接泄漏。"""
-    db = g.pop('_request_db', None)
+def _close_db(exc):
+    db = g.pop('_db_conn', None)
     if db is not None:
-        db.close()
+        try:
+            db.close()
+        except Exception:
+            pass
+
+def _request_db():
+    return get_db()
 
 
 def hash_password(password):
@@ -1678,9 +1689,19 @@ def _client_ip():
     return request.remote_addr or 'unknown'
 
 
-# ── 评论显示 IP 归属地（省份）──
-_IP_LOC_CACHE = {}
-_IP_LOC_CACHE_MAX = 2000  # 缓存上限：超过后淘汰最早条目，防长期运行内存无限增长
+# ── 评论显示 IP 归属地：ip2region 离线库（vendor/ip2region/*.xdb，Apache-2.0）──
+# 纯本地 xdb 查询（约 0.1ms/次），不依赖任何在线 API；查不到返回 ''（前台不展示）。
+sys.path.insert(0, os.path.join(BASE_DIR, 'vendor'))
+try:
+    import ip2region.util as _i2r_util
+    import ip2region.searcher as _i2r_searcher
+    _HAS_IP2REGION = True
+except Exception as _i2r_err:
+    _HAS_IP2REGION = False
+    print(f'[ip2region] 离线库加载失败：{_i2r_err}')
+
+_IPDB = {}        # 4/6 -> xdb 查询器（惰性创建，vector 索引模式常驻 512KiB）
+_IPDB_LOCK = threading.Lock()  # 查询器非线程安全（共享文件句柄），串行化查询
 
 
 def _fmt_loc(loc):
@@ -1693,53 +1714,41 @@ def _fmt_loc(loc):
 
 
 def _ip_location(ip):
-    """在线查 IP 归属地并缓存；查不到返回 ''（前台不展示，不打扰）。"""
-    if not ip or ip == 'unknown':
+    """查 IP 归属地（离线库）；回环/私网/畸形 IP 或库缺失返回 ''。"""
+    if not _HAS_IP2REGION:
         return ''
-    # 回环/私网 IP 不查询归属地（避免无效请求）
+    s = str(ip or '').strip().strip('[]').split('%')[0]
     try:
-        _ip_obj = ipaddress.ip_address(ip)
-        if _ip_obj.is_loopback or _ip_obj.is_private or _ip_obj.is_link_local:
-            return ''
+        obj = ipaddress.ip_address(s)
+        if obj.is_loopback or obj.is_private or obj.is_link_local:
+            return ''  # 回环/私网无归属地
+        if isinstance(obj, ipaddress.IPv6Address) and obj.ipv4_mapped:
+            obj = obj.ipv4_mapped  # ::ffff:a.b.c.d 归一到 v4 库查询
     except ValueError:
-        pass
-    if ip in _IP_LOC_CACHE:
-        return _IP_LOC_CACHE[ip]
-    loc = ''
-    prov = city = ''
-    for url in ('https://ip.useragentinfo.com/json?ip=%s' % ip,
-                'https://api.vore.top/api/IPdata?ip=%s' % ip,
-                'http://ip-api.com/json/%s?lang=zh-CN&fields=status,regionName,city' % ip):
-        try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0',
-                                                       'Referer': 'https://ip.useragentinfo.com/'})
-            with urllib.request.urlopen(req, timeout=8) as r:
-                data = json.loads(r.read().decode('utf-8'))
-            if 'province' in data:  # ip.useragentinfo.com
-                prov = (data.get('province') or '').strip()
-                city = (data.get('city') or '').strip()
-            elif (data.get('data') or {}).get('province') is not None:  # api.vore.top
-                d = data.get('data') or {}
-                prov = (d.get('province') or '').strip()
-                city = (d.get('city') or '').strip()
-            elif data.get('status') == 'success':  # ip-api.com（备用，仅 IPv4）
-                prov = (data.get('regionName') or '').strip()
-                city = (data.get('city') or '').strip()
-            prov = _fmt_loc(prov)
-            city = _fmt_loc(city)
-            if prov:
-                loc = prov if (prov == city or not city) else ('%s %s' % (prov, city))
-                break
-        except Exception:
-            continue
-    # 容量上限控制：dict 保持插入序，超限时淘汰最早一条（dict.popitem(last=False)）
-    if len(_IP_LOC_CACHE) >= _IP_LOC_CACHE_MAX:
-        try:
-            _IP_LOC_CACHE.popitem(last=False)
-        except (KeyError, StopIteration):
-            pass
-    _IP_LOC_CACHE[ip] = loc
-    return loc
+        return ''  # 畸形/伪造 IP 不查询
+    ver = 6 if obj.version == 6 else 4
+    s = str(obj)
+    try:
+        with _IPDB_LOCK:
+            if ver not in _IPDB:
+                path = os.path.join(BASE_DIR, 'vendor', 'ip2region', 'ip2region_v%d.xdb' % ver)
+                _i2r_util.verify_from_file(path)
+                _IPDB[ver] = _i2r_searcher.new_with_vector_index(
+                    _i2r_util.version_from_header(_i2r_util.load_header_from_file(path)),
+                    path, _i2r_util.load_vector_index_from_file(path))
+            region = _IPDB[ver].search(s)
+    except Exception:
+        return ''  # 库文件缺失/损坏：静默不展示归属地
+    # region 格式：国家|省份|城市|ISP|国家代码（缺省字段为 '0'）
+    f = (region or '').split('|')
+    country = f[0] if f else ''
+    if country != '中国':
+        return country  # 国外只显示国家名
+    prov = _fmt_loc(f[1] if len(f) > 1 else '')
+    city = _fmt_loc(f[2] if len(f) > 2 and f[2] != '0' else '')
+    if not prov or prov == '0':
+        return ''
+    return prov if (prov == city or not city) else ('%s %s' % (prov, city))
 
 
 def _fill_ip_location(cid, ip):
@@ -2687,13 +2696,24 @@ def _absolutize_readme_urls(html, slug, branch):
     return re.sub(r'\b(src|href)="([^"]*)"', _fix, html)
 
 
+# 裸 <details> 检测：不含 markdown="1" 声明的折叠块（GitHub 风格 README 常见写法）
+_BARE_DETAILS_RE = re.compile(r'<details(?![^>]*\bmarkdown\s*=)([^>]*)>', re.IGNORECASE)
+
 def render_readme_html(md, slug, branch):
-    """README Markdown → 消毒后的 HTML（含相对链接修正）。转换异常时返回 None。"""
+    """README Markdown → 消毒后的 HTML（含相对链接修正）。转换异常时返回 None。
+
+    details 折叠块修复：GitHub 风格 README 常在 <details> 内写 markdown（靠空行分块，
+    GitHub 的 CommonMark 渲染器会正常解析块内 ##/bold/列表）；而 Python-Markdown
+    默认把块级 HTML 整体透传、块内 markdown 一律不转换——导致前台展开折叠块时
+    全是裸源码（## v2.3.46、- **修复**：… 原样输出）。
+    处理：给裸 <details> 注入 markdown="1" 并启用 md_in_html 扩展，块内 markdown
+    正常渲染；该属性在转换时被扩展消费，最终 HTML 无残留。"""
     if not md:
         return None
     try:
         html = markdown.markdown(
-            md, extensions=['fenced_code', 'tables', 'nl2br', 'sane_lists'])
+            _BARE_DETAILS_RE.sub(r'<details\1 markdown="1">', md),
+            extensions=['fenced_code', 'tables', 'nl2br', 'sane_lists', 'md_in_html'])
     except Exception:
         return None
     html = _absolutize_readme_urls(html, slug, branch or 'main')
