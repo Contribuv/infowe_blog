@@ -45,7 +45,7 @@
         <div class="tech-proj-langs">
             {% for l in project.lang_list %}
             <span class="tech-project-lang">
-                <span class="tech-lang-dot" style="background: {{ l[2] }};"></span>
+                <span class="tech-lang-dot" style="--lang-color: {{ l[2] }};"></span>
                 {{ l[0] }}<span class="tech-project-lang-pct"> {{ l[1] }}%</span>
             </span>
             {% endfor %}

@@ -978,7 +978,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-skill-level { font-size: 12px; color: var(--text-secondary); flex-shrink: 0; }
 .tech-skill-bar { height: 6px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden; }
 .tech-skill-fill {
-  height: 100%; border-radius: 3px; width: 0;
+  height: 100%; border-radius: 3px; width: var(--sl, 0);
   background: linear-gradient(90deg, var(--accent), var(--hl-title));
   transition: width .9s cubic-bezier(.22, .61, .36, 1);
 }
@@ -1095,7 +1095,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   .tech-project-lang-more:focus .tech-tip { display: block; }
 }
 .tech-project-lang-more.is-open .tech-tip { display: block; }
-.tech-lang-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.tech-lang-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--lang-color, #8b949e); }
 
 /* ── 项目详情页（从列表卡片点击进入） ── */
 /* 禁用双击缩放 / 捏合缩放的 CSS 兜底（disable-zoom.js 为 iOS 主力拦截） */

@@ -60,7 +60,7 @@
                 <span class="tech-skill-level">{{ skill.level }}%</span>
             </div>
             <div class="tech-skill-bar">
-                <div class="tech-skill-fill" data-level="{{ skill.level }}" style="width: {{ skill.level }}%;"></div>
+                <div class="tech-skill-fill" data-level="{{ skill.level }}" style="--sl: {{ skill.level }}%;"></div>
             </div>
         </div>
         {% endfor %}
