@@ -243,17 +243,39 @@
         return Object.keys(count).filter(function (t) { return count[t] >= 2; })
             .sort(function (a, b) { return count[b] - count[a]; });
     }
-    // 自动添加开关：仅在标签框为空且尚未自动添加过时执行一次，避免用户手动编辑后被覆盖
-    var autoAdded = false;
-    // 自动将匹配正文的已有标签填入输入框（仅限词典可靠项，数量随机取 5-7）；返回是否执行了自动添加
+    // 自动填入状态：
+    // autoLocked=true 表示用户已手动接管（打开时标签框已有内容，或手动增删过标签），此后永不自动填入；
+    // autoFilled 记录已由本机制填入的标签（原始大小写），用于判断输入框是否仍与自动结果完全一致。
+    var autoLocked = false;
+    var autoFilled = [];
+    var AUTO_FILL_MAX = 8;   // 自动填入标签总数上限（避免一次塞满输入框）
+    // 将匹配正文的已有标签「渐进式」补入输入框：用户手动干预前，每输入新内容都会继续补齐新匹配项；
+    // 一旦检测到手动增删（输入框内容与自动结果不一致）立即锁定，绝不覆盖用户编辑。返回是否执行了补入
     function autoAddTags(autoList) {
-        if (autoAdded || !tagsInput) return false;
-        if (tagsInput.value.trim()) { autoAdded = true; return false; }
-        if (!autoList || !autoList.length) return false;
-        var n = Math.min(5 + Math.floor(Math.random() * 3), autoList.length);
-        tagsInput.value = autoList.slice(0, n).join(', ');
-        autoAdded = true;
-        renderChips();  // 刷新建议区，已自动添加的标签不再显示
+        if (autoLocked || !tagsInput) return false;
+        var cur = currentTagNames();
+        var curLower = cur.map(function (s) { return s.toLowerCase(); });
+        var autoLower = autoFilled.map(function (s) { return s.toLowerCase(); });
+        // 输入框内容与自动结果完全一致（含两者皆空）才视为「用户尚未干预」
+        var untouched = curLower.length === autoLower.length &&
+            curLower.every(function (t) { return autoLower.indexOf(t) !== -1; });
+        if (!untouched) {
+            autoLocked = true;  // 用户手动增删 → 永久接管
+            return false;
+        }
+        var room = AUTO_FILL_MAX - autoFilled.length;
+        if (room <= 0 || !autoList) return false;
+        // 仅追加新匹配、尚未填入过的标签（autoList 已按频率排序）
+        var fresh = autoList.filter(function (t) {
+            return autoLower.indexOf(t.toLowerCase()) === -1;
+        }).slice(0, room);
+        if (!fresh.length) return false;
+        fresh.forEach(function (t) {
+            if (!hasTag(t)) cur.push(t);
+        });
+        tagsInput.value = cur.join(', ');
+        autoFilled = currentTagNames();  // 以规范化后的实际值为准
+        renderChips();  // 递归刷新建议区（递归时已无 fresh 标签，转而去绘制 chips）
         return true;
     }
     // 自动识别区：纯基于本文（标题+正文）的高频术语 → 推荐新词，不混入历史标签

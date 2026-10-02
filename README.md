@@ -128,13 +128,19 @@ sudo systemctl restart blog
 
 ## 版本更新日志
 
+### v1.3.63
+
+- **修复后台「安全验证」OTP 无法关闭**：开关字符串 `'0'` 被 `not` 判断为真，关闭分支永不执行；改为布尔值，取消勾选即清空密钥与恢复码
+- **修复文章标签自动填入只填一部分**：原一次性锁定只填最先匹配的标签；改为渐进式补全，持续追加新匹配标签，手动增删后立即锁定、绝不覆盖
+- `app.py` VERSION 同步至 **1.3.63**
+
+<details>
+<summary>历史版本日志（v1.3.62 及更早）</summary>
+
 ### v1.3.62
 
 - **消除 `tech/` 模板 CSS lint 警告**：模板内联样式 `style="background: {{ l[2] }};"` 与 `style="width: {{ skill.level }}%;"` 中的 Jinja 占位符被 Trae / VS Code CSS 校验器误判为非法 CSS。改为 CSS 自定义属性 `--lang-color` / `--sl`（值允许任意 token 序列），CSS 通过 `var()` 读取，与 `default` / `admin` 主题既有写法一致。视觉行为完全不变
 - `app.py` VERSION 同步至 **1.3.62**
-
-<details>
-<summary>历史版本日志（v1.3.61 及更早）</summary>
 
 ### v1.3.61
 

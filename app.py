@@ -5,7 +5,7 @@ SQLite 数据库驱动，完整前台 + 后台管理
 """
 
 # 应用版本号（后台显示用，修改请同步更新此处）
-VERSION = '1.3.62'
+VERSION = '1.3.63'
 
 import os
 import re
@@ -6199,7 +6199,9 @@ def admin_settings():
                 app.config['avatar'] = avatar_url
                 flash('头像已更新', 'success')
         # ── OTP 双重验证：开关 / 绑定 / 重绑 / 关闭（开关即绑定）──
-        want_otp = '1' if request.form.get('otp_enabled') else '0'
+        # 注意：必须用布尔值，不可写成 '1'/'0' 字符串——
+        # 非空字符串 '0' 为 truthy，下方 `not want_otp` 会永远为 False，导致无法关闭
+        want_otp = bool(request.form.get('otp_enabled'))
         cur_otp = _otp_enabled()
         new_secret = (request.form.get('otp_secret') or '').strip().upper()
         confirm_code = (request.form.get('otp_confirm_code') or '').strip()

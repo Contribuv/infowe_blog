@@ -2,15 +2,23 @@
 
 本项目所有重要变更都记录在此文件，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [v1.3.63] - 2026-10-02
+
+### 修复
+- **后台「安全验证」OTP 双重验证无法关闭**：保存设置时开关被赋为字符串 `'0'`/`'1'`，关闭分支用 `not want_otp` 判断；非空字符串 `'0'` 在 Python 中为真，`not '0'` 恒为 False，导致关闭分支永不执行、取消勾选无效。改为布尔值 `want_otp = bool(request.form.get('otp_enabled'))`，取消后密钥与恢复码正确清空
+- **新建/编辑文章时标签自动填入只填一部分**：原机制在正文首次匹配到任意标签后即「一次性锁定」，逐字输入时往往只填入最先出现的标签（如 Python），后文才出现的匹配标签（生活、记录）无法继续填入。改为渐进式补全：用户手动干预前持续追加新匹配标签；一旦检测到手动增删立即锁定，绝不覆盖用户编辑（浏览器真实键盘实测：自动补全「生活, 记录, Python」；手动删除后不会被填回）
+
+---
+
+<details>
+<summary>历史版本日志（v1.3.62 及更早）</summary>
+
 ## [v1.3.62] - 2026-09-28
 
 ### 修复
 - **消除 `tech/` 模板 CSS lint 警告**：模板内联样式 `style="background: {{ l[2] }};"` 与 `style="width: {{ skill.level }}%;"` 中的 Jinja 占位符被 Trae / VS Code CSS 校验器误判为非法 CSS（`css-propertyvalueexpected` / `css-ruleorselectorexpected`）。改为 CSS 自定义属性 `--lang-color` / `--sl`（其值允许任意 token 序列），CSS 通过 `var()` 读取，与 `default` / `admin` 主题既有写法一致。视觉行为完全不变
 
 ---
-
-<details>
-<summary>历史版本日志（v1.3.61 及更早）</summary>
 
 ## [v1.3.61] - 2026-09-28
 
