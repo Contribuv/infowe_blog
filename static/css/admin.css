@@ -138,7 +138,11 @@ svg { vertical-align: -3px; flex: none; }
   height: 100%; min-height: 0;
   padding: var(--sp-4) var(--sp-3);
   overflow-y: auto; overscroll-behavior: contain;
-  scrollbar-width: thin;
+  scrollbar-width: none;          /* Firefox：隐藏滚动条，保留滚动 */
+  -ms-overflow-style: none;       /* IE/Edge */
+}
+.admin-sidebar-inner::-webkit-scrollbar {
+  width: 0; height: 0; display: none;  /* Chromium/Safari */
 }
 
 /* 侧栏头部：logo + 移动端关闭按钮 */
@@ -236,6 +240,13 @@ svg { vertical-align: -3px; flex: none; }
   width: 38px; height: 38px;
   background: none; border: none; border-radius: var(--r);
   color: var(--text-secondary);
+  flex: none;
+}
+.admin-burger svg {
+  display: block;
+  width: 22px; height: 22px;
+  stroke: currentColor;
+  flex: none;
 }
 @media (hover: hover) and (pointer: fine) { .admin-burger:hover { background: var(--bg-hover); color: var(--text); } }
 .admin-topbar .navbar-brand { font-size: var(--fz-lg); }
