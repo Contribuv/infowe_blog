@@ -44,8 +44,7 @@ python_blog/
 ├── uploads/               # 上传文件
 ├── backups/               # 数据库备份
 ├── storage/cache/         # 头像/分享图/README 图缓存
-├── data/                  # 同步状态、导入临时文件
-└── instance/blog.db       # SQLite 数据库（首次启动生成）
+└── data/                  # SQLite 数据库（blog.db）、密钥、同步状态
 ```
 
 ## 快速开始
@@ -69,7 +68,7 @@ python -m venv .venv
 
 | 项目 | 内容 |
 | --- | --- |
-| 数据库 | `instance/blog.db`（SQLite，自动建表） |
+| 数据库 | `data/blog.db`（SQLite，自动建表） |
 | 管理员 | `admin` / `admin123` |
 | 示例文章 | 《致使用者的一封信》 |
 | 默认分类 | 随笔 |
@@ -138,7 +137,7 @@ python3 -m venv .venv
 .venv/bin/python -m flask --app app create-admin --username admin
 ```
 
-若已上传本地 `instance/blog.db`，会直接使用其中的数据与管理员。
+若已上传本地 `data/blog.db`，会直接使用其中的数据与管理员。
 
 4. 宝塔「Python 项目管理器 → 添加项目」：
 
@@ -162,7 +161,7 @@ gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
 6. 目录权限（SQLite、上传、备份都要可写）：
 
 ```bash
-chown -R www:www instance uploads backups data storage
+chown -R www:www uploads backups data storage
 ```
 
 7. 后台「博客设置」填写 `site_url`，开启 HTTPS，再申请 SSL。
@@ -222,7 +221,7 @@ systemctl restart python-blog   # 或宝塔面板重启项目
 
 ### 升级与数据库结构
 
-升级**不会覆盖** `instance/blog.db`。每次启动都会以 `schema.sql` 为基准自动同步表结构：
+升级**不会覆盖** `data/blog.db`。每次启动都会以 `schema.sql` 为基准自动同步表结构：
 
 - 新增字段：自动 `ALTER TABLE ADD COLUMN`
 - 删除字段：SQLite 3.35+ 自动 `DROP COLUMN`；低版本会跳过并在日志中提示
@@ -338,7 +337,7 @@ curl http://127.0.0.1:5000/feed.xml
 
 - 生产环境务必修改初始密码，建议开启 OTP；
 - 使用 HTTPS，并在后台设置 `site_url`；
-- `instance/`、`uploads/`、`backups/`、`data/` 不要暴露为静态目录（本项目的 Flask 路由已做限制）；
+- `data/`、`uploads/`、`backups/` 不要暴露为静态目录（本项目的 Flask 路由已做限制）；
 - 上传目录禁止脚本扩展名（`.php/.html/.svg` 等已在白名单与黑名单双重拦截）。
 
 ## 常见问题
@@ -353,18 +352,18 @@ curl http://127.0.0.1:5000/feed.xml
 
 ### 数据库在哪里
 
-主库：`instance/blog.db`；备份：`backups/`。可直接复制 `blog.db` 迁移。
+主库：`data/blog.db`；备份：`backups/`。可直接复制 `blog.db` 迁移。
 
 ### 首次启动没有文章
 
-空库会自动写入《致使用者的一封信》。如果使用了自己的数据库，以数据库内容为准；检查 `instance/blog.db` 是否存在、目录是否可写。
+空库会自动写入《致使用者的一封信》。如果使用了自己的数据库，以数据库内容为准；检查 `data/blog.db` 是否存在、目录是否可写。
 
 ### 上传 / 备份失败
 
 确保这些目录对运行用户可写：
 
 ```bash
-chown -R www:www instance uploads backups data storage
+chown -R www:www uploads backups data storage
 ```
 
 ### 后台 403 / 502

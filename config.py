@@ -5,7 +5,7 @@
 - templates/  存放前台主题、后台与共享模板；
 - themes/     存放主题静态资源（theme.css / theme.js）；
 - static/     全站静态资源；
-- instance/   SQLite 数据库与密钥；
+- data/       SQLite 数据库、密钥与运行期状态；
 - uploads/    用户上传；
 - backups/    备份与导出。
 """
@@ -27,10 +27,12 @@ STORAGE_DIR = BASE_DIR / "storage"
 CACHE_DIR = STORAGE_DIR / "cache"
 DATA_DIR = BASE_DIR / "data"
 FONTS_DIR = BASE_DIR / "fonts"
-INSTANCE_DIR = BASE_DIR / "instance"
 
-DATABASE = INSTANCE_DIR / "blog.db"
-SECRET_KEY_FILE = INSTANCE_DIR / ".secret_key"
+# 旧版本目录，仅用于启动时自动迁移，不再使用
+LEGACY_INSTANCE_DIR = BASE_DIR / "instance"
+
+DATABASE = DATA_DIR / "blog.db"
+SECRET_KEY_FILE = DATA_DIR / ".secret_key"
 
 # 版本线：Python 重构版独立版本号
 VERSION = "3.0.1"

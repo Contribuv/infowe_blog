@@ -9,8 +9,6 @@ from typing import Any, Iterable, Sequence
 
 from flask import current_app, g
 
-from config import DATABASE
-
 # 旧库升级：以 schema.sql 为唯一基准，自动补列 / 删列（删除前自动备份）。
 COLUMN_MIGRATIONS: list[tuple[str, str, str]] = []
 

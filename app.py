@@ -21,11 +21,41 @@ from services.settings import get_str
 
 def _ensure_dirs() -> None:
     for path in (
-        config.INSTANCE_DIR, config.UPLOADS_DIR, config.BACKUPS_DIR,
+        config.UPLOADS_DIR, config.BACKUPS_DIR,
         config.STORAGE_DIR, config.CACHE_DIR, config.DATA_DIR,
         config.THEMES_DIR, config.STATIC_DIR,
     ):
         Path(path).mkdir(parents=True, exist_ok=True)
+
+
+def _migrate_legacy_instance() -> None:
+    """旧版本的 instance/blog.db 自动迁移到 data/blog.db（保留数据）。"""
+    import shutil
+
+    legacy_dir = Path(config.LEGACY_INSTANCE_DIR)
+    if not legacy_dir.is_dir():
+        return
+    target_db = Path(config.DATABASE)
+    legacy_db = legacy_dir / "blog.db"
+    if not target_db.exists() and legacy_db.is_file():
+        for suffix in ("", "-wal", "-shm"):
+            src = Path(str(legacy_db) + suffix)
+            if src.is_file():
+                try:
+                    shutil.move(str(src), str(Path(str(target_db) + suffix)))
+                except OSError:
+                    pass
+    legacy_key = legacy_dir / ".secret_key"
+    target_key = Path(config.SECRET_KEY_FILE)
+    if not target_key.exists() and legacy_key.is_file():
+        try:
+            shutil.move(str(legacy_key), str(target_key))
+        except OSError:
+            pass
+    try:
+        legacy_dir.rmdir()
+    except OSError:
+        pass
 
 
 def _secret_key() -> str:
@@ -45,6 +75,7 @@ def _secret_key() -> str:
 
 def create_app(test_config: dict | None = None) -> Flask:
     _ensure_dirs()
+    _migrate_legacy_instance()
     app = Flask(__name__, static_folder=str(config.STATIC_DIR), static_url_path="/static")
     app.config.update(
         SECRET_KEY=_secret_key(),
