@@ -11,14 +11,15 @@
    不支持时由 base.html 的 page-enter 兜底，仅做新页淡入。 */
 @view-transition { navigation: auto; }
 ::view-transition { background: var(--bg, #ffffff); }
-::view-transition-old(root) { animation: tech-vt-out 160ms ease both; }
-::view-transition-new(root) { animation: tech-vt-in 240ms cubic-bezier(.2, .7, .3, 1) both; }
+::view-transition-group(root) { animation-duration: 140ms; }
+::view-transition-old(root) { animation: tech-vt-out 100ms ease-out both; }
+::view-transition-new(root) { animation: tech-vt-in 140ms ease-out both; }
 @keyframes tech-vt-out {
   to { opacity: 0; }
 }
 @keyframes tech-vt-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ── 设计令牌 ── */
@@ -275,7 +276,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   to { opacity: 1; }
 }
 html.page-enter .tech-main {
-  animation: tech-page-enter 240ms cubic-bezier(.2, .7, .3, 1) both;
+  animation: tech-page-enter 140ms ease-out both;
 }
 /* 居中极简 Hero 页面（首页/搜索/标签结果）：main 自身不垫顶部，留白交给 page-head 统一，保证上下对称 */
 .tech-main:has(.tech-page-head--center) { padding-top: 0; }
