@@ -3,17 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <!-- 防白屏闪烁：主题 CSS 加载前先给 html 上色，避免深色主题刷新/跳转时闪白 -->
+    <style>
+      html { background: #0d1117; color-scheme: dark; }
+      html[data-theme="light"] { background: #ffffff; color-scheme: light; }
+    </style>
     <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
       (function () {
-        try {
-          var saved = localStorage.getItem('infowe-theme');
-          var mode = 'auto';
-          if (saved === 'light' || saved === 'dark' || saved === 'auto') mode = saved;
-          document.documentElement.setAttribute('data-theme-mode', mode);
-          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          document.documentElement.setAttribute('data-theme', mode === 'auto' ? (dark ? 'dark' : 'light') : mode);
-        } catch (e) {}
+        var saved = null;
+        try { saved = localStorage.getItem('infowe-theme'); } catch (e) {}
+        var mode = 'auto';
+        if (saved === 'light' || saved === 'dark' || saved === 'auto') mode = saved;
+        document.documentElement.setAttribute('data-theme-mode', mode);
+        var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', mode === 'auto' ? (dark ? 'dark' : 'light') : mode);
       })();
     </script>
     <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>

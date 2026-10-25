@@ -1,4 +1,4 @@
-/**
+﻿/**
  * infowe Admin Panel - 交互脚本（零框架依赖）
  * 主题：三模式循环（auto 跟随系统 → light → dark），与前台共用 infowe-theme 键
  * 抽屉：<992px 侧栏 offcanvas 替代方案（.admin-sidebar.open + .drawer-overlay.show）

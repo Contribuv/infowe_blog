@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 禁用移动端网页缩放（配合 viewport user-scalable=no）。
  * iOS 10+ 起 Safari 忽略 user-scalable=no，必须再拦截 gesturestart 才能禁双指捏合。
  */

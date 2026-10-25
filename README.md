@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.1.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.2)
+[![version](https://img.shields.io/badge/version-3.1.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.3)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -364,6 +364,12 @@ location / {
 如果所有请求都 `proxy_pass`，CSS/JS/图片也会经过 Flask。把静态目录交给 Nginx：
 
 ```nginx
+# 静态资源直出也必须声明 UTF-8，否则 CSS/JS 里的中文会乱码。
+# 注意：Nginx 默认 charset_types 不包含 text/css，必须显式补上。
+# 这两行放在 server {} 内、所有 location 之前。
+charset utf-8;
+charset_types text/html text/css text/plain text/xml text/javascript application/javascript application/json application/rss+xml image/svg+xml;
+
 # 必须放在 location / 之前
 location ^~ /static/ {
     alias /www/wwwroot/infowe.site/static/;
@@ -395,6 +401,15 @@ gzip_types text/plain text/css application/javascript application/json applicati
 
 > `alias` 末尾斜杠要与 `location` 一致；`/share-thumb`、`/avatar`、`/readme-img` 是动态生成，不要 alias。
 > 静态资源直出后不再经过 Flask 的白名单校验，因此必须保留 `deny` 规则，且不要放开脚本扩展名上传。
+
+> **CSS/JS 中文乱码**：如果静态文件由 Nginx 直出，必须确认响应头带 `charset=utf-8`：
+> ```bash
+> curl -I https://www.infowe.site/static/css/admin.css
+> curl -I https://www.infowe.site/static/js/admin.js
+> ```
+> 期望分别是 `text/css; charset=utf-8` 和 `application/javascript; charset=utf-8`（部分 Nginx 返回 `text/javascript; charset=utf-8`，也正常）。
+> 只返回 `text/css` 说明 `charset_types` 少了 `text/css`，即使已经写了 `charset utf-8;` 也不会生效。
+> 项目内 CSS 首行已内置 `@charset "UTF-8";`，自有 JS 已带 UTF-8 BOM；但 Nginx 仍建议按上面的配置声明，避免其他静态资源出现同类问题。
 
 > **伪静态**：宝塔 Python 项目会自动生成 `rewrite/python_xxx.conf`。
 > 如果该文件里有 `location /` 或 `proxy_pass`，请清空或删除这行 include，避免与站点里的反代重复。
@@ -455,6 +470,9 @@ git pull
 ```
 
 然后在宝塔 Python 项目管理器中点「重启」。
+
+> 升级包含模板/CSS/JS 变更时，重启后建议到后台「数据管理 → 清除页面缓存」。
+> 旧页面缓存默认还会保留 5～30 分钟，清除后新模板（例如防白屏内联样式）立即生效。
 
 ### 宝塔常见错误
 
@@ -615,7 +633,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.1.2**
+- 版本：**v3.1.3**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 
