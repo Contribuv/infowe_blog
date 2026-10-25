@@ -129,7 +129,11 @@ def parse_date(raw: str) -> date | None:
 def expiry_info() -> dict:
     today = date.today()
     result: dict[str, dict] = {}
-    for key, label in (("aliyun", "阿里云"), ("tencent", "腾讯云")):
+    aliyun_type = settings.get_str("aliyun_server_type", "").strip()
+    aliyun_label = f"阿里云 {aliyun_type}" if aliyun_type and not aliyun_type.startswith("阿里云") else (aliyun_type or "阿里云")
+    tencent_domain = settings.get_str("tencent_domain", "").strip()
+    tencent_label = "腾讯云域名" if tencent_domain else "腾讯云"
+    for key, label in (("aliyun", aliyun_label), ("tencent", tencent_label)):
         parsed = parse_date(settings.get_str(f"expiry_{key}", ""))
         if not parsed:
             result[key] = {"label": label, "expiry": "", "status": "none", "days": None}
