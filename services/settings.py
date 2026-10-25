@@ -151,9 +151,9 @@ def json_list(key: str, default: list | None = None) -> list:
 
 
 def set_value(key: str, value: Any) -> None:
+    # INSERT OR REPLACE 兼容 SQLite 3.7+（服务器上的 Python 可能链接旧版 SQLite）
     db.execute(
-        "INSERT INTO settings (key, value) VALUES (?, ?) "
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
         (key, "" if value is None else str(value)),
     )
     if hasattr(g, "_settings"):
@@ -163,8 +163,7 @@ def set_value(key: str, value: Any) -> None:
 def set_many(values: dict[str, Any]) -> None:
     conn = db.get_db()
     conn.executemany(
-        "INSERT INTO settings (key, value) VALUES (?, ?) "
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
         [(k, "" if v is None else str(v)) for k, v in values.items()],
     )
     conn.commit()

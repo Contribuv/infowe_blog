@@ -59,9 +59,8 @@ def register_failure(ip: str) -> None:
     fails = int(data.get("fail_count") or 0) + 1
     locked_until = time.time() + LOCK_SECONDS if fails >= MAX_FAILS else 0
     db.execute(
-        "INSERT INTO login_attempts (ip, fail_count, last_at, locked_until) VALUES (?,?,?,?) "
-        "ON CONFLICT(ip) DO UPDATE SET fail_count=excluded.fail_count, last_at=excluded.last_at, "
-        "locked_until=excluded.locked_until",
+        "INSERT OR REPLACE INTO login_attempts (ip, fail_count, last_at, locked_until) "
+        "VALUES (?,?,?,?)",
         (ip, fails, time.time(), locked_until),
     )
 
