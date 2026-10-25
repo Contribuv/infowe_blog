@@ -137,7 +137,7 @@ svg { vertical-align: -3px; flex: none; }
 .admin-sidebar-inner {
   display: flex; flex-direction: column;
   height: 100%; min-height: 0;
-  padding: var(--sp-4) var(--sp-3);
+  padding: 0 var(--sp-3) var(--sp-4);
   overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: none;          /* Firefox：隐藏滚动条，保留滚动 */
   -ms-overflow-style: none;       /* IE/Edge */
@@ -146,12 +146,14 @@ svg { vertical-align: -3px; flex: none; }
   width: 0; height: 0; display: none;  /* Chromium/Safari */
 }
 
-/* 侧栏头部：logo + 移动端关闭按钮 */
+/* 侧栏头部：logo + 移动端关闭按钮；高度与顶栏一致，底线连成一条 */
 .admin-sidebar-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: var(--sp-2) var(--sp-2) var(--sp-4);
+  flex: none;
+  height: var(--topbar-h);
+  padding: 0 var(--sp-4);
+  margin: 0 calc(-1 * var(--sp-3)) var(--sp-4);
   border-bottom: 1px solid var(--border);
-  margin-bottom: var(--sp-4);
 }
 .navbar-brand {
   display: inline-flex; align-items: center; gap: 1px;
