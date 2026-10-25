@@ -1,16 +1,39 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.1.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.7)
+[![version](https://img.shields.io/badge/version-3.1.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.8)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-一个基于 **Flask + SQLite** 的多模块个人博客系统，功能对齐 Haozi Blog PHP 版。
-前台服务端渲染，后台提供完整内容管理，开箱即用；支持从 PHP/MySQL 或旧 Flask SQLite 迁移。
+这是博客系统的 Python 版：前台用 Flask 服务端渲染，后台管理文章、评论、项目和设置，数据放在 SQLite 里。部署只需要 Python 和 Nginx，不需要额外的数据库服务。
+
+如果你之前用过 PHP 版，文章、分类、标签、友链、项目这些结构基本都保留了下来；迁移工具也放在仓库里。
 
 - GitHub：<https://github.com/Contribuv/infowe_blog>
 - Gitee：<https://gitee.com/infowe/infowe_blog>
+
+---
+
+## 📚 目录
+
+- [✨ 功能特性](#功能特性)
+- [🧰 技术栈](#技术栈)
+- [✅ 环境要求](#环境要求)
+- [🚀 快速开始](#快速开始)
+- [📁 目录结构](#目录结构)
+- [🔗 URL 结构](#url-结构)
+- [🔐 后台入口](#后台入口)
+- [⚙️ 配置说明](#配置说明)
+- [🛠 宝塔面板部署](#宝塔面板部署)
+- [🧩 其他部署方式](#其他部署方式)
+- [📦 数据迁移](#数据迁移)
+- [⬆️ 升级与数据库结构](#升级与数据库结构)
+- [💾 备份与恢复](#备份与恢复)
+- [❓ 常见问题](#常见问题)
+- [🛡 安全建议](#安全建议)
+- [📝 更新日志](#更新日志)
+- [📄 License](#license)
 
 ---
 
@@ -146,7 +169,6 @@ Windows 可直接双击 `run.bat`。
 ├── backups/               # 数据库备份、JSON/Markdown 导出
 ├── storage/cache/         # 运行缓存（头像/分享图/README 图/页面缓存）
 ├── fonts/                 # 水印字体
-├── docs/                  # 功能一致性报告等文档
 ├── tools/                 # 数据迁移脚本
 ├── run.bat                # Windows 一键启动
 └── requirements.txt
@@ -164,7 +186,6 @@ Windows 可直接双击 `run.bat`。
 | `themes/` | 主题静态资源 | 不可删 |
 | `templates/` | 页面模板 | 不可删 |
 | `fonts/` | 水印字体 | 不启用水印时可删 |
-| `docs/` | 文档 | 可删 |
 | `tools/` | 迁移工具 | 可删（不再迁移时） |
 
 > `data/`、`uploads/`、`backups/`、`storage/` 不要暴露为静态目录，本项目已通过路由限制访问。
@@ -212,7 +233,9 @@ python -c "from app import app; from services import settings; c=app.app_context
 
 ---
 
-## 配置说明（后台 → 博客设置）
+## 配置说明
+
+后台「博客设置」里集中管理站点信息、导航、评论、SMTP、水印、敏感词、统计代码和上传限制。
 
 | 分组 | 内容 |
 | --- | --- |
@@ -360,7 +383,7 @@ location / {
 > 宝塔的反向代理有时只写入 80，443 仍是静态配置，会导致 **403**。
 > 遇到 403 时，检查 443 的 `server {}` 是否也有 `location /`。
 
-### 6.1 静态资源直出（强烈建议）
+### 6.1 静态资源交给 Nginx（推荐）
 
 如果所有请求都 `proxy_pass`，CSS/JS/图片也会经过 Flask。把静态目录交给 Nginx：
 
@@ -412,9 +435,96 @@ gzip_types text/plain text/css application/javascript application/json applicati
 > 只返回 `text/css` 说明 `charset_types` 少了 `text/css`，即使已经写了 `charset utf-8;` 也不会生效。
 > 项目内 CSS 首行已内置 `@charset "UTF-8";`，自有 JS 已带 UTF-8 BOM；但 Nginx 仍建议按上面的配置声明，避免其他静态资源出现同类问题。
 
-### 6.2 伪静态 / Rewrite（重要）
+### 6.2 完整 Nginx 配置示例
+
+下面这份配置可以直接对照宝塔生成的站点文件改。**证书路径、日志路径和 `include` 以宝塔实际生成的为准，不要整段覆盖。**
+
+```nginx
+# HTTP：统一跳 HTTPS。
+# 如果宝塔使用文件方式续签证书，保留它生成的 .well-known 配置。
+server {
+    listen 80;
+    listen [::]:80;
+    server_name infowe.site www.infowe.site;
+
+    return 301 https://www.infowe.site$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name infowe.site www.infowe.site;
+
+    # 按宝塔「SSL」页面实际路径填写
+    ssl_certificate     /www/server/panel/vhost/cert/infowe.site/fullchain.pem;
+    ssl_certificate_key /www/server/panel/vhost/cert/infowe.site/privkey.pem;
+    # 其余 ssl_* 配置保持宝塔生成的内容
+
+    charset utf-8;
+    charset_types text/html text/css text/plain text/xml text/javascript application/javascript application/json application/rss+xml image/svg+xml;
+
+    client_max_body_size 64m;
+
+    gzip on;
+    gzip_min_length 1k;
+    gzip_types text/plain text/css application/javascript application/json application/rss+xml image/svg+xml;
+
+    # 静态资源直出
+    location ^~ /static/ {
+        alias /www/wwwroot/infowe.site/static/;
+        expires 7d;
+        access_log off;
+    }
+
+    location ^~ /themes/ {
+        alias /www/wwwroot/infowe.site/themes/;
+        expires 7d;
+        access_log off;
+    }
+
+    # 注意：这里不能写 ^~，否则下面的隐藏文件 deny 不会执行
+    location /uploads/ {
+        alias /www/wwwroot/infowe.site/uploads/;
+        expires 7d;
+        access_log off;
+    }
+
+    # 禁止下载 .originals 无痕原图
+    location ~ ^/uploads/\. {
+        deny all;
+    }
+
+    # 其余请求全部交给 Flask，不需要 rewrite / try_files
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_read_timeout 120s;
+    }
+}
+```
+
+> 如果 Nginx 版本较新，`listen 443 ssl http2;` 可以改成 `listen 443 ssl;` 加 `http2 on;`。
+> 宝塔站点配置里通常还有 `include enable-php-xx.conf`、`access_log` 等，保留即可；我们只改反代、静态资源和上面的几项。
+> 80 和 443 都要有 `location /`。只在 443 配反代、80 落到静态目录，是宝塔部署里很常见的 403 原因。
+
+### 6.3 伪静态 / Rewrite（重要）
 
 宝塔「网站 → 设置 → 伪静态」**保持为空**，不要选择 WordPress、ThinkPHP 等模板。
+
+对应的伪静态文件正确写法就是**空文件**：
+
+```nginx
+# /www/server/panel/vhost/rewrite/python_infowe_site.conf
+# 保持为空即可。不要写：
+# location / { ... }
+# proxy_pass ...
+# try_files ...
+```
 
 Flask 已经处理了这些路由：
 
@@ -446,7 +556,7 @@ curl -I https://www.infowe.site/archive/2026
 
 应返回 `200` 或正常的 `301`，不是 `404`。80 和 443 的 `server {}` 都要有同样的 `location /` 反代。
 
-### 6.3 页面缓存（已内置）
+### 6.4 页面缓存（已内置）
 
 项目已内置应用层页面缓存，不需要额外 Nginx 模块：
 
@@ -492,7 +602,9 @@ chown -R www:www data uploads backups storage
 - 放行 `80`、`443`
 - **不要**放行 `5000`（只给本机 Nginx 访问）
 
-### 10. 更新
+### 10. 更新与重启
+
+#### 10.1 手动更新
 
 ```bash
 cd /www/wwwroot/infowe.site
@@ -502,8 +614,140 @@ git pull
 
 然后在宝塔 Python 项目管理器中点「重启」。
 
-> 升级包含模板/CSS/JS 变更时，重启后建议到后台「数据管理 → 清除页面缓存」。
-> 旧页面缓存默认还会保留 5～30 分钟，清除后新模板（例如防白屏内联样式）立即生效。
+Gunicorn 也可以只给 master 发 HUP，让它平滑替换 worker，不会中断正在处理的请求：
+
+```bash
+ps -eo pid,ppid,user,args | grep '[g]unicorn'
+kill -HUP <master_pid>
+```
+
+只对 master 发信号，不要对 worker 发。升级包含模板、CSS、JS 变更时，重启后到后台「数据管理 → 清除页面缓存」，否则旧页面缓存可能还会保留 5～30 分钟。
+
+#### 10.2 Gunicorn 自动重启（可选）
+
+宝塔默认不会因为 `git pull` 自动重启。项目里的在线升级也只更新代码和依赖，最后会写入 `data/upgrade_state.json` 的 `done` 状态，然后等人工重启。
+
+如果希望在线升级完成后自动重启，可以在服务器上配置一个 `post-merge` hook。它会在 `git pull` 后等待 `pip install` 结束，再给 Gunicorn master 发 HUP。
+
+> 下面脚本放在服务器上，不属于项目代码，`git pull` 不会覆盖。
+
+**第一步：创建平滑重载脚本**
+
+`/root/infowe-reload.sh`：
+
+```bash
+#!/bin/bash
+set -u
+
+BASE=/www/wwwroot/infowe.site
+PIDFILE=""
+
+for f in \
+  "$BASE/gunicorn.pid" \
+  "$BASE/gunicorn.pidfile" \
+  "$BASE/data/gunicorn.pid"
+do
+  if [ -f "$f" ]; then
+    PIDFILE="$f"
+    break
+  fi
+done
+
+if [ -n "$PIDFILE" ]; then
+  MASTER=$(cat "$PIDFILE" 2>/dev/null || true)
+else
+  MASTER=$(ps -eo pid,args | awk -v base="$BASE" '
+    /[g]unicorn/ && $0 !~ /worker/ && index($0, base) { print $1; exit }
+  ')
+fi
+
+if [ -z "${MASTER:-}" ] || ! kill -0 "$MASTER" 2>/dev/null; then
+  echo "gunicorn master not found" >&2
+  exit 1
+fi
+
+# 清应用层页面缓存，避免重启后继续返回旧 HTML
+rm -rf "$BASE/storage/cache/pages"/* 2>/dev/null || true
+
+kill -HUP "$MASTER"
+echo "reloaded gunicorn master: $MASTER"
+```
+
+```bash
+chmod +x /root/infowe-reload.sh
+/root/infowe-reload.sh
+```
+
+**第二步：等待升级完成**
+
+在线升级先执行 `git pull`，再执行 `pip install`。`post-merge` 触发时依赖可能还没装完，所以不能立刻重启。
+
+`/root/infowe-wait-reload.sh`：
+
+```bash
+#!/bin/bash
+set -u
+
+BASE=/www/wwwroot/infowe.site
+STATE="$BASE/data/upgrade_state.json"
+
+# 手动 git pull 时 state 通常不是 running，直接短延迟后重载
+if ! grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"' "$STATE" 2>/dev/null; then
+  sleep 2
+  /root/infowe-reload.sh
+  exit $?
+fi
+
+# 在线升级：等 pip install 完成后写入 done
+for i in $(seq 1 300); do
+  if grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null; then
+    sleep 3
+    /root/infowe-reload.sh
+    exit $?
+  fi
+
+  if grep -Eq '"state"[[:space:]]*:[[:space:]]*"failed"' "$STATE" 2>/dev/null; then
+    echo "upgrade failed; skip reload" >&2
+    exit 1
+  fi
+
+  sleep 2
+done
+
+echo "wait upgrade timeout" >&2
+exit 2
+```
+
+```bash
+chmod +x /root/infowe-wait-reload.sh
+```
+
+**第三步：挂到 Git hook**
+
+```bash
+cat > /www/wwwroot/infowe.site/.git/hooks/post-merge <<'EOF'
+#!/bin/sh
+nohup /root/infowe-wait-reload.sh \
+  >>/var/log/infowe-auto-reload.log 2>&1 &
+EOF
+
+chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
+```
+
+之后在线升级的流程是：
+
+1. `git pull`
+2. `post-merge` 启动等待脚本
+3. `pip install` 完成
+4. `upgrade_state.json` 写入 `done`
+5. 等 3 秒，清页面缓存
+6. `kill -HUP <gunicorn master>`
+
+如果 `pip install` 失败，状态是 `failed`，不会自动重启，避免带着不完整依赖启动。
+
+> 目前 Web 服务由 root 启动，所以 hook 也有权限发信号。以后如果改成 `www` 用户运行，`.git/hooks` 通常没有权限操作 root 的 Gunicorn master，这时应把等待/重启脚本放到 root 的宝塔计划任务里执行。
+> 不想用 hook，也可以在宝塔「计划任务」里每分钟执行一次 `/root/infowe-wait-reload.sh`，代价是最多约 1 分钟延迟。
+> Gunicorn 的 `--reload` 只监听 Python 文件变化，不会处理 `pip install` 的新依赖，也不适合替代这里的明确重启。
 
 ### 宝塔常见错误
 
@@ -664,7 +908,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.1.7**
+- 版本：**v3.1.8**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 
