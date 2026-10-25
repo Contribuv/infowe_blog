@@ -190,14 +190,27 @@ def _run() -> None:
             })
             return
         _write_state({"state": "running", "percent": 55, "label": "安装依赖", "started": time.time()})
+        venv_pip = base / ".venv" / "bin" / "pip"
+        if venv_pip.is_file():
+            pip_cmd = [str(venv_pip), "install", "-r", "requirements.txt"]
+        else:
+            pip_cmd = [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]
         proc = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+            pip_cmd,
             cwd=str(base), capture_output=True, text=True, timeout=600,
         )
         if proc.returncode != 0:
+            detail = (proc.stderr or proc.stdout or "").strip()[-1500:]
             _write_state({
-                "state": "failed", "percent": 100, "label": "依赖安装失败",
-                "summary": (proc.stderr or proc.stdout or "").strip()[-500:],
+                "state": "failed",
+                "percent": 100,
+                "label": "依赖安装失败（代码已更新）",
+                "summary": (
+                    "代码已通过 git pull 更新，但依赖安装失败，通常是运行用户无权限写入 Python 环境，或网络无法访问 PyPI。\n\n"
+                    f"错误输出：\n{detail}\n\n"
+                    "请用 root 手动执行：\n"
+                    f"cd {base} && {' '.join(pip_cmd)}"
+                ),
                 "finished": time.time(),
             })
             return
