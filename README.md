@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.1.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.8)
+[![version](https://img.shields.io/badge/version-3.1.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.9)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -625,64 +625,15 @@ kill -HUP <master_pid>
 
 #### 10.2 Gunicorn 自动重启（可选）
 
-宝塔默认不会因为 `git pull` 自动重启。项目里的在线升级也只更新代码和依赖，最后会写入 `data/upgrade_state.json` 的 `done` 状态，然后等人工重启。
+宝塔默认不会因为 `git pull` 自动重启。项目里的在线升级只更新代码和依赖，最后把 `data/upgrade_state.json` 写成 `done`，然后等人工重启。
 
-如果希望在线升级完成后自动重启，可以在服务器上配置一个 `post-merge` hook。它会在 `git pull` 后等待 `pip install` 结束，再给 Gunicorn master 发 HUP。
+如果希望升级完成后自动重启，用一个脚本就够了：脚本负责等待安装完成、清页面缓存、给 Gunicorn master 发 HUP；`post-merge` hook 负责即时触发，宝塔计划任务可以选做兜底。
 
-> 下面脚本放在服务器上，不属于项目代码，`git pull` 不会覆盖。
+> 下面内容都在服务器上配置，不属于项目代码，`git pull` 不会覆盖。
 
-**第一步：创建平滑重载脚本**
+**第一步：创建重启脚本**
 
-`/root/infowe-reload.sh`：
-
-```bash
-#!/bin/bash
-set -u
-
-BASE=/www/wwwroot/infowe.site
-PIDFILE=""
-
-for f in \
-  "$BASE/gunicorn.pid" \
-  "$BASE/gunicorn.pidfile" \
-  "$BASE/data/gunicorn.pid"
-do
-  if [ -f "$f" ]; then
-    PIDFILE="$f"
-    break
-  fi
-done
-
-if [ -n "$PIDFILE" ]; then
-  MASTER=$(cat "$PIDFILE" 2>/dev/null || true)
-else
-  MASTER=$(ps -eo pid,args | awk -v base="$BASE" '
-    /[g]unicorn/ && $0 !~ /worker/ && index($0, base) { print $1; exit }
-  ')
-fi
-
-if [ -z "${MASTER:-}" ] || ! kill -0 "$MASTER" 2>/dev/null; then
-  echo "gunicorn master not found" >&2
-  exit 1
-fi
-
-# 清应用层页面缓存，避免重启后继续返回旧 HTML
-rm -rf "$BASE/storage/cache/pages"/* 2>/dev/null || true
-
-kill -HUP "$MASTER"
-echo "reloaded gunicorn master: $MASTER"
-```
-
-```bash
-chmod +x /root/infowe-reload.sh
-/root/infowe-reload.sh
-```
-
-**第二步：等待升级完成**
-
-在线升级先执行 `git pull`，再执行 `pip install`。`post-merge` 触发时依赖可能还没装完，所以不能立刻重启。
-
-`/root/infowe-wait-reload.sh`：
+`/root/infowe-auto-restart.sh`：
 
 ```bash
 #!/bin/bash
@@ -690,64 +641,115 @@ set -u
 
 BASE=/www/wwwroot/infowe.site
 STATE="$BASE/data/upgrade_state.json"
+STAMP="$BASE/data/.auto-restart.stamp"
+LOCK="$BASE/data/.auto-restart.lock"
 
-# 手动 git pull 时 state 通常不是 running，直接短延迟后重载
-if ! grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"' "$STATE" 2>/dev/null; then
-  sleep 2
-  /root/infowe-reload.sh
-  exit $?
+exec 9>"$LOCK"
+flock -n 9 || exit 0
+
+# 在线升级中：等 pip install 完成
+if grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"' "$STATE" 2>/dev/null; then
+  for i in $(seq 1 300); do
+    if grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null; then
+      break
+    fi
+    if grep -Eq '"state"[[:space:]]*:[[:space:]]*"failed"' "$STATE" 2>/dev/null; then
+      echo "upgrade failed, skip restart"
+      exit 1
+    fi
+    sleep 2
+  done
 fi
 
-# 在线升级：等 pip install 完成后写入 done
-for i in $(seq 1 300); do
-  if grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null; then
-    sleep 3
-    /root/infowe-reload.sh
-    exit $?
-  fi
+# 只处理 done 状态
+if ! grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null; then
+  exit 0
+fi
 
-  if grep -Eq '"state"[[:space:]]*:[[:space:]]*"failed"' "$STATE" 2>/dev/null; then
-    echo "upgrade failed; skip reload" >&2
-    exit 1
-  fi
+# 防止重复重启
+if [ -f "$STAMP" ] && [ ! "$STATE" -nt "$STAMP" ]; then
+  exit 0
+fi
 
-  sleep 2
-done
+# 取最老的 gunicorn 进程，即 master
+MASTER=$(pgrep -o -f 'gunicorn.*infowe\.site' || true)
 
-echo "wait upgrade timeout" >&2
-exit 2
+if [ -z "${MASTER:-}" ]; then
+  MASTER=$(ps -eo pid,args | awk '
+    /[g]unicorn/ && $0 !~ /worker/ && /infowe\.site/ { print $1; exit }
+  ')
+fi
+
+if [ -z "${MASTER:-}" ] || ! kill -0 "$MASTER" 2>/dev/null; then
+  echo "gunicorn master not found"
+  exit 1
+fi
+
+# 清页面缓存，再平滑替换 worker
+rm -rf "$BASE/storage/cache/pages"/* 2>/dev/null || true
+
+if kill -HUP "$MASTER"; then
+  touch "$STAMP"
+  echo "$(date '+%F %T') reloaded gunicorn master $MASTER"
+fi
 ```
 
 ```bash
-chmod +x /root/infowe-wait-reload.sh
+chown root:root /root/infowe-auto-restart.sh
+chmod 755 /root/infowe-auto-restart.sh
+sh -n /root/infowe-auto-restart.sh
 ```
 
-**第三步：挂到 Git hook**
+**第二步：可选，配置即时触发**
+
+`post-merge` 在 `git pull` 成功后执行。注意此时 `pip install` 还没结束，所以 hook 只负责启动脚本，真正的重启由脚本等待 `done` 后再做。
 
 ```bash
 cat > /www/wwwroot/infowe.site/.git/hooks/post-merge <<'EOF'
 #!/bin/sh
-nohup /root/infowe-wait-reload.sh \
-  >>/var/log/infowe-auto-reload.log 2>&1 &
+nohup /root/infowe-auto-restart.sh \
+  >>/var/log/infowe-auto-restart.log 2>&1 &
 EOF
 
 chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
 ```
 
-之后在线升级的流程是：
+**第三步：可选，宝塔计划任务兜底**
 
-1. `git pull`
-2. `post-merge` 启动等待脚本
-3. `pip install` 完成
-4. `upgrade_state.json` 写入 `done`
-5. 等 3 秒，清页面缓存
-6. `kill -HUP <gunicorn master>`
+宝塔 → 计划任务 → 添加任务：
 
-如果 `pip install` 失败，状态是 `failed`，不会自动重启，避免带着不完整依赖启动。
+- 类型：Shell 脚本
+- 名称：infowe 自动重启
+- 周期：每分钟
+- 脚本：`/root/infowe-auto-restart.sh`
 
-> 目前 Web 服务由 root 启动，所以 hook 也有权限发信号。以后如果改成 `www` 用户运行，`.git/hooks` 通常没有权限操作 root 的 Gunicorn master，这时应把等待/重启脚本放到 root 的宝塔计划任务里执行。
-> 不想用 hook，也可以在宝塔「计划任务」里每分钟执行一次 `/root/infowe-wait-reload.sh`，代价是最多约 1 分钟延迟。
-> Gunicorn 的 `--reload` 只监听 Python 文件变化，不会处理 `pip install` 的新依赖，也不适合替代这里的明确重启。
+脚本里有 `flock` 和 stamp，hook 和计划任务同时存在也不会重复重启。
+
+**验证**
+
+```bash
+cat /www/wwwroot/infowe.site/data/upgrade_state.json
+/www/wwwroot/infowe.site/.git/hooks/post-merge
+sleep 3
+
+cat /var/log/infowe-auto-restart.log
+ls -l /www/wwwroot/infowe.site/data/.auto-restart.stamp
+ps -eo pid,ppid,lstart,args | grep '[g]unicorn'
+```
+
+预期：
+
+- 日志出现 `reloaded gunicorn master ...`
+- 生成 `.auto-restart.stamp`
+- master PID 不变
+- worker PID 变新、启动时间变新
+
+如果 `upgrade_state.json` 当前不是 `done`，脚本会正常退出，不会重启；等下一次在线升级即可。
+
+> `HUP` 只对 master 发，不要对 worker 发。
+> 手动 SSH 执行 `git pull` 不会自动更新 `upgrade_state.json`，需要手动 `kill -HUP <master>`，或者删掉 stamp 后再运行脚本。
+> 如果以后 Web 服务从 root 改成 www 运行，`.git/hooks` 通常没有权限操作 root 的 Gunicorn master，这时把脚本放到 root 的宝塔计划任务里执行。
+> Gunicorn 的 `--reload` 只监听 Python 文件变化，不处理 `pip install` 的新依赖，也不适合替代这里的明确重启。
 
 ### 宝塔常见错误
 
@@ -908,7 +910,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.1.8**
+- 版本：**v3.1.9**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 
