@@ -14,9 +14,12 @@ _EXTENSIONS = [
 ]
 
 
-def _make() -> md_lib.Markdown:
+def _make(breaks: bool = True) -> md_lib.Markdown:
+    # 文章正文保留单行换行；GitHub README 的软换行按空格处理，
+    # 关闭 nl2br，否则多行徽章（badge）会被渲染成竖排。
+    extensions = _EXTENSIONS if breaks else [e for e in _EXTENSIONS if e != "nl2br"]
     return md_lib.Markdown(
-        extensions=_EXTENSIONS,
+        extensions=extensions,
         extension_configs={"toc": {"permalink": False, "slugify": _slugify}},
         output_format="html5",
     )
@@ -94,7 +97,7 @@ def render_readme(text: str, slug: str = "", branch: str = "main") -> str:
         text,
         flags=re.I,
     )
-    parser = _make()
+    parser = _make(breaks=False)
     html = parser.convert(text)
     html = _optimize_images(html)
     html = _harden_links(html)

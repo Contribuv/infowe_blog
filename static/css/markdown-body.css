@@ -71,6 +71,15 @@
 
 /* ── 段落 / 行内 ── */
 .markdown-body p { margin-top: 0; margin-bottom: 16px; }
+/* README 徽章常写成多行（每行一个 badge），GitHub 按空格横排；
+   旧缓存或显式 <br> 仍会保留换行，这里兜底改成横向并隐藏这些换行。 */
+.markdown-body p:has(> a > img):has(> br) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.markdown-body p:has(> a > img):has(> br) > br { display: none; }
 .markdown-body strong, .markdown-body b { font-weight: 600; color: inherit; }
 .markdown-body em, .markdown-body i { font-style: italic; }
 .markdown-body s, .markdown-body del { text-decoration: line-through; color: inherit; }
