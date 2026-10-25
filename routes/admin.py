@@ -693,6 +693,8 @@ def admin_settings():
 def _save_settings():
     from app import _sanitize_stats
 
+    full_form = str(request.form.get("_settings_form") or "") == "1"
+
     for key in TEXT_KEYS:
         if key not in request.form:
             continue
@@ -711,10 +713,8 @@ def _save_settings():
         else:
             settings.set_value("site_url", "")
 
-    full_form = str(request.form.get("_settings_form") or "") == "1"
     for key in (
-        "force_https", "unify_www", "comments_enabled", "comment_notify",
-        "comment_image_upload", "sensitive_filter_enabled", "watermark_enabled",
+        "force_https", "unify_www", "comments_enabled", "comment_notify",        "comment_image_upload", "sensitive_filter_enabled", "watermark_enabled",
     ):
         if full_form or key in request.form:
             settings.set_value(key, "1" if request.form.get(key) else "0")
