@@ -6,6 +6,21 @@
    全站同一列宽基准，无第二档宽度
    ═══════════════════════════════════════════════ */
 
+/* ── 页面切换过渡（跨文档 View Transition，渐进增强） ──
+   支持的浏览器在站内跳转时淡出旧页、淡入新页；
+   不支持时由 base.html 的 page-enter 兜底，仅做新页淡入。 */
+@view-transition { navigation: auto; }
+::view-transition { background: var(--bg, #ffffff); }
+::view-transition-old(root) { animation: tech-vt-out 160ms ease both; }
+::view-transition-new(root) { animation: tech-vt-in 240ms cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes tech-vt-out {
+  to { opacity: 0; }
+}
+@keyframes tech-vt-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* ── 设计令牌 ── */
 :root,
 [data-theme="light"] {
@@ -173,6 +188,10 @@ img { max-width: 100%; }
     scroll-behavior: auto !important;
   }
   .tech-quote-cursor { animation: none !important; }
+  /* 页面切换也不做淡出/位移动画 */
+  @view-transition { navigation: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+  html.page-enter .tech-main { animation: none !important; }
 }
 .tech-nav-links { display: flex; gap: 2px; margin: 0 auto; }
 .tech-nav-link {
@@ -250,6 +269,14 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 
 /* ── 主内容 ── */
 .tech-main { flex: 1; padding: 24px 0 40px; }
+/* 不支持跨文档 View Transition 的浏览器：站内跳转时主内容淡入（不回退到白屏） */
+@keyframes tech-page-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+html.page-enter .tech-main {
+  animation: tech-page-enter 240ms cubic-bezier(.2, .7, .3, 1) both;
+}
 /* 居中极简 Hero 页面（首页/搜索/标签结果）：main 自身不垫顶部，留白交给 page-head 统一，保证上下对称 */
 .tech-main:has(.tech-page-head--center) { padding-top: 0; }
 /* 关于页：顶部是左对齐「关于」页头 + 下方人物卡 Hero，需与其他子页一致的顶部留白 */

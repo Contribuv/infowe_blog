@@ -20,6 +20,25 @@
         document.documentElement.setAttribute('data-theme', mode === 'auto' ? (dark ? 'dark' : 'light') : mode);
       })();
     </script>
+    <!-- 页面切换：不支持跨文档 View Transition 的浏览器，站内跳转时让主内容淡入 -->
+    <script>
+      (function () {
+        var nativeVT = false;
+        try {
+          nativeVT = !!(window.CSS && CSS.supports && CSS.supports('at-rule(@view-transition)'))
+            || (('onpageswap' in window) && ('onpagereveal' in window));
+        } catch (e) {}
+        if (nativeVT) return;
+        try {
+          var ref = document.referrer || '';
+          if (!ref) return;
+          if (new URL(ref).origin !== location.origin) return;
+          var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+          if (nav && nav.type === 'reload') return;
+          document.documentElement.classList.add('page-enter');
+        } catch (e) {}
+      })();
+    </script>
     <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/theme.css', t=theme_asset_ver) }}">

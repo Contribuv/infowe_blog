@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.1.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.3)
+[![version](https://img.shields.io/badge/version-3.1.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -30,6 +30,7 @@
 | 关于 | 简介、技能、时间线 |
 | 状态 | 服务探活、可用率、证书天数、云资源到期 |
 | 分享 | Open Graph、4:3 分享缩略图、二维码 |
+| 页面过渡 | 跨文档 View Transition：支持时旧页淡出 / 新页淡入，不支持时自动回退为新页淡入，尊重系统「减弱动态效果」 |
 
 ### 后台
 
@@ -633,7 +634,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.1.3**
+- 版本：**v3.1.4**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 
