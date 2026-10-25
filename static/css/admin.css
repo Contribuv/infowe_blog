@@ -455,6 +455,34 @@ svg { vertical-align: -3px; flex: none; }
 @media (hover: hover) and (pointer: fine) { .main-td a:hover { color: var(--accent); } }
 .main-td strong { font-weight: 600; }
 .desc-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 长评论：默认显示摘要，点击展开全文；避免长内容撑坏表格 */
+.comment-cell { white-space: normal; overflow: visible; text-overflow: clip; }
+.comment-details summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+.comment-details summary::marker { color: var(--accent); }
+.comment-toggle {
+  margin-left: 4px;
+  color: var(--accent);
+  font-size: var(--fz-xs);
+  white-space: nowrap;
+}
+.comment-toggle::before { content: "展开"; }
+.comment-details[open] .comment-toggle { color: var(--text-tertiary); }
+.comment-details[open] .comment-toggle::before { content: "收起"; }
+.comment-details .comment-full {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--border);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow-y: auto;
+  line-height: 1.65;
+}
 .cell-sub { font-size: var(--fz-xs); color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
 .cell-muted { color: var(--text-tertiary); }
 .cell-link { word-break: break-all; }
@@ -1380,6 +1408,8 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
   body.bulk-on .table td.col-check { display: flex; }
   .table td.actions-cell { justify-content: flex-end; padding-top: 10px; }
   .table .desc-cell { max-width: none; white-space: normal; overflow: visible; text-overflow: clip; }
+  .table .comment-cell { flex-direction: column; align-items: stretch; text-align: left; }
+  .table .comment-cell::before { margin-bottom: 4px; }
   .table td.col-opt { display: none; }  /* projects 次要列隐藏 */
 
   .edit-layout { grid-template-columns: 1fr; gap: var(--sp-4); }

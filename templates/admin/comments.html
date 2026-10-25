@@ -54,7 +54,16 @@
                             </span>
                         </span>
                     </td>
-                    <td class="desc-cell" data-label="内容">{{ c.content[:100] }}</td>
+                    <td class="desc-cell comment-cell" data-label="内容">
+                        {% if c.content|length > 100 %}
+                        <details class="comment-details">
+                            <summary title="点击展开或收起全文">{{ c.content[:100] }}…<span class="comment-toggle" aria-hidden="true"></span></summary>
+                            <div class="comment-full">{{ c.content }}</div>
+                        </details>
+                        {% else %}
+                        {{ c.content }}
+                        {% endif %}
+                    </td>
                     <td data-label="文章 / 项目">
                         {% if c.post_id %}<a href="/post/{{ c.post_id }}#comment-{{ c.id }}" target="_blank">{{ c.post_title[:20] }}</a>
                         {% elif c.project_id %}<a href="/projects/{{ c.project_id }}#comment-{{ c.id }}" target="_blank">{{ c.project_name[:20] }}</a>
