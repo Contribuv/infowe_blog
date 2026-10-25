@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from config import THEMES_DIR, THEME_TEMPLATE_DIR, STATIC_DIR, VERSION
@@ -57,11 +58,38 @@ def list_themes() -> list[dict]:
 def asset_version() -> int:
     version = 0
     base = THEMES_DIR / active_key()
-    for name in ("theme.css", "theme.js"):
+    for name in ("theme.css", "theme.min.css", "theme.js"):
         path = base / name
         if path.is_file():
             version = max(version, int(path.stat().st_mtime))
     return version
+
+
+def css_name(key: str | None = None) -> str:
+    """优先使用自动压缩的 theme.min.css；源文件更新后自动重建。
+
+    构建失败、目录不可写或缺少 csscompressor 时回退到 theme.css，
+    不影响主题正常使用。
+    """
+    base = THEMES_DIR / (key or active_key())
+    src = base / "theme.css"
+    dst = base / "theme.min.css"
+    if not src.is_file():
+        return "theme.css"
+    try:
+        if not dst.is_file() or src.stat().st_mtime > dst.stat().st_mtime:
+            import csscompressor
+
+            text = csscompressor.compress(
+                src.read_text(encoding="utf-8"),
+                preserve_exclamation_comments=False,
+            )
+            tmp = dst.with_name(f"{dst.name}.{os.getpid()}.tmp")
+            tmp.write_text(text, encoding="utf-8")
+            tmp.replace(dst)
+    except Exception:
+        return "theme.css"
+    return "theme.min.css" if dst.is_file() else "theme.css"
 
 
 def admin_asset_version() -> int:

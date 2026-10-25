@@ -41,7 +41,7 @@
     </script>
     <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/theme.css', t=theme_asset_ver) }}">
+    <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/' ~ theme_css_name, t=theme_asset_ver) }}">
     <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
     <!-- 社交分享：Open Graph + Twitter Card -->
     <meta property="og:site_name" content="{{ blog_name }}">
@@ -195,7 +195,39 @@
     })();
     </script>
     {% block scripts %}{% endblock %}
-    {# 统计代码：后台「统计代码」原样注入，仅管理员可填 #}
-    {{ stats_code | safe }}
+    {# 统计代码：后台「统计代码」原样注入，仅管理员可填。
+       放进 template，等 load 后空闲时再执行，避免第三方统计阻塞首屏和 load 事件。 #}
+    {% if stats_code %}
+    <template id="stats-code-template">{{ stats_code | safe }}</template>
+    <script>
+    (function () {
+      function runStats() {
+        var tpl = document.getElementById('stats-code-template');
+        if (!tpl || tpl.dataset.loaded) return;
+        tpl.dataset.loaded = '1';
+        var frag = tpl.content.cloneNode(true);
+        // template 里的 script 直接 clone 不保证执行，重建 script 节点
+        frag.querySelectorAll('script').forEach(function (old) {
+          var s = document.createElement('script');
+          Array.prototype.forEach.call(old.attributes, function (attr) {
+            s.setAttribute(attr.name, attr.value);
+          });
+          s.text = old.textContent;
+          old.parentNode.replaceChild(s, old);
+        });
+        document.body.appendChild(frag);
+      }
+      function schedule() {
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(runStats, { timeout: 2500 });
+        } else {
+          window.setTimeout(runStats, 300);
+        }
+      }
+      if (document.readyState === 'complete') schedule();
+      else window.addEventListener('load', schedule, { once: true });
+    })();
+    </script>
+    {% endif %}
 </body>
 </html>

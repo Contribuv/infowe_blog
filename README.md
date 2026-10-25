@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.1.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.9)
+[![version](https://img.shields.io/badge/version-3.2.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -54,6 +54,7 @@
 | 状态 | 服务探活、可用率、证书天数、云资源到期 |
 | 分享 | Open Graph、4:3 分享缩略图、二维码 |
 | 页面过渡 | 跨文档 View Transition：支持时旧页淡出 / 新页淡入，不支持时自动回退为新页淡入，尊重系统「减弱动态效果」 |
+| 性能 | 页面缓存、CSS 自动压缩、静态资源 7 天缓存、统计代码延迟加载 |
 
 ### 后台
 
@@ -89,6 +90,7 @@
 | 模板 | Jinja2 |
 | Markdown | `markdown`（表格、代码块、目录、脚注、details） |
 | 图片 | Pillow（水印、分享图、头像裁剪） |
+| CSS | csscompressor（theme.min.css 自动生成） |
 | HTTP | requests（GitHub 同步、状态探测、头像/README 图） |
 | 生产 | gunicorn / uWSGI + Nginx |
 
@@ -163,7 +165,7 @@ Windows 可直接双击 `run.bat`。
 │   ├── admin/             # 后台模板
 │   └── shared/            # 公共模板片段
 ├── static/                # 后台 CSS/JS、Vditor、highlight.js、图标
-├── themes/tech/           # 主题静态资源（theme.css/theme.js/info.json/preview.png）
+├── themes/tech/           # 主题静态资源（theme.css/theme.min.css/theme.js/info.json/preview.png）
 ├── uploads/               # 文章图片、评论图片、README 图片
 ├── data/                  # SQLite 数据库、密钥、项目同步状态
 ├── backups/               # 数据库备份、JSON/Markdown 导出
@@ -189,6 +191,7 @@ Windows 可直接双击 `run.bat`。
 | `tools/` | 迁移工具 | 可删（不再迁移时） |
 
 > `data/`、`uploads/`、`backups/`、`storage/` 不要暴露为静态目录，本项目已通过路由限制访问。
+> `theme.min.css` 由 `theme.css` 自动生成；修改主题源文件后首次访问会重新压缩。目录不可写或缺少 `csscompressor` 时自动回退到 `theme.css`。
 
 ---
 
@@ -248,6 +251,8 @@ python -c "from app import app; from services import settings; c=app.app_context
 | 站点地址 | `site_url`、强制 HTTPS、同主域 www 归一 |
 | 统计代码 | 只保留 `<script>`，剥离事件属性与 `javascript:` |
 | 服务状态 | 监控服务列表、云资源到期日期 |
+
+> 统计代码会在页面 `load` 之后通过 `requestIdleCallback` 执行，不再阻塞首屏和 `load` 事件。
 
 ---
 
@@ -459,6 +464,9 @@ server {
     ssl_certificate     /www/server/panel/vhost/cert/infowe.site/fullchain.pem;
     ssl_certificate_key /www/server/panel/vhost/cert/infowe.site/privkey.pem;
     # 其余 ssl_* 配置保持宝塔生成的内容
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # HSTS 只保留一条；如果宝塔 SSL 配置里已有，不要重复添加
 
     charset utf-8;
     charset_types text/html text/css text/plain text/xml text/javascript application/javascript application/json application/rss+xml image/svg+xml;
@@ -910,7 +918,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.1.9**
+- 版本：**v3.2.0**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 

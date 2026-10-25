@@ -228,6 +228,7 @@ def _register_hooks(app: Flask) -> None:
             "nav_all": nav_all,
             "version": config.VERSION,
             "admin_prefix": app.config.get("ADMIN_PREFIX", "/admin"),
+            "theme_css_name": theme_service.css_name(active),
             "theme_asset_ver": theme_service.asset_version(),
             "admin_ver": theme_service.admin_asset_version(),
             "now_year": __import__("datetime").datetime.now().year,
@@ -263,7 +264,8 @@ def _register_hooks(app: Flask) -> None:
             "worker-src 'self' blob:; "
             "frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'",
         )
-        if request.is_secure:
+        # HSTS 由 Nginx 统一输出；只有直连 Flask TLS 且没有代理头时才补
+        if request.is_secure and not request.headers.get("X-Forwarded-Proto"):
             response.headers.setdefault(
                 "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
             )
