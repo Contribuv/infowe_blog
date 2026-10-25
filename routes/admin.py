@@ -820,6 +820,7 @@ def _save_settings():
         else:
             flash(message, "error")
 
+    flash("设置已保存", "success")
     return redirect(url_for("admin_settings"))
 
 

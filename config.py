@@ -35,7 +35,7 @@ DATABASE = DATA_DIR / "blog.db"
 SECRET_KEY_FILE = DATA_DIR / ".secret_key"
 
 # 版本线：Python 重构版独立版本号
-VERSION = "3.0.6"
+VERSION = "3.0.7"
 
 # 上传限制
 MAX_CONTENT_LENGTH = 64 * 1024 * 1024  # 单请求 64MB
