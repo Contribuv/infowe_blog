@@ -37,7 +37,7 @@ def admin_dashboard():
         "admin/dashboard.html",
         stats=stats,
         recent=recent,
-        upgrade_stale=False,
+        upgrade_stale=True,
     )
 
 
@@ -946,6 +946,11 @@ def admin_export_import_sql():
 # ── 升级 ──────────────────────────────────────────────
 @LOGIN
 def admin_upgrade():
+    from services import upgrade as upgrade_service
+
+    if request.method == "POST":
+        ok, message = upgrade_service.start()
+        return jsonify({"ok": ok, "message": message})
     return render_template(
         "admin/upgrade.html",
         current_version=VERSION,
@@ -956,25 +961,31 @@ def admin_upgrade():
 
 @LOGIN
 def admin_upgrade_check():
-    return jsonify({"current": VERSION, "latest": VERSION, "available": False, "note": "Python 版请通过 git pull 更新"})
+    from services import upgrade as upgrade_service
+
+    force = request.args.get("force") == "1"
+    return jsonify(upgrade_service.check(force=force))
 
 
 @LOGIN
 def admin_upgrade_progress():
-    return jsonify({
-        "running": False, "progress": 0, "step": "", "message": "",
-        "state": "idle", "error": "", "done": True,
-    })
+    from services import upgrade as upgrade_service
+
+    return jsonify(upgrade_service.status())
 
 
 @LOGIN
 def admin_upgrade_cancel():
-    return jsonify({"ok": True})
+    from services import upgrade as upgrade_service
+
+    return jsonify(upgrade_service.cancel())
 
 
 @LOGIN
 def admin_upgrade_reset():
-    return jsonify({"ok": True})
+    from services import upgrade as upgrade_service
+
+    return jsonify(upgrade_service.reset())
 
 
 # ── 注册 ──────────────────────────────────────────────
