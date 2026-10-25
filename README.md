@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.8)
+[![version](https://img.shields.io/badge/version-3.2.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.9)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -657,7 +657,7 @@ LOCK="$BASE/data/.auto-restart.lock"
 exec 9>"$LOCK"
 flock -n 9 || exit 0
 
-CURRENT=$(git -C "$BASE" rev-parse HEAD 2>/dev/null || true)
+CURRENT=$(git --git-dir="$BASE/.git" --work-tree="$BASE" rev-parse HEAD 2>/dev/null || true)
 LAST=$(cat "$HEADFILE" 2>/dev/null || true)
 [ -n "$CURRENT" ] || exit 1
 [ "$CURRENT" = "$LAST" ] && exit 0
@@ -937,7 +937,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.2.8**
+- 版本：**v3.2.9**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 
