@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.11)
+[![version](https://img.shields.io/badge/version-3.2.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.12)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -54,6 +54,7 @@
 | 状态 | 服务探活、可用率、证书天数、云资源到期 |
 | 分享 | Open Graph、4:3 分享缩略图、二维码 |
 | 页面过渡 | 轻量淡入淡出（约 140ms，无位移），不支持时回退为新页淡入，尊重系统「减弱动态效果」 |
+| 首页一言 | 后台自定义文案，一行一条，支持出处；留空使用内置 36 条 |
 | 性能 | 页面缓存、CSS 自动压缩、静态资源 7 天缓存、统计代码延迟加载 |
 
 ### 后台
@@ -243,6 +244,7 @@ python -c "from app import app; from services import settings; c=app.app_context
 | 分组 | 内容 |
 | --- | --- |
 | 站点信息 | 站名、副标题、作者、简介、技能、GitHub、联系邮箱 |
+| 首页一言 | 一行一条，`文本\|出处`；留空使用内置文案 |
 | 导航菜单 | 文章/标签/项目/友链/关于/状态 开关 |
 | 评论 | 总开关、审核、邮件通知、评论图片、敏感词 |
 | 上传 | 图片/媒体/附件白名单、单文件大小、水印 |
@@ -773,6 +775,7 @@ rm -f /www/wwwroot/infowe.site/data/.auto-restart.head
 
 如果 `upgrade_state.json` 是 `running`，脚本会等它结束；如果是 `failed`，不会自动重启，避免带着未装好的依赖启动。其他情况下，只要 Git HEAD 变了就会重启。
 
+> 手动执行 `/root/infowe-auto-restart.sh` 时，输出只在终端；日志文件只记录 hook 或计划任务触发的重启。HEAD 没变化时脚本会静默退出，不会写日志。
 > `HUP` 只对 master 发，不要对 worker 发。
 > 手动 SSH 执行 `git pull` 后，只要 HEAD 变了，hook 和计划任务都会触发自动重启；如果本次升级状态是 `failed`，会跳过自动重启，需要先处理依赖再手动 `kill -HUP <master>`。
 > 如果以后 Web 服务从 root 改成 www 运行，`.git/hooks` 通常没有权限操作 root 的 Gunicorn master，这时把脚本放到 root 的宝塔计划任务里执行。
@@ -937,7 +940,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.2.11**
+- 版本：**v3.2.12**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 

@@ -17,6 +17,7 @@ import config
 from db import init_app as init_db_app, init_db
 from services import settings as settings_service
 from services import theme as theme_service
+from services import quotes as quotes_service
 from services.settings import get_str
 
 
@@ -205,6 +206,7 @@ def _register_hooks(app: Flask) -> None:
             "blog_name": conf.get("blog_name", "infowe"),
             "blog_subtitle": conf.get("blog_subtitle", ""),
             "home_title": conf.get("home_title", ""),
+            "home_quotes": quotes_service.parse(conf.get("home_quotes", "")),
             "home_posts_count": conf.get("home_posts_count", "6"),
             "posts_per_page": conf.get("posts_per_page", "20"),
             "comments_enabled": conf.get("comments_enabled", "1"),

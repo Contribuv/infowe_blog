@@ -13,6 +13,7 @@ DEFAULTS: dict[str, str] = {
     "blog_name": "infowe",
     "blog_subtitle": "Python · Code · Life",
     "home_title": "",
+    "home_quotes": "",
     "home_posts_count": "6",
     "posts_per_page": "20",
     "author": "Linus",

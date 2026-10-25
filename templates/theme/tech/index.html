@@ -16,7 +16,10 @@
     <!-- 站点名不再作大标题（导航与页脚已承载），用 sr-only 保留 h1 语义 -->
     <h1 class="sr-only">{{ home_title or blog_name }}</h1>
     <p class="tech-page-desc tech-page-desc--mono">共 {{ total }} 篇文章 · {{ all_tags|length }} 个标签 · {{ total_categories }} 个分类</p>
-    <!-- 首页格言：本地句子库，交互逻辑见 theme.js -->
+    {% if home_quotes %}
+    <script type="application/json" id="tech-quotes-data">{{ home_quotes | tojson }}</script>
+    {% endif %}
+    <!-- 首页格言：后台自定义优先，否则使用主题内置句子库；交互逻辑见 theme.js -->
     <div class="tech-quote">
         <span class="tech-quote-text" id="tech-quote-text"></span>
         <span class="tech-quote-cursor" aria-hidden="true"></span>

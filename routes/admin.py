@@ -632,7 +632,7 @@ def _activate_theme():
 TEXT_KEYS = [
     "blog_name", "blog_subtitle", "author", "author_bio", "about_intro", "skills",
     "avatar", "github_username", "social_github", "github_token", "contact_email",
-    "home_title", "icp_beian", "police_beian", "home_posts_count", "posts_per_page",
+    "home_title", "home_quotes", "icp_beian", "police_beian", "home_posts_count", "posts_per_page",
     "smtp_host", "smtp_sender_name", "smtp_port", "smtp_user", "smtp_pass",
     "notify_email", "footer_copyright_year", "footer_copyright_owner",
     "footer_powered_by", "stats_code", "sensitive_words",
@@ -652,6 +652,7 @@ def _settings_view() -> dict:
         "current_url": base(),
         "force_https": "1" if settings.bool_of("force_https") else "0",
         "unify_www": "1" if settings.bool_of("unify_www") else "0",
+        "home_quotes": settings.get_str("home_quotes", ""),
         "smtp_host": settings.get_str("smtp_host", ""),
         "smtp_port": settings.get_str("smtp_port", "465"),
         "smtp_user": settings.get_str("smtp_user", ""),
@@ -826,6 +827,9 @@ def _save_settings():
             flash(message, "error")
 
     flash("设置已保存", "success")
+    # 设置可能影响前台 HTML（首页一言、导航、统计代码等），统一清页面缓存
+    from services import page_cache
+    page_cache.clear_all()
     return redirect(url_for("admin_settings"))
 
 

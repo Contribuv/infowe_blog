@@ -144,6 +144,22 @@
     { text: '博客最怕的不是没人看，是连自己都不回看。', src: '' }
   ];
 
+  // 后台「首页一言」有自定义内容时优先使用；留空继续用上面的内置列表
+  var quoteData = document.getElementById('tech-quotes-data');
+  if (quoteData) {
+    try {
+      var customQuotes = JSON.parse(quoteData.textContent || '[]');
+      if (Array.isArray(customQuotes)) {
+        var validQuotes = customQuotes.filter(function (item) {
+          return item && typeof item.text === 'string' && item.text.trim();
+        }).map(function (item) {
+          return { text: item.text.trim(), src: typeof item.src === 'string' ? item.src.trim() : '' };
+        });
+        if (validQuotes.length) FALLBACK = validQuotes;
+      }
+    } catch (e) {}
+  }
+
   var timers = [];
   var MAX_LEN = 120;
   var lastIndex = -1;
