@@ -52,6 +52,7 @@ def _fetch_github() -> dict | None:
             "tag": _clean_version(data.get("tag_name", "")),
             "url": data.get("html_url") or f"https://github.com/{GITHUB_REPO}/releases",
             "notes": (data.get("body") or "")[:4000],
+            "published_at": data.get("published_at") or "",
         }
     except requests.RequestException:
         return None
@@ -72,6 +73,7 @@ def _fetch_gitee() -> dict | None:
             "tag": _clean_version(data.get("tag_name", "")),
             "url": f"https://gitee.com/{GITEE_REPO}/releases/tag/v{_clean_version(data.get('tag_name', ''))}",
             "notes": (data.get("body") or "")[:4000],
+            "published_at": data.get("created_at") or "",
         }
     except requests.RequestException:
         return None
@@ -119,9 +121,13 @@ def check(force: bool = False) -> dict:
             "current_version": current,
             "latest_version": latest["tag"],
             "available": available,
+            # 模板实际使用的字段名
+            "upgradable": available,
             "source": latest["source"],
             "release_url": latest["url"],
             "notes": latest["notes"],
+            "body": latest["notes"],
+            "published_at": latest.get("published_at", ""),
             "sources": sources,
             "checked": now,
         }
