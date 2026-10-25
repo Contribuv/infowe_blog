@@ -1,0 +1,229 @@
+/* ═══════════════════════════════════════════════════════════
+   评论区（tech 主题专用 · 盖楼 v2，独立于 default 的 comments.css）
+   结构：一个楼层 = 根评论 + 它下面全部回复，同属 .cmt-thread
+   层级表达：缩进 + 头像尺度 + @提及，不使用任何竖线/内部分隔线
+   皮肤：一律「每条根评论一张卡」，tech 与 default 的差异只剩配色（.cmt-skin-line 仅作配色开关）
+   变量做双主题兼容：tech 提供 --bg-subtle/--text-secondary，故全部带回退。
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── tech 评论容器：与相关区块之间留 24px 上距（default 同节奏），底部靠 .tech-main 的 64px padding 收口 ── */
+.tech-comments{margin:24px 0 0}
+
+.cmt{
+  --av-root:40px;    /* 根评论头像 */
+  --av-reply:28px;   /* 回复头像 */
+  --gap:12px;        /* 头像与内容间距 */
+  --indent:52px;     /* 回复区缩进 = 根头像 40 + 间距 12，对齐根评论正文左缘 */
+  /* 卡面不做底色分层，只靠 1px 描边成形；卡内次级区块一律用 --c-reply 半透明 tint */
+  --c-card:transparent;
+  --c-sub:var(--bg-subtle);
+  --c-border:var(--border);
+  /* 楼层卡 / 表单卡专用描边：比 --c-border 再淡一档（V5 方案）。
+     目标是「能看出有边界，但不形成一叠平行线噪音」；
+     输入框 / 按钮 / 缩略图仍用 --c-border，保证可点元素的可见性不被削弱。 */
+  --c-hairline:color-mix(in srgb, var(--c-text) 8%, transparent);
+  /* 卡片 hover 提亮：与淡描边同源加深，避免从 8% 直接跳到 --border-strong 的突兀感 */
+  --c-border-h:color-mix(in srgb, var(--c-text) 22%, transparent);
+  --c-text:var(--text);
+  --c-text2:var(--text-secondary, var(--text));
+  --c-text3:var(--text-tertiary, var(--text-secondary, var(--text)));
+  --c-accent:var(--accent);
+  --c-accent-weak:var(--accent-weak, rgba(91,141,239,.14));
+  /* 回复区底色：用正文色的极低透明度叠加，亮/暗皮肤下都能显出浅底 */
+  --c-reply:color-mix(in srgb, var(--c-text) 5%, transparent);
+  --c-radius:var(--r, 12px);
+  /* 头像配色：tech 皮肤在下方覆盖为 accent-weak 底 + accent 字 */
+  --av-bg:linear-gradient(135deg,var(--accent),var(--accent-soft,var(--accent)));
+  --av-color:#fff;
+  /* 移动端点按不再出现系统默认蓝色高亮块；该属性可继承，一次覆盖评论区内所有可点元素 */
+  -webkit-tap-highlight-color:transparent;
+  font-size:14px;
+}
+
+/* ── 标题 ── */
+.cmt-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;color:var(--c-text);margin:0 0 18px}
+.cmt-title .cmt-num{font-size:11.5px;font-weight:600;color:var(--c-text3);background:var(--c-sub);padding:2px 9px;border-radius:20px;font-variant-numeric:tabular-nums}
+
+/* ── 待审核提示条 ── */
+.cmt-notice{display:flex;align-items:flex-start;gap:8px;padding:10px 13px;margin-bottom:16px;border-radius:10px;font-size:12.5px;line-height:1.6;color:var(--c-text2);background:var(--c-accent-weak);border:1px solid transparent}
+.cmt-notice svg{flex:none;width:15px;height:15px;margin-top:1px;stroke:var(--c-accent);fill:none;stroke-width:2}
+.cmt-notice b{color:var(--c-accent);font-weight:600}
+
+/* ── 楼层组 ── */
+.cmt-thread{padding:18px 20px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-hairline);transition:border-color .18s}
+/* 楼层间 18px > 卡内回复间距 14px：靠间距层级把「楼层边界」立起来，淡描边只做兜底提示 */
+.cmt-thread+.cmt-thread{margin-top:18px}
+@media (hover:hover) and (pointer:fine){.cmt-thread:hover{border-color:var(--c-border-h)}}
+/* 表单卡与独立 details 卡同享描边提亮反馈；.cmt-form.is-inline 无描边故无变化 */
+@media (hover:hover) and (pointer:fine){.cmt-form:hover,.cmt-box:hover{border-color:var(--c-border-h)}}
+
+/* tech 皮肤楼层与 default 同构：每条根评论一张卡（楼中楼在卡内）。
+   此前用 .cmt-skin-line 大外框把全部楼层连同表单圈在一起，只靠淡横线分区，
+   视觉上「全挤一块」，故取消外框与扁平覆盖。
+   V5：卡面仍不着色，描边由 --border 降为 --c-hairline（正文色 8%）；
+   楼层间距提到 18px（大于卡内回复的 14px），用间距层级替代重描边来立边界 */
+
+/* ── 评论条目（根与回复同构，仅头像尺寸/字号不同） ── */
+.cmt-item{display:flex;gap:var(--gap)}
+.cmt-item[data-lv="root"] .cmt-avatar{width:var(--av-root);height:var(--av-root);font-size:15px}
+.cmt-item[data-lv="reply"] .cmt-avatar{width:var(--av-reply);height:var(--av-reply);font-size:12px}
+/* 头像外链包裹层：不影响 .cmt-avatar 的尺寸计算 */
+/* align-self 防止被 .cmt-item 的 stretch 拉伸成整条评论高度（否则 50% 圆角变椭圆、hover 光环畸形） */
+.cmt-avatar-link{flex:none;align-self:flex-start;display:block;border-radius:50%;line-height:0;transition:box-shadow .18s ease,transform .18s ease}
+@media (hover:hover) and (pointer:fine){ .cmt-avatar-link:hover{box-shadow:0 0 0 2px var(--c-accent);transform:scale(1.06)} }
+/* 悬停头像时昵称同步高亮：:has 不支持的老浏览器自动降级为不联动 */
+@media (hover:hover) and (pointer:fine){ .cmt-item:has(.cmt-avatar-link:hover) a.cmt-author{color:var(--c-accent)} }
+@media (prefers-reduced-motion:reduce){
+  .cmt-avatar-link{transition:none}
+  .cmt-avatar-link:hover{transform:none}
+}
+.cmt-avatar{flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--av-color);font-weight:600;line-height:1;background:var(--av-bg);overflow:hidden;user-select:none}
+.cmt-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+/* tech 皮肤：accent-weak 底 + accent 字，随亮/暗自动切换 */
+.cmt-skin-line{--av-bg:var(--c-accent-weak);--av-color:var(--c-accent)}
+.cmt-main{flex:1;min-width:0}
+/* 作者行：名字 + 徽章 + 元信息同行；字号不一（13.5 与 11），用 baseline 对齐底部基线才齐 */
+.cmt-head{display:flex;align-items:baseline;column-gap:6px;row-gap:2px;flex-wrap:wrap;line-height:1.4}
+.cmt-author{font-size:13.5px;font-weight:600;color:var(--c-text)}
+a.cmt-author{color:var(--c-text);text-decoration:none}
+@media (hover:hover) and (pointer:fine){ a.cmt-author:hover{color:var(--c-accent)} }
+/* 元信息（时间/属地）跟在昵称与徽章之后同排：与身份组多留 6px，弱化成 11px 小字 */
+.cmt-time{margin-left:6px;font-size:11px;color:var(--c-text3);font-variant-numeric:tabular-nums}
+.cmt-loc{font-size:11px;color:var(--c-text3);font-style:normal}
+/* 属地加显式前缀：裸地名易被误读为第二个时间或正文，与微博/知乎口径一致 */
+.cmt-loc::before{content:"· IP属地："}
+.cmt-badge{font-size:10.5px;line-height:1.6;padding:0 7px;border-radius:20px;font-weight:500;border:1px solid transparent}
+.cmt-badge--author{background:var(--c-accent-weak);color:var(--c-accent)}
+.cmt-badge--private{background:rgba(224,179,62,.16);color:#9a6700}
+.cmt-badge--pending{background:var(--c-reply);color:var(--c-text3);border-color:var(--c-border);border-style:dashed}
+.cmt-text{margin-top:9px;font-size:14px;line-height:1.75;color:var(--c-text2);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
+.cmt-item[data-lv="reply"] .cmt-text{font-size:13.5px;margin-top:7px}
+.cmt-at{color:var(--c-accent);text-decoration:none;font-weight:500;margin-right:2px}
+@media (hover:hover) and (pointer:fine){ .cmt-at:hover{text-decoration:underline} }
+.cmt-actions{margin-top:7px;display:flex;gap:14px}
+.cmt-reply{font-size:12.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer;transition:color .15s}
+@media (hover:hover) and (pointer:fine){ .cmt-reply:hover{color:var(--c-accent)} }
+
+/* ── 回复区：无底色，仅靠缩进与头像尺度分层（组内一律平铺） ── */
+.cmt-replies{margin:14px 0 0 var(--indent);padding:0}
+.cmt-replies .cmt-item+.cmt-item{margin-top:14px}
+/* display:flex 会覆盖 UA 的 [hidden]，必须强制隐藏 */
+.cmt [hidden]{display:none !important}
+/* 折叠按钮 */
+.cmt-fold{margin-top:14px;font-size:12.5px;font-weight:500;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.cmt-fold svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.4;transition:transform .18s}
+.cmt-fold[aria-expanded="true"] svg{transform:rotate(180deg)}
+@media (hover:hover) and (pointer:fine){ .cmt-fold:hover{text-decoration:underline} }
+
+/* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
+.cmt-form{margin-top:20px;background:var(--c-card);border:1px solid var(--c-hairline);border-radius:var(--c-radius);padding:14px 16px}
+.cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
+.cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
+.cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
+.cmt-toggle{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:13.5px;color:var(--c-text2);cursor:pointer;user-select:none;transition:color .15s,background .15s}
+.cmt-toggle::-webkit-details-marker{display:none}
+@media (hover:hover) and (pointer:fine){ .cmt-toggle:hover{color:var(--c-accent)} }
+.cmt-box:not([open]) .cmt-box-body{display:none}
+.cmt-box[open] .cmt-box-body{display:block}
+.cmt-box-body{padding:14px 16px}
+/* 卡内的 details 不再自带内距，统一由 .cmt-form 的 padding 收口 */
+.cmt-form .cmt-toggle{padding:0}
+.cmt-form .cmt-box[open] .cmt-toggle{padding-bottom:12px}
+.cmt-form .cmt-box-body{padding:0}
+.cmt-form .row{display:flex;gap:9px;margin-bottom:9px}
+.cmt-form input,.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
+.cmt-form textarea{min-height:76px;resize:vertical;margin-bottom:10px}
+.cmt-form input::placeholder,.cmt-form textarea::placeholder{color:var(--c-text3)}
+.cmt-form input:focus,.cmt-form textarea:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak)}
+.cmt-form .foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cmt-form .chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--c-text3);cursor:pointer;user-select:none}
+.cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
+.cmt-form .count{margin-left:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
+.cmt-form .count.is-over{color:#cf222e}
+.cmt-form .submit{padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
+@media (hover:hover) and (pointer:fine){ .cmt-form .submit:hover{filter:brightness(1.08)} }
+.cmt-form .submit[disabled]{opacity:.6;cursor:not-allowed}
+.cmt-hint{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px;color:var(--c-accent)}
+.cmt-hint button{font-size:11.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer}
+@media (hover:hover) and (pointer:fine){ .cmt-hint button:hover{color:var(--c-text2)} }
+.cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:12.5px;color:var(--c-text3)}
+.cmt-remember button{flex:none;font-size:11.5px;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
+/* 博主身份条：登录后替代昵称/邮箱/网址输入行（与 .cmt-remember 同为卡内 tint 块，不加描边） */
+.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:13px;color:var(--c-text)}
+.cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none}
+
+/* ── 空态 ── */
+.cmt-empty{padding:26px 0;text-align:center;font-size:13.5px;color:var(--c-text3)}
+
+/* ── 移动端：收紧尺度，回复区缩进对齐根评论正文左缘（36+10=46） ── */
+@media (max-width:767px){
+  .cmt{--av-root:36px;--av-reply:26px;--gap:10px;--indent:46px}
+  .cmt-thread{padding:16px 14px}
+  .cmt-replies{margin-top:12px;padding:0}
+  .cmt-replies .cmt-item+.cmt-item{margin-top:12px}
+  .cmt-form .row{flex-direction:column;gap:9px}
+  .cmt-text{font-size:13.5px}
+  .cmt-title{font-size:15px}
+}
+
+/* ── 邮箱字段：纯数字 QQ 号下拉补全 @qq.com + 头像预览 ── */
+.cmt-form .row>.cmt-field{position:relative;min-width:0}
+/* 仅横向排列时等分：column 布局下 flex-basis:0 会把高度压塌 */
+@media (min-width:768px){.cmt-form .row>input,.cmt-form .row>.cmt-field{flex:1 1 0;min-width:0}}
+.cmt-form .cmt-field input{padding-right:38px}
+.cmt-qq-av{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;object-fit:cover;pointer-events:none;background:var(--c-reply)}
+.cmt-suggest{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;padding:8px 12px;font-size:12.5px;color:var(--c-text2);background:var(--c-sub);border:1px solid var(--c-border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.12);cursor:pointer;text-align:left}
+@media (hover:hover) and (pointer:fine){ .cmt-suggest:hover{color:var(--c-accent);border-color:var(--c-accent)} }
+
+/* ── 表情选择：精选 Unicode emoji（面板由 comments.js 生成） ── */
+.cmt-emoji{position:relative;flex:none}
+.cmt-emoji-btn{width:30px;height:30px;font-size:17px;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;padding:0;transition:border-color .15s}
+@media (hover:hover) and (pointer:fine){ .cmt-emoji-btn:hover{background:var(--c-reply);border-color:var(--c-accent)} }
+.cmt-emoji-panel{position:absolute;bottom:calc(100% + 8px);left:0;z-index:30;width:min(300px,calc(100vw - 56px));max-height:220px;overflow-y:auto;padding:10px 12px;background:var(--c-sub);border:1px solid var(--c-border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16)}
+.cmt-emoji-group+.cmt-emoji-group{margin-top:8px}
+.cmt-emoji-title{font-size:11px;color:var(--c-text3);margin-bottom:4px}
+.cmt-emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:2px}
+.cmt-emoji-item{font-size:17px;line-height:1;padding:4px 0;background:none;border:none;border-radius:6px;cursor:pointer}
+@media (hover:hover) and (pointer:fine){ .cmt-emoji-item:hover{background:var(--c-reply)} }
+
+/* ── 评论正文内图片（评论图片上传）：默认显示缩略小图，点击后用灯箱看大图 ── */
+.cmt-text .cmt-img{display:inline-block;max-width:160px;max-height:160px;width:auto;height:auto;margin:8px 8px 0 0;border-radius:8px;border:1px solid var(--c-border);background:var(--c-reply);cursor:zoom-in;vertical-align:top}
+/* 灯箱：点缩略图后在浮层里放大显示，点空白处 / 关闭按钮 / 按 Esc 关闭 */
+.cmt-lightbox{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.85);cursor:zoom-out;opacity:0;pointer-events:none;transition:opacity .2s;touch-action:none}
+.cmt-lightbox.is-open{opacity:1;pointer-events:auto}
+.cmt-lightbox img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5);background:#111;cursor:default;touch-action:none;transition:transform .2s ease;-webkit-user-select:none;user-select:none}
+/* 右上角关闭按钮：移动端也能轻松点到 */
+.cmt-lightbox-close{position:absolute;top:16px;right:16px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:24px;line-height:1;cursor:pointer;padding:0;transition:background .15s}
+@media (hover:hover) and (pointer:fine){ .cmt-lightbox-close:hover{background:rgba(255,255,255,.28)} }
+/* 移动端：缩小留白、放大关闭按钮热区 */
+@media (max-width:640px){
+  .cmt-lightbox{padding:12px}
+  .cmt-lightbox-close{top:10px;right:10px;width:44px;height:44px;font-size:26px}
+}
+
+/* ── 锚点定位（#comment-N）：给 sticky 导航留出滚动余量，命中后短暂高亮 ── */
+.cmt-item{scroll-margin-top:80px}
+@keyframes cmt-anchor-flash{0%,60%{background:var(--c-reply)}100%{background:transparent}}
+.cmt-anchor-flash{animation:cmt-anchor-flash 1.6s ease;border-radius:8px}
+
+/* ── 图片上传按钮（与表情按钮同尺寸，放在表情右侧） ── */
+.cmt-imgup{position:relative;flex:none}
+.cmt-imgup-btn{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;padding:0;color:var(--c-text2);transition:border-color .15s,color .15s}
+.cmt-imgup-btn svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (hover:hover) and (pointer:fine){ .cmt-imgup-btn:hover{background:var(--c-reply);border-color:var(--c-accent);color:var(--c-accent)} }
+.cmt-imgup-btn[disabled]{opacity:.55;cursor:default}
+.cmt-imgup-btn.is-loading svg{animation:cmt-spin 1s linear infinite}
+@keyframes cmt-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.cmt-imgup-btn.is-loading svg{animation:none}}
+
+/* ── 已上传图片的缩略图条：上传后即时预览，可单独删除 ── */
+.cmt-imgup-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.cmt-imgup-item{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid var(--c-border);background:var(--c-reply)}
+.cmt-imgup-item img{width:100%;height:100%;object-fit:cover;display:block}
+.cmt-imgup-remove{position:absolute;top:2px;right:2px;width:18px;height:18px;line-height:16px;text-align:center;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:14px;cursor:pointer;padding:0}
+@media (hover:hover) and (pointer:fine){ .cmt-imgup-remove:hover{background:rgba(0,0,0,.8)} }
+
+/* ── 网址协议补全下拉（多选项，复用 .cmt-suggest 容器） ── */
+.cmt-suggest-item{padding:4px 0;cursor:pointer}
+.cmt-suggest-item+.cmt-suggest-item{border-top:1px solid var(--c-border)}
+@media (hover:hover) and (pointer:fine){ .cmt-suggest-item:hover{color:var(--c-accent)} }

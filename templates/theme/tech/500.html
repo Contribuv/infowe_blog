@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}服务器错误{% endblock %}
+{% block content %}
+<div class="tech-error">
+    <div class="tech-error-code">5<span>0</span>0</div>
+    <h1 class="tech-error-title">服务器开小差了</h1>
+    <p class="tech-error-desc">服务器遇到意外错误，请稍后重试。</p>
+    <div class="tech-error-code-block">
+        <pre><span class="hl-error">$</span> tail -f /var/log/blog/error.log
+<span class="hl-error">PHP Fatal error:</span>  Uncaught ErrorException in core/Db.php
+    <span class="hl-error">SQLSTATE[HY000] [2002] Connection refused</span></pre>
+    </div>
+    <a href="/" class="tech-btn tech-btn-primary">返回首页</a>
+</div>
+{% endblock %}

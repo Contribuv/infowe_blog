@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}服务暂时不可用{% endblock %}
+{% block content %}
+<div class="tech-error">
+    <div class="tech-error-code">5<span>0</span>2</div>
+    <h1 class="tech-error-title">服务暂时不可用</h1>
+    <p class="tech-error-desc">服务器暂时无法处理请求，请稍后重试。</p>
+    <div class="tech-error-code-block">
+        <pre><span class="hl-error">$</span> tail -f /var/log/nginx/error.log
+      <span class="hl-error">connect() failed (111: Connection refused) while connecting to fastcgi</span>
+      <span class="hl-error">upstream: "fastcgi://unix:/run/php/php-fpm.sock"</span></pre>
+    </div>
+    <a href="/" class="tech-btn tech-btn-primary">返回首页</a>
+</div>
+{% endblock %}

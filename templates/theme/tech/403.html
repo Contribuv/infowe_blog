@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}请求被拒绝{% endblock %}
+{% block content %}
+<div class="tech-error">
+    <div class="tech-error-code">4<span>0</span>3</div>
+    <h1 class="tech-error-title">请求被拒绝</h1>
+    <p class="tech-error-desc">检测到跨站提交的表单，请求已拦截。若非本人操作，请忽略此页。</p>
+    <div class="tech-error-code-block">
+        <pre><span class="hl-error">$</span> curl -I -X POST {{ request.url }}
+HTTP/1.1 <span class="hl-error">403 Forbidden</span>
+Origin: <span class="hl-error">evil.example</span>
+X-CSRF: <span class="hl-error">rejected</span></pre>
+    </div>
+    <a href="/" class="tech-btn tech-btn-primary">返回首页</a>
+</div>
+{% endblock %}

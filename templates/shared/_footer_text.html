@@ -1,0 +1,11 @@
+{# 全站共用的版权行渲染片段（admin 后台 + default/tech 主题前台都用）
+   数据来源：app.config（footer_copyright_year / footer_copyright_owner / footer_powered_by）
+   缺失时自动回退：年份 → 服务器当前年；主体 → blog_name；Powered by → "Python & Flask"
+   渲染顺序：Powered by X © YYYY Blog #}
+{%- set _yr = config.get('footer_copyright_year', '').strip() -%}
+{%- set _yr = _yr if _yr else now_year|string -%}
+{%- set _owner = config.get('footer_copyright_owner', '').strip() -%}
+{%- set _owner = _owner if _owner else (blog_name or 'My Blog') -%}
+{%- set _powered = config.get('footer_powered_by', '').strip() -%}
+{%- set _powered = _powered if _powered else 'Python & Flask' -%}
+{%- if _powered %}Powered by {{ _powered }} {% endif %}© {{ _yr }} {{ _owner }}

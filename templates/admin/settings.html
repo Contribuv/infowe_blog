@@ -1,0 +1,728 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}博客设置{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>博客设置</h2>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="settings-form">
+<input type="hidden" name="_settings_form" value="1">
+        <!-- 账号安全分组：管理员账号 + OTP 双重验证（分组容器保证两卡在双栏瀑布流中始终紧挨同列） -->
+        <div class="card-group">
+        <div class="card">
+            <div class="card-header"><h3>账号安全</h3></div>
+            <div class="form-group">
+                <label>账号名</label>
+                <input type="text" name="admin_username" class="input-text"
+                       value="{{ admin_username }}" placeholder="登录用户名" autocomplete="username">
+                <span class="form-hint">修改后将自动更新当前登录会话。</span>
+            </div>
+            <div class="form-group">
+                <label>头像</label>
+                <div class="avatar-edit">
+                    <div class="avatar-preview">
+                        {% if admin_avatar and avatar_exists %}
+                        <img src="{{ admin_avatar }}" alt="头像" id="avatar_img">
+                        {% else %}
+                        <span class="avatar-preview-empty">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="avatar-upload">
+                        <input type="file" name="avatar_file" id="avatar_file" accept="image/*" hidden>
+                        <label for="avatar_file" class="btn btn-outline btn-sm">选择图片</label>
+                        <span class="form-hint" id="avatar_filename">建议正方形，自动裁剪为 144×144</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" name="new_password" class="input-text"
+                       placeholder="留空表示不修改，至少6位字符" minlength="6" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label>联系邮箱</label>
+                <input type="email" name="contact_email" class="input-text"
+                       value="{{ config.get('contact_email', '') }}"
+                       placeholder="如: hello@yourdomain.com">
+            </div>
+        </div>
+
+        <!-- 安全验证：OTP 双重验证（id 供 OTP 邮箱找回后定位跳转） -->
+        <div class="card" id="otp-card">
+            <div class="card-header card-header--hint">
+                <h3>安全验证</h3>
+                <span class="card-hint">开启后登录后台需额外输入 6 位动态验证码，防止密码泄露后被直接入侵</span>
+            </div>
+
+            {% if otp_emergency %}
+            <div class="otp-emergency">
+                <strong>检测到 OTP 紧急禁用标记（data/.otp_disable）</strong>
+                <p>当前 OTP 验证已被临时跳过。已确认可以正常登录后，请清除该标记以恢复保护。</p>
+                {# 不能嵌套 form：HTML 解析器会忽略内层 action，按钮会误提交到外层设置表单。用 form 属性指向外部表单 #}
+                <button type="submit" form="otpEmergencyForm" class="btn btn-outline btn-sm">我已处理，清除标记并恢复</button>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="otp_enabled" id="otp_enabled" value="1"{{ ' checked' if otp_enabled else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后登录后台需要「密码 + 动态验证码」双重验证；首次开启请在下方完成扫码绑定。</span>
+                </label>
+            </div>
+
+            <!-- 绑定区：未启用时勾选开关展开；已启用时点「重新绑定」展开 -->
+            <div id="otp_bind_section" class="otp-bind hidden">
+                <div class="form-group">
+                    <button type="button" id="otp_gen_qr" class="btn btn-outline btn-sm">生成二维码</button>
+                    <div class="otp-qr-row">
+                        <div id="otp_qr_box" class="otp-qr-box hidden">
+                            <div id="otp_qr"></div>
+                            <div class="otp-manual"><span>或手动输入密钥</span><code id="otp_secret_show" class="otp-secret-text"></code></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="otp_confirm_code">验证码确认</label>
+                    <input type="text" id="otp_confirm_code" name="otp_confirm_code" class="input-text" inputmode="numeric"
+                           autocomplete="off" maxlength="6" pattern="[0-9]{6}"
+                           placeholder="用验证器 App 扫码后，输入当前 6 位动态码">
+                    <span class="form-hint" id="otp_bind_hint">输入正确验证码并点击「保存所有设置」后才正式生效</span>
+                </div>
+                <input type="hidden" name="otp_secret" id="otp_secret" value="">
+                <input type="hidden" name="otp_rotate" id="otp_rotate" value="">
+            </div>
+
+            <!-- 已启用信息区 -->
+            <div id="otp_enabled_section" class="otp-enabled{% if not otp_enabled %} hidden{% endif %}">
+                <p><span class="otp-dot"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> 双重验证已开启，登录后台需输入动态验证码。</p>
+                <p>剩余恢复码：<strong>{{ otp_recovery_left }}</strong> 个
+                    {%- if otp_recovery_left <= 3 %}（即将用完，建议重新绑定并保存新恢复码）{% endif %}</p>
+                {% if otp_mail_ok %}
+                <p>找回保障：已配置 SMTP，验证器/恢复码都丢失时可<strong>邮箱重置</strong>。</p>
+                {% endif %}
+                {% if not otp_mail_ok %}
+                <p>找回提示：未配置 SMTP，请务必妥善保存恢复码；验证器与恢复码都丢失时可在服务器执行 <code>touch data/.otp_disable</code> 临时跳过。</p>
+                {% endif %}
+                <button type="button" id="otp_rotate_btn" class="btn btn-outline btn-sm">重新绑定（换新密钥 + 新恢复码）</button>
+            </div>
+        </div>
+
+        {% if otp_new_codes %}
+        <!-- 恢复码一次性展示：启用/重绑成功后的唯一展示机会 -->
+        <div class="card otp-codes-card">
+            <div class="card-header"><h3>保存你的恢复码（仅显示这一次）</h3></div>
+            <p>每个恢复码只能使用一次，用于验证器丢失时登录后台。请立即保存（打印 / 拍照 / 点击下载），刷新页面后将不再显示。</p>
+            <ul class="otp-codes-list">
+                {% for c in otp_new_codes %}
+                <li>{{ c[:4] }}-{{ c[4:] }}</li>
+                {% endfor %}
+            </ul>
+            <button type="button" id="otp_download_codes" class="btn btn-primary btn-sm">下载恢复码 .txt</button>
+        </div>
+        {% endif %}
+        </div><!-- /.card-group -->
+
+        <!-- 站点信息：前台展示配置 -->
+        <div class="card">
+            <div class="card-header"><h3>站点信息</h3></div>
+            <div class="form-group">
+                <label>站点地址</label>
+                <input type="text" name="site_url" class="input-text"
+                       value="{{ site_url }}" placeholder="https://www.example.com">
+                <span class="form-hint">用于生成 RSS、分享卡片、邮件里的绝对链接。留空则跟随当前访问地址；本地 127.0.0.1 / localhost 调试会自动跟随，不受此项影响。当前访问：{{ current_url|default('') }}</span>
+            </div>
+            <div class="form-group">
+                <label>强制 HTTPS</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="force_https" value="1"{{ ' checked' if force_https|default('0') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">站点地址填写 https:// 时，http 访问会 301 跳到 https。后台、安装向导、.well-known 与本地调试自动豁免。</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>统一 www</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="unify_www" value="1"{{ ' checked' if unify_www|default('0') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">仅在同一主域内，把带 / 不带 www 的访问 301 到「站点地址」的写法；不会跨域名跳转，避免填错后无法访问。</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>博客名称</label>
+                <input type="text" name="blog_name" class="input-text"
+                       value="{{ blog_name }}" placeholder="你的博客名称">
+            </div>
+            <div class="form-group">
+                <label>副标题</label>
+                <input type="text" name="blog_subtitle" class="input-text"
+                       value="{{ blog_subtitle }}" placeholder="一句话描述你的博客">
+            </div>
+            <div class="form-group">
+                <label>首页标题（留空则用站点名）</label>
+                <input type="text" name="home_title" class="input-text"
+                       value="{{ home_title }}" placeholder="如：用 Flask 手搓的极简博客">
+            </div>
+            <div class="form-group">
+                <label>首页最多显示文章数</label>
+                <input type="number" name="home_posts_count" class="input-text"
+                       value="{{ home_posts_count if home_posts_count is defined else '6' }}" min="1" max="50">
+                <span class="form-hint">精选文章排在前面，其余按最新文章补足，总数不超过该值。</span>
+            </div>
+            <div class="form-group">
+                <label>文章列表每页条数</label>
+                <input type="number" name="posts_per_page" class="input-text"
+                       value="{{ posts_per_page if posts_per_page is defined else '20' }}" min="1" max="100">
+                <span class="form-hint">前台「文章」列表页每页显示的文章数量，超过则分页（默认 20）。</span>
+            </div>
+            <div class="form-group">
+                <label>评论功能</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="comments_enabled" value="1"{{ ' checked' if comments_enabled|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后前台文章页显示评论区；关闭后前台不显示且提交评论将被拦截。</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>评论图片上传</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="comment_image_upload" value="1"{{ ' checked' if comment_image_upload|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">允许访客在评论框上传图片（仅 png/jpg/jpeg/gif/webp，单图 ≤5MB，同 IP 每分钟 ≤3 张、每天 ≤30 张）。关闭后按钮隐藏且接口拒绝。</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>评论敏感词过滤</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="sensitive_filter_enabled" value="1"{{ ' checked' if sensitive_filter_enabled|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后评论正文命中下方词库时，输入即被替换为等长星号（前端实时拦截 + 后端提交兜底）。关闭则完全不过滤。</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>敏感词库</label>
+                <textarea name="sensitive_words" class="textarea-sm" rows="8"
+                          placeholder="一行一个词，例如：&#10;广告&#10;加微信&#10;# 井号开头是注释，可写说明">{{ sensitive_words }}</textarea>
+                <span class="form-hint">一行一个敏感词；<b>#</b> 开头的行是注释会被忽略。词库会下发到浏览器做实时过滤，页面源码中可见，请勿放入不希望公开的内容。开源中文词库可参考 GitHub 项目：konsheng/Sensitive-lexicon、houbb/sensitive-word、fighting41love/funNLP，自行筛选拷贝即可。</span>
+            </div>
+        </div>
+        <!-- 图片水印：正文/灯箱图片叠加角落水印，无痕原图备份在 uploads/.originals（公网不可达） -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>图片水印</h3>
+                <span class="card-hint">修改文本/位置/开关后保存，历史图片自动后台刷新</span>
+            </div>
+            <div class="form-group">
+                <label>启用水印</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="watermark_enabled" value="1"{{ ' checked' if watermark_enabled|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后上传图片自动叠加水印；关闭时仅保留无痕原图。</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>水印文本</label>
+                <input type="text" name="watermark_text" class="input-text"
+                       value="{{ watermark_text|default('') }}" placeholder="留空则用「站点名 · 域名」">
+                <span class="form-hint">支持中文；留空自动取当前站点名 + 域名（如 infowe.site · example.com）。</span>
+            </div>
+            <div class="form-group">
+                <label>水印位置</label>
+                <select name="watermark_position" class="input-text">
+                    <option value="br"{{ ' selected' if watermark_position|default('br') == 'br' else '' }}>右下角</option>
+                    <option value="bl"{{ ' selected' if watermark_position|default('br') == 'bl' else '' }}>左下角</option>
+                    <option value="tr"{{ ' selected' if watermark_position|default('br') == 'tr' else '' }}>右上角</option>
+                    <option value="tl"{{ ' selected' if watermark_position|default('br') == 'tl' else '' }}>左上角</option>
+                    <option value="bc"{{ ' selected' if watermark_position|default('br') == 'bc' else '' }}>底部居中</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>水印大小</label>
+                <select name="watermark_size" class="input-text">
+                    <option value="s"{{ ' selected' if watermark_size|default('m') == 's' else '' }}>小（图宽 2%）</option>
+                    <option value="m"{{ ' selected' if watermark_size|default('m') == 'm' else '' }}>标准（图宽 3%）</option>
+                    <option value="l"{{ ' selected' if watermark_size|default('m') == 'l' else '' }}>大（图宽 4%）</option>
+                </select>
+                <span class="form-hint">文字按图片宽度自动缩放，不同尺寸图片观感一致；修改后保存，历史图片自动后台刷新。</span>
+            </div>
+            <div class="form-group">
+                <label>历史图片刷新状态</label>
+                <span class="form-hint">
+                {% if wm_refresh.state == 'running' %}
+                    正在后台刷新全部历史图片…（完成后本页自动显示结果）
+                {% elif wm_refresh.state == 'done' %}
+                    上次已于 {{ wm_refresh.time }} 完成：刷新 {{ wm_refresh.done }} 张，失败 {{ wm_refresh.errs }}，耗时 {{ wm_refresh.seconds|default(0) }} 秒
+                {% else %}
+                    尚未触发过；保存水印配置变化时自动刷新。
+                {% endif %}
+                </span>
+            </div>
+        </div>
+        <!-- 上传设置：编辑器可上传的类型与大小上限，留空回退默认白名单 -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>上传设置</h3>
+                <span class="card-hint">控制编辑器可上传的文件类型与大小，保存后立即生效</span>
+            </div>
+            <div class="form-group">
+                <label>图片扩展名</label>
+                <input type="text" name="upload_image_ext" class="input-text"
+                       value="{{ upload_image_ext }}" placeholder="png, jpg, jpeg, gif, webp, bmp, heic, heif">
+                <span class="form-hint">逗号或空格分隔，可写 .png 或 png；这些类型会走压缩与水印处理。HEIC/HEIF 需服务器装有 ImageMagick 或 ffmpeg 才能解码。</span>
+            </div>
+            <div class="form-group">
+                <label>音视频扩展名</label>
+                <input type="text" name="upload_media_ext" class="input-text"
+                       value="{{ upload_media_ext }}" placeholder="mp4, webm, ogg, mov, avi, mp3, wav, m4a, aac">
+                <span class="form-hint">插入正文时以 &lt;video&gt; / &lt;audio&gt; 播放器呈现。</span>
+            </div>
+            <div class="form-group">
+                <label>附件扩展名</label>
+                <input type="text" name="upload_file_ext" class="input-text"
+                       value="{{ upload_file_ext }}" placeholder="zip, rar, pdf, doc, docx, xls, xlsx, ppt, pptx, txt, md, py, js, json">
+                <span class="form-hint">插入正文时呈现为可下载链接。</span>
+            </div>
+            <div class="form-group">
+                <label>单文件大小上限（MB）</label>
+                <input type="number" name="upload_max_size" class="input-text" min="1" max="512" step="1"
+                       value="{{ upload_max_size }}">
+                <span class="form-hint">1–512；留空或填 0 使用默认 20MB。</span>
+            </div>
+            <div class="form-group">
+                <span class="form-hint">安全提示：php / phtml / phar / htaccess 等可执行或会改动服务器配置的扩展名会被自动忽略。</span>
+            </div>
+        </div>
+        <!-- 统计代码：原样注入前台页面 </body> 前（插在中部，避免瀑布流两列高差过大） -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>统计代码</h3>
+                <span class="card-hint">原样注入前台页面底部，可粘贴百度统计 / Google Analytics / Umami 等脚本</span>
+            </div>
+            <div class="form-group">
+                <textarea name="stats_code" class="textarea-sm textarea-code" rows="6"
+                          placeholder='&lt;script defer src="https://example.com/analytics.js"&gt;&lt;/script&gt;'>{{ config.get('stats_code', '') }}</textarea>
+                <span class="form-hint">内容按 HTML 原样输出到前台，请只填可信任代码；留空则不注入</span>
+            </div>
+        </div>
+        <!-- 评论邮件通知：SMTP 配置，仅通知博主（不存评论者明文邮箱，无法通知评论者） -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>评论邮件通知</h3>
+                <span class="card-hint">新评论 / 新回复时通过 SMTP 发送邮件提醒</span>
+            </div>
+            <div class="form-group">
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="comment_notify" value="1"{{ ' checked' if comment_notify|default('0') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">开启后新评论提交即邮件通知；关闭则与当前行为一致（仅后台可见）。</span>
+                </label>
+            </div>
+            <div class="smtp-row">
+                <div class="form-group">
+                    <label>SMTP 服务器</label>
+                    <input type="text" name="smtp_host" class="input-text"
+                           value="{{ smtp_host }}" placeholder="如 smtp.qq.com">
+                </div>
+                <div class="form-group">
+                    <label>SMTP 端口</label>
+                    <select name="smtp_port" id="smtp_port" class="input-text">
+                        <option value="465"{{ ' selected' if smtp_port|string == '465' }}>465 — SSL 加密</option>
+                        <option value="587"{{ ' selected' if smtp_port|string == '587' }}>587 — STARTTLS（推荐）</option>
+                        <option value="25"{{ ' selected' if smtp_port|string == '25' }}>25 — 明文</option>
+                        <option value="2525"{{ ' selected' if smtp_port|string == '2525' }}>2525 — 备选</option>
+                        <option value="__custom__"{{ ' selected' if smtp_port and smtp_port|string not in ('465','587','25','2525') else '' }}>自定义…</option>
+                    </select>
+                    <span class="form-hint">465=SSL、587=STARTTLS（QQ/163 邮箱建议 465）。</span>
+                    <input type="text" name="smtp_port_custom" id="smtp_port_custom" class="input-text hidden"
+                           value="{{ smtp_port if smtp_port and smtp_port|string not in ('465','587','25','2525') else '' }}"
+                           placeholder="输入自定义端口号">
+                    <span class="form-hint hidden" id="smtp_port_hint">端口范围 1-65535</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>发件名称</label>
+                <input type="text" name="smtp_sender_name" class="input-text"
+                       value="{{ smtp_sender_name }}" placeholder="收件人看到的名称，留空用博客名">
+            </div>
+            <div class="form-group">
+                <label>发件账号</label>
+                <input type="text" name="smtp_user" class="input-text"
+                       value="{{ smtp_user }}" placeholder="SMTP 登录账号，通常为发件邮箱">
+            </div>
+            <div class="form-group">
+                <label>发件授权码</label>
+                <input type="password" name="smtp_pass" class="input-text"
+                       value="{{ smtp_pass }}" placeholder="QQ 邮箱等需使用授权码">
+            </div>
+            <div class="form-group">
+                <label>收件人</label>
+                <input type="email" name="notify_email" class="input-text"
+                       value="{{ notify_email }}" placeholder="留空默认发送到「联系邮箱」">
+            </div>
+            <div class="form-group">
+                <button type="button" id="btn_test_email" class="btn btn-secondary">发送测试邮件</button>
+                <span class="form-hint hidden" id="email_test_result"></span>
+                <span class="form-hint">先填好上方 SMTP 配置，点此验证连通性（不保存设置）；测试邮件发往「收件人」。新评论/新回复会自动通知博主与被回复者。</span>
+            </div>
+        </div>
+
+        <!-- 博主资料：个人介绍 + 社交 -->
+        <div class="card">
+            <div class="card-header"><h3>博主资料</h3></div>
+            <div class="form-group">
+                <label>博主名称</label>
+                <input type="text" name="author" class="input-text"
+                       value="{{ author }}" placeholder="你的名字">
+            </div>
+            <div class="form-group">
+                <label>博主简介</label>
+                <textarea name="author_bio" class="textarea-sm" rows="3" placeholder="简短的自我介绍">{{ author_bio }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>GitHub 用户名</label>
+                <input type="text" name="github_username" class="input-text"
+                       value="{{ config.get('github_username', '') }}"
+                       placeholder="如: torvalds">
+            </div>
+            <div class="form-group">
+                <label>GitHub 主页</label>
+                <input type="text" name="social_github" class="input-text"
+                       value="{{ config.get('social_github', '') }}"
+                       placeholder="如: https://github.com/username">
+                <span class="form-hint">前台"关于我"卡片的 GitHub 链接，留空则不显示</span>
+            </div>
+            <div class="form-group">
+                <label>GitHub Token（用于项目同步）</label>
+                <input type="password" name="github_token" class="input-text"
+                       value="{{ config.get('github_token', '') }}"
+                       placeholder="ghp_xxx 或 github_pat_xxx（仅用于同步私有仓库/提升限额）">
+                <span class="form-hint">仅后台「项目同步」时使用，可留空匿名拉取。配置后可访问私有仓库，并将 API 限额从匿名 60/小时 提升到 5000/小时。建议用仅含 <code>repo</code> 只读权限的 Token。前台项目页不依赖此配置。</span>
+            </div>
+            <div class="form-hint">
+                RSS 链接自动生成（/feed.xml）。邮箱、GitHub 会用于前台"关于我"卡片展示。
+            </div>
+        </div>
+
+        <!-- 关于页面 + 备案信息 -->
+        <div class="card">
+            <div class="card-header"><h3>关于页面</h3></div>
+            <div class="form-group">
+                <label>博客介绍</label>
+                <textarea name="about_intro" class="textarea-sm" rows="4" placeholder="关于这个博客和你">{{ about_intro }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>技能列表</label>
+                <textarea name="skills" class="textarea-sm textarea-code" rows="6"
+                          placeholder='[{"name":"Python","level":95},{"name":"Flask","level":85}]'>{{ skills }}</textarea>
+                <span class="form-hint">JSON 格式，每项包含 name 和 level (0-100)</span>
+            </div>
+            <div class="form-group">
+                <label>ICP 备案号（工信部）</label>
+                <input type="text" name="icp_beian" class="input-text"
+                       value="{{ config.get('icp_beian', '') }}"
+                       placeholder="如: 京ICP备2024000000号-1">
+            </div>
+            <div class="form-group">
+                <label>公安备案号</label>
+                <input type="text" name="police_beian" class="input-text"
+                       value="{{ config.get('police_beian', '') }}"
+                       placeholder="如: 京公网安备11010802000000号">
+            </div>
+            <div class="form-group">
+                <label>版权年份</label>
+                <input type="text" name="footer_copyright_year" class="input-text"
+                       value="{{ config.get('footer_copyright_year', '') }}"
+                       placeholder="如: 2026">
+                <span class="form-hint">登录页/首页底部版权行显示的年份，留空则自动取服务器当前年份</span>
+            </div>
+            <div class="form-group">
+                <label>版权主体（站点名称）</label>
+                <input type="text" name="footer_copyright_owner" class="input-text"
+                       value="{{ config.get('footer_copyright_owner', '') }}"
+                       placeholder="如: infowe.site">
+                <span class="form-hint">会拼成「Powered by X © {年份} {站点名称}」，留空则回退到博客名称</span>
+            </div>
+            <div class="form-group">
+                <label>Powered by 文案</label>
+                <input type="text" name="footer_powered_by" class="input-text"
+                       value="{{ config.get('footer_powered_by', '') }}"
+                       placeholder="如: Python &amp; Flask">
+                <span class="form-hint">版权行右侧的 Powered by 部分，留空则隐藏该项</span>
+            </div>
+        </div>
+
+        <!-- 导航菜单：每项一行（页面名 + 开关） -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>导航菜单</h3>
+                <span class="card-hint">控制入口是否显示在顶部导航与页脚</span>
+            </div>
+            <div class="form-group">
+                <div class="nav-toggle-grid">
+                    {% for item in nav_all %}
+                    <label class="nav-toggle">
+                        <span class="nav-toggle-name">{{ item.label }}</span>
+                        <span class="switch">
+                            <input type="checkbox" name="nav_{{ item.key }}" value="1"{{ ' checked' if item.enabled else '' }}>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
+            </div>
+        </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">保存所有设置</button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">取消</a>
+    </div>
+</form>
+
+{# 独立的清除标记表单：受上面的按钮通过 form 属性触发 #}
+<form id="otpEmergencyForm" method="POST" action="{{ url_for('admin_otp_clear_emergency') }}" hidden></form>
+
+<script src="{{ url_for('static', filename='vendor/qrcode/qrcode.min.js') }}"></script>
+<script>
+  var _avatarInput = document.getElementById('avatar_file');
+  if (_avatarInput) {
+    _avatarInput.addEventListener('change', function () {
+      var tip = document.getElementById('avatar_filename');
+      tip.textContent = this.files.length ? this.files[0].name : '建议正方形，自动裁剪为 144×144';
+      // 即时预览
+      if (this.files.length && this.files[0].type.startsWith('image/')) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var prev = document.querySelector('.avatar-preview');
+          // 如果当前是空占位符，替换为 img
+          var empty = prev.querySelector('.avatar-preview-empty');
+          if (empty) {
+            empty.outerHTML = '<img src="' + e.target.result + '" alt="头像预览" id="avatar_img">';
+          } else {
+            var img = document.getElementById('avatar_img');
+            if (img) img.src = e.target.result;
+          }
+        };
+        reader.readAsDataURL(this.files[0]);
+      }
+    });
+  }
+  // SMTP 端口：预设下拉 + 「自定义…」切换显示输入框；提交时把自定义值回填到 select
+  var portSel = document.getElementById('smtp_port');
+  var portCustom = document.getElementById('smtp_port_custom');
+  var portHint = document.getElementById('smtp_port_hint');
+  if (portSel) {
+    var syncPortField = function () {
+      var custom = portSel.value === '__custom__';
+      portCustom.style.display = custom ? 'block' : 'none';
+      portHint.style.display = custom ? 'block' : 'none';
+      if (custom) portCustom.focus();
+    };
+    portSel.addEventListener('change', syncPortField);
+    syncPortField();  // 页面加载时，若存的是自定义端口则立即展开输入框
+    var pf = portSel.closest('form');
+    if (pf) {
+      pf.addEventListener('submit', function () {
+        if (portSel.value === '__custom__') {
+          var v = portCustom.value.trim();
+          if (/^[1-9]\d{0,4}$/.test(v) && +v >= 1 && +v <= 65535) {
+            portSel.value = v;
+          } else {
+            portSel.value = '587';
+            alert('自定义端口无效，已回退为 587（STARTTLS）');
+          }
+        }
+      });
+    }
+  }
+  // SMTP 测试邮件：AJAX 同页反馈（不刷新、不保存设置），结果展示在本卡片内
+  var btnTest = document.getElementById('btn_test_email');
+  var testRes = document.getElementById('email_test_result');
+  if (btnTest) {
+    var gv = function (n) {
+      var el = document.querySelector('[name="' + n + '"]');
+      return el ? el.value : '';
+    };
+    btnTest.addEventListener('click', function () {
+      var host = gv('smtp_host').trim();
+      if (!host) {
+        testRes.textContent = '请先填写 SMTP 服务器';
+        testRes.className = 'form-hint email-test-err';
+        testRes.style.display = 'block';
+        return;
+      }
+      var pv = portSel ? portSel.value : '';
+      if (pv === '__custom__') pv = (portCustom.value || '').trim();
+      var fd = new URLSearchParams();
+      ['smtp_host', 'smtp_user', 'smtp_pass', 'notify_email', 'contact_email'].forEach(function (k) {
+        fd.set(k, gv(k));
+      });
+      fd.set('smtp_port', pv || '');
+      btnTest.disabled = true;
+      testRes.textContent = '正在发送…';
+      testRes.className = 'form-hint';
+      testRes.style.display = 'block';
+      fetch('/admin/settings/test-email', {
+        method: 'POST',
+        body: fd,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      }).then(function (r) { return r.json(); })
+        .then(function (j) {
+          testRes.textContent = j.msg;
+          testRes.className = 'form-hint ' + (j.ok ? 'email-test-ok' : 'email-test-err');
+        })
+        .catch(function () {
+          testRes.textContent = '请求失败，请重试';
+          testRes.className = 'form-hint email-test-err';
+        })
+        .then(function () { btnTest.disabled = false; });
+    });
+  }
+  // ── OTP 双重验证：二维码 / 绑定 / 重绑 / 恢复码下载 ──
+  (function () {
+    var cb = document.getElementById('otp_enabled');
+    if (!cb) return;
+    var bindSec = document.getElementById('otp_bind_section');
+    var enabledSec = document.getElementById('otp_enabled_section');
+    var genBtn = document.getElementById('otp_gen_qr');
+    var rotateBtn = document.getElementById('otp_rotate_btn');
+    var qrBox = document.getElementById('otp_qr_box');
+    var qrEl = document.getElementById('otp_qr');
+    var secretEl = document.getElementById('otp_secret');
+    var secretShow = document.getElementById('otp_secret_show');
+    var rotateEl = document.getElementById('otp_rotate');
+    var confirmEl = document.getElementById('otp_confirm_code');
+    var bindHint = document.getElementById('otp_bind_hint');
+    var wasEnabled = {{ 'true' if otp_enabled else 'false' }};
+    var secret = '';   // 当前待确认的新密钥（页面未提交前不落库）
+
+    function renderQr(uri) {
+      if (!qrEl) return;
+      qrEl.innerHTML = '';
+      if (window.qrcode) {
+        try {
+          var qr = qrcode(0, 'M');   // qrcode-generator：typeNumber 0=自适应，容错 M
+          qr.addData(uri);
+          qr.make();
+          qrEl.innerHTML = qr.createImgTag(5, 2);
+        } catch (e) {
+          qrEl.innerHTML = '<span class="form-hint">二维码渲染失败，请使用下方密钥手动输入</span>';
+        }
+      } else {
+        qrEl.innerHTML = '<span class="form-hint">二维码组件未加载，请使用下方密钥手动输入</span>';
+      }
+    }
+
+    function fetchSecret() {
+      bindHint.textContent = '正在生成密钥…';
+      fetch('/admin/otp/setup')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+        .then(function (j) {
+          secret = j.secret || '';
+          secretEl.value = secret;
+          secretShow.textContent = secret;
+          renderQr(j.uri);
+          qrBox.style.display = 'flex';
+          bindHint.textContent = '输入正确验证码并点击「保存所有设置」后才正式生效';
+          if (confirmEl) confirmEl.focus();
+        })
+        .catch(function () {
+          secret = ''; secretEl.value = '';
+          bindHint.textContent = '密钥生成失败，请重试';
+        });
+    }
+
+    // 勾选开关：展开/收起绑定区
+    cb.addEventListener('change', function () {
+      if (cb.checked) {
+        bindSec.style.display = 'block';
+        if (enabledSec && enabledSec.style.display !== 'none') enabledSec.style.display = 'none';
+      } else {
+        bindSec.style.display = 'none';
+        if (enabledSec && wasEnabled) enabledSec.style.display = 'block';
+        // 丢弃尚未确认的绑定数据
+        secret = ''; secretEl.value = ''; secretShow.textContent = '';
+        rotateEl.value = ''; if (confirmEl) confirmEl.value = '';
+        qrBox.style.display = 'none'; if (qrEl) qrEl.innerHTML = '';
+      }
+    });
+
+    // 生成二维码
+    if (genBtn) genBtn.addEventListener('click', fetchSecret);
+
+    // OTP 邮箱找回后自动进入重绑流程（后端 redirect 带 otp_rebind=1）：
+    // 勾选开关展开绑定区 + 直接生成新密钥与二维码，扫码确认即可完成重绑
+    if (new URLSearchParams(location.search).get('otp_rebind') === '1') {
+      if (!cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+      fetchSecret();
+    }
+
+    // 重新绑定：替换 skey + 新恢复码
+    if (rotateBtn) rotateBtn.addEventListener('click', function () {
+      rotateEl.value = '1';
+      bindSec.style.display = 'block';
+      enabledSec.style.display = 'none';
+      fetchSecret();
+    });
+
+    // 恢复码下载
+    var dlBtn = document.getElementById('otp_download_codes');
+    if (dlBtn) dlBtn.addEventListener('click', function () {
+      var items = document.querySelectorAll('.otp-codes-list li');
+      var text = 'infowe 博客后台 OTP 恢复码\n生成时间: ' + new Date().toLocaleString('zh-CN') +
+                 '\n每个恢复码仅可使用一次，验证器丢失时用它登录后台。\n\n';
+      for (var i = 0; i < items.length; i++) text += items[i].textContent + '\n';
+      var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'otp-recovery-codes.txt';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 100);
+    });
+  })();
+
+  // ── 历史图片水印刷新：后台队列由本页轮询推进，完成后自动刷新显示结果 ──
+  (function () {
+    if (!{{ 'true' if wm_refresh.state == 'running' else 'false' }}) return;
+    var failures = 0;
+    function poll() {
+      fetch('{{ url_for("admin_settings_wm_refresh") }}')
+        .then(function (r) { return r.json(); })
+        .then(function (s) {
+          failures = 0;
+          if (s.state === 'running') { setTimeout(poll, 1500); }
+          else { location.reload(); }
+        })
+        .catch(function () {
+          if (++failures > 8) return;
+          setTimeout(poll, 3000);
+        });
+    }
+    poll();
+  })();
+</script>
+{% endblock %}

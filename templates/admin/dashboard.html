@@ -1,0 +1,197 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}仪表盘{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('layout-dashboard', 20) | safe }} 仪表盘</h2>
+</div>
+
+{% if upgrade_available and upgrade_check %}
+<div class="upgrade-banner" id="upgrade-status">
+{% else %}
+<div class="upgrade-banner is-idle" id="upgrade-status">
+{% endif %}
+    <div class="upgrade-banner-icon">{{ icon('rocket', 24) | safe }}</div>
+    <div class="upgrade-banner-text" id="upgrade-status-text">
+        {% if upgrade_available and upgrade_check %}
+        <strong>发现新版本 v{{ upgrade_check.tag }}</strong>
+        <span>当前版本 v{{ version }}，点击前往一键升级（自动备份数据）</span>
+        {% elif upgrade_check %}
+        <strong>已是最新版本 v{{ version }}</strong>
+        <span>最近一次检测到的版本为 v{{ upgrade_check.tag }}</span>
+        {% else %}
+        <strong>当前版本 v{{ version }}</strong>
+        <span>正在检查更新…</span>
+        {% endif %}
+    </div>
+    <div class="upgrade-status-action" id="upgrade-status-action">
+        {% if upgrade_available and upgrade_check %}
+        <a href="{{ url_for('admin_upgrade') }}" class="btn btn-primary">{{ icon('arrow-up-right', 16, 'icon-sm') | safe }} 去升级</a>
+        {% else %}
+        <button type="button" class="btn btn-secondary" id="upgrade-status-check">{{ icon('history', 16, 'icon-sm') | safe }} 检查更新</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">{{ icon('file', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.total }}</span>
+            <span class="stat-label">文章总数</span>
+        </div>
+    </div>
+    <div class="stat-card stat-published">
+        <div class="stat-icon">{{ icon('check-circle', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.published }}</span>
+            <span class="stat-label">已发布</span>
+        </div>
+    </div>
+    <div class="stat-card stat-draft">
+        <div class="stat-icon">{{ icon('pencil', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.drafts }}</span>
+            <span class="stat-label">草稿</span>
+        </div>
+    </div>
+    <div class="stat-card stat-extras">
+        <div class="stat-icon">{{ icon('tag', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ all_tags|length }}</span>
+            <span class="stat-label">标签数</span>
+        </div>
+    </div>
+    <div class="stat-card stat-projects">
+        <div class="stat-icon">{{ icon('github', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.projects }}</span>
+            <span class="stat-label">开源项目</span>
+        </div>
+    </div>
+    <div class="stat-card stat-links">
+        <div class="stat-icon">{{ icon('link', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.links }}</span>
+            <span class="stat-label">友情链接</span>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷操作 -->
+<div class="quick-actions">
+    <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary">{{ icon('pencil', 16, 'icon-sm') | safe }} 写新文章</a>
+    <a href="{{ url_for('admin_project_new') }}" class="btn btn-secondary">{{ icon('folder', 16, 'icon-sm') | safe }} 添加项目</a>
+    <a href="{{ url_for('admin_link_new') }}" class="btn btn-secondary">{{ icon('link', 16, 'icon-sm') | safe }} 添加链接</a>
+    <a href="{{ url_for('admin_settings') }}" class="btn btn-secondary">{{ icon('settings', 16, 'icon-sm') | safe }} 博客设置</a>
+</div>
+
+<!-- 最近更新 -->
+<div class="card">
+    <div class="card-header">
+        <h3>最近更新的文章</h3>
+    </div>
+    <div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>标题</th>
+                <th>状态</th>
+                <th>更新时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in recent %}
+            <tr>
+                <td data-label="标题">
+                    <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="post-link">{{ post.title }}</a>
+                </td>
+                <td data-label="状态">
+                    {% if post.status == 'published' %}
+                <span class="badge badge-success">已发布</span>
+                {% elif post.status == 'hidden' %}
+                <span class="badge badge-info">隐藏</span>
+                {% else %}
+                <span class="badge badge-warning">草稿</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" data-label="更新时间">{{ post.updated_at[:10] }}</td>
+                <td data-label="操作">
+                    <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="btn btn-sm">编辑</a>
+                    <a href="/post/{{ post.id }}" target="_blank" class="btn btn-sm">查看</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-muted text-center">暂无文章</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script type="application/json" id="dashboard-upgrade-meta">{"check": "{{ url_for('admin_upgrade_check') }}", "upgrade": "{{ url_for('admin_upgrade') }}", "auto": {{ 'true' if upgrade_stale else 'false' }}}</script>
+<script>
+// 主动发现更新：进入仪表盘即回显版本状态。服务端只读缓存（渲染期零网络），
+// 缓存过期或缺失时由这里补一次异步检测，无需刷新第二次页面。
+(function () {
+    var box = document.getElementById('upgrade-status');
+    if (!box) return;
+    var textEl = document.getElementById('upgrade-status-text');
+    var actionEl = document.getElementById('upgrade-status-action');
+    var meta = JSON.parse(document.getElementById('dashboard-upgrade-meta').textContent);
+    var CUR = "{{ version }}";
+
+    var ICON_UP = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg>';
+    var ICON_RE = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>';
+
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // 动作区随状态切换：有新版给「去升级」，否则给「检查更新」
+    function setAction(available) {
+        if (available) {
+            actionEl.innerHTML = '<a href="' + esc(meta.upgrade) + '" class="btn btn-primary">' + ICON_UP + ' 去升级</a>';
+            return;
+        }
+        actionEl.innerHTML = '<button type="button" class="btn btn-secondary" id="upgrade-status-check">' + ICON_RE + ' 检查更新</button>';
+        bindCheck();
+    }
+
+    function paint(html, available) {
+        textEl.innerHTML = html;
+        box.classList.toggle('is-idle', !available);
+        setAction(available);
+    }
+
+    function apply(d) {
+        if (d && d.upgradable && d.latest_version) {
+            paint('<strong>发现新版本 v' + esc(d.latest_version) + '</strong><span>当前版本 v' + esc(CUR) + '，点击前往一键升级（自动备份数据）</span>', true);
+        } else if (d && d.ok) {
+            paint('<strong>已是最新版本 v' + esc(CUR) + '</strong><span>刚刚完成检测，未发现更高版本</span>', false);
+        } else {
+            paint('<strong>当前版本 v' + esc(CUR) + '</strong><span>未能获取版本信息（网络受限或 API 限流），可点「检查更新」重试</span>', false);
+        }
+    }
+
+    function check(force) {
+        textEl.innerHTML = '<strong>当前版本 v' + esc(CUR) + '</strong><span>' + (force ? '正在重新检测…' : '正在检查更新…') + '</span>';
+        fetch(meta.check + (force ? '?force=1' : ''), { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(apply)
+            .catch(function () { apply({ ok: false }); });
+    }
+
+    function bindCheck() {
+        var btn = document.getElementById('upgrade-status-check');
+        if (btn) btn.addEventListener('click', function () { check(true); });
+    }
+
+    bindCheck();
+    if (meta.auto) check(false);
+})();
+</script>
+{% endblock %}

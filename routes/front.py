@@ -1,0 +1,416 @@
+"""前台路由。"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+
+from flask import (
+    abort, flash, jsonify, make_response, redirect, render_template, request,
+    Response, url_for,
+)
+from markupsafe import escape
+
+import db
+from models import Category, Comment, Link, Post, Project, Timeline
+from services import auth, avatar, comments as comments_service, ip_location
+from services import lang, markdown, project_sync, settings, site_url, status, theme, upload
+
+
+def _decorate_categories(posts: list[dict]) -> list[dict]:
+    names = Category.name_map()
+    for post in posts:
+        cid = post.get("category_id")
+        post["category_name"] = names.get(int(cid), "") if cid else ""
+    return posts
+
+
+def index():
+    tag = (request.args.get("tag") or "").strip()
+    search = (request.args.get("q") or "").strip()
+    home_count = settings.get_int("home_posts_count", 6) or 6
+
+    if tag or search:
+        posts, total = Post.load("published", tag or None, search or None, None, 1, Post.PAGE_SIZE)
+        featured: list[dict] = []
+    else:
+        featured = Post.featured(3)
+        posts = Post.home_posts(home_count, True)
+        _, total = Post.load("published", None, None, None, 1)
+
+    posts = _decorate_categories(posts)
+    featured = _decorate_categories(featured)
+    home_links = Link.load("approved") if not tag and not search else []
+    return render_template(
+        "index.html",
+        posts=posts,
+        featured=featured,
+        links=home_links,
+        current_tag=tag,
+        search_query=search,
+        page=1,
+        total_pages=1,
+        total=total,
+        total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+    )
+
+
+def posts_page():
+    if not settings.bool_of("nav_posts", True):
+        abort(404)
+    tag = (request.args.get("tag") or "").strip() or None
+    year = (request.args.get("year") or "").strip() or None
+    per_page = settings.get_int("posts_per_page", 20) or 20
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+
+    _, total = Post.load("published", tag, None, year, 1, per_page)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    posts, _ = Post.load("published", tag, None, year, page, per_page)
+    posts = _decorate_categories(posts)
+
+    return render_template(
+        "posts.html",
+        posts=posts,
+        groups=None,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        filtered=bool(tag or year),
+        all_tags=Post.all_tags(),
+        all_years=Post.all_years(),
+        active_tag=tag or "",
+        active_year=year or "",
+    )
+
+
+def post_detail(post_id: int):
+    post = Post.get(post_id)
+    if not post or post["status"] not in {"published", "hidden"}:
+        abort(404)
+    category = Category.get(int(post["category_id"])) if post.get("category_id") else None
+    post["category_name"] = category["name"] if category else ""
+    post["word_count"] = len("".join((post.get("content") or "").split()))
+
+    content, toc = markdown.render_post(post.get("content") or "")
+
+    share = (post.get("cover") or "").strip() or upload.first_url(post.get("content") or "")
+    if share.startswith("/uploads/"):
+        from urllib.parse import quote
+
+        og_path = "/share-thumb/" + quote(share[len("/uploads/"):])
+    elif share:
+        og_path = share
+    else:
+        og_path = "/static/images/og-image.png"
+
+    related = Post.related(post_id, post.get("tags") or [])
+    enabled = comments_service.open_comments()
+    is_admin = auth.is_admin()
+    commenter = comments_service.commenter()
+    my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
+    if enabled:
+        comment_list, comment_total = Comment.load(post_id, None, is_admin, my_comments)
+    else:
+        comment_list, comment_total = [], 0
+    my_pending = 0 if is_admin else Comment.count_pending(comment_list)
+
+    side_posts, _ = Post.load("published", None, None, None, 1, 12)
+    return render_template(
+        "post.html",
+        post=post,
+        content=content,
+        toc=toc,
+        related=related,
+        comments=comment_list,
+        comment_total=comment_total,
+        prev_post=Post.adjacent(post["created_at"], True),
+        next_post=Post.adjacent(post["created_at"], False),
+        comments_enabled=enabled,
+        og_image_path=og_path,
+        commenter=commenter,
+        is_admin=is_admin,
+        admin_avatar=avatar.admin_url(40) if is_admin else "",
+        my_pending=my_pending,
+        side_posts=side_posts,
+    )
+
+
+def post_view(post_id: int):
+    if not Post.get(post_id):
+        abort(404)
+    comments_service.count_view(post_id)
+    return ("", 204)
+
+
+def _apply_commenter_cookie(response, data: dict | None):
+    if data:
+        response.set_cookie(
+            "blog_commenter",
+            json.dumps(data, ensure_ascii=False),
+            max_age=30 * 24 * 3600,
+            path="/",
+            httponly=True,
+            samesite="Lax",
+        )
+    return response
+
+
+def post_comment(post_id: int):
+    if not comments_service.open_comments():
+        abort(403)
+    post = Post.get(post_id)
+    if not post or post["status"] not in {"published", "hidden"}:
+        abort(404)
+    result = comments_service.submit(post=post)
+    if result.get("error"):
+        flash(result["error"], "error")
+    else:
+        flash(result.get("message", "评论已提交"), "success")
+    return _apply_commenter_cookie(redirect(result["url"]), result.get("commenter"))
+
+
+def comment_upload():
+    if not comments_service.open_comments() or not comments_service.image_upload_on():
+        return jsonify({"error": "评论图片上传已关闭"}), 403
+    file = request.files.get("image")
+    url, error = upload.save(
+        file,
+        {".jpg", ".jpeg", ".png", ".gif", ".webp"},
+        max_bytes=8 * 1024 * 1024,
+        sub_dir=datetime.now().strftime("comment/%Y/%m"),
+        randomize=True,
+    )
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify({"url": url})
+
+
+def tags():
+    if not settings.bool_of("nav_tags", True):
+        abort(404)
+    posts, total = Post.load("published", None, None, None, 1, 99999)
+    names = Category.name_map()
+    buckets: dict[str, list[dict]] = {}
+    for post in posts:
+        post["category_name"] = names.get(int(post["category_id"]), "") if post.get("category_id") else ""
+        for tag in post.get("tags") or []:
+            buckets.setdefault(str(tag), []).append(post)
+    keys = sorted(buckets, key=lambda k: (-len(buckets[k]), k))
+    groups = [(k, buckets[k]) for k in keys]
+    return render_template("tags.html", tag_groups=groups, post_total=total)
+
+
+def search():
+    q = (request.args.get("q") or "").strip()
+    if not q:
+        return redirect(url_for("index"))
+    return redirect(url_for("index", q=q))
+
+
+def about():
+    if not settings.bool_of("nav_about", True):
+        abort(404)
+    skills = settings.json_list("skills", [])
+    _, post_total = Post.load("published", None, None, None, 1, 1)
+    return render_template(
+        "about.html",
+        skills=skills,
+        about_intro=settings.get_str("about_intro", ""),
+        author=settings.get_str("author", ""),
+        github=settings.get_str("github_username", "") or settings.get_str("social_github", ""),
+        timeline=Timeline.load(),
+        post_total=post_total,
+        category_total=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+    )
+
+
+def links_page():
+    avatar_cfg = settings.get_str("avatar", "").strip()
+    if avatar_cfg and not avatar_cfg.startswith("http"):
+        avatar_url = site_url.base() + avatar_cfg
+    elif avatar_cfg:
+        avatar_url = avatar_cfg
+    else:
+        avatar_url = site_url.base() + "/static/images/favicon.svg"
+    return render_template(
+        "links.html",
+        links=Link.load("approved"),
+        site_url=site_url.base(),
+        avatar_url=avatar_url,
+    )
+
+
+def links_apply():
+    if not settings.bool_of("nav_links", True):
+        abort(404)
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        url = (request.form.get("url") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        avatar_url = (request.form.get("avatar") or "").strip()
+        if not name or not url:
+            flash("请填写名称和网址", "error")
+            return render_template("links_apply.html", form=request.form)
+        if not url.startswith(("http://", "https://")):
+            url = "http://" + url
+        Link.save(
+            {"name": name, "url": url, "description": description, "avatar": avatar_url, "sort_order": 0},
+            None,
+            "pending",
+        )
+        return redirect(url_for("links_apply_success"))
+    return render_template("links_apply.html", form=None)
+
+
+def links_apply_success():
+    if not settings.bool_of("nav_links", True):
+        abort(404)
+    reviewer = settings.get_str("author", "").strip() or settings.get_str("blog_name", "").strip() or "博主"
+    return render_template("links_apply_success.html", reviewer=reviewer)
+
+
+def status_page():
+    expiry, services, _ = status.snapshot()
+    return render_template("status.html", expiry=expiry, services=services)
+
+
+def projects_page():
+    if not settings.bool_of("nav_projects", True):
+        abort(404)
+    project_sync.auto_sync()
+    projects = [lang.decorate(p) for p in Project.load()]
+    return render_template("projects.html", projects=projects, languages=lang.tally(projects))
+
+
+def project_detail(project_id: int):
+    if not settings.bool_of("nav_projects", True):
+        abort(404)
+    project = Project.get(project_id)
+    if not project:
+        abort(404)
+    project = lang.decorate(project)
+
+    from services import github
+
+    repo = (project.get("github_repo") or "").strip() or (github.parse_repo(project.get("url", "")) or "")
+    cached = github.snapshot(repo) if repo else None
+    if cached is not None:
+        gh = {**cached, "cached": True}
+    else:
+        gh = {"gh": None, "readme": "", "branch": "", "ts": 0, "error": "", "cached": False}
+    gh["age_text"] = _age_text(float(gh.get("ts") or 0))
+    toc = markdown.toc_from_html(str(gh.get("readme") or ""))
+
+    enabled = comments_service.open_comments()
+    is_admin = auth.is_admin()
+    commenter = comments_service.commenter()
+    my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
+    if enabled:
+        comment_list, comment_total = Comment.load(None, project_id, is_admin, my_comments)
+    else:
+        comment_list, comment_total = [], 0
+    return render_template(
+        "project_detail.html",
+        project=project,
+        gh=gh,
+        toc=toc,
+        comments=comment_list,
+        comment_total=comment_total,
+        comments_enabled=enabled,
+        commenter=commenter,
+        is_admin=is_admin,
+        admin_avatar=avatar.admin_url(40) if is_admin else "",
+        my_pending=0 if is_admin else Comment.count_pending(comment_list),
+    )
+
+
+def project_comment(project_id: int):
+    if not comments_service.open_comments():
+        abort(403)
+    project = Project.get(project_id)
+    if not project:
+        abort(404)
+    result = comments_service.submit(project=project)
+    if result.get("error"):
+        flash(result["error"], "error")
+    else:
+        flash(result.get("message", "评论已提交"), "success")
+    return _apply_commenter_cookie(redirect(result["url"]), result.get("commenter"))
+
+
+def _age_text(ts: float) -> str:
+    if ts <= 0:
+        return ""
+    diff = max(0, int(datetime.now().timestamp() - ts))
+    if diff < 60:
+        return "刚刚"
+    if diff < 3600:
+        return f"{diff // 60} 分钟前"
+    if diff < 86400:
+        return f"{diff // 3600} 小时前"
+    if diff < 86400 * 30:
+        return f"{diff // 86400} 天前"
+    if diff < 86400 * 365:
+        return f"{diff // (86400 * 30)} 个月前"
+    return f"{diff // (86400 * 365)} 年前"
+
+
+def rss_feed():
+    posts, _ = Post.load("published", None, None, None, 1, 20)
+    base = site_url.base()
+    items = []
+    for post in posts:
+        link = f"{base}/post/{post['id']}"
+        excerpt = post.get("excerpt") or ""
+        pub = post.get("created_at") or ""
+        try:
+            pub_date = datetime.strptime(pub, "%Y-%m-%d %H:%M:%S").strftime("%a, %d %b %Y %H:%M:%S +0800")
+        except ValueError:
+            pub_date = ""
+        items.append(
+            "<item>"
+            f"<title>{escape(post['title'])}</title>"
+            f"<link>{escape(link)}</link>"
+            f"<guid isPermaLink=\"true\">{escape(link)}</guid>"
+            f"<description>{escape(excerpt)}</description>"
+            f"<pubDate>{pub_date}</pubDate>"
+            "</item>"
+        )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0"><channel>'
+        f"<title>{escape(settings.get_str('blog_name', '博客'))}</title>"
+        f"<link>{escape(base)}</link>"
+        f"<description>{escape(settings.get_str('blog_subtitle', ''))}</description>"
+        f"<language>zh-CN</language>"
+        f"<lastBuildDate>{datetime.now().strftime('%a, %d %b %Y %H:%M:%S +0800')}</lastBuildDate>"
+        + "".join(items)
+        + "</channel></rss>"
+    )
+    return Response(xml, mimetype="application/rss+xml")
+
+
+def register(app) -> None:
+    rules = [
+        ("/", "index", index, ["GET"]),
+        ("/posts", "posts_page", posts_page, ["GET"]),
+        ("/post/<int:post_id>", "post_detail", post_detail, ["GET"]),
+        ("/post/<int:post_id>/view", "post_view", post_view, ["POST"]),
+        ("/post/<int:post_id>/comment", "post_comment", post_comment, ["POST"]),
+        ("/comment/upload", "comment_upload", comment_upload, ["POST"]),
+        ("/tags", "tags", tags, ["GET"]),
+        ("/search", "search", search, ["GET"]),
+        ("/about", "about", about, ["GET"]),
+        ("/links", "links_page", links_page, ["GET"]),
+        ("/links/apply", "links_apply", links_apply, ["GET", "POST"]),
+        ("/links/apply/success", "links_apply_success", links_apply_success, ["GET"]),
+        ("/status", "status_page", status_page, ["GET"]),
+        ("/projects", "projects_page", projects_page, ["GET"]),
+        ("/projects/<int:project_id>", "project_detail", project_detail, ["GET"]),
+        ("/projects/<int:project_id>/comment", "project_comment", project_comment, ["POST"]),
+        ("/feed.xml", "rss_feed", rss_feed, ["GET"]),
+    ]
+    for rule, endpoint, view, methods in rules:
+        app.add_url_rule(rule, endpoint=endpoint, view_func=view, methods=methods)

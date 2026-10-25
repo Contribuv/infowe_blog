@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{% if active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">全部文章</h1>
+    <p class="tech-page-desc">共 {{ total }} 篇文章</p>
+</div>
+
+<!-- 筛选栏：自定义下拉（替代原生 select，弹层跟随暗色主题，iOS/微信亦一致） -->
+{% if all_tags or all_years %}
+<div class="tech-filter-bar">
+    <div class="tech-cs" data-cs data-cs-role="tag">
+        <button type="button" class="tech-cs-trigger" data-cs-trigger aria-haspopup="listbox" aria-expanded="false">
+            <span data-cs-label>{% if active_tag %}{{ active_tag }}{% else %}全部标签{% endif %}</span>
+            <svg class="tech-cs-arrow" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"/></svg>
+        </button>
+        <div class="tech-cs-items" role="listbox">
+            <button type="button" role="option" class="tech-cs-item {% if not active_tag %}is-selected{% endif %}" data-cs-value="" {% if not active_tag %}aria-selected="true"{% else %}aria-selected="false"{% endif %}>全部标签</button>
+            {% for t in all_tags %}
+            <button type="button" role="option" class="tech-cs-item {% if active_tag == t %}is-selected{% endif %}" data-cs-value="{{ t }}" {% if active_tag == t %}aria-selected="true"{% else %}aria-selected="false"{% endif %}>{{ t }}</button>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="tech-cs" data-cs data-cs-role="year">
+        <button type="button" class="tech-cs-trigger" data-cs-trigger aria-haspopup="listbox" aria-expanded="false">
+            <span data-cs-label>{% if active_year %}{{ active_year }}{% else %}全部年份{% endif %}</span>
+            <svg class="tech-cs-arrow" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"/></svg>
+        </button>
+        <div class="tech-cs-items" role="listbox">
+            <button type="button" role="option" class="tech-cs-item {% if not active_year %}is-selected{% endif %}" data-cs-value="" {% if not active_year %}aria-selected="true"{% else %}aria-selected="false"{% endif %}>全部年份</button>
+            {% for y in all_years %}
+            <button type="button" role="option" class="tech-cs-item {% if active_year == y %}is-selected{% endif %}" data-cs-value="{{ y }}" {% if active_year == y %}aria-selected="true"{% else %}aria-selected="false"{% endif %}>{{ y }}</button>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="tech-cs" data-cs data-cs-role="sort">
+        <button type="button" class="tech-cs-trigger" data-cs-trigger aria-haspopup="listbox" aria-expanded="false">
+            <span data-cs-label>最新优先</span>
+            <svg class="tech-cs-arrow" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"/></svg>
+        </button>
+        <div class="tech-cs-items" role="listbox">
+            <button type="button" role="option" class="tech-cs-item is-selected" data-cs-value="new" aria-selected="true">最新优先</button>
+            <button type="button" role="option" class="tech-cs-item" data-cs-value="old" aria-selected="false">最早优先</button>
+            <button type="button" role="option" class="tech-cs-item" data-cs-value="read" aria-selected="false">阅读时长</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- 文章列表 -->
+<ul class="tech-post-list" id="postsList">
+    {% for post in posts %}
+    <li class="tech-post-item" data-date="{{ post.created_at [:10] }}" data-read="{{ post.read_time }}">
+        <div class="tech-post-meta">
+            <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
+            {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
+            <span>{{ post.read_time }} 分钟</span>
+        </div>
+        <h3 class="tech-post-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
+        <p class="tech-post-excerpt">{{ post.excerpt }}</p>
+        <div class="tech-post-tags">
+            {% for tag in post.tags %}<a href="/?tag={{ tag }}" class="tech-tag">{{ tag }}</a>{% endfor %}
+        </div>
+        <span class="tech-post-arrow" aria-hidden="true">→</span>
+    </li>
+    {% endfor %}
+</ul>
+
+{% if not posts %}
+<div class="tech-empty">
+    <div class="tech-empty-icon">∅</div>
+    <h3>没有符合条件的文章</h3>
+    <p>换个筛选条件试试</p>
+</div>
+{% endif %}
+
+<!-- 分页 -->
+{% if total_pages > 1 %}
+<nav class="tech-pagination" aria-label="分页导航">
+    {% if page > 1 %}
+    <a href="{{ url_for('posts_page', page=page-1, tag=active_tag or None, year=active_year or None) }}" class="tech-page-btn">上一页</a>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            {% if p == page %}
+            <span class="tech-page-btn active" aria-current="page">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('posts_page', page=p, tag=active_tag or None, year=active_year or None) }}" class="tech-page-btn">{{ p }}</a>
+            {% endif %}
+        {% elif p == page - 3 or p == page + 3 %}
+            <span class="tech-page-ellipsis">…</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+    <a href="{{ url_for('posts_page', page=page+1, tag=active_tag or None, year=active_year or None) }}" class="tech-page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+    var doc = document;
+
+    /* 文章列表按 data-* 排序 */
+    function applySort(mode) {
+        var list = doc.getElementById('postsList');
+        if (!list) return;
+        var items = Array.prototype.slice.call(list.querySelectorAll('.tech-post-item'));
+        var cmpMap = {
+            new: function (a, b) { return b.getAttribute('data-date').localeCompare(a.getAttribute('data-date')); },
+            old: function (a, b) { return a.getAttribute('data-date').localeCompare(b.getAttribute('data-date')); },
+            read: function (a, b) { return (parseInt(b.getAttribute('data-read')) || 0) - (parseInt(a.getAttribute('data-read')) || 0); }
+        };
+        var cmp = cmpMap[mode] || cmpMap.new;
+        items.sort(cmp).forEach(function (c) { list.appendChild(c); });
+    }
+
+    /* 标签/年份下拉：按当前选中项跳转筛选 URL（等价原 select change） */
+    function goFilter() {
+        var params = new URLSearchParams();
+        var tag = doc.querySelector('[data-cs-role="tag"] .is-selected');
+        var year = doc.querySelector('[data-cs-role="year"] .is-selected');
+        if (tag && tag.getAttribute('data-cs-value')) params.set('tag', tag.getAttribute('data-cs-value'));
+        if (year && year.getAttribute('data-cs-value')) params.set('year', year.getAttribute('data-cs-value'));
+        var qs = params.toString();
+        location.href = '/posts' + (qs ? '?' + qs : '');
+    }
+
+    /* 自定义下拉组件：开合、选中、外部点击/Esc 关闭 */
+    var boxes = Array.prototype.slice.call(doc.querySelectorAll('[data-cs]'));
+    if (!boxes.length) { applySort('new'); return; }
+
+    function closeAll(except) {
+        boxes.forEach(function (box) {
+            if (box === except) return;
+            box.classList.remove('is-open');
+            var t = box.querySelector('[data-cs-trigger]');
+            if (t) t.setAttribute('aria-expanded', 'false');
+        });
+    }
+
+    boxes.forEach(function (box) {
+        var role = box.getAttribute('data-cs-role');
+        var trigger = box.querySelector('[data-cs-trigger]');
+        var items = Array.prototype.slice.call(box.querySelectorAll('.tech-cs-item'));
+
+        trigger.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var willOpen = !box.classList.contains('is-open');
+            closeAll(box);
+            box.classList.toggle('is-open', willOpen);
+            trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+
+        items.forEach(function (item) {
+            item.addEventListener('click', function (e) {
+                e.stopPropagation();
+                items.forEach(function (x) { x.classList.remove('is-selected'); x.setAttribute('aria-selected', 'false'); });
+                item.classList.add('is-selected');
+                item.setAttribute('aria-selected', 'true');
+                var label = box.querySelector('[data-cs-label]');
+                if (label) label.textContent = item.textContent;
+                closeAll();
+                if (role === 'sort') applySort(item.getAttribute('data-cs-value'));
+                else goFilter();
+            });
+        });
+    });
+
+    doc.addEventListener('click', closeAll);
+    doc.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeAll();
+    });
+
+    /* 初始排序：取当前选中值（默认 new） */
+    var sortSel = doc.querySelector('[data-cs-role="sort"] .is-selected');
+    applySort(sortSel ? sortSel.getAttribute('data-cs-value') : 'new');
+})();
+</script>
+{% endblock %}

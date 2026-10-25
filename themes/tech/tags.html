@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}标签{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">文章标签</h1>
+    <p class="tech-page-desc">共 {{ tag_groups|length }} 个标签 · {{ post_total }} 篇文章，点击查看相关文章</p>
+</div>
+
+{% if tag_groups %}
+<div class="tech-tags-cloud">
+    {% for tag, posts in tag_groups %}
+    <a href="/?tag={{ tag }}" class="tech-tag-cloud-item">
+        # {{ tag }}
+        <span class="tech-tag-cloud-count">{{ posts|length }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="tech-empty">
+    <div class="tech-empty-icon">#</div>
+    <h3>暂无标签</h3>
+    <p>发表文章后，标签会自动出现在这里</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}文章管理{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('file-text', 20) | safe }} 文章管理 <span class="badge">{{ total }}</span></h2>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary btn-sm">{{ icon('pencil', 14, 'icon-sm') | safe }} 新建文章</a>
+    </div>
+</div>
+
+<!-- 搜索 + 筛选 -->
+<div class="filter-bar">
+    <div class="filter-tabs">
+        <a href="?status=all" class="filter-tag {% if status_filter == 'all' %}active{% endif %}">全部</a>
+        <a href="?status=published" class="filter-tag {% if status_filter == 'published' %}active{% endif %}">已发布</a>
+        <a href="?status=draft" class="filter-tag {% if status_filter == 'draft' %}active{% endif %}">草稿</a>
+        <a href="?status=hidden" class="filter-tag {% if status_filter == 'hidden' %}active{% endif %}">隐藏</a>
+    </div>
+    <form class="filter-search" method="GET">
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <input type="text" name="q" class="search-input-sm" placeholder="搜索文章..." value="{{ search_query }}">
+        <button type="submit" class="btn btn-sm">搜索</button>
+    </form>
+</div>
+
+<!-- 文章表格 -->
+<div class="card">
+    <form method="POST" action="{{ url_for('admin_posts_bulk') }}" id="bulkPosts">
+        <input type="hidden" name="action" id="bulkAction" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkAll"> 全选
+            </label>
+            <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-success" data-action="publish">批量发布</button>
+            <button type="submit" class="btn btn-sm" data-action="unpublish">批量下线</button>
+            <button type="submit" class="btn btn-sm" data-action="hide">批量隐藏</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        </div>
+        <div class="table-wrap">
+        <table class="table">
+        <thead>
+            <tr>
+                <th class="col-check">选择</th>
+                <th class="w-35">标题</th>
+                <th>标签</th>
+                <th>状态</th>
+                <th>日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="post_ids[]" value="{{ post.id }}" form="bulkPosts" aria-label="选择文章 {{ post.id }}">
+                </td>
+                <td class="main-td" data-label="标题">
+                    <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="post-link">
+                        {{ post.title }}
+                        {% if post.is_featured %}<span class="featured-mark" title="精选">{{ icon('star', 14) | safe }}</span>{% endif %}
+                    </a>
+                </td>
+                <td data-label="标签">
+                    <div class="tag-list">
+                        {% for tag in post.tags %}
+                        <span class="tag-chip">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                </td>
+                <td data-label="状态">
+                    {% if post.status == 'published' %}
+                    <span class="badge badge-success">已发布</span>
+                    {% elif post.status == 'hidden' %}
+                    <span class="badge badge-info">隐藏</span>
+                    {% else %}
+                    <span class="badge badge-warning">草稿</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" data-label="日期">{{ post.created_at [:10] }}</td>
+                <td data-label="操作">
+                    <div class="btn-group">
+                        <a href="{{ url_for('admin_post_edit', post_id=post.id) }}" class="btn btn-sm">编辑</a>
+                        <a href="/post/{{ post.id }}" target="_blank" class="btn btn-sm">查看</a>
+                        <button type="submit" form="delForm{{ post.id }}" class="btn btn-sm btn-danger">删除</button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-muted text-center">暂无文章，<a href="{{ url_for('admin_post_new') }}">写一篇吧</a></td></tr>
+            {% endfor %}
+        </tbody>
+        </table>
+        </div>
+    </form>
+{# 单条删除表单定义在批量表单之外：HTML 禁止嵌套 form，否则浏览器丢弃内层 action，
+   按钮归属外层 bulkPosts，提交到批量接口并报「无效的批量操作」。 #}
+{% for post in posts %}
+    <form id="delForm{{ post.id }}" method="POST" action="{{ url_for('admin_post_delete', post_id=post.id) }}" class="hidden" onsubmit="return confirm('确定删除《{{ post.title }}》？此操作不可恢复。')"></form>
+{% endfor %}
+</div>
+
+<!-- 分页 -->
+{% if total_pages > 1 %}
+<nav class="admin-pagination">
+    {% set args = {'status': status_filter} %}
+    {% if search_query %}{% set args = args.update({'q': search_query}) %}{% endif %}
+    {% if page > 1 %}
+    <a href="{{ url_for('admin_posts', page=page-1, **args) }}" class="page-btn">上一页</a>
+    {% endif %}
+    <span class="page-info">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ url_for('admin_posts', page=page+1, **args) }}" class="page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('bulkPosts');
+    if (!form) return;
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    var count = document.getElementById('bulkCount');
+
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        count.textContent = n;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+
+    form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) { e.preventDefault(); alert('请先勾选要操作的文章'); return; }
+        if (action === 'delete' && !confirm('确定删除选中的 ' + n + ' 篇文章？此操作不可恢复。')) { e.preventDefault(); return; }
+        document.getElementById('bulkAction').value = action;
+    });
+
+    update();
+})();
+</script>
+{% endblock %}

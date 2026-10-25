@@ -1,0 +1,173 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}数据管理{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('database', 20) | safe }} 数据管理</h2>
+</div>
+
+<!-- 数据统计 -->
+<div class="stats-grid stats-grid--six">
+    <div class="stat-card">
+        <div class="stat-icon">{{ icon('file-text', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.posts }}</span>
+            <span class="stat-label">文章</span>
+        </div>
+    </div>
+    <div class="stat-card stat-projects">
+        <div class="stat-icon">{{ icon('folder', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.projects }}</span>
+            <span class="stat-label">项目</span>
+        </div>
+    </div>
+    <div class="stat-card stat-links">
+        <div class="stat-icon">{{ icon('link', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.links }}</span>
+            <span class="stat-label">友链</span>
+        </div>
+    </div>
+    <div class="stat-card stat-extras">
+        <div class="stat-icon">{{ icon('message-circle', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.comments }}</span>
+            <span class="stat-label">评论</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">{{ icon('calendar', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.timeline }}</span>
+            <span class="stat-label">历程</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">{{ icon('tag', 28) | safe }}</div>
+        <div class="stat-info">
+            <span class="stat-value">{{ stats.categories }}</span>
+            <span class="stat-label">分类</span>
+        </div>
+    </div>
+</div>
+
+<!-- 导出操作 -->
+<div class="card">
+    <div class="card-header">
+        <h3>{{ icon('archive', 18) | safe }} 导出操作</h3>
+    </div>
+    <div class="quick-actions">
+        <a href="{{ url_for('admin_export_json') }}" class="btn btn-primary">{{ icon('download', 16, 'icon-sm') | safe }} JSON 导出</a>
+        <a href="{{ url_for('admin_export_markdown') }}" class="btn btn-secondary">{{ icon('file-text', 16, 'icon-sm') | safe }} Markdown 导出</a>
+        <form method="POST" action="{{ url_for('admin_export_db_backup') }}" class="d-inline">
+            <button type="submit" class="btn btn-secondary">{{ icon('plus', 16, 'icon-sm') | safe }} 数据库备份</button>
+        </form>
+    </div>
+</div>
+
+<!-- 数据导入：SQLite（原 Python 版迁移） / MySQL SQL（本站备份还原），同卡片内 Tab 切换 -->
+<div class="card">
+    <div class="card-header">
+        <h3>{{ icon('inbox', 18) | safe }} 数据导入</h3>
+    </div>
+    <div class="tabs">
+        <input type="radio" name="import_tab" id="tab-sqlite" checked>
+        <input type="radio" name="import_tab" id="tab-sql">
+        <div class="tab-nav">
+            <label class="tab-btn" for="tab-sqlite">{{ icon('inbox', 15) | safe }} SQLite 导入</label>
+            <label class="tab-btn" for="tab-sql">{{ icon('database', 15) | safe }} MySQL 导入</label>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="sqlite">
+            <form method="POST" action="{{ url_for('admin_export_import_sqlite') }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="db_file">选择 SQLite 备份文件</label>
+                    <input type="file" id="db_file" name="db_file" accept=".db,.sqlite,.sqlite3" required>
+                    <p class="form-hint">用于导入原 Python（Flask）版的 <code>blog.db</code>，或其他 <code>.db</code> 数据库文件。<strong>导入会覆盖当前数据库全部内容</strong>；提交前系统会自动备份一次当前库。</p>
+                </div>
+                <div class="form-group">
+                    <label class="switch-label">
+                        <span class="switch"><input type="checkbox" name="keep_users" value="1" checked><span class="slider"></span></span>
+                        <span class="switch-text">保留当前管理员账号与密码（不导入源库 users 表）</span>
+                    </label>
+                    <label class="switch-label">
+                        <span class="switch"><input type="checkbox" name="confirm" value="1" required><span class="slider"></span></span>
+                        <span class="switch-text">我确认用上传文件覆盖当前全部数据</span>
+                    </label>
+                </div>
+                <div class="quick-actions">
+                    <button type="submit" class="btn btn-danger">{{ icon('inbox', 16, 'icon-sm') | safe }} 上传并导入</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="tab-panel" data-tab-panel="sql">
+            <form method="POST" action="{{ url_for('admin_export_import_sql') }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="sql_file">选择 SQL 备份文件</label>
+                    <input type="file" id="sql_file" name="sql_file" accept=".sql,.txt" required>
+                    <p class="form-hint">用于还原「数据库备份」生成的 <code>.sql</code> 文件，也兼容 mysqldump / phpMyAdmin 导出的 SQL。<strong>导入会覆盖当前数据库全部内容</strong>；提交前系统会自动备份一次当前库。文件过大时请调大 php.ini 的 <code>upload_max_filesize</code>。</p>
+                </div>
+                <div class="form-group">
+                    <label class="switch-label">
+                        <span class="switch"><input type="checkbox" name="keep_users" value="1" checked><span class="slider"></span></span>
+                        <span class="switch-text">保留当前管理员账号与密码（不执行备份中的 users 语句）</span>
+                    </label>
+                    <label class="switch-label">
+                        <span class="switch"><input type="checkbox" name="confirm" value="1" required><span class="slider"></span></span>
+                        <span class="switch-text">我确认用上传文件覆盖当前全部数据</span>
+                    </label>
+                </div>
+                <div class="quick-actions">
+                    <button type="submit" class="btn btn-danger">{{ icon('database', 16, 'icon-sm') | safe }} 上传并导入</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 备份文件列表 -->
+<div class="card">
+    <div class="card-header">
+        <h3>{{ icon('archive', 18) | safe }} 备份文件 <span class="badge">{{ backups|length }}</span></h3>
+    </div>
+    {% if backups %}
+    <div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>文件名</th>
+                <th>大小</th>
+                <th>时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in backups %}
+            <tr>
+                <td data-label="文件名"><code>{{ b.filename }}</code></td>
+                <td data-label="大小">{{ b.size }}</td>
+                <td class="text-muted" data-label="时间">{{ b.mtime }}</td>
+                <td data-label="操作">
+                    <div class="btn-group">
+                        <a href="{{ url_for('admin_export_download', filename=b.filename) }}" class="btn btn-sm">{{ icon('download', 14) | safe }} 下载</a>
+                        <form method="POST" action="{{ url_for('admin_export_delete', filename=b.filename) }}" class="d-inline"
+                              onsubmit="return confirm('确定删除备份 《{{ b.filename }}》 吗？此操作不可恢复。')">
+                            <button type="submit" class="btn btn-sm btn-danger">{{ icon('trash-2', 14) | safe }} 删除</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">{{ icon('archive', 40) | safe }}</div>
+        <p class="empty-state-text">还没有备份文件，点击「数据库备份」创建第一个备份。</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

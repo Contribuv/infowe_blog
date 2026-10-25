@@ -1,0 +1,224 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}开源项目{% endblock %}
+{% block admin_content %}
+
+<div class="page-header">
+    <h2>{{ icon('github', 20) | safe }} 开源项目 <span class="badge">{{ projects|length }}</span></h2>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加项目</a>
+        <button type="button" id="syncAllBtn" class="btn btn-sm btn-secondary" data-sync-url="{{ url_for('admin_projects_sync_all') }}" title="从 GitHub 同步全部项目（重复仓库自动跳过）">{{ icon('refresh-cw', 14, 'icon-sm') | safe }} 一键同步全部</button>
+    </div>
+</div>
+
+<div id="syncStatusBar" class="flash-msg info hidden">
+    <div id="syncStatusText"></div>
+</div>
+
+{% if projects %}
+<div class="card">
+    <form method="POST" action="{{ url_for('admin_projects_bulk') }}" id="bulkProjects">
+        <input type="hidden" name="action" id="bulkAction" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkAll"> 全选
+            </label>
+            <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        </div>
+    <div class="table-wrap">
+    <table class="table table-fixed">
+        <thead>
+            <tr>
+                <th class="col-check">选择</th>
+                <th class="col-opt col-num">排序</th>
+                <th class="w-16">项目名</th>
+                <th class="url-cell w-13">仓库地址</th>
+                <th class="w-20">描述</th>
+                <th class="w-14">语言</th>
+                <th class="col-opt col-num">Stars</th>
+                <th class="col-opt col-num">精选</th>
+                <th class="w-16">操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in projects %}
+            <tr>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="project_ids[]" value="{{ p.id }}" form="bulkProjects" aria-label="选择项目 {{ p.id }}">
+                </td>
+                <td class="sort-cell col-opt col-num" data-label="排序">{{ p.sort_order }}</td>
+                <td class="main-td" data-label="项目名">
+                    <strong>{{ p.name }}</strong>{% if p.custom_name %} <span class="tag tag-custom" title="显示名已自定义，GitHub 同步时不会被仓库名覆盖">自定义</span>{% endif %}
+                    {% if p.custom_name and p.github_repo %}<div class="cell-sub">GitHub：{{ p.github_repo }}</div>{% endif %}
+                </td>
+                <td class="url-cell" data-label="仓库地址">
+                    <a href="{{ p.url }}" target="_blank" class="link-url" title="{{ p.url }}">{{ p.url|replace('https://github.com/', '')|replace('http://github.com/', '') }}</a>
+                </td>
+                <td class="desc-cell" data-label="描述">{{ p.description }}</td>
+                <td data-label="语言">
+                    {% set langs = p.lang_list if p.lang_list else [] %}
+                    {% if langs %}
+                    {% for l in langs[:2] %}
+                    <span class="lang-tag"{% if l[1] %} title="{{ l[0] }} {{ l[1] }}%"{% endif %}><span class="lang-dot" style="--lang-color: {{ l[2] }};"></span>{{ l[0] }}</span>
+                    {% endfor %}
+                    {% if langs|length > 2 %}<span class="lang-more" title="{% for l in langs[2:] %}{{ l[0] }}{% if l[1] %} {{ l[1] }}%{% endif %}{% if not loop.last %}、{% endif %}{% endfor %}">+{{ langs|length - 2 }}</span>{% endif %}
+                    {% elif p.language %}
+                    <span class="lang-tag"><span class="lang-dot" style="--lang-color: {{ lang_color(p.language) }};"></span>{{ p.language }}</span>
+                    {% else %}-{% endif %}
+                </td>
+                <td class="text-muted col-opt col-num" data-label="Stars">{{ p.stars }}</td>
+                <td class="col-opt col-num" data-label="精选">
+                    {% if p.featured %}<span class="badge badge-featured">{{ icon('star', 14) | safe }} 精选</span>
+                    {% else %}-{% endif %}
+                </td>
+                <td data-label="操作">
+                    <div class="btn-group">
+                        <a href="/projects/{{ p.id }}" class="btn btn-sm" target="_blank" title="在前台查看项目详情页">前台</a>
+                        <a href="{{ url_for('admin_project_edit', project_id=p.id) }}" class="btn btn-sm">编辑</a>
+                        <button type="button" class="btn btn-sm" data-sync-url="{{ url_for('admin_project_sync', project_id=p.id) }}" title="重新从 GitHub 拉取实时数据与 README">{{ icon('refresh-cw', 14) | safe }} 同步</button>
+                        <button type="submit" form="delForm{{ p.id }}" class="btn btn-sm btn-danger">删除</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    </form>
+    {# 删除按钮归属的表单必须定义在批量操作表单之外：HTML 禁止嵌套 form，
+       嵌套时浏览器会忽略内层 form 的 action，按钮归属外层批量表单，
+       导致点击提交到批量接口并报「无效的批量操作」。同步已改 AJAX 不走表单。 #}
+    {% for p in projects %}
+    <form id="delForm{{ p.id }}" method="POST" action="{{ url_for('admin_project_delete', project_id=p.id) }}" class="hidden" onsubmit="return confirm('确定删除项目 {{ p.name }} ？')"></form>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>暂无项目，点击右上角添加</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    // 批量操作：全选 / 计数 / 删除确认
+    // 注意：项目为空时 bulkProjects 表单不渲染，此处不能直接 return，
+    // 否则下面「一键同步全部」的绑定也会被一起跳过。
+    var form = document.getElementById('bulkProjects');
+    if (form) {
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    var count = document.getElementById('bulkCount');
+
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        count.textContent = n;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+
+    form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) { e.preventDefault(); alert('请先勾选要删除的项目'); return; }
+        if (!confirm('确定删除选中的 ' + n + ' 个项目？此操作不可恢复。')) { e.preventDefault(); return; }
+        document.getElementById('bulkAction').value = action;
+    });
+
+    update(); // 初始化计数：严格模式下 update 声明在 if 块内，只能在块内调用
+    }
+
+    // ── 后台同步：AJAX 提交 + 原地轮询进度 ──
+    // 同步（含 README 图片本地化）在后台线程执行，POST 立即返回 JSON（不跳转），
+    // 这里每 2 秒查一次 /admin/projects/sync-status 更新进度条；完成显示结果并刷新一次。
+    var bar = document.getElementById('syncStatusBar');
+    var text = document.getElementById('syncStatusText');
+    var syncBtns = Array.prototype.slice.call(document.querySelectorAll('[data-sync-url]'));
+    // 本次页面加载期间是否提交过同步（防止重复点击多个按钮多次提交）
+    var submitted = false;
+    // 只在本页面加载期间观测到「进行中→完成」转变时才显示结果并自动刷新：
+    // 若打开/刷新页面时同步早已完成（历史状态 finished 常驻），静默不提示、
+    // 不刷新——否则提示条常驻或 reload 死循环（页面无限闪屏）。
+    var sawRunning = false;
+    var failures = 0;
+
+    function showBar(cls, msg, hideMs) {
+        bar.className = 'flash-msg ' + cls;
+        text.textContent = msg;
+        if (hideMs) { setTimeout(function () { bar.classList.add('hidden'); }, hideMs); }
+    }
+
+    function setSyncBusy(busy) {
+        syncBtns.forEach(function (b) { b.disabled = busy; });
+    }
+
+    // 点击「同步 / 一键同步全部」：AJAX 提交，成功后原地开始轮询
+    syncBtns.forEach(function (b) {
+        b.addEventListener('click', function () {
+            if (submitted) return;
+            submitted = true;
+            setSyncBusy(true);
+            showBar('info', '正在提交同步任务…');
+            fetch(b.getAttribute('data-sync-url'), { method: 'POST' })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (!res.started) {
+                        submitted = false;
+                        setSyncBusy(false);
+                        showBar('danger', res.error || '提交失败，请重试', 5000);
+                        return;
+                    }
+                    poll();
+                })
+                .catch(function () {
+                    submitted = false;
+                    setSyncBusy(false);
+                    showBar('danger', '提交失败（网络异常），请重试', 5000);
+                });
+        });
+    });
+
+    function poll() {
+        fetch('{{ url_for("admin_projects_sync_status") }}')
+            .then(function (r) { return r.json(); })
+            .then(function (s) {
+                failures = 0;
+                if (s.running) {
+                    sawRunning = true;
+                    showBar('info', '后台同步中 ' + s.done + '/' + s.total + '（当前：' + (s.current || '…') + '）…');
+                    setTimeout(poll, 2000);
+                } else if (s.finished && sawRunning) {
+                    // 全部成功显示绿色，有失败显示橙色/红色
+                    showBar(s.failed > 0 && s.ok === 0 ? 'danger' : 'success', (s.summary || '同步完成') + '，即将刷新…');
+                    // 先消费完成状态（consume 清除 finished），避免刷新后页面仍挂旧提示
+                    fetch('{{ url_for("admin_projects_sync_status") }}?consume=1').catch(function () {});
+                    setTimeout(function () { location.reload(); }, 1500);
+                }
+                // 其余情况（空闲 / 历史完成）：无进行中任务，静默停止轮询
+            })
+            .catch(function () {
+                // 接口连续失败多次（如网络异常/未登录跳转）后停止，避免无限重试
+                if (++failures > 8) return;
+                setTimeout(poll, 3000);
+            });
+    }
+
+    // 页面加载时若已有同步在后台跑（他人触发/刷新页面），直接接续轮询
+    poll();
+})();
+</script>
+{% endblock %}

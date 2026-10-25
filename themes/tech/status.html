@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}服务状态{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">服务状态</h1>
+    <p class="tech-page-desc">云资源到期时间与在线服务可用性一览，数据每 5 分钟自动更新</p>
+</div>
+
+<div class="tech-status">
+    <!-- 云资源到期时间 -->
+    <section class="tech-status-section">
+        <h2>到期时间 <span class="svc-count">云资源</span></h2>
+        <div class="svc-list" id="expiry-list">
+            {% for key, info in expiry.items() %}
+            <div class="svc-row st-{{ info.status }}" data-expiry-key="{{ key }}">
+                <span class="svc-dot st-{{ info.status }}"></span>
+                <div class="svc-main">
+                    <span class="svc-name expiry-label">{{ info.label }}</span>
+                </div>
+                <div class="svc-metrics">
+                    <span class="svc-metric" data-field="expiry" data-expiry-field="date" title="到期日期">{{ info.expiry or '—' }}</span>
+                    <span class="svc-metric" data-field="status" data-expiry-field="badge">
+                        {% if info.status == 'ok' %}正常{% elif info.status == 'warn' %}即将到期{% elif info.status == 'expired' %}已到期{% else %}未配置{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% else %}
+            <div class="svc-empty">
+                <div>暂无云资源到期配置</div>
+                <div class="svc-empty-sub">在后台「服务时效」中配置后，将在此展示到期时间</div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 在线服务监控 -->
+    <section class="tech-status-section">
+        <h2>服务状态
+            {% if services %}
+            <span class="svc-count" id="svc-count">{{ services | selectattr('ok', 'equalto', true) | list | length }}/{{ services | length }} 在线</span>
+            {% endif %}
+        </h2>
+        <div class="svc-list" id="svc-list">
+            {% for s in services %}
+            <div class="svc-row" data-svc-name="{{ s.name }}">
+                <span class="svc-dot {{ 'st-ok' if s.ok else ('st-none' if s.ok is none else 'st-down') }}"></span>
+                <div class="svc-main">
+                    <span class="svc-name">{{ s.name }}</span>
+                </div>
+                <div class="svc-metrics">
+                    <span class="svc-metric" data-field="latency" title="响应延迟">{{ s.latency_ms ~ ' ms' if s.latency_ms is not none else '—' }}</span>
+                    <span class="svc-metric" data-field="cert" title="SSL 证书剩余天数">{{ s.cert_days ~ ' 天' if s.cert_days is not none and s.cert_days >= 0 else '—' }}</span>
+                    <span class="svc-metric" data-field="uptime" title="近 24 小时可用率">{{ s.uptime ~ '%' if s.uptime is not none else '—' }}</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="svc-empty">
+                <div>暂未配置在线服务监控</div>
+                <div class="svc-empty-sub">在后台「服务时效」中添加 HTTP(S) 服务后，将在此展示其实时可用性</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% if services %}
+        <p class="status-hint" id="status-hint"></p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/status.js', t='v' ~ version) }}" defer></script>
+{% endblock %}

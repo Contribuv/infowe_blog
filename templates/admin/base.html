@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>{% block admin_title %}管理后台{% endblock %} - {{ blog_name }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <meta name="theme-color" id="themeColor" content="#0f1117">
+    <!-- 防白屏闪烁 + 主题预设（三模式：auto 跟随系统 / dark 深色 / light 浅色，默认 auto；与前台共用 infowe-theme 键） -->
+    <style>html{background:#0f1117}html[data-theme="light"]{background:#f5f6fa}</style>
+    <script>
+    (function(){
+        var t; try { t = localStorage.getItem('infowe-theme'); } catch (e) {}
+        if (t !== 'light' && t !== 'dark' && t !== 'auto') t = 'auto';
+        var dark = t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var html = document.documentElement;
+        html.setAttribute('data-theme-mode', t);
+        html.setAttribute('data-theme', dark ? 'dark' : 'light');
+        html.style.colorScheme = dark ? 'dark' : 'light';
+        var m = document.getElementById('themeColor');
+        if (m) m.setAttribute('content', dark ? '#0f1117' : '#f5f6fa');
+    })();
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css', t=admin_ver) }}">
+    {% block admin_head %}{% endblock %}
+</head>
+<body class="admin-body">
+<div class="admin-app">
+    <!-- ═══════════ 侧边栏：桌面固定 / 移动端抽屉 ═══════════ -->
+    <aside class="admin-sidebar" id="adminSidebar" aria-label="管理菜单">
+        <div class="admin-sidebar-inner">
+            <div class="admin-sidebar-header">
+                <a href="{{ url_for('admin_dashboard') }}" class="navbar-brand">
+                    <span class="brand-mark">&lt;</span>{{ blog_name }}<span class="brand-mark">/&gt;</span>
+                    <span class="admin-badge">Admin</span>
+                </a>
+                <button type="button" class="admin-drawer-close" id="drawerClose" aria-label="关闭菜单">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <nav class="admin-nav">
+                <div class="admin-nav-group">
+                    <div class="admin-nav-title">内容运营</div>
+                    <a href="{{ url_for('admin_dashboard') }}" class="admin-nav-item {% if request.path == '/admin/dashboard' %}active{% endif %}">
+                        {{ icon('layout-dashboard', 20, 'admin-nav-icon') | safe }}<span>博客面板</span>
+                    </a>
+                    <a href="{{ url_for('admin_posts') }}" class="admin-nav-item {% if request.path.startswith('/admin/posts') %}active{% endif %}">
+                        {{ icon('file-text', 20, 'admin-nav-icon') | safe }}<span>文章管理</span>
+                    </a>
+                    <a href="{{ url_for('admin_categories') }}" class="admin-nav-item {% if request.path.startswith('/admin/categories') %}active{% endif %}">
+                        {{ icon('tag', 20, 'admin-nav-icon') | safe }}<span>文章分类</span>
+                    </a>
+                    <a href="{{ url_for('admin_comments') }}" class="admin-nav-item {% if request.path == '/admin/comments' %}active{% endif %}">
+                        {{ icon('message-circle', 20, 'admin-nav-icon') | safe }}<span>评论管理</span>
+                    </a>
+                </div>
+                <div class="admin-nav-group">
+                    <div class="admin-nav-title">站点模块</div>
+                    <a href="{{ url_for('admin_projects') }}" class="admin-nav-item {% if request.path.startswith('/admin/projects') %}active{% endif %}">
+                        {{ icon('folder', 20, 'admin-nav-icon') | safe }}<span>项目管理</span>
+                    </a>
+                    <a href="{{ url_for('admin_links') }}" class="admin-nav-item {% if request.path.startswith('/admin/links') %}active{% endif %}">
+                        {{ icon('link', 20, 'admin-nav-icon') | safe }}<span>友情链接</span>
+                    </a>
+                    <a href="{{ url_for('admin_timeline') }}" class="admin-nav-item {% if request.path.startswith('/admin/timeline') %}active{% endif %}">
+                        {{ icon('calendar', 20, 'admin-nav-icon') | safe }}<span>博客历程</span>
+                    </a>
+                </div>
+                <div class="admin-nav-group">
+                    <div class="admin-nav-title">系统</div>
+                    <a href="{{ url_for('admin_settings') }}" class="admin-nav-item {% if request.path == '/admin/settings' %}active{% endif %}">
+                        {{ icon('settings', 20, 'admin-nav-icon') | safe }}<span>博客设置</span>
+                    </a>
+                    <a href="{{ url_for('admin_themes') }}" class="admin-nav-item {% if request.path.startswith('/admin/themes') %}active{% endif %}">
+                        {{ icon('palette', 20, 'admin-nav-icon') | safe }}<span>主题管理</span>
+                    </a>
+                    <a href="{{ url_for('admin_export') }}" class="admin-nav-item {% if request.path == '/admin/export' %}active{% endif %}">
+                        {{ icon('database', 20, 'admin-nav-icon') | safe }}<span>数据管理</span>
+                    </a>
+                    <a href="{{ url_for('admin_status') }}" class="admin-nav-item {% if request.path.startswith('/admin/status') %}active{% endif %}">
+                        {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>服务时效</span>
+                    </a>
+                    <a href="{{ url_for('admin_orphans') }}" class="admin-nav-item {% if request.path.startswith('/admin/orphans') %}active{% endif %}">
+                        {{ icon('trash-2', 20, 'admin-nav-icon') | safe }}<span>文件清理</span>
+                    </a>
+                </div>
+
+                <div class="admin-nav-group">
+                    <a href="/" class="admin-nav-item">
+                        {{ icon('home', 20, 'admin-nav-icon') | safe }}<span>返回首页</span>
+                    </a>
+                    <button type="button" id="sidebar-theme-toggle" class="admin-nav-item w-100 text-start">
+                        <span class="theme-icon theme-icon-auto">{{ icon('monitor', 20, 'admin-nav-icon') | safe }}</span>
+                        <span class="theme-icon theme-icon-dark">{{ icon('moon', 20, 'admin-nav-icon') | safe }}</span>
+                        <span class="theme-icon theme-icon-light">{{ icon('sun', 20, 'admin-nav-icon') | safe }}</span>
+                        <span class="theme-label">跟随系统</span>
+                    </button>
+                    <a href="{{ url_for('admin_logout') }}" class="admin-nav-item admin-nav-danger">
+                        {{ icon('log-out', 20, 'admin-nav-icon') | safe }}<span>退出登录</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- 移动端抽屉遮罩 -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+
+    <!-- ═══════════ 主区域 ═══════════ -->
+    <div class="admin-main">
+        <!-- 顶栏 -->
+        <header class="admin-topbar">
+            <button class="admin-burger" type="button" id="adminBurger" aria-label="打开菜单" aria-controls="adminSidebar" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <a href="{{ url_for('admin_dashboard') }}" class="navbar-brand topbar-brand me-auto">
+                <span class="brand-mark">&lt;</span>{{ blog_name }}<span class="brand-mark">/&gt;</span>
+            </a>
+            <div class="topbar-actions">
+                <button type="button" id="admin-theme-toggle" class="btn btn-icon" aria-label="切换主题">
+                    <span class="theme-icon theme-icon-auto">{{ icon('monitor', 20) | safe }}</span>
+                    <span class="theme-icon theme-icon-dark">{{ icon('moon', 20) | safe }}</span>
+                    <span class="theme-icon theme-icon-light">{{ icon('sun', 20) | safe }}</span>
+                </button>
+                <a href="/" class="btn btn-icon topbar-home" aria-label="返回首页" title="返回首页">
+                    {{ icon('home', 20) | safe }}
+                </a>
+                <a href="{{ url_for('admin_logout') }}" class="btn btn-icon" aria-label="退出登录" title="退出登录">
+                    {{ icon('log-out', 20) | safe }}
+                </a>
+            </div>
+        </header>
+
+        <!-- 内容 -->
+        <main class="admin-content">
+            {% set flashes = get_flashed_messages(with_categories=true) %}
+            {% if flashes %}
+            <div class="admin-flash-wrap">
+                {% for cat, msg in flashes %}
+                <div class="flash-msg {{ 'danger' if cat == 'error' else cat }}">
+                    {{ icon('check-circle' if cat == 'success' else ('alert-circle' if cat == 'error' else 'info'), 18) | safe }}
+                    <div>{{ msg }}</div>
+                    <button type="button" class="flash-close" aria-label="关闭">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% block admin_content %}{% endblock %}
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="admin-footer">
+            {# 这两个值存在 settings 表里，须走 config.get 读；直接取同名变量永远为空 #}
+            {%- set _yr = config.get('footer_copyright_year', '').strip() -%}
+            {%- set _owner = config.get('footer_copyright_owner', '').strip() -%}
+            <span>© {{ _yr if _yr else now_year }} {{ _owner if _owner else blog_name }} · 管理后台</span>
+            <a href="{{ url_for('admin_upgrade') }}">
+                infowe Blog <b>v{{ version }}</b>{% if upgrade_available %} · 发现新版{% endif %}
+            </a>
+        </footer>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/admin.js', t=admin_ver) }}"></script>
+<script src="{{ url_for('static', filename='js/disable-zoom.js', t=admin_ver) }}"></script>
+<script>
+// 主题选择：input 是 hidden 的 radio，原生视觉不可见。点击 label 后手动同步选中态：
+// 把 .active 移到当前选中的卡片，并把「使用中」徽章搬过去，提交前用户能清晰看到选谁。
+(function () {
+  var grid = document.querySelector('.theme-grid');
+  if (!grid) return;
+  var badgeHtml = '<span class="theme-badge">使用中</span>';
+  function sync() {
+    var items = grid.querySelectorAll('.theme-item');
+    items.forEach(function (item) {
+      var input = item.querySelector('input[type="radio"]');
+      var nameEl = item.querySelector('.theme-name');
+      var oldBadge = nameEl ? nameEl.querySelector('.theme-badge') : null;
+      if (input && input.checked) {
+        item.classList.add('active');
+        if (nameEl && !oldBadge) nameEl.insertAdjacentHTML('beforeend', badgeHtml);
+      } else {
+        item.classList.remove('active');
+        if (oldBadge) oldBadge.remove();
+      }
+    });
+  }
+  grid.addEventListener('change', sync);
+  grid.addEventListener('click', function (e) {
+    // 兜底：部分浏览器对 hidden radio 的 click 不触发 change，提交前再同步一次
+    setTimeout(sync, 0);
+  });
+})();
+</script>
+{% block admin_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}申请已提交{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">申请已提交</h1>
+    <p class="tech-page-desc">感谢你的友链申请。</p>
+</div>
+
+<div class="tech-empty">
+    <div class="tech-empty-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+    </div>
+    <h3>我已收到你的申请</h3>
+    <p>你提交的友链申请暂不会立即展示。</p>
+    <p>为保持友链质量，{{ reviewer }} 上线后会逐条查看，<br>审核通过后才会出现在 <a href="/links">友链</a> 页。</p>
+    <p style="margin-top:20px;">
+        <a href="/links" class="tech-btn">返回友链列表</a>
+        <a href="/" class="tech-btn tech-btn-primary" style="margin-left:10px;">回到首页</a>
+    </p>
+</div>
+{% endblock %}
