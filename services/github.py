@@ -13,6 +13,7 @@ import requests
 
 from config import DATA_DIR, UPLOADS_DIR
 from services import settings
+from services.lang import normalize_languages
 
 CACHE_DIR = Path(DATA_DIR) / "project_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -99,13 +100,10 @@ def fetch_repo(repo: str, timeout: int = 10) -> dict | None:
 
 
 def _lang_list(raw: dict) -> list[dict]:
-    total = sum(int(v or 0) for v in raw.values())
-    if not total:
-        return []
-    return [
-        {"name": name, "bytes": int(size), "percent": round(int(size) / total * 100, 1)}
-        for name, size in sorted(raw.items(), key=lambda kv: -int(kv[1] or 0))
-    ]
+    return normalize_languages([
+        {"name": name, "bytes": int(size or 0), "percent": 0}
+        for name, size in raw.items()
+    ])
 
 
 def fetch_readme(repo: str, timeout: int = 10) -> tuple[str, str]:

@@ -17,25 +17,77 @@ _LANG_COLORS = {
 }
 
 
+def normalize_languages(raw: list[dict]) -> list[dict]:
+    """按 GitHub 侧边栏规则归一化语言列表。
+
+    GitHub 会隐藏四舍五入后为 0.0% 的极小语言，并用剩余语言重新计算
+    百分比。因此 file-collector 的 JavaScript 是 90.5%，而不是按全量
+    字节直接算出的 90.4%；Go / PowerShell 也不会出现。
+    """
+    parsed: list[dict] = []
+    for item in raw or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        try:
+            bytes_ = int(item.get("bytes") or 0)
+        except (TypeError, ValueError):
+            bytes_ = 0
+        try:
+            percent = float(item.get("percent") or 0)
+        except (TypeError, ValueError):
+            percent = 0.0
+        parsed.append({"name": name, "bytes": bytes_, "percent": percent})
+
+    total_bytes = sum(item["bytes"] for item in parsed)
+    if total_bytes > 0:
+        visible: list[dict] = []
+        for item in parsed:
+            raw_percent = item["bytes"] / total_bytes * 100 if item["bytes"] else item["percent"]
+            if round(raw_percent, 1) >= 0.1:
+                visible.append(item)
+        visible_bytes = sum(item["bytes"] for item in visible)
+        for item in visible:
+            if item["bytes"] and visible_bytes:
+                item["percent"] = round(item["bytes"] / visible_bytes * 100, 1)
+            else:
+                item["percent"] = round(item["percent"], 1)
+    else:
+        visible = [item for item in parsed if round(item["percent"], 1) >= 0.1]
+
+    visible.sort(key=lambda item: (-item["bytes"], -item["percent"], item["name"].lower()))
+    return visible
+
+
+def _project_languages(project: dict) -> list[dict]:
+    """兼容数据库中的 dict / 旧版 list 语言结构。"""
+    raw: list[dict] = []
+    languages = project.get("languages") or []
+    if not isinstance(languages, list):
+        return raw
+    for item in languages:
+        if isinstance(item, dict):
+            raw.append(item)
+        elif isinstance(item, (list, tuple)) and item:
+            raw.append({
+                "name": str(item[0]),
+                "bytes": 0,
+                "percent": float(item[1]) if len(item) > 1 else 100.0,
+            })
+        elif item:
+            raw.append({"name": str(item), "bytes": 0, "percent": 100.0})
+    return raw
+
+
 def color(name: str) -> str:
     return _LANG_COLORS.get(name or "", "#8b949e")
 
 
 def decorate(project: dict) -> dict:
-    languages = project.get("languages") or []
-    items: list[list] = []
-    if isinstance(languages, list):
-        for item in languages:
-            if isinstance(item, dict):
-                name = str(item.get("name") or "")
-                percent = float(item.get("percent") or 0)
-            elif isinstance(item, (list, tuple)):
-                name = str(item[0]) if item else ""
-                percent = float(item[1]) if len(item) > 1 else 100.0
-            else:
-                name, percent = str(item or ""), 100.0
-            if name:
-                items.append([name, round(percent, 1), color(name)])
+    normalized = normalize_languages(_project_languages(project))
+    items = [[item["name"], item["percent"], color(item["name"])] for item in normalized]
     if not items and project.get("language"):
         items = [[project["language"], 100.0, color(project["language"])]]
     project["lang_list"] = items
