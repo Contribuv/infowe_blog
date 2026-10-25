@@ -19,9 +19,22 @@ def name_map() -> dict[int, str]:
     return {int(r["id"]): str(r["name"]) for r in db.query("SELECT id, name FROM categories")}
 
 
+def _unique_slug(slug: str, name: str, exclude_id: int | None = None) -> str:
+    base = slugify(slug or name, "category")
+    candidate = base
+    i = 2
+    while db.one(
+        "SELECT 1 FROM categories WHERE slug = ? AND id != ?",
+        (candidate, exclude_id if exclude_id is not None else -1),
+    ):
+        candidate = f"{base}-{i}"
+        i += 1
+    return candidate
+
+
 def save(form: dict, cat_id: int | None = None) -> int:
-    name = (form.get("name") or "").strip()
-    slug = (form.get("slug") or "").strip() or slugify(name, "category")
+    name = (form.get("name") or "").strip() or "未命名分类"
+    slug = _unique_slug((form.get("slug") or "").strip(), name, cat_id)
     sort_order = int(form.get("sort_order") or 0)
     if cat_id is not None:
         db.execute(

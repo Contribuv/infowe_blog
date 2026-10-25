@@ -225,7 +225,8 @@ def share_thumb(filename: str) -> Path | None:
             dst.save(out, "JPEG", quality=82, optimize=True)
         return out
     except Exception:
-        return src
+        # 非位图（SVG 等）不生成分享图，避免以图片 MIME 返回可执行内容
+        return None
 
 
 def extract_urls(*texts: str) -> set[str]:

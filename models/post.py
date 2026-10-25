@@ -42,12 +42,15 @@ def load(
         conditions.append("status = ?")
         params.append(status)
     if tag:
-        conditions.append("tags LIKE ?")
+        conditions.append("tags LIKE ? ESCAPE '\\'")
         escaped = tag.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         params.append(f'%"{escaped}"%')
     if search:
-        conditions.append("(title LIKE ? OR content LIKE ? OR excerpt LIKE ?)")
-        like = f"%{search}%"
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        conditions.append(
+            "(title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\' OR excerpt LIKE ? ESCAPE '\\')"
+        )
+        like = f"%{escaped}%"
         params.extend([like, like, like])
     if year:
         conditions.append("SUBSTR(created_at, 1, 4) = ?")
@@ -89,10 +92,11 @@ def related(current_id: int, tags: list[str], limit: int = 4) -> list[dict]:
     for tag in tags:
         if not tag:
             continue
+        escaped = tag.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         rows = db.query(
-            "SELECT * FROM posts WHERE status = 'published' AND id != ? AND tags LIKE ? "
+            "SELECT * FROM posts WHERE status = 'published' AND id != ? AND tags LIKE ? ESCAPE '\\' "
             "ORDER BY created_at DESC LIMIT ?",
-            (current_id, f'%"{tag}"%', limit),
+            (current_id, f'%"{escaped}"%', limit),
         )
         for row in rows:
             pid = int(row["id"])

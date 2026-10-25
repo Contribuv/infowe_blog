@@ -22,22 +22,29 @@ def get(link_id: int) -> dict | None:
     return row_to_dict(db.one("SELECT * FROM links WHERE id = ?", (link_id,)))
 
 
-def save(form: dict, link_id: int | None = None, status: str = "approved") -> int:
+def save(form: dict, link_id: int | None = None, status: str | None = None) -> int:
     name = (form.get("name") or "").strip()
     url = (form.get("url") or "").strip()
     description = (form.get("description") or "").strip()
     avatar = (form.get("avatar") or "").strip()
     sort_order = int(form.get("sort_order") or 0)
-    status = status if status in STATUSES else "approved"
     if link_id is not None:
+        existing = get(link_id)
+        # 编辑时未显式传 status 则保留原状态，避免 pending 链接被误通过
+        final_status = status or (existing["status"] if existing else "approved")
+        if status is None and form.get("status") in STATUSES:
+            final_status = str(form["status"])
         db.execute(
             "UPDATE links SET name=?, url=?, description=?, avatar=?, sort_order=?, status=? WHERE id=?",
-            (name, url, description, avatar, sort_order, status, link_id),
+            (name, url, description, avatar, sort_order, final_status, link_id),
         )
         return link_id
+    final_status = status or "approved"
+    if final_status not in STATUSES:
+        final_status = "approved"
     return db.insert(
         "INSERT INTO links (name, url, description, avatar, sort_order, status) VALUES (?,?,?,?,?,?)",
-        (name, url, description, avatar, sort_order, status),
+        (name, url, description, avatar, sort_order, final_status),
     )
 
 

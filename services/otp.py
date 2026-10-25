@@ -52,8 +52,11 @@ def enabled() -> bool:
 def totp_code(secret_b32: str, timestamp: int | None = None) -> str:
     if not secret_b32:
         return ""
+    try:
+        key = base32_decode(secret_b32)
+    except Exception:
+        return ""
     counter = int((timestamp if timestamp is not None else time.time()) // STEP)
-    key = base32_decode(secret_b32)
     digest = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
     offset = digest[-1] & 0x0F
     code = struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF

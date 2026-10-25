@@ -54,7 +54,7 @@ def _fetch_github() -> dict | None:
             "notes": (data.get("body") or "")[:4000],
             "published_at": data.get("published_at") or "",
         }
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
         return None
 
 
@@ -75,19 +75,26 @@ def _fetch_gitee() -> dict | None:
             "notes": (data.get("body") or "")[:4000],
             "published_at": data.get("created_at") or "",
         }
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
         return None
 
 
 def check(force: bool = False) -> dict:
     """同时查询 GitHub / Gitee 最新 Release，返回模板需要的字段。"""
     now = time.time()
+    current = config.VERSION
     if not force and CACHE_FILE.is_file():
         try:
             cached = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
-            if now - float(cached.get("ts") or 0) < CACHE_TTL:
-                return cached["data"]
-        except (ValueError, OSError, KeyError):
+            data = cached.get("data") or {}
+            fresh = now - float(cached.get("ts") or 0) < CACHE_TTL
+            # 旧版本缓存可能没有 upgradable 字段，直接失效重新获取
+            complete = isinstance(data, dict) and {
+                "ok", "current_version", "latest_version", "upgradable", "sources"
+            } <= set(data)
+            if fresh and complete and cached.get("version") == current:
+                return data
+        except (ValueError, OSError, KeyError, TypeError):
             pass
 
     results = []
@@ -99,7 +106,6 @@ def check(force: bool = False) -> dict:
         if item:
             results.append(item)
 
-    current = config.VERSION
     if not results:
         data = {
             "ok": False,
@@ -133,7 +139,10 @@ def check(force: bool = False) -> dict:
         }
 
     try:
-        CACHE_FILE.write_text(json.dumps({"ts": now, "data": data}, ensure_ascii=False), encoding="utf-8")
+        CACHE_FILE.write_text(
+            json.dumps({"ts": now, "version": current, "data": data}, ensure_ascii=False),
+            encoding="utf-8",
+        )
     except OSError:
         pass
     return data
@@ -156,7 +165,8 @@ def _write_state(state: dict) -> None:
 
 
 def status() -> dict:
-    state = _read_state()
+    state = {"state": "idle", "percent": 0, "label": "", "summary": "", "cancel_requested": False}
+    state.update(_read_state())
     if state.get("state") == "running" and time.time() - float(state.get("started") or 0) > 900:
         state["stale"] = True
     return state
@@ -167,8 +177,10 @@ def start() -> tuple[bool, str]:
     with _lock:
         if _read_state().get("state") == "running":
             return False, "已有升级任务正在执行"
-        if not (Path(config.BASE_DIR) / ".git").is_dir():
+        if not (Path(config.BASE_DIR) / ".git").exists():
             return False, "当前目录不是 Git 仓库，无法在线升级；请手动拉取/上传新版本，并保留 data、uploads、backups"
+        # 先在锁内写入 running，避免并发请求同时启动两个升级线程
+        _write_state({"state": "running", "percent": 1, "label": "准备升级", "started": time.time()})
         _thread = threading.Thread(target=_run, daemon=True)
         _thread.start()
     return True, "升级任务已启动"

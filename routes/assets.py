@@ -36,7 +36,7 @@ def share_thumb(filename: str):
     path = upload.share_thumb(filename)
     if path is None:
         abort(404)
-    return send_file(path, conditional=True, max_age=86400, mimetype="image/jpeg")
+    return send_file(path, conditional=True, max_age=86400)
 
 
 def avatar_proxy(key: str, size: int):
