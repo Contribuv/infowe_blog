@@ -874,6 +874,15 @@ def admin_export():
 
 
 @LOGIN
+def admin_cache_clear():
+    from services import page_cache
+
+    page_cache.clear_all()
+    flash("页面缓存已清除", "success")
+    return redirect(url_for("admin_export"))
+
+
+@LOGIN
 def admin_export_db_backup():
     name = backup.create_db_backup()
     flash(f"数据库备份成功：{name}", "success")
@@ -1044,6 +1053,7 @@ def register(app) -> None:
         ("/admin/settings/wm-refresh", "admin_settings_wm_refresh", admin_settings_wm_refresh, ["GET"]),
         ("/admin/settings/test-email", "admin_settings_test_email", admin_settings_test_email, ["POST"]),
         ("/admin/export", "admin_export", admin_export, ["GET"]),
+        ("/admin/cache/clear", "admin_cache_clear", admin_cache_clear, ["POST"]),
         ("/admin/export/db-backup", "admin_export_db_backup", admin_export_db_backup, ["POST"]),
         ("/admin/export/import-sqlite", "admin_export_import_sqlite", admin_export_import_sqlite, ["POST"]),
         ("/admin/export/import-sql", "admin_export_import_sql", admin_export_import_sql, ["POST"]),

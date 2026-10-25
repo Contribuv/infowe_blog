@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import sys
 from pathlib import Path
@@ -142,6 +143,7 @@ def create_app(test_config: dict | None = None) -> Flask:
 def _register_hooks(app: Flask) -> None:
     @app.before_request
     def _before() -> None:
+        admin_prefix = app.config.get("ADMIN_PREFIX", "/admin")
         # 主题可能在后台被切换，每个请求同步模板搜索路径
         loader = app.extensions.get("theme_loader")
         if loader is not None:
@@ -159,10 +161,29 @@ def _register_hooks(app: Flask) -> None:
                     return ("跨站请求被拒绝", 403)
 
         # 强制 HTTPS / www 归一（仅 GET，后台与本地豁免）
-        if request.method == "GET" and not request.path.startswith("/admin"):
+        if request.method == "GET" and not request.path.startswith(admin_prefix):
             target = _canonical_redirect()
             if target:
                 return redirect(target, code=301)
+
+        # 页面缓存：只命中匿名 GET；写操作标记失效
+        from services import page_cache
+
+        if request.method == "POST":
+            if request.path == admin_prefix or request.path.startswith(admin_prefix + "/"):
+                g._clear_page_cache = True
+            match = re.fullmatch(r"/post/(\d+)/comment", request.path)
+            if match:
+                g._invalidate_pages = [f"/post/{match.group(1)}"]
+            match = re.fullmatch(r"/projects/(\d+)/comment", request.path)
+            if match:
+                g._invalidate_pages = [f"/projects/{match.group(1)}"]
+            if request.path == "/links/apply":
+                g._invalidate_pages = ["/links"]
+
+        cached = page_cache.load()
+        if cached is not None:
+            return cached
 
     @app.context_processor
     def _inject_globals() -> dict:
@@ -246,6 +267,18 @@ def _register_hooks(app: Flask) -> None:
             response.headers.setdefault(
                 "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
             )
+
+        # 页面缓存：写缓存 / 清理失效页面
+        from services import page_cache
+
+        page_cache.store(response)
+        if getattr(g, "_clear_page_cache", False):
+            page_cache.clear_all()
+        elif getattr(g, "_invalidate_pages", None):
+            for path in g._invalidate_pages:
+                page_cache.invalidate_path(path)
+        if response.mimetype in {"text/html", "application/rss+xml"}:
+            response.headers.setdefault("Cache-Control", "no-cache")
         return response
 
     @app.errorhandler(403)

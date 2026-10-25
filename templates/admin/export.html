@@ -63,6 +63,9 @@
         <form method="POST" action="{{ url_for('admin_export_db_backup') }}" class="d-inline">
             <button type="submit" class="btn btn-secondary">{{ icon('plus', 16, 'icon-sm') | safe }} 数据库备份</button>
         </form>
+        <form method="POST" action="{{ url_for('admin_cache_clear') }}" class="d-inline">
+            <button type="submit" class="btn btn-secondary">{{ icon('history', 16, 'icon-sm') | safe }} 清除页面缓存</button>
+        </form>
     </div>
 </div>
 

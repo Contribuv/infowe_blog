@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.0.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.0.11)
+[![version](https://img.shields.io/badge/version-3.1.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -143,7 +143,7 @@ Windows 可直接双击 `run.bat`。
 ├── uploads/               # 文章图片、评论图片、README 图片
 ├── data/                  # SQLite 数据库、密钥、项目同步状态
 ├── backups/               # 数据库备份、JSON/Markdown 导出
-├── storage/cache/         # 头像/分享图/README 图缓存
+├── storage/cache/         # 运行缓存（头像/分享图/README 图/页面缓存）
 ├── fonts/                 # 水印字体
 ├── docs/                  # 功能一致性报告等文档
 ├── tools/                 # 数据迁移脚本
@@ -359,6 +359,66 @@ location / {
 > 宝塔的反向代理有时只写入 80，443 仍是静态配置，会导致 **403**。
 > 遇到 403 时，检查 443 的 `server {}` 是否也有 `location /`。
 
+### 6.1 静态资源直出（强烈建议）
+
+如果所有请求都 `proxy_pass`，CSS/JS/图片也会经过 Flask。把静态目录交给 Nginx：
+
+```nginx
+# 必须放在 location / 之前
+location ^~ /static/ {
+    alias /www/wwwroot/infowe.site/static/;
+    expires 7d;
+    access_log off;
+}
+
+location ^~ /themes/ {
+    alias /www/wwwroot/infowe.site/themes/;
+    expires 7d;
+    access_log off;
+}
+
+location ^~ /uploads/ {
+    alias /www/wwwroot/infowe.site/uploads/;
+    expires 7d;
+    access_log off;
+}
+
+# 禁止访问上传目录里的隐藏文件（.originals 等）
+location ~ ^/uploads/\. {
+    deny all;
+}
+
+gzip on;
+gzip_min_length 1k;
+gzip_types text/plain text/css application/javascript application/json application/rss+xml image/svg+xml;
+```
+
+> `alias` 末尾斜杠要与 `location` 一致；`/share-thumb`、`/avatar`、`/readme-img` 是动态生成，不要 alias。
+> 静态资源直出后不再经过 Flask 的白名单校验，因此必须保留 `deny` 规则，且不要放开脚本扩展名上传。
+
+### 6.2 页面缓存（已内置）
+
+项目已内置应用层页面缓存，不需要额外 Nginx 模块：
+
+- 存储：`storage/cache/pages/`
+- 只缓存匿名 GET 的 HTML / RSS
+- 管理员、提交过评论的访客（`blog_commenter` cookie）自动绕过
+- 默认 TTL：
+  - 首页、列表：5 分钟
+  - 文章、归档、关于：30 分钟
+  - 标签、项目、友链、RSS：10 分钟
+  - 状态页：1 分钟
+- 响应头 `X-Cache: HIT/MISS`，便于确认命中
+- 后台保存文章/分类/项目/友链/时间线/评论/设置/主题，或导入数据后，**自动清空页面缓存**
+- 访客提交评论只清除对应文章页/项目页，审核通过后再次清除
+- 后台「数据管理 → 清除页面缓存」可手动清空
+
+伪静态本身不需要额外 rewrite：`location /` 反代到 5000 即可。
+自定义后台入口 `admin_path` 也不需要改 Nginx，项目内部路由会自动生成。
+
+> 如果以后访问量更大，可以再加 Nginx `proxy_cache` 或 CDN 作为一级缓存；
+> 记得对带 Cookie 的请求 bypass，并在发布/评论后 purge。
+
 ### 7. 申请 SSL
 
 站点设置 → SSL：
@@ -551,7 +611,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.0.11**
+- 版本：**v3.1.0**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 

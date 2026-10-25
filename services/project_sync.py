@@ -86,6 +86,9 @@ def sync_one_background(project_id: int) -> bool:
             project = Project.get(project_id)
             if project:
                 sync_one(project)
+                from services import page_cache
+
+                page_cache.clear_all()
 
     threading.Thread(target=_run, daemon=True).start()
     return True
@@ -139,6 +142,9 @@ def _run_all(app) -> None:
                     "summary": f"同步完成 {done}/{len(projects)}",
                 }
             )
+            from services import page_cache
+
+            page_cache.clear_all()
 
 
 def auto_sync(max_age: int = 86400) -> None:
