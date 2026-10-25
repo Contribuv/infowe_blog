@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from flask import Flask, g, redirect, render_template, request, url_for
 from jinja2 import ChoiceLoader, FileSystemLoader
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import config
 from db import init_app as init_db_app, init_db
@@ -58,6 +59,10 @@ def create_app(test_config: dict | None = None) -> Flask:
     )
     if test_config:
         app.config.update(test_config)
+
+    # 位于 Nginx / 宝塔反向代理之后：信任一层代理的 Host / Proto / IP 头，
+    # 否则开启 HTTPS 强制跳转时会因 request.scheme=http 产生循环。
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     # ── 模板加载顺序：当前主题 → 共享片段 → templates 根（含 admin/） ──
     theme_loader = FileSystemLoader(str(theme_service.active_template_dir()))

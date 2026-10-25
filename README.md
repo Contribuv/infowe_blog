@@ -100,7 +100,114 @@ Windows 推荐 [waitress](https://docs.pylonsproject.org/projects/waitress/)：
 Linux 推荐 gunicorn：
 
 ```bash
-gunicorn -w 2 -b 127.0.0.1:5000 app:app
+.venv/bin/pip install gunicorn
+.venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
+```
+
+### 宝塔面板（Linux）
+
+1. 克隆代码到站点目录：
+
+```bash
+cd /www/wwwroot
+git clone https://gitee.com/infowe/infowe_blog.git python_blog
+cd python_blog
+```
+
+2. 创建虚拟环境并安装依赖（宝塔「软件商店 → Python 项目管理器」也可代劳）：
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt gunicorn
+```
+
+3. 首次初始化。**gunicorn 不会执行 `app.py` 的 `__main__`**，需手动建库/建管理员：
+
+```bash
+.venv/bin/python -m flask --app app init-db
+.venv/bin/python -m flask --app app create-admin --username admin
+```
+
+终端会输出初始密码。若已上传本地 `instance/blog.db`，跳过这一步。
+
+4. 宝塔「Python 项目管理器 → 添加项目」：
+
+| 项 | 值 |
+| --- | --- |
+| 项目路径 | `/www/wwwroot/python_blog` |
+| 启动方式 | `gunicorn` |
+| 启动文件 | `app.py` |
+| 端口 | `5000` |
+| 运行用户 | `www` |
+| 依赖安装 | 勾选（或命令行安装） |
+
+启动命令等价于：
+
+```bash
+gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
+```
+
+5. 网站 → 添加站点 → 反向代理到 `http://127.0.0.1:5000`，或使用 Python 项目管理器的域名映射。
+
+6. 目录权限（SQLite、上传、备份都要可写）：
+
+```bash
+chown -R www:www instance uploads backups data storage
+```
+
+7. 后台「博客设置」填写 `site_url`，开启 HTTPS，再申请 SSL。
+
+Nginx 反向代理核心配置：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:5000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_read_timeout 120s;
+    client_max_body_size 64m;
+}
+```
+
+> 项目已启用 `ProxyFix`，会信任一层代理的 `Host` / `X-Forwarded-Proto` / `X-Forwarded-For`，
+> 因此宝塔开启 HTTPS 后不会出现重定向循环。
+
+### systemd（不使用宝塔进程管理时）
+
+```ini
+[Unit]
+Description=Python Blog
+After=network.target
+
+[Service]
+User=www
+Group=www
+WorkingDirectory=/www/wwwroot/python_blog
+Environment="PATH=/www/wwwroot/python_blog/.venv/bin"
+ExecStart=/www/wwwroot/python_blog/.venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+systemctl daemon-reload
+systemctl enable --now python-blog
+```
+
+### 更新
+
+```bash
+cd /www/wwwroot/python_blog
+git pull
+.venv/bin/pip install -r requirements.txt
+systemctl restart python-blog   # 或宝塔面板重启项目
 ```
 
 Nginx 反向代理要点：
