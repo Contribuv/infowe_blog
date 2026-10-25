@@ -106,13 +106,9 @@
 
   /* 本地句子库：加载/刷新时先用它，保证弱网与一键旁路下首屏即时出句 */
   var FALLBACK = [
-    { text: 'Talk is cheap. Show me the code.', src: 'Linus Torvalds' },
-    { text: 'Stay hungry, stay foolish.', src: 'Steve Jobs' },
     { text: '学而不思则罔，思而不学则殆。', src: '《论语》' },
     { text: '君子藏器于身，待时而动。', src: '《周易》' },
     { text: '博学之，审问之，慎思之，明辨之，笃行之。', src: '《礼记·中庸》' },
-    { text: '任何足够先进的技术都与魔法无异。', src: 'Arthur C. Clarke' },
-    { text: '简单是可靠的先决条件。', src: 'Edsger W. Dijkstra' },
     { text: '把一件事做到极致，胜过平庸地做一万件事。', src: '' },
     { text: '代码如诗：先让它正确，再让它清晰，最后让它简洁。', src: '' },
     { text: '道阻且长，行则将至；行而不辍，未来可期。', src: '' },
@@ -125,11 +121,32 @@
     { text: '一个人把日子过明白，比凑合两个人更有分量。', src: '' },
     { text: '自己造轮子不丢人，丢人的是不知道轮子怎么转。', src: '' },
     { text: '开源的意义：省了别人的时间，也逼自己把活做干净。', src: '' },
-    { text: '好东西不靠调参堆出来，靠把每条链路都接住。', src: '' }
+    { text: '好东西不靠调参堆出来，靠把每条链路都接住。', src: '' },
+    { text: '把踩过的坑写下来，下一次就能少走一点弯路。', src: '' },
+    { text: '一篇文章只讲清一个问题，读者才记得住。', src: '' },
+    { text: '先让它跑起来，再让它跑得优雅。', src: '' },
+    { text: '代码会过时，排查问题的方法不会。', src: '' },
+    { text: '能稳定复现的问题，才值得写进文章。', src: '' },
+    { text: '博客不是作品集，是一份长期维护的公开笔记。', src: '' },
+    { text: '先写清楚，再写漂亮。', src: '' },
+    { text: '好的文档，是写给三个月后的自己看的。', src: '' },
+    { text: '把复杂留给实现，把简单留给读者。', src: '' },
+    { text: '线上没有小事，日志里藏着答案。', src: '' },
+    { text: '更新日志不是流水账，是项目留下的脚印。', src: '' },
+    { text: '比起追新，更重要的是把旧问题讲明白。', src: '' },
+    { text: '写作和调试一样，都是不断缩小问题范围。', src: '' },
+    { text: '先记录，再整理；先完成，再完美。', src: '' },
+    { text: '一个能长期更新的博客，比一次爆款更有价值。', src: '' },
+    { text: '把经验写成步骤，下次就不用重新踩坑。', src: '' },
+    { text: '文章是代码之外的另一份调试记录。', src: '' },
+    { text: '能被搜索到、能被复用的内容，才值得写下来。', src: '' },
+    { text: '别急着加功能，先把现有链路跑顺。', src: '' },
+    { text: '博客最怕的不是没人看，是连自己都不回看。', src: '' }
   ];
 
   var timers = [];
   var MAX_LEN = 120;
+  var lastIndex = -1;
 
   function clearTimers() {
     timers.forEach(function (t) { clearTimeout(t); });
@@ -156,7 +173,14 @@
   }
 
   function renderLocal() {
-    var item = FALLBACK[Math.floor(Math.random() * FALLBACK.length)];
+    var index = 0;
+    if (FALLBACK.length > 1) {
+      do {
+        index = Math.floor(Math.random() * FALLBACK.length);
+      } while (index === lastIndex);
+    }
+    lastIndex = index;
+    var item = FALLBACK[index];
     typeQuote(item.text, item.src);
   }
 
