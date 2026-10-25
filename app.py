@@ -80,6 +80,9 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     # 后台入口前缀（可在后台设置；修改后需重启服务）
     with app.app_context():
+        from services.install import seed_initial_data
+
+        seed_initial_data()
         admin_path = str(settings_service.get_str("admin_path", "admin") or "admin").strip().strip("/")
     if (
         not __import__("re").fullmatch(r"[A-Za-z0-9_-]{2,32}", admin_path)
@@ -359,18 +362,12 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    # 首次启动时若没有任何管理员，自动生成并打印初始密码
-    from models import User
-
     with app.app_context():
+        from models import User
+
         if User.count() == 0:
-            pwd = secrets.token_urlsafe(12)
-            User.create("admin", pwd)
-            pwd_file = config.DATA_DIR / ".initial_admin_password"
-            pwd_file.write_text(pwd, encoding="utf-8")
-            print("=" * 56)
-            print("已生成初始管理员：admin /", pwd)
-            print("密码同时写入 data/.initial_admin_password（首次登录后请修改）")
-            print("=" * 56)
+            # create_app 已初始化；这里是极端兜底，保持与首次安装一致的默认密码
+            User.create("admin", "admin123")
+            print("已创建默认管理员：admin / admin123（请登录后立即修改）")
     port = int(os.environ.get("PORT", "5000"))
     app.run(host=os.environ.get("HOST", "127.0.0.1"), port=port, debug=False)

@@ -63,12 +63,22 @@ python -m venv .venv
 .\.venv\Scripts\python.exe app.py
 ```
 
-打开 <http://127.0.0.1:5000>：
+打开 <http://127.0.0.1:5000>。
 
-- 前台：`/`
-- 后台：`/admin`（可在后台「博客设置 → 账号安全」改为自定义路径，重启后生效）
-- 首次启动的初始账号为 `admin`，密码会打印在控制台，
-  同时写入 `data/.initial_admin_password`（登录后请尽快修改并删除该文件）。
+首次启动会自动完成：
+
+| 项目 | 内容 |
+| --- | --- |
+| 数据库 | `instance/blog.db`（SQLite，自动建表） |
+| 管理员 | `admin` / `admin123` |
+| 示例文章 | 《致使用者的一封信》 |
+| 默认分类 | 随笔 |
+
+> ⚠️ 默认密码只用于首次登录，请立即在「博客设置 → 账号安全」修改。
+> 宝塔 / gunicorn 部署同样会在首次启动时自动初始化，无需手动建库。
+
+- 后台：`/admin`（可在「博客设置 → 账号安全」改为自定义路径，重启后生效）
+- 示例文章会自动出现在首页，可直接删除或改写
 
 前台 URL 采用目录形式：
 
@@ -121,14 +131,14 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt gunicorn
 ```
 
-3. 首次初始化。**gunicorn 不会执行 `app.py` 的 `__main__`**，需手动建库/建管理员：
+3. 首次启动会自动建库、创建默认管理员 `admin / admin123` 和示例文章。
+   如需自定义管理员，可执行（仅在无管理员时有效）：
 
 ```bash
-.venv/bin/python -m flask --app app init-db
 .venv/bin/python -m flask --app app create-admin --username admin
 ```
 
-终端会输出初始密码。若已上传本地 `instance/blog.db`，跳过这一步。
+若已上传本地 `instance/blog.db`，会直接使用其中的数据与管理员。
 
 4. 宝塔「Python 项目管理器 → 添加项目」：
 
@@ -315,6 +325,51 @@ curl http://127.0.0.1:5000/feed.xml
 - 使用 HTTPS，并在后台设置 `site_url`；
 - `instance/`、`uploads/`、`backups/`、`data/` 不要暴露为静态目录（本项目的 Flask 路由已做限制）；
 - 上传目录禁止脚本扩展名（`.php/.html/.svg` 等已在白名单与黑名单双重拦截）。
+
+## 常见问题
+
+### 忘记后台密码
+
+```bash
+.venv/bin/python -m flask --app app reset-password
+```
+
+默认账号为 `admin / admin123`（首次启动创建）。
+
+### 数据库在哪里
+
+主库：`instance/blog.db`；备份：`backups/`。可直接复制 `blog.db` 迁移。
+
+### 首次启动没有文章
+
+空库会自动写入《致使用者的一封信》。如果使用了自己的数据库，以数据库内容为准；检查 `instance/blog.db` 是否存在、目录是否可写。
+
+### 上传 / 备份失败
+
+确保这些目录对运行用户可写：
+
+```bash
+chown -R www:www instance uploads backups data storage
+```
+
+### 后台 403 / 502
+
+- 403：Nginx 的 443 server 没有 `location / { proxy_pass http://127.0.0.1:5000; }`
+- 502：gunicorn/uWSGI 未启动、端口不对、工作目录不对
+
+### 修改后台入口后进不去
+
+重启服务使新路径生效；如果路径写错，可在数据库把 `settings.admin_path` 改回 `admin`：
+
+```bash
+.venv/bin/python -c "from app import app; from services import settings; ctx=app.app_context(); ctx.push(); settings.set_value('admin_path','admin')"
+```
+
+## 更新日志
+
+- 当前版本：v3.0.1
+- GitHub Releases：https://github.com/Contribuv/infowe_blog/releases
+- Gitee Releases：https://gitee.com/infowe/infowe_blog/releases
 
 ## License
 

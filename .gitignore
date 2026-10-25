@@ -16,3 +16,6 @@ data/*
 *.db-shm
 .DS_Store
 Thumbs.db
+
+# 本地计划文档（不推送）
+PLAN.md
