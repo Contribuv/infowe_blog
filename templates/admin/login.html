@@ -156,7 +156,8 @@
             if (!canvas) return;
             var ctx = canvas.getContext('2d');
             var w, h, particles = [];
-            var PARTICLE_COUNT = 36, CONNECT_DIST = 80;
+            var isMobile = window.matchMedia('(max-width: 767.98px)').matches;
+            var PARTICLE_COUNT = isMobile ? 16 : 36, CONNECT_DIST = 80;
             var chars = '01{}[]()<>/\\|*#@$%&;:,.pydef class import return async await lambda'.split(' ');
             var mouseX = -500, mouseY = -500, glowX = -500, glowY = -500;
 
@@ -164,7 +165,16 @@
                 var t = document.documentElement.getAttribute('data-theme');
                 return t !== 'light';
             }
-            function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+            function resize() {
+                var dpr = Math.min(window.devicePixelRatio || 1, 2);
+                w = window.innerWidth;
+                h = window.innerHeight;
+                canvas.width = Math.floor(w * dpr);
+                canvas.height = Math.floor(h * dpr);
+                canvas.style.width = w + 'px';
+                canvas.style.height = h + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
             function Particle() { this.reset(); }
             Particle.prototype.reset = function () {
                 this.x = Math.random() * w; this.y = Math.random() * h;

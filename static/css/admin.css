@@ -1324,7 +1324,20 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
   .upgrade-banner .btn { width: 100%; }
   .upgrade-status-action { width: 100%; }
   .upgrade-body { max-height: 200px; }
-  .login-shell { width: min(400px, 100% - 32px); }
+  .login-shell { width: calc(100% - 24px); padding: 72px 0 24px; }
+  .login-card { max-width: 100%; padding: 24px 18px var(--sp-5); }
+  /* iOS 聚焦 input 时小于 16px 会自动放大页面 */
+  .field input { font-size: 16px; }
+  /* 触摸设备没有鼠标光斑 */
+  .login-cursor-glow { display: none; }
+  .login-theme-toggle, .login-home-btn { top: 14px; width: 38px; height: 38px; }
+  .login-theme-toggle { right: 14px; }
+  .login-home-btn { left: 14px; }
+}
+
+/* 移动端地址栏收放时，100vh 会造成底部被裁切 */
+@supports (height: 100dvh) {
+  .login-page { min-height: 100dvh; }
 }
 
 @media (max-width: 479.98px) {
