@@ -56,15 +56,15 @@
     <meta name="twitter:image" content="{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
     {% if request.path.startswith('/post/') or request.path.startswith('/projects/') %}
     <!-- 正文统一 GitHub 排版（文章正文 / 项目 README 共用） -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t='v' ~ version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t=static_ver) }}">
     <!-- 评论区（tech 独立样式，与 default 的 comments.css 互不影响）+ Toast 轻提示 -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/comments-tech.css', t='v' ~ version) }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css', t='v' ~ version) }}">
-    <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t='v' ~ version) }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/comments-tech.css', t=static_ver) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css', t=static_ver) }}">
+    <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t=static_ver) }}" defer></script>
     {% endif %}
     {% if request.path.startswith('/post/') %}
     <!-- 文章分享面板样式（两主题通用） -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t='v' ~ version) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t=static_ver) }}">
     {% endif %}
 </head>
 <body>
@@ -169,7 +169,7 @@
     </button>
 
     <script src="{{ url_for('theme_static', filename=active_theme ~ '/theme.js', t=theme_asset_ver) }}" defer></script>
-    <script src="{{ url_for('static', filename='js/disable-zoom.js', t='v' ~ version) }}"></script>
+    <script src="{{ url_for('static', filename='js/disable-zoom.js', t=static_ver) }}"></script>
     <script>
     // 项目页「反馈」按钮：点击平滑滚动到评论区并聚焦输入框
     (function () {

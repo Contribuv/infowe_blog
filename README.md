@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.13-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.13)
+[![version](https://img.shields.io/badge/version-3.2.14-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.14)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -47,7 +47,7 @@
 | 文章状态 | `published` / `draft` / `hidden`（隐藏文章仅 URL 可直达） |
 | 浏览 | 全文搜索、标签聚合、年份归档、分页 |
 | 订阅 | `/feed.xml` RSS |
-| 评论 | 嵌套回复、审核、私密评论、图片、敏感词、IP 归属地 |
+| 评论 | 嵌套回复、审核、私密评论、图片、敏感词、IP 归属地、分页 |
 | 项目 | GitHub/Gitee 同步、语言占比、README 渲染与图片本地化、项目评论 |
 | 友链 | 申请、审核、本站信息卡片 |
 | 关于 | 简介、技能、时间线 |
@@ -246,7 +246,7 @@ python -c "from app import app; from services import settings; c=app.app_context
 | 站点信息 | 站名、副标题、作者、简介、技能、GitHub、联系邮箱 |
 | 首页一言 | 一行一条，`文本\|出处`；留空使用内置文案 |
 | 导航菜单 | 文章/标签/项目/友链/关于/状态 开关 |
-| 评论 | 总开关、审核、邮件通知、评论图片、敏感词 |
+| 评论 | 总开关、单页条数、后台列表条数、邮件通知、评论图片、敏感词 |
 | 上传 | 图片/媒体/附件白名单、单文件大小、水印 |
 | 邮件 | SMTP 服务器、端口、账号、通知收件人、测试发送 |
 | 账号安全 | 用户名、密码、OTP、后台入口路径 |
@@ -940,9 +940,19 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.2.13**
+- 版本：**v3.2.14**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.14
+
+- 评论通知规则修正：博主自己评论 / 回复不再给自己发信；访客回复访客时，评论审核通过后才通知被回复者；私密评论、回复自己、同一收件人均不会重复发送
+- 通知邮件改为 HTML + 纯文本双版本，强调色跟随主题 `--accent`，页脚显示「首页标题（留空回退站点名）」，并支持直接回复评论者
+- 评论分页：前台按顶层评论分页，每页条数可配置（默认 10，0 为不分页），楼中楼跟随根评论
+- 评论翻页改为局部刷新：只替换评论区，不再整页跳转，消除主题跨文档过渡造成的闪屏，并自动定位到评论区开头
+- 后台评论管理列表支持分页，每页条数可配置（默认 20）
+- 修复后台评论列表无空格长链接溢出单元格
+- 静态资源缓存戳改按文件修改时间生成，改 CSS / JS 后无需再改版本号
 
 ---
 

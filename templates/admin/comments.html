@@ -2,13 +2,14 @@
 {% block admin_title %}评论管理{% endblock %}
 {% block admin_content %}
 <div class="page-header">
-    <h2>{{ icon('message-circle', 20) | safe }} 评论管理 <span class="badge">{{ comments|length }}</span></h2>
+    <h2>{{ icon('message-circle', 20) | safe }} 评论管理 <span class="badge">{{ total }}</span></h2>
 </div>
 
 {% if comments %}
 <div class="card" id="pending-comments">
 <form method="POST" action="{{ url_for('admin_comments_bulk') }}" id="bulkForm">
     <input type="hidden" name="action" id="bulkAction" value="">
+    <input type="hidden" name="page" value="{{ page }}">
     <div class="bulk-bar">
         <label class="checkbox-label">
             <input type="checkbox" id="checkAll">
@@ -100,11 +101,24 @@
    导致点单条删除报「无效的批量操作」。 #}
 {% for c in comments %}
     {% if c.status == 'pending' %}
-    <form id="approveForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" class="hidden"></form>
+    <form id="approveForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" class="hidden"><input type="hidden" name="page" value="{{ page }}"></form>
     {% endif %}
-    <form id="delForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" class="hidden" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')"></form>
+    <form id="delForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" class="hidden" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')"><input type="hidden" name="page" value="{{ page }}"></form>
 {% endfor %}
 </div>
+
+<!-- 分页 -->
+{% if total_pages > 1 %}
+<nav class="admin-pagination">
+    {% if page > 1 %}
+    <a href="{{ url_for('admin_comments', page=page-1) }}" class="page-btn">上一页</a>
+    {% endif %}
+    <span class="page-info">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ url_for('admin_comments', page=page+1) }}" class="page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
 {% else %}
 <div class="empty-state">
     <p>暂无评论</p>

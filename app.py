@@ -229,6 +229,7 @@ def _register_hooks(app: Flask) -> None:
             "nav_pages": nav_pages,
             "nav_all": nav_all,
             "version": config.VERSION,
+            "static_ver": _static_version(),
             "admin_prefix": app.config.get("ADMIN_PREFIX", "/admin"),
             "theme_css_name": theme_service.css_name(active),
             "theme_asset_ver": theme_service.asset_version(),
@@ -328,6 +329,25 @@ def _canonical_redirect() -> str | None:
 
 # ── 模板辅助 ──────────────────────────────────────────────
 _ICON_CACHE: dict[str, str] = {}
+_STATIC_VER_CACHE: dict[str, float] = {"ts": 0.0, "ver": 0.0}
+
+
+def _static_version() -> int:
+    """static 下 css/js 的最新 mtime，用作 ?t= 缓存戳。
+
+    改了静态文件就自动换 URL，不必每改一次都动版本号；30 秒内复用结果。
+    """
+    import time as _time
+
+    now = _time.time()
+    if now - _STATIC_VER_CACHE["ts"] < 30:
+        return int(_STATIC_VER_CACHE["ver"])
+    latest = 0
+    for path in config.STATIC_DIR.rglob("*"):
+        if path.suffix.lower() in {".css", ".js"} and path.is_file():
+            latest = max(latest, int(path.stat().st_mtime))
+    _STATIC_VER_CACHE.update(ts=now, ver=latest)
+    return latest
 
 
 def icon_svg(name: str, size: int = 20, class_name: str = "") -> str:

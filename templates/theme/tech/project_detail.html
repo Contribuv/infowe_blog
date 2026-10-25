@@ -172,7 +172,7 @@
 })();
 </script>
 {% if comments_enabled %}
-<script src="{{ url_for('static', filename='js/toast.js', t='v' ~ version) }}"></script>
-<script src="{{ url_for('static', filename='js/comments.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='js/toast.js', t=static_ver) }}"></script>
+<script src="{{ url_for('static', filename='js/comments.js', t=static_ver) }}"></script>
 {% endif %}
 {% endblock %}

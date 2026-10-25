@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlencode
 
 from flask import (
     abort, flash, jsonify, make_response, redirect, render_template, request,
@@ -24,6 +25,46 @@ def _decorate_categories(posts: list[dict]) -> list[dict]:
         cid = post.get("category_id")
         post["category_name"] = names.get(int(cid), "") if cid else ""
     return posts
+
+
+def _comment_pager(pager: dict) -> dict:
+    """把模型层分页信息转成模板可直接渲染的链接结构。"""
+    total_pages = int(pager.get("total_pages") or 1)
+    page = int(pager.get("page") or 1)
+    if total_pages <= 1:
+        return {"total_pages": 1, "page": 1, "pages": [], "prev": "", "next": ""}
+
+    def url(target: int) -> str:
+        args = request.args.to_dict(flat=True)
+        args.pop("cpage", None)
+        if target > 1:
+            args["cpage"] = str(target)
+        query = urlencode(args)
+        return request.path + ("?" + query if query else "") + "#comments"
+
+    pages: list[dict] = []
+    for item in range(1, total_pages + 1):
+        if item == 1 or item == total_pages or abs(item - page) <= 2:
+            pages.append({"num": item, "url": url(item), "current": item == page, "ellipsis": False})
+        elif abs(item - page) == 3:
+            pages.append({"num": 0, "url": "", "current": False, "ellipsis": True})
+    return {
+        "total_pages": total_pages,
+        "page": page,
+        "pages": pages,
+        "prev": url(page - 1) if page > 1 else "",
+        "next": url(page + 1) if page < total_pages else "",
+    }
+
+
+def _load_comments(post_id: int | None, project_id: int | None, include_private: bool, my_comments: dict):
+    """按后台「评论每页条数」分页读取评论，返回 (列表, 总数, 分页信息)。"""
+    per_page = settings.get_int("comments_per_page", 10)
+    page = request.args.get("cpage", 1, type=int) or 1
+    comment_list, comment_total, pager = Comment.load(
+        post_id, project_id, include_private, my_comments, page, per_page
+    )
+    return comment_list, comment_total, _comment_pager(pager)
 
 
 def index():
@@ -201,9 +242,12 @@ def post_detail(post_id: int):
     commenter = comments_service.commenter()
     my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
     if enabled:
-        comment_list, comment_total = Comment.load(post_id, None, is_admin, my_comments)
+        comment_list, comment_total, comment_pager = _load_comments(
+            post_id, None, is_admin, my_comments
+        )
     else:
         comment_list, comment_total = [], 0
+        comment_pager = _comment_pager({})
     my_pending = 0 if is_admin else Comment.count_pending(comment_list)
 
     side_posts, _ = Post.load("published", None, None, None, 1, 12)
@@ -215,6 +259,7 @@ def post_detail(post_id: int):
         related=related,
         comments=comment_list,
         comment_total=comment_total,
+        comment_pager=comment_pager,
         prev_post=Post.adjacent(post["created_at"], True),
         next_post=Post.adjacent(post["created_at"], False),
         comments_enabled=enabled,
@@ -398,9 +443,12 @@ def project_detail(project_id: int):
     commenter = comments_service.commenter()
     my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
     if enabled:
-        comment_list, comment_total = Comment.load(None, project_id, is_admin, my_comments)
+        comment_list, comment_total, comment_pager = _load_comments(
+            None, project_id, is_admin, my_comments
+        )
     else:
         comment_list, comment_total = [], 0
+        comment_pager = _comment_pager({})
     return render_template(
         "project_detail.html",
         project=project,
@@ -408,6 +456,7 @@ def project_detail(project_id: int):
         toc=toc,
         comments=comment_list,
         comment_total=comment_total,
+        comment_pager=comment_pager,
         comments_enabled=enabled,
         commenter=commenter,
         is_admin=is_admin,

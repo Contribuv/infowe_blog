@@ -1,6 +1,6 @@
 {# 评论区共享片段：文章 / 项目详情页共用（active_theme 决定皮肤类名）。
    依赖上下文变量：
-     comments / comment_total / my_pending / commenter / is_admin / admin_avatar
+     comments / comment_total / comment_pager / my_pending / commenter / is_admin / admin_avatar
      comment_form_action —— 评论提交地址（如 /post/1/comment、/projects/2/comment）
      comment_section_class —— 外层 section 类（默认 comments-section；tech 主题传 tech-comments）
    两套主题各自 post.html 与项目详情页均以 {% include "_comments.html" %} 引入，
@@ -70,6 +70,8 @@
     </div>
     {% endmacro %}
 
+    {# 评论列表 + 分页条：comments.js 只替换这个容器（AJAX 翻页，避免整页刷新导致闪屏） #}
+    <div id="cmt-region">
     {% if comments %}
     <div class="cmt-list" id="cmt-list">
         {% for c in comments %}{{ render_thread(c) }}{% endfor %}
@@ -77,6 +79,20 @@
     {% else %}
     <p class="cmt-empty">还没有评论，来抢沙发吧~</p>
     {% endif %}
+
+    {# 评论分页：按顶层评论分页，楼中楼跟随根评论；后台「评论每页条数」填 0 时不显示 #}
+    {% if comment_pager and comment_pager.total_pages > 1 %}
+    <nav class="cmt-pager" aria-label="评论分页">
+        {% if comment_pager.prev %}<a class="cmt-page-btn" href="{{ comment_pager.prev }}" data-cmt-page="prev">上一页</a>{% endif %}
+        {% for item in comment_pager.pages %}
+            {% if item.ellipsis %}<span class="cmt-page-ellipsis" aria-hidden="true">…</span>
+            {% elif item.current %}<span class="cmt-page-btn active" aria-current="page">{{ item.num }}</span>
+            {% else %}<a class="cmt-page-btn" href="{{ item.url }}" data-cmt-page="{{ item.num }}">{{ item.num }}</a>{% endif %}
+        {% endfor %}
+        {% if comment_pager.next %}<a class="cmt-page-btn" href="{{ comment_pager.next }}" data-cmt-page="next">下一页</a>{% endif %}
+    </nav>
+    {% endif %}
+    </div><!-- /#cmt-region -->
 
     <!-- 评论表单（回复时由 comments.js 挂到对应楼层组的回复区末尾） -->
     <form class="cmt-form" id="comment-form" method="POST" action="{{ comment_form_action }}" data-sensitive-words="{{ sensitive_words_json | default('') }}">

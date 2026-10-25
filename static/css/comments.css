@@ -148,6 +148,17 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 空态 ── */
 .cmt-empty{padding:26px 0;text-align:center;font-size:13.5px;color:var(--c-text3)}
 
+/* ── 评论分页（按顶层评论分页，楼中楼跟随根评论） ── */
+.cmt-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin:22px 0 4px}
+.cmt-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 10px;font-size:13px;line-height:1;color:var(--c-text2);text-decoration:none;border:1px solid var(--c-border);border-radius:9px;background:transparent;transition:border-color .18s,color .18s}
+@media (hover:hover) and (pointer:fine){.cmt-page-btn:hover{border-color:var(--c-accent);color:var(--c-accent)}}
+.cmt-page-btn.active{background:var(--c-accent);border-color:var(--c-accent);color:#fff;cursor:default}
+.cmt-page-ellipsis{padding:0 2px;font-size:13px;color:var(--c-text3)}
+@media (max-width:767px){.cmt-pager{margin:18px 0 2px}.cmt-page-btn{min-width:30px;height:30px;padding:0 8px;font-size:12.5px}}
+/* AJAX 翻页加载态：只轻微变淡，避免整页刷新那样的闪烁 */
+#cmt-region{transition:opacity .15s ease}
+#cmt-region[aria-busy="true"]{opacity:.6}
+
 /* ── 移动端：收紧尺度，回复区缩进对齐根评论正文左缘（36+10=46） ── */
 @media (max-width:767px){
   .cmt{--av-root:36px;--av-reply:26px;--gap:10px;--indent:46px}

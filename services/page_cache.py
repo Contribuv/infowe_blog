@@ -164,7 +164,19 @@ def clear_all() -> None:
 
 
 def invalidate_path(path: str) -> None:
-    for candidate in {path, path.rstrip("/"), path + "/"}:
+    targets = {path, path.rstrip("/"), path + "/"}
+    # 同一路径可能带查询串派生多个缓存键（如评论分页 ?cpage=2），按 meta 里的 url 一并清理
+    folder = _paths(path)[0].parent
+    if folder.is_dir():
+        for meta_file in folder.glob("*.json"):
+            try:
+                meta = json.loads(meta_file.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if urlparse(str(meta.get("url") or "")).path in targets:
+                meta_file.unlink(missing_ok=True)
+                meta_file.with_suffix(".html").unlink(missing_ok=True)
+    for candidate in targets:
         html_path, meta_path = _paths(candidate)
         try:
             html_path.unlink(missing_ok=True)

@@ -1,19 +1,34 @@
-"""SMTP 邮件与评论通知。"""
+"""SMTP 邮件与评论通知。
+
+通知规则（blogger = 博主本人）：
+- 博主自己评论 / 回复：不再给自己发「新评论」邮件，只在回复访客时通知对方；
+- 访客评论：给博主发一封（待审核的兼作审核提醒）；
+- 访客回复访客：给博主发一封；被回复者的「收到回复」邮件等到评论审核通过后再发；
+- 同一收件人只发一封，私密评论、回复自己的评论都不发通知。
+"""
 
 from __future__ import annotations
 
 import smtplib
 import threading
-from email.header import Header
-from email.mime.text import MIMEText
+
+from email.message import EmailMessage
 from email.utils import formataddr
 
-from services import settings, site_url
+import db
+from services import mail_template, settings, site_url
 
 _SMTP_PORTS = {25: False, 465: True, 587: False, 994: True}
 
 
-def send(to: str, subject: str, body: str) -> tuple[bool, str]:
+def send(
+    to: str,
+    subject: str,
+    body: str,
+    html: str | None = None,
+    reply_to: str = "",
+) -> tuple[bool, str]:
+    """发送邮件；html 不为空时按 multipart/alternative 带上 HTML 版本。"""
     host = settings.get_str("smtp_host", "").strip()
     user = settings.get_str("smtp_user", "").strip()
     password = settings.get_str("smtp_pass", "")
@@ -25,10 +40,17 @@ def send(to: str, subject: str, body: str) -> tuple[bool, str]:
     except ValueError:
         port = 465
     use_ssl = _SMTP_PORTS.get(port, port == 465)
-    msg = MIMEText(body, "plain", "utf-8")
-    msg["Subject"] = Header(subject, "utf-8")
-    msg["From"] = formataddr((str(Header(sender, "utf-8")), user))
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = formataddr((sender, user))
     msg["To"] = to
+    if reply_to:
+        msg["Reply-To"] = reply_to
+    msg.set_content(body or "")
+    if html:
+        msg.add_alternative(html, subtype="html")
+
     timeout = settings.get_int("smtp_timeout", 10)
     try:
         if use_ssl:
@@ -48,6 +70,74 @@ def send(to: str, subject: str, body: str) -> tuple[bool, str]:
         return False, f"发送失败：{exc}"
 
 
+# ── 收件人判定 ──────────────────────────────────────────
+def _admin_to() -> str:
+    return (
+        settings.get_str("notify_email", "").strip()
+        or settings.get_str("contact_email", "").strip()
+    )
+
+
+def _blogger_emails() -> set[str]:
+    emails = {
+        settings.get_str("notify_email", "").strip().lower(),
+        settings.get_str("contact_email", "").strip().lower(),
+    }
+    emails.discard("")
+    return emails
+
+
+def _is_blogger(email: str, author: str = "", is_admin: bool = False) -> bool:
+    if is_admin:
+        return True
+    blogger_name = settings.get_str("author", "").strip()
+    if blogger_name and author and author.strip() == blogger_name:
+        return True
+    return (email or "").strip().lower() in _blogger_emails()
+
+
+def _detail_url(detail_path: str, comment_id: int | None) -> str:
+    base = site_url.base()
+    path = detail_path if detail_path.startswith("/") else "/" + detail_path
+    anchor = f"#comment-{comment_id}" if comment_id else "#comments"
+    return base + path + anchor
+
+
+def _dispatch(jobs: list[dict]) -> None:
+    """邮件放到后台线程发送，失败静默，不阻塞请求。"""
+    if not jobs:
+        return
+    from flask import current_app
+
+    app = current_app._get_current_object()
+
+    def _run() -> None:
+        # 线程没有请求上下文，必须显式推入应用上下文才能读取 settings
+        with app.app_context():
+            for job in jobs:
+                send(
+                    job["to"],
+                    job["subject"],
+                    job["text"],
+                    job.get("html"),
+                    job.get("reply_to", ""),
+                )
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _comment_title(project_id: int | None, post_id: int | None) -> tuple[str, str, str]:
+    """返回 (label, title, detail_path)。"""
+    import db
+
+    if project_id:
+        row = db.one("SELECT name FROM projects WHERE id = ?", (project_id,))
+        return "项目", str(row["name"] if row else "项目"), f"/projects/{project_id}"
+    row = db.one("SELECT title FROM posts WHERE id = ?", (post_id,))
+    return "文章", str(row["title"] if row else "文章"), f"/post/{post_id}"
+
+
+# ── 评论通知 ────────────────────────────────────────────
 def notify_comment(
     post_id: int | None,
     project_id: int | None,
@@ -59,41 +149,138 @@ def notify_comment(
     status: str,
     detail_path: str,
     label: str = "文章",
+    comment_id: int | None = None,
+    is_admin: bool = False,
+    is_private: bool = False,
 ) -> None:
-    admin_to = settings.get_str("notify_email", "").strip()
-    if not admin_to:
+    """提交评论后的通知：博主提醒 + （已通过时）被回复者提醒。"""
+    if not settings.bool_of("comment_notify", True):
         return
-    details = f"{site_url.base()}{detail_path}"
-    review = "待审核" if status == "pending" else "已通过"
-    body = (
-        f"你的{label}《{title}》收到新评论（{review}）\n\n"
-        f"昵称：{author}\n邮箱：{email or '（未填写）'}\n\n"
-        f"{content}\n\n查看：{details}\n"
-    )
-    subject = f"[{settings.get_str('blog_name', '博客')}] {label}《{title}》收到新评论"
 
-    # 在请求上下文内取出被回复者邮箱，线程中不再访问数据库
-    reply_to = ""
+    blog = settings.get_str("blog_name", "博客").strip() or "博客"
+    site = site_url.base()
+    url = _detail_url(detail_path, comment_id)
+    when = db.now()
+    commenter = (email or "").strip()
+
+    parent_author = ""
+    reply_email = ""
+    reply_private = False
     if parent_id:
-        import db
+        parent = db.one(
+            "SELECT author, email, is_private FROM comments WHERE id = ?", (parent_id,)
+        )
+        if parent:
+            parent_author = str(parent["author"] or "")
+            reply_email = str(parent["email"] or "").strip()
+            reply_private = bool(int(parent["is_private"] or 0))
 
-        parent = db.one("SELECT author, email FROM comments WHERE id = ?", (parent_id,))
-        if parent and parent["email"] and parent["email"].lower() != admin_to.lower():
-            reply_to = parent["email"]
+    jobs: list[dict] = []
+    admin_to = _admin_to()
+    from_blogger = _is_blogger(commenter, author, is_admin)
 
-    from flask import current_app
+    # 1) 博主提醒：博主自己发言不再发给自己
+    if admin_to and not from_blogger:
+        text, page = mail_template.comment_notice(
+            blog_name=blog,
+            site=site,
+            label=label,
+            title=title,
+            url=url,
+            author=author,
+            content=content,
+            when=when,
+            status=status,
+            parent_author=parent_author,
+        )
+        review = "待审核" if status != "approved" else "已通过"
+        jobs.append(
+            {
+                "to": admin_to,
+                "subject": f"[{blog}] {label}《{title}》收到新评论（{review}）",
+                "text": text,
+                "html": page,
+                "reply_to": commenter,
+            }
+        )
 
-    app = current_app._get_current_object()
+    # 2) 被回复者提醒：仅评论已公开、非私密、对方不是博主本人、也不是自己回自己
+    if status == "approved" and reply_email and not reply_private and not is_private:
+        reply_lower = reply_email.lower()
+        if reply_lower not in _blogger_emails() and reply_lower != commenter.lower():
+            text, page = mail_template.reply_notice(
+                blog_name=blog,
+                site=site,
+                label=label,
+                title=title,
+                url=url,
+                author=author,
+                content=content,
+                when=when,
+                parent_author=parent_author,
+            )
+            jobs.append(
+                {
+                    "to": reply_email,
+                    "subject": f"[{blog}] 你的评论收到了回复：{title}",
+                    "text": text,
+                    "html": page,
+                }
+            )
 
-    def _send() -> None:
-        # 线程没有请求上下文，必须显式推入应用上下文才能读取 settings
-        with app.app_context():
-            send(admin_to, subject, body)
-            if reply_to:
-                reply_body = (
-                    f"你在{label}《{title}》的评论收到了回复\n\n"
-                    f"{author}：{content}\n\n查看：{details}\n"
-                )
-                send(reply_to, f"回复通知：{title}", reply_body)
+    _dispatch(jobs)
 
-    threading.Thread(target=_send, daemon=True).start()
+
+def notify_approved_reply(comment_id: int) -> None:
+    """评论审核通过后，补发「收到回复」邮件给被回复的访客。"""
+    if not settings.bool_of("comment_notify", True):
+        return
+
+    from models import Comment
+
+    comment = Comment.get(int(comment_id))
+    if not comment or comment.get("status") != "approved":
+        return
+    if int(comment.get("is_private") or 0):
+        return
+    parent_id = comment.get("parent_id")
+    if not parent_id:
+        return
+
+    parent = Comment.get(int(parent_id))
+    if not parent or int(parent.get("is_private") or 0):
+        return
+    reply_email = str(parent.get("email") or "").strip()
+    commenter_email = str(comment.get("email") or "").strip()
+    if not reply_email:
+        return
+    if reply_email.lower() in _blogger_emails():
+        return
+    if reply_email.lower() == commenter_email.lower():
+        return
+
+    blog = settings.get_str("blog_name", "博客").strip() or "博客"
+    label, title, detail_path = _comment_title(
+        comment.get("project_id"), comment.get("post_id")
+    )
+    text, page = mail_template.reply_notice(
+        blog_name=blog,
+        site=site_url.base(),
+        label=label,
+        title=title,
+        url=_detail_url(detail_path, int(comment_id)),
+        author=str(comment.get("author") or ""),
+        content=str(comment.get("content") or ""),
+        when=str(comment.get("created_at") or ""),
+        parent_author=str(parent.get("author") or ""),
+    )
+    _dispatch(
+        [
+            {
+                "to": reply_email,
+                "subject": f"[{blog}] 你的评论收到了回复：{title}",
+                "text": text,
+                "html": page,
+            }
+        ]
+    )

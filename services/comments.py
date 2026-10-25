@@ -260,8 +260,11 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
                 parent_id=parent_id,
                 email=email,
                 status=status,
-                detail_path=f"{back}#comments",
+                detail_path=back,
                 label="项目" if is_project else "文章",
+                comment_id=comment_id,
+                is_admin=is_admin,
+                is_private=is_private,
             )
         except Exception:
             pass
@@ -272,4 +275,11 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         message = "评论已提交"
     else:
         message = "评论已提交，审核通过后显示"
-    return {"url": f"{back}#comments", "message": message, "commenter": data}
+
+    url = f"{back}#comment-{comment_id}"
+    per_page = settings.get_int("comments_per_page", 10)
+    if per_page > 0:
+        page = Comment.page_of(comment_id, per_page, include_private=is_admin)
+        if page > 1:
+            url = f"{back}?cpage={page}#comment-{comment_id}"
+    return {"url": url, "message": message, "commenter": data}

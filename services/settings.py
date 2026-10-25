@@ -42,6 +42,8 @@ DEFAULTS: dict[str, str] = {
     "comments_enabled": "1",
     "comment_notify": "1",
     "comment_image_upload": "1",
+    "comments_per_page": "10",
+    "admin_comments_per_page": "20",
     "sensitive_filter_enabled": "0",
     "sensitive_words": "",
     "smtp_host": "",

@@ -456,7 +456,11 @@ svg { vertical-align: -3px; flex: none; }
 .main-td strong { font-weight: 600; }
 .desc-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* 长评论：默认显示摘要，点击展开全文；避免长内容撑坏表格 */
-.comment-cell { white-space: normal; overflow: visible; text-overflow: clip; }
+/* overflow-wrap:anywhere 让无空格的长串（如 ![](/uploads/...)）也能断行，避免溢出单元格 */
+.comment-cell {
+  white-space: normal; overflow: visible; text-overflow: clip;
+  overflow-wrap: anywhere; word-break: break-word;
+}
 .comment-details summary {
   cursor: pointer;
   overflow-wrap: anywhere;

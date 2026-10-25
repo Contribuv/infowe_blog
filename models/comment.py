@@ -7,13 +7,22 @@ from typing import Any
 import db
 from models.base import row_to_dict
 
+ADMIN_PAGE_SIZE = 20
+
 
 def load(
     post_id: int | None = None,
     project_id: int | None = None,
     include_private: bool = False,
     my_comments: dict[str, str] | None = None,
-) -> tuple[list[dict], int]:
+    page: int = 1,
+    per_page: int = 0,
+) -> tuple[list[dict], int, dict]:
+    """读取评论区。
+
+    返回 (顶层评论, 评论总数, 分页信息)。per_page > 0 时按顶层评论分页，
+    楼中楼回复始终跟随所属根评论一起展示。
+    """
     from services import avatar, comments as comments_service, settings
 
     column = "project_id" if project_id is not None else "post_id"
@@ -91,7 +100,63 @@ def load(
 
     for root in roots:
         set_depth(root, 0)
-    return roots, len(items)
+
+    total_roots = len(roots)
+    pager = {"page": 1, "per_page": 0, "total_pages": 1, "total_roots": total_roots}
+    if per_page and per_page > 0:
+        total_pages = max(1, (total_roots + per_page - 1) // per_page)
+        page = min(max(1, int(page or 1)), total_pages)
+        start = (page - 1) * per_page
+        roots = roots[start:start + per_page]
+        pager = {
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "total_roots": total_roots,
+        }
+    return roots, len(items), pager
+
+
+def page_of(comment_id: int, per_page: int, include_private: bool = False) -> int:
+    """评论所在的分页页码（按根评论位置计算，供提交后跳转使用）。"""
+    if not per_page or per_page <= 0:
+        return 1
+    row = db.one(
+        "SELECT id, parent_id, post_id, project_id, created_at FROM comments WHERE id = ?",
+        (int(comment_id),),
+    )
+    if not row:
+        return 1
+    root = dict(row)
+    guard = 0
+    while root.get("parent_id") and guard < 50:
+        parent = db.one(
+            "SELECT id, parent_id, post_id, project_id, created_at FROM comments WHERE id = ?",
+            (int(root["parent_id"]),),
+        )
+        if not parent:
+            break
+        root = dict(parent)
+        guard += 1
+
+    is_project = root.get("project_id") is not None
+    column = "project_id" if is_project else "post_id"
+    value = root.get("project_id") if is_project else root.get("post_id")
+    visible = (
+        "(status = 'approved' OR is_private = 1)"
+        if include_private
+        else "(status = 'approved' AND is_private = 0)"
+    )
+    earlier = int(
+        db.scalar(
+            f"SELECT COUNT(*) FROM comments WHERE {column} = ? AND parent_id IS NULL "
+            f"AND {visible} AND (created_at < ? OR (created_at = ? AND id < ?))",
+            (value, root.get("created_at"), root.get("created_at"), int(root["id"])),
+            0,
+        )
+        or 0
+    )
+    return earlier // per_page + 1
 
 
 def count_pending(nodes: list[dict]) -> int:
@@ -150,15 +215,23 @@ def set_status(comment_id: int, status: str) -> None:
         db.execute("UPDATE comments SET status = ? WHERE id = ?", (status, comment_id))
 
 
-def admin_list() -> list[dict]:
-    rows = db.query(
+def admin_list(page: int = 1, per_page: int = 0) -> tuple[list[dict], int]:
+    """后台评论列表，返回 (当前页数据, 总数)；per_page > 0 时分页。"""
+    total = int(db.scalar("SELECT COUNT(*) FROM comments", (), 0))
+    sql = (
         "SELECT c.*, p.title AS post_title, p.id AS post_id, pj.name AS project_name, "
         "pa.author AS parent_author FROM comments c "
         "LEFT JOIN posts p ON c.post_id = p.id "
         "LEFT JOIN projects pj ON c.project_id = pj.id "
         "LEFT JOIN comments pa ON c.parent_id = pa.id "
-        "ORDER BY (c.status = 'pending') DESC, c.is_private DESC, c.created_at DESC"
+        "ORDER BY (c.status = 'pending') DESC, c.is_private DESC, c.created_at DESC, c.id DESC"
     )
+    params: list[Any] = []
+    if per_page and per_page > 0:
+        page = max(1, int(page or 1))
+        sql += " LIMIT ? OFFSET ?"
+        params = [per_page, (page - 1) * per_page]
+    rows = db.query(sql, params)
     result = []
     for row in rows:
         item = dict(row)
@@ -168,7 +241,7 @@ def admin_list() -> list[dict]:
         item["is_private"] = int(item.get("is_private") or 0)
         item["parent_author"] = item.get("parent_author") or ""
         result.append(item)
-    return result
+    return result, total
 
 
 def pending_count() -> int:

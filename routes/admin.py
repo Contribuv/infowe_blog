@@ -435,7 +435,13 @@ def admin_timeline_bulk():
 # ── 评论 ──────────────────────────────────────────────
 @LOGIN
 def admin_comments():
-    items = Comment.admin_list()
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = max(1, min(100, settings.get_int("admin_comments_per_page", Comment.ADMIN_PAGE_SIZE)))
+    items, total = Comment.admin_list(page, per_page)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+        items, total = Comment.admin_list(page, per_page)
     author_name = settings.get_str("author", "")
     cfg_avatar = settings.get_str("avatar", "").strip()
     cfg_ok = avatar.configured_avatar_exists()
@@ -451,21 +457,39 @@ def admin_comments():
         if not item["admin_avatar"]:
             item["admin_avatar"] = default_url
         item["admin_avatar_default"] = default_url
-    return render_template("admin/comments.html", comments=items)
+    return render_template(
+        "admin/comments.html",
+        comments=items,
+        page=page,
+        total_pages=total_pages,
+        total=total,
+    )
+
+
+def _comments_back():
+    """评论操作结束后回到原分页：页码由表单里的 page 字段带回。"""
+    page = (request.form.get("page") or "").strip()
+    if page.isdigit() and int(page) > 1:
+        return redirect(url_for("admin_comments", page=int(page)))
+    return redirect(url_for("admin_comments"))
 
 
 @LOGIN
 def admin_comment_approve(comment_id: int):
+    previous = Comment.get(comment_id)
     Comment.set_status(comment_id, "approved")
+    # 待审核 -> 通过时，补发「收到回复」邮件给被回复的访客
+    if previous and previous.get("status") != "approved":
+        notify.notify_approved_reply(comment_id)
     flash("评论已通过", "success")
-    return redirect(url_for("admin_comments"))
+    return _comments_back()
 
 
 @LOGIN
 def admin_comment_delete(comment_id: int):
     Comment.delete(comment_id)
     flash("评论及其回复已删除", "success")
-    return redirect(url_for("admin_comments"))
+    return _comments_back()
 
 
 @LOGIN
@@ -474,18 +498,28 @@ def admin_comments_bulk():
     ids = _ids("comment_ids")
     if action not in {"approve", "delete"}:
         flash("无效的批量操作", "error")
-        return redirect(url_for("admin_comments"))
+        return _comments_back()
     if not ids:
         flash("未选择任何评论", "error")
-        return redirect(url_for("admin_comments"))
+        return _comments_back()
     if action == "approve":
+        marks = ",".join("?" * len(ids))
+        fresh = [
+            int(row["id"])
+            for row in db.query(
+                f"SELECT id FROM comments WHERE id IN ({marks}) AND status != 'approved'",
+                ids,
+            )
+        ]
         Comment.bulk(ids, "approve")
+        for cid in fresh:
+            notify.notify_approved_reply(cid)
         flash(f"已通过 {len(ids)} 条评论", "success")
     else:
         for cid in ids:
             Comment.delete(cid)
         flash(f"已删除 {len(ids)} 条评论及其回复", "success")
-    return redirect(url_for("admin_comments"))
+    return _comments_back()
 
 
 # ── 上传 ──────────────────────────────────────────────
@@ -679,6 +713,8 @@ def _settings_view() -> dict:
         "otp_new_codes": session.pop("_otp_new_codes", None),
         "otp_mail_ok": bool(settings.get_str("smtp_host", "")),
         "comments_enabled": settings.get_str("comments_enabled", "1"),
+        "comments_per_page": settings.get_str("comments_per_page", "10"),
+        "admin_comments_per_page": settings.get_str("admin_comments_per_page", "20"),
         "nav_posts": settings.get_str("nav_posts", "1"),
         "nav_tags": settings.get_str("nav_tags", "1"),
         "nav_projects": settings.get_str("nav_projects", "1"),
@@ -708,6 +744,20 @@ def _save_settings():
         if key == "stats_code":
             value = _sanitize_stats(value)
         settings.set_value(key, value)
+
+    if "comments_per_page" in request.form:
+        try:
+            per_page = int((request.form.get("comments_per_page") or "10").strip())
+        except ValueError:
+            per_page = 10
+        settings.set_value("comments_per_page", str(max(0, min(100, per_page))))
+
+    if "admin_comments_per_page" in request.form:
+        try:
+            admin_per_page = int((request.form.get("admin_comments_per_page") or "20").strip())
+        except ValueError:
+            admin_per_page = 20
+        settings.set_value("admin_comments_per_page", str(max(1, min(100, admin_per_page))))
 
     if full_form or "site_url" in request.form:
         raw_site = (request.form.get("site_url") or "").strip().rstrip("/")

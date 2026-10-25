@@ -131,8 +131,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='vendor/qrcode/qrcode.min.js', t='v' ~ version) }}"></script>
-<script src="{{ url_for('static', filename='js/share.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='vendor/qrcode/qrcode.min.js', t=static_ver) }}"></script>
+<script src="{{ url_for('static', filename='js/share.js', t=static_ver) }}"></script>
 <script>
 (function () {
     'use strict';
@@ -456,6 +456,6 @@
 
 </script>
 
-<script src="{{ url_for('static', filename='js/toast.js', t='v' ~ version) }}"></script>
-<script src="{{ url_for('static', filename='js/comments.js', t='v' ~ version) }}"></script>
+<script src="{{ url_for('static', filename='js/toast.js', t=static_ver) }}"></script>
+<script src="{{ url_for('static', filename='js/comments.js', t=static_ver) }}"></script>
 {% endblock %}

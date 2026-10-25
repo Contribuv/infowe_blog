@@ -53,7 +53,7 @@
   var form = document.getElementById('comment-form');
   if (!form) return;
 
-  var list = document.getElementById('cmt-list');
+  function getList() { return document.getElementById('cmt-list'); }
   var parentInput = document.getElementById('comment-parent-id');
   var hint = document.getElementById('comment-replying');
   var hintName = document.getElementById('comment-replying-name');
@@ -118,6 +118,7 @@
 
   document.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('.cmt-reply') : null;
+    var list = getList();
     if (!btn || !list || !list.contains(btn)) return;
 
     var item = btn.closest('.cmt-item');
@@ -186,6 +187,7 @@
   }
 
   function setupAllFolds() {
+    var list = getList();
     if (!list) return;
     Array.prototype.forEach.call(list.querySelectorAll('.cmt-replies'), setupFold);
   }
@@ -218,6 +220,94 @@
   }
   revealHashTarget();
   window.addEventListener('hashchange', revealHashTarget);
+
+  /* ── 2.6 评论分页：只替换评论区，避免整页跳转触发跨文档过渡动画（闪屏） ──
+     渐进增强：不支持 fetch / pushState 时，分页链接仍是普通链接，照常整页跳转。 */
+  var region = document.getElementById('cmt-region');
+  var pageLoading = false;
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  /* 吸顶导航会盖住目标位置，按实际高度留出间距 */
+  function stickyHeaderHeight() {
+    var nav = document.querySelector('.tech-nav, .site-header, header');
+    if (!nav) return 12;
+    var style = window.getComputedStyle ? window.getComputedStyle(nav) : null;
+    var pinned = style && (style.position === 'fixed' || style.position === 'sticky');
+    var height = pinned ? nav.getBoundingClientRect().height : 0;
+    return height + 12;
+  }
+
+  /* 翻页后定位到「评论区开头」（评论标题处），而不是文章顶部 */
+  function scrollToCommentsTop() {
+    var title = document.querySelector('.cmt-title') || region;
+    if (!title) return;
+    var current = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var top = Math.max(0, title.getBoundingClientRect().top + current - stickyHeaderHeight());
+    // 距离过远时直接定位，避免长时间平滑滚动；尊重系统「减弱动态效果」
+    var behavior = prefersReducedMotion() || Math.abs(current - top) > 1500 ? 'auto' : 'smooth';
+    try {
+      window.scrollTo({ top: top, behavior: behavior });
+    } catch (err) {
+      window.scrollTo(0, top);
+    }
+  }
+
+  function refreshRegion() {
+    var imgs = region.querySelectorAll('.cmt-avatar-img');
+    Array.prototype.forEach.call(imgs, initAvatar);
+    setupAllFolds();
+  }
+
+  function loadCommentPage(url, push) {
+    if (!region || !window.fetch || pageLoading) return;
+    pageLoading = true;
+    region.setAttribute('aria-busy', 'true');
+    fetch(url, {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'fetch' }
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        var fresh = new DOMParser().parseFromString(text, 'text/html').getElementById('cmt-region');
+        if (!fresh) throw new Error('cmt-region not found');
+        resetReply();   // 表单先回到主位置，免得回复态表单随旧楼层一起被替换
+        region.innerHTML = fresh.innerHTML;
+        refreshRegion();
+        if (push !== false) {
+          var target = url.split('#')[0] + '#comments';
+          history.pushState({ cmtPage: target }, '', target);
+        }
+        scrollToCommentsTop();
+      })
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        location.href = url;   // 任何异常都退回整页跳转，保证分页可用
+      })
+      .then(function () {
+        pageLoading = false;
+        region.removeAttribute('aria-busy');
+      });
+  }
+
+  if (region) {
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest ? e.target.closest('a[data-cmt-page]') : null;
+      if (!link) return;
+      if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      loadCommentPage(link.href, true);
+    });
+
+    window.addEventListener('popstate', function () {
+      loadCommentPage(location.href, false);
+    });
+  }
 
   /* ── 3. 字数统计 ── */
   if (textarea && counter) {
