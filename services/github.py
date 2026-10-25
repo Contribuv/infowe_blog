@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import time
 from pathlib import Path
+from urllib.parse import quote, urlparse
 
 import requests
 
-from config import DATA_DIR
+from config import DATA_DIR, UPLOADS_DIR
 from services import settings
 
 CACHE_DIR = Path(DATA_DIR) / "project_cache"
@@ -164,20 +166,80 @@ def save_cache(repo: str, payload: dict) -> None:
     cache_path(repo).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
 
+_README_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".avif"}
+_PROXY_IMAGE_HOSTS = {
+    "img.shields.io", "shields.io", "badgen.net", "img.badgesize.io",
+    "raw.githubusercontent.com", "user-images.githubusercontent.com",
+    "camo.githubusercontent.com", "avatars.githubusercontent.com",
+}
+
+
+def _image_ext(url: str) -> str:
+    ext = Path(urlparse(url).path).suffix.lower()
+    return ext if ext in _README_IMAGE_EXTS else ""
+
+
+def _download_bytes(url: str, timeout: int = 8) -> bytes | None:
+    try:
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+        if resp.status_code == 200 and resp.content and len(resp.content) <= 8 * 1024 * 1024:
+            return resp.content
+    except requests.RequestException:
+        pass
+    return None
+
+
+def _cache_readme_image(url: str, repo: str, ext: str) -> str:
+    """与 PHP 版一致：md5(url) 命名，落到 uploads/projects/<slug>/readme/。"""
+    name = hashlib.md5(url.encode("utf-8")).hexdigest() + ext
+    dest = Path(UPLOADS_DIR) / "projects" / repo / "readme" / name
+    if dest.is_file() and dest.stat().st_size > 0:
+        return f"/uploads/projects/{repo}/readme/{name}"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    site = settings.get_str("site_url", "").strip().rstrip("/")
+    candidates = [url]
+    if site:
+        # 本地网络无法访问 raw.githubusercontent.com 时，从既有 PHP 站回退取图
+        candidates.append(f"{site}/uploads/projects/{repo}/readme/{name}")
+    for candidate in candidates:
+        data = _download_bytes(candidate)
+        if data:
+            dest.write_bytes(data)
+            return f"/uploads/projects/{repo}/readme/{name}"
+    return ""
+
+
 def localize_readme_images(html: str, repo: str, branch: str) -> str:
-    """把 README 中的相对图片地址改写成 /readme-img 代理地址。"""
-    from urllib.parse import quote
+    """README 图片本地化：
+    - GitHub raw / 相对图片 → 下载到 uploads/projects/<repo>/readme（与 PHP 版同路径、同 md5 命名）
+    - shields 等徽章 → 站内 /readme-img 代理
+    - 其他外链 → 保持原样
+    """
 
     def repl(match: re.Match) -> str:
-        src = match.group(2)
-        # 外部绝对地址保持原样（徽章/图床由浏览器直连），只本地化仓库内的相对图片
-        if src.startswith(("http://", "https://", "data:", "//")):
+        attr, src = match.group(1), match.group(2)
+        if src.startswith(("data:", "/uploads/", "/readme-img", "#")):
             return match.group(0)
-        if src.startswith("/"):
-            target = f"https://raw.githubusercontent.com/{repo}/{branch}{src}"
+        if src.startswith(("http://", "https://")):
+            url = src
+        elif src.startswith("//"):
+            url = "https:" + src
+        elif src.startswith("/"):
+            url = f"https://raw.githubusercontent.com/{repo}/{branch}{src}"
         else:
-            target = f"https://raw.githubusercontent.com/{repo}/{branch}/{src.lstrip('./')}"
-        return f'{match.group(1)}="/readme-img?url={quote(target, safe="")}"'
+            url = f"https://raw.githubusercontent.com/{repo}/{branch}/{src.lstrip('./')}"
+
+        host = (urlparse(url).hostname or "").lower()
+        ext = _image_ext(url)
+        is_repo_image = host == "raw.githubusercontent.com" or not src.startswith(("http://", "https://", "//"))
+        if is_repo_image and ext:
+            local = _cache_readme_image(url, repo, ext)
+            if local:
+                return f'{attr}="{local}"'
+        if host in _PROXY_IMAGE_HOSTS:
+            return f'{attr}="/readme-img?url={quote(url, safe="")}"'
+        return match.group(0)
 
     return re.sub(r'(<img[^>]*?\bsrc)="([^"]+)"', repl, html, flags=re.I)
 

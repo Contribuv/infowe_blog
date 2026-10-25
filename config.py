@@ -33,7 +33,7 @@ DATABASE = INSTANCE_DIR / "blog.db"
 SECRET_KEY_FILE = INSTANCE_DIR / ".secret_key"
 
 # 版本线：Python 重构版独立版本号
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 
 # 上传限制
 MAX_CONTENT_LENGTH = 64 * 1024 * 1024  # 单请求 64MB

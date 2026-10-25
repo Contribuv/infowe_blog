@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 import requests
-from flask import abort, redirect, request, send_file
+from flask import abort, redirect, request, send_file, Response
 
 from config import CACHE_DIR, THEMES_DIR
 from services import avatar, upload
@@ -82,6 +82,14 @@ _ALLOWED_README_HOSTS = {
 }
 
 
+_README_PLACEHOLDER = (
+    b'<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48">'
+    b'<rect width="160" height="48" rx="6" fill="#eaeef2"/>'
+    b'<text x="80" y="29" font-family="system-ui,sans-serif" font-size="12" fill="#8b949e" '
+    b'text-anchor="middle">image unavailable</text></svg>'
+)
+
+
 def readme_image():
     raw = request.args.get("url", "").strip()
     if not raw:
@@ -100,25 +108,49 @@ def readme_image():
     if parsed.scheme not in {"http", "https"} or parsed.hostname not in _ALLOWED_README_HOSTS:
         abort(404)
 
-    # 徽章/矢量图直接 302 到源站：避免同源 SVG 脚本风险，也省去转换成本
-    if parsed.hostname.endswith("shields.io") or parsed.path.lower().endswith(".svg"):
-        return redirect(raw, code=302)
-
     cache_dir = Path(CACHE_DIR) / "readme_images"
     cache_dir.mkdir(parents=True, exist_ok=True)
     suffix = Path(parsed.path).suffix.lower()
-    if suffix not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".avif"}:
+    if suffix not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif"}:
         suffix = ""
-    path = cache_dir / (hashlib.sha1(raw.encode()).hexdigest() + suffix)
-    if not path.is_file():
+
+    import hashlib
+
+    key = hashlib.sha1(raw.encode()).hexdigest()
+    candidates = list(cache_dir.glob(key + ".*"))
+    if not candidates:
         try:
-            resp = requests.get(raw, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-            if resp.status_code != 200 or not resp.content:
-                return redirect(raw, code=302)
-            path.write_bytes(resp.content)
+            resp = requests.get(raw, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            if resp.status_code == 200 and resp.content and len(resp.content) <= 8 * 1024 * 1024:
+                ctype = (resp.headers.get("Content-Type") or "").lower()
+                if not suffix:
+                    if "svg" in ctype:
+                        suffix = ".svg"
+                    elif "png" in ctype:
+                        suffix = ".png"
+                    elif "gif" in ctype:
+                        suffix = ".gif"
+                    elif "webp" in ctype:
+                        suffix = ".webp"
+                    elif "jpeg" in ctype or "jpg" in ctype:
+                        suffix = ".jpg"
+                path = cache_dir / (key + suffix)
+                path.write_bytes(resp.content)
+                candidates = [path]
         except requests.RequestException:
-            return redirect(raw, code=302)
-    return send_file(path, max_age=86400, conditional=True)
+            candidates = []
+    if not candidates:
+        return Response(_README_PLACEHOLDER, mimetype="image/svg+xml", status=200)
+
+    path = candidates[0]
+    import mimetypes
+
+    mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+    response = send_file(path, mimetype=mime, max_age=86400, conditional=True)
+    if mime == "image/svg+xml":
+        # SVG 作为独立文档时禁止脚本，仅允许内联样式（徽章）
+        response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
+    return response
 
 
 def register(app) -> None:

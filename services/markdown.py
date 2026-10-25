@@ -86,6 +86,14 @@ def render_page(content: str) -> str:
 def render_readme(text: str, slug: str = "", branch: str = "main") -> str:
     if not (text or "").strip():
         return ""
+    # GitHub README 常在 <details> 内写 Markdown；Python-Markdown 默认把块内当原始 HTML，
+    # 显式加 markdown="1" 让 md_in_html 递归解析（与 GitHub / PHP 版一致）。
+    text = re.sub(
+        r"<details(?![^>]*\bmarkdown=)([^>]*)>",
+        r'<details\1 markdown="1">',
+        text,
+        flags=re.I,
+    )
     parser = _make()
     html = parser.convert(text)
     html = _optimize_images(html)

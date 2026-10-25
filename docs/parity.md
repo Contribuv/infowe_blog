@@ -145,3 +145,20 @@ SQLite 导入（合法/非法/未确认）、同源校验、安全响应头、Co
 | 上传文件 | 本地已含文章图片与线上下载的头像；旧 PHP 副本仅有 2 个 README 图 |
 
 > 到期日期（阿里云 2028-02-23、腾讯云 2034-02-16）与标签已按线上 `/api/status` 同步。
+
+---
+
+## 补充轮次：用户反馈修复（项目 README）
+
+| 问题 | 根因 | 修复 |
+| --- | --- | --- |
+| 项目 1 图片不显示 | README 图片被改写成 `/readme-img` 后 302 到 `raw.githubusercontent.com`，本机 DNS 无法解析，浏览器直连失败 | 改为服务端下载并落到 `uploads/projects/<repo>/readme/<md5>.<ext>`（与 PHP 版同路径/同命名），无法下载时回退从 `site_url` 同路径取图；徽章走站内代理并缓存 |
+| `<details>` 内 Markdown 未解析 | Python-Markdown 默认把块级 HTML 当原始内容 | 渲染前给 `<details>` 加 `markdown="1"`；项目 1 h3 由 14 → 155，与线上一致 |
+| README 居中/折叠样式缺失 | `markdown-body.css` 未覆盖 `align` 属性与 `details` | 追加居中、details/summary 样式 |
+| 友链申请页无返回入口 | 模板缺少返回链接 | 增加「返回友链」按钮 |
+
+验证结果：
+
+- 项目 1：图片 7/7 加载成功（本地文件 + 徽章代理），README 纯文本与线上 **100% 一致**，目录 167 项一致；
+- 项目 9：README 纯文本与线上 99.99% 一致（仅换行），目录 84 项一致，details 正常展开；
+- 项目 2/3/8 README 已重新同步，无图片或外链图片保持原样。

@@ -1711,3 +1711,11 @@ html { touch-action: manipulation; }
 
 /* 通用隐藏类：置于末尾以按顺序压过后文同特异度的 display 声明（如 .tech-link-avatar） */
 .hidden { display: none; }
+/* README / 友链申请补充 */
+.markdown-body [align="center"] { text-align: center; }
+.markdown-body [align="right"] { text-align: right; }
+.markdown-body details { margin: 1em 0; }
+.markdown-body summary { cursor: pointer; font-weight: 600; }
+.markdown-body details[open] summary { margin-bottom: .5em; }
+.tech-form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.tech-form-actions .tech-btn { width: auto; }

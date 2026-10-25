@@ -23,7 +23,10 @@
         <input type="url" name="avatar" class="tech-input" placeholder="头像地址（选填）" maxlength="500">
         <input type="email" name="email" class="tech-input" placeholder="联系邮箱（选填）" maxlength="100">
         <textarea name="description" class="tech-textarea" placeholder="一句话介绍你的网站（选填）" maxlength="200"></textarea>
-        <button type="submit" class="tech-btn tech-btn-primary">提交申请</button>
+        <div class="tech-form-actions">
+            <button type="submit" class="tech-btn tech-btn-primary">提交申请</button>
+            <a href="/links" class="tech-btn">返回友链</a>
+        </div>
     </form>
 </div>
 {% endblock %}
