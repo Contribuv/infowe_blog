@@ -396,6 +396,10 @@ gzip_types text/plain text/css application/javascript application/json applicati
 > `alias` 末尾斜杠要与 `location` 一致；`/share-thumb`、`/avatar`、`/readme-img` 是动态生成，不要 alias。
 > 静态资源直出后不再经过 Flask 的白名单校验，因此必须保留 `deny` 规则，且不要放开脚本扩展名上传。
 
+> **伪静态**：宝塔 Python 项目会自动生成 `rewrite/python_xxx.conf`。
+> 如果该文件里有 `location /` 或 `proxy_pass`，请清空或删除这行 include，避免与站点里的反代重复。
+> Flask 的 `/tag/`、`/search/`、`/archive/` 都是应用路由，不需要 Nginx rewrite。
+
 ### 6.2 页面缓存（已内置）
 
 项目已内置应用层页面缓存，不需要额外 Nginx 模块：
