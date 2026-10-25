@@ -1,5 +1,11 @@
 # Python Blog（Flask + SQLite）
 
+[![version](https://img.shields.io/badge/version-3.0.1-blue)](https://github.com/Contribuv/infowe_blog)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 以 `D:\fnos\blog`（PHP + MySQL 版 Haozi Blog）为功能基准重构的多模块 Python 博客。
 前台/后台路由、模板与静态资源尽量与 PHP 版保持一致，存储层改为 SQLite，开箱即用。
 
