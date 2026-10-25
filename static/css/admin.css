@@ -543,6 +543,9 @@ input[type="file"]::file-selector-button {
   font-size: var(--fz-sm); font-weight: 500; color: var(--text);
   cursor: pointer;
 }
+/* 批量条左内边距 20px，表格单元格左内边距 12px；给行复选框补 8px，
+   让「全选」和每行复选框在同一垂直线上（移动端行 padding 也按此对齐） */
+.table .row-check { margin-left: 12px; }
 input[type="checkbox"], input[type="radio"] {
   width: 16px; height: 16px; flex: none;
   accent-color: var(--accent);
