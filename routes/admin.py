@@ -31,12 +31,15 @@ def _ids(name: str) -> list[int]:
 @LOGIN
 def admin_dashboard():
     stats = Post.stats()
+    link_stats = Link.stats()
     rows = db.query("SELECT * FROM posts ORDER BY updated_at DESC, id DESC LIMIT 5")
     recent = [Post.hydrate(r) for r in rows]
     return render_template(
         "admin/dashboard.html",
         stats=stats,
         recent=recent,
+        pending_comments=Comment.pending_count(),
+        pending_links=link_stats["pending"],
         upgrade_stale=True,
     )
 

@@ -32,7 +32,37 @@
     </div>
 </div>
 
-<!-- 统计卡片 -->
+{% set pending_total = pending_comments + pending_links %}
+{% if pending_total %}
+<section class="dashboard-pending" aria-label="待处理事项">
+    <div class="dashboard-pending-head">
+        <span class="dashboard-pending-title">{{ icon('inbox', 15) | safe }} 待处理</span>
+        <span class="badge badge-warning">{{ pending_total }}</span>
+    </div>
+    <div class="dashboard-pending-grid">
+        {% if pending_comments %}
+        <a class="dashboard-pending-item" href="{{ url_for('admin_comments') }}#pending-comments">
+            <span class="dashboard-pending-icon is-comment">{{ icon('message-circle', 20) | safe }}</span>
+            <span class="dashboard-pending-text">
+                <strong>{{ pending_comments }} 条评论待审核</strong>
+                <small>通过后才会在前台显示</small>
+            </span>
+            <span class="dashboard-pending-arrow">{{ icon('chevron-right', 16) | safe }}</span>
+        </a>
+        {% endif %}
+        {% if pending_links %}
+        <a class="dashboard-pending-item" href="{{ url_for('admin_links') }}#pending-links">
+            <span class="dashboard-pending-icon is-link">{{ icon('link', 20) | safe }}</span>
+            <span class="dashboard-pending-text">
+                <strong>{{ pending_links }} 个友链申请待审核</strong>
+                <small>审核通过后展示在友链页面</small>
+            </span>
+            <span class="dashboard-pending-arrow">{{ icon('chevron-right', 16) | safe }}</span>
+        </a>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-icon">{{ icon('file', 28) | safe }}</div>

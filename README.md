@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.1.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.6)
+[![version](https://img.shields.io/badge/version-3.1.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.7)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -34,7 +34,7 @@
 
 ### 后台
 
-- 仪表盘：文章/评论/项目/友链统计、最近更新
+- 仪表盘：文章/评论/项目/友链统计、待审核评论/友链申请提醒、最近更新
 - 文章：新建、编辑、预览、删除、批量发布/草稿/隐藏
 - 分类 / 标签 / 项目 / 友链 / 时间线 / 评论：增删改查与批量操作
 - 上传：图片 / 媒体 / 附件，白名单与大小限制，水印
@@ -412,11 +412,41 @@ gzip_types text/plain text/css application/javascript application/json applicati
 > 只返回 `text/css` 说明 `charset_types` 少了 `text/css`，即使已经写了 `charset utf-8;` 也不会生效。
 > 项目内 CSS 首行已内置 `@charset "UTF-8";`，自有 JS 已带 UTF-8 BOM；但 Nginx 仍建议按上面的配置声明，避免其他静态资源出现同类问题。
 
-> **伪静态**：宝塔 Python 项目会自动生成 `rewrite/python_xxx.conf`。
-> 如果该文件里有 `location /` 或 `proxy_pass`，请清空或删除这行 include，避免与站点里的反代重复。
-> Flask 的 `/tag/`、`/search/`、`/archive/` 都是应用路由，不需要 Nginx rewrite。
+### 6.2 伪静态 / Rewrite（重要）
 
-### 6.2 页面缓存（已内置）
+宝塔「网站 → 设置 → 伪静态」**保持为空**，不要选择 WordPress、ThinkPHP 等模板。
+
+Flask 已经处理了这些路由：
+
+- `/post/<id>`
+- `/tag/<tag>`
+- `/search/<q>`
+- `/archive/<year>`
+- 旧参数 URL 的 301 跳转
+- 后台自定义入口 `admin_path`
+
+因此**不需要** Nginx `rewrite`、`try_files` 或 `index.php` 规则。
+
+检查宝塔自动生成的伪静态文件：
+
+```bash
+ls /www/server/panel/vhost/rewrite/
+grep -RE "location /|proxy_pass" /www/server/panel/vhost/rewrite/python_*.conf
+```
+
+如果 `rewrite/python_xxx.conf` 里出现 `location /` 或 `proxy_pass`，请清空该文件，或删除站点配置里对应的 `include`。否则会和 6.1 里的 `location /` 重复，可能出现 403 / 502 / 代理规则冲突。
+
+验证应用路由：
+
+```bash
+curl -I https://www.infowe.site/tag/Python
+curl -I https://www.infowe.site/search/Flask
+curl -I https://www.infowe.site/archive/2026
+```
+
+应返回 `200` 或正常的 `301`，不是 `404`。80 和 443 的 `server {}` 都要有同样的 `location /` 反代。
+
+### 6.3 页面缓存（已内置）
 
 项目已内置应用层页面缓存，不需要额外 Nginx 模块：
 
@@ -634,7 +664,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.1.6**
+- 版本：**v3.1.7**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 

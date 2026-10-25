@@ -6,7 +6,7 @@
 </div>
 
 {% if comments %}
-<div class="card">
+<div class="card" id="pending-comments">
 <form method="POST" action="{{ url_for('admin_comments_bulk') }}" id="bulkForm">
     <input type="hidden" name="action" id="bulkAction" value="">
     <div class="bulk-bar">
