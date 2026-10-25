@@ -448,34 +448,45 @@ def _age_text(ts: float) -> str:
 
 
 def rss_feed():
+    from datetime import timedelta, timezone
+    from email.utils import format_datetime
+
+    from models.base import strip_markdown
+
+    cst = timezone(timedelta(hours=8))
+
+    def rss_date(value: str) -> str:
+        try:
+            return format_datetime(
+                datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=cst)
+            )
+        except (ValueError, TypeError):
+            return format_datetime(datetime.now(cst))
+
     posts, _ = Post.load("published", None, None, None, 1, 20)
     base = site_url.base()
     items = []
     for post in posts:
         link = f"{base}/post/{post['id']}"
-        excerpt = post.get("excerpt") or ""
-        pub = post.get("created_at") or ""
-        try:
-            pub_date = datetime.strptime(pub, "%Y-%m-%d %H:%M:%S").strftime("%a, %d %b %Y %H:%M:%S +0800")
-        except ValueError:
-            pub_date = ""
+        description = post.get("excerpt") or strip_markdown(post.get("content") or "")[:200]
         items.append(
             "<item>"
             f"<title>{escape(post['title'])}</title>"
             f"<link>{escape(link)}</link>"
             f"<guid isPermaLink=\"true\">{escape(link)}</guid>"
-            f"<description>{escape(excerpt)}</description>"
-            f"<pubDate>{pub_date}</pubDate>"
+            f"<description>{escape(description)}</description>"
+            f"<pubDate>{rss_date(post.get('created_at') or '')}</pubDate>"
             "</item>"
         )
     xml = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<rss version="2.0"><channel>'
+        '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel>'
         f"<title>{escape(settings.get_str('blog_name', '博客'))}</title>"
         f"<link>{escape(base)}</link>"
         f"<description>{escape(settings.get_str('blog_subtitle', ''))}</description>"
         f"<language>zh-CN</language>"
-        f"<lastBuildDate>{datetime.now().strftime('%a, %d %b %Y %H:%M:%S +0800')}</lastBuildDate>"
+        f"<lastBuildDate>{format_datetime(datetime.now(cst))}</lastBuildDate>"
+        f'<atom:link href="{escape(base)}/feed.xml" rel="self" type="application/rss+xml"/>'
         + "".join(items)
         + "</channel></rss>"
     )
