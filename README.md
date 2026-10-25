@@ -1,172 +1,346 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.0.1-blue)](https://github.com/Contribuv/infowe_blog)
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![version](https://img.shields.io/badge/version-3.0.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.0.2)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-以 `D:\fnos\blog`（PHP + MySQL 版 Haozi Blog）为功能基准重构的多模块 Python 博客。
-前台/后台路由、模板与静态资源尽量与 PHP 版保持一致，存储层改为 SQLite，开箱即用。
+一个基于 **Flask + SQLite** 的多模块个人博客系统，功能对齐 Haozi Blog PHP 版。
+前台服务端渲染，后台提供完整内容管理，开箱即用；支持从 PHP/MySQL 或旧 Flask SQLite 迁移。
 
-- 前台：文章、标签、搜索、分类、归档、RSS、评论、友链、项目、时间线、站点状态
-- 后台：文章/分类/项目/友链/时间线/评论管理、上传、孤儿文件清理、主题、设置、状态监控、备份与导入导出
-- 安全：单管理员、PBKDF2 密码、登录防爆破、TOTP 双重验证、邮箱找回、同源校验、上传白名单
+- GitHub：<https://github.com/Contribuv/infowe_blog>
+- Gitee：<https://gitee.com/infowe/infowe_blog>
+
+---
+
+## 功能特性
+
+### 前台
+
+| 模块 | 说明 |
+| --- | --- |
+| 文章 | Markdown 写作、分类、标签、精选、阅读时长、访问计数、上下篇 |
+| 文章状态 | `published` / `draft` / `hidden`（隐藏文章仅 URL 可直达） |
+| 浏览 | 全文搜索、标签聚合、年份归档、分页 |
+| 订阅 | `/feed.xml` RSS |
+| 评论 | 嵌套回复、审核、私密评论、图片、敏感词、IP 归属地 |
+| 项目 | GitHub/Gitee 同步、语言占比、README 渲染与图片本地化、项目评论 |
+| 友链 | 申请、审核、本站信息卡片 |
+| 关于 | 简介、技能、时间线 |
+| 状态 | 服务探活、可用率、证书天数、云资源到期 |
+| 分享 | Open Graph、4:3 分享缩略图、二维码 |
+
+### 后台
+
+- 仪表盘：文章/评论/项目/友链统计、最近更新
+- 文章：新建、编辑、预览、删除、批量发布/草稿/隐藏
+- 分类 / 标签 / 项目 / 友链 / 时间线 / 评论：增删改查与批量操作
+- 上传：图片 / 媒体 / 附件，白名单与大小限制，水印
+- 孤儿文件清理：扫描未被引用的上传文件
+- 主题切换
+- 设置：站点信息、导航、评论、SMTP、水印、敏感词、统计代码、上传限制
+- 状态监控：HTTP(S) 探活、历史采样
+- 数据：SQLite 备份、JSON/Markdown 导出、SQLite 导入
+- 安全：登录防爆破、图片验证码、TOTP 双重验证、邮箱找回密码
+
+### 安全
+
+- 单管理员约束、PBKDF2 密码
+- 登录失败计数、递增延迟、5 分钟锁定
+- OTP（RFC 6238）与一次性恢复码
+- CSRF 同源校验、安全响应头、CSP
+- 上传扩展名白名单 + 危险扩展名黑名单
+- Markdown 链接协议过滤、统计代码消毒
+- 上传/主题/备份路径穿越防护
+
+---
 
 ## 技术栈
 
 | 层 | 选型 |
 | --- | --- |
-| Web | Flask 3.x（应用工厂 + 路由模块） |
+| Web | Flask 3.x（应用工厂 + Blueprint 风格路由模块） |
 | 数据库 | SQLite（WAL） |
-| 模板 | Jinja2（复用 PHP 版 Jinja2 兼容模板） |
-| Markdown | `markdown`（表格、代码块、目录、脚注等） |
-| 图片 | Pillow（水印、分享缩略图、头像裁剪） |
-| HTTP | requests（GitHub 同步、状态探测、头像回源） |
+| 模板 | Jinja2 |
+| Markdown | `markdown`（表格、代码块、目录、脚注、details） |
+| 图片 | Pillow（水印、分享图、头像裁剪） |
+| HTTP | requests（GitHub 同步、状态探测、头像/README 图） |
+| 生产 | gunicorn / uWSGI + Nginx |
+
+---
+
+## 环境要求
+
+- Python **3.10+**（推荐 3.12）
+- SQLite **3.35+**（低于该版本可运行，但自动删除字段会跳过）
+- 可选：Nginx、gunicorn 或 uWSGI
+
+---
+
+## 快速开始
+
+### 1. 获取代码
+
+```bash
+git clone https://gitee.com/infowe/infowe_blog.git
+# 或
+git clone https://github.com/Contribuv/infowe_blog.git
+cd infowe_blog
+```
+
+也可以直接下载压缩包解压。
+
+### 2. 安装依赖
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 3. 启动
+
+```bash
+python app.py
+```
+
+Windows 可直接双击 `run.bat`。
+
+访问 <http://127.0.0.1:5000>。
+
+### 4. 首次启动自动完成
+
+| 项目 | 内容 |
+| --- | --- |
+| 数据库 | `data/blog.db`（自动建表） |
+| 管理员 | `admin` / `admin123` |
+| 示例分类 | 随笔 |
+| 示例文章 | 《致使用者的一封信》 |
+
+> ⚠️ 默认密码只用于首次登录，请立即在「博客设置 → 账号安全」修改。
+> 如果使用已有数据库，则不会覆盖管理员和文章。
+
+---
 
 ## 目录结构
 
 ```
-python_blog/
-├── app.py                 # 入口：create_app / 全局上下文 / CLI / 开发服务器
-├── config.py              # 路径、上传限制、导航配置
-├── db.py                  # SQLite 连接、建表、旧库补列
-├── schema.sql             # 数据库结构
-├── models/                # 数据模型（post/comment/project/link/...）
-├── services/              # 业务服务（markdown/upload/auth/otp/github/...）
-├── routes/                # 路由（front/auth/admin/assets/api）
+.
+├── app.py                 # 应用工厂、启动入口、CLI 命令
+├── config.py              # 路径、版本、上传限制、导航与保留路径
+├── db.py                  # SQLite 连接、schema 自动同步
+├── schema.sql             # 数据库表结构（唯一基准）
+├── models/                # 数据模型：文章/分类/评论/项目/友链/时间线/用户
+├── services/              # 业务服务：认证/OTP/Markdown/上传/备份/同步/状态
+├── routes/                # 路由：前台/后台/认证/静态资源/API
 ├── templates/
 │   ├── theme/tech/        # 前台主题模板
 │   ├── admin/             # 后台模板
-│   └── shared/            # 公共片段
-├── static/                # 全站静态资源（后台 CSS/JS、Vditor、图标）
-├── themes/tech/           # 主题样式与脚本
-├── uploads/               # 上传文件
-├── backups/               # 数据库备份
+│   └── shared/            # 公共模板片段
+├── static/                # 后台 CSS/JS、Vditor、highlight.js、图标
+├── themes/tech/           # 主题静态资源（theme.css/theme.js/info.json/preview.png）
+├── uploads/               # 文章图片、评论图片、README 图片
+├── data/                  # SQLite 数据库、密钥、项目同步状态
+├── backups/               # 数据库备份、JSON/Markdown 导出
 ├── storage/cache/         # 头像/分享图/README 图缓存
-└── data/                  # SQLite 数据库（blog.db）、密钥、同步状态
+├── fonts/                 # 水印字体
+├── docs/                  # 功能一致性报告等文档
+├── tools/                 # 数据迁移脚本
+├── run.bat                # Windows 一键启动
+└── requirements.txt
 ```
 
-## 快速开始
+### 各目录职责
 
-要求 Python 3.10+（推荐 3.12）。
+| 目录 | 作用 | 是否可删 |
+| --- | --- | --- |
+| `data/` | 数据库、密钥、同步状态 | **不可删**（删了等于重置站点） |
+| `uploads/` | 用户上传文件 | 不可删（文章图片会失效） |
+| `backups/` | 备份与导出文件 | 可按需清理旧备份 |
+| `storage/cache/` | 运行缓存 | 可删，会自动重建 |
+| `static/` | 后台与编辑器资源 | 不可删 |
+| `themes/` | 主题静态资源 | 不可删 |
+| `templates/` | 页面模板 | 不可删 |
+| `fonts/` | 水印字体 | 不启用水印时可删 |
+| `docs/` | 文档 | 可删 |
+| `tools/` | 迁移工具 | 可删（不再迁移时） |
 
-```powershell
-cd D:\python_blog
+> `data/`、`uploads/`、`backups/`、`storage/` 不要暴露为静态目录，本项目已通过路由限制访问。
 
-# 1. 创建虚拟环境并安装依赖
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+---
 
-# 2. 启动（自动建库；首次启动会生成管理员并打印密码）
-.\.venv\Scripts\python.exe app.py
-```
-
-打开 <http://127.0.0.1:5000>。
-
-首次启动会自动完成：
-
-| 项目 | 内容 |
-| --- | --- |
-| 数据库 | `data/blog.db`（SQLite，自动建表） |
-| 管理员 | `admin` / `admin123` |
-| 示例文章 | 《致使用者的一封信》 |
-| 默认分类 | 随笔 |
-
-> ⚠️ 默认密码只用于首次登录，请立即在「博客设置 → 账号安全」修改。
-> 宝塔 / gunicorn 部署同样会在首次启动时自动初始化，无需手动建库。
-
-- 后台：`/admin`（可在「博客设置 → 账号安全」改为自定义路径，重启后生效）
-- 示例文章会自动出现在首页，可直接删除或改写
-
-前台 URL 采用目录形式：
+## URL 结构
 
 | 页面 | URL |
 | --- | --- |
-| 标签 | `/tag/Python` |
-| 搜索 | `/search/Python` |
-| 年份归档 | `/archive/2025` |
+| 首页 | `/` |
+| 文章列表 | `/posts` |
+| 文章详情 | `/post/<id>` |
+| 标签 | `/tag/<标签>` |
+| 搜索 | `/search/<关键词>` |
+| 年份归档 | `/archive/<年份>` |
+| 项目 | `/projects`、`/projects/<id>` |
+| 友链 | `/links`、`/links/apply` |
+| 关于 | `/about` |
+| 状态 | `/status`、`/api/status` |
+| RSS | `/feed.xml` |
+| 后台 | `/admin` |
 
-旧参数形式（`/?tag=`、`/?q=`、`/posts?year=`）会 301 到新地址，不影响既有链接。
+旧参数形式（`/?tag=`、`/?q=`、`/posts?year=`）会 301 到新地址。
 
-也可用 Flask CLI：
+---
 
-```powershell
-.\.venv\Scripts\python.exe -m flask --app app init-db
-.\.venv\Scripts\python.exe -m flask --app app create-admin --username admin
-.\.venv\Scripts\python.exe -m flask --app app run --port 5000
+## 后台入口
+
+默认：`/admin`
+
+可在「博客设置 → 账号安全 → 后台入口路径」改成自定义路径，例如：
+
+```
+/manage-2026
 ```
 
-## 生产部署
+修改后需要**重启服务**；旧 `/admin` 会返回 404。
 
-Windows 推荐 [waitress](https://docs.pylonsproject.org/projects/waitress/)：
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install waitress
-.\.venv\Scripts\waitress-serve.exe --listen=0.0.0.0:5000 app:app
-```
-
-Linux 推荐 gunicorn：
+如果改错或忘记，可在项目目录执行：
 
 ```bash
-.venv/bin/pip install gunicorn
-.venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
+python -c "from app import app; from services import settings; c=app.app_context(); c.push(); settings.set_value('admin_path','admin')"
 ```
 
-### 宝塔面板（Linux）
+---
 
-1. 克隆代码到站点目录：
+## 配置说明（后台 → 博客设置）
+
+| 分组 | 内容 |
+| --- | --- |
+| 站点信息 | 站名、副标题、作者、简介、技能、GitHub、联系邮箱 |
+| 导航菜单 | 文章/标签/项目/友链/关于/状态 开关 |
+| 评论 | 总开关、审核、邮件通知、评论图片、敏感词 |
+| 上传 | 图片/媒体/附件白名单、单文件大小、水印 |
+| 邮件 | SMTP 服务器、端口、账号、通知收件人、测试发送 |
+| 账号安全 | 用户名、密码、OTP、后台入口路径 |
+| 站点地址 | `site_url`、强制 HTTPS、同主域 www 归一 |
+| 统计代码 | 只保留 `<script>`，剥离事件属性与 `javascript:` |
+| 服务状态 | 监控服务列表、云资源到期日期 |
+
+---
+
+## 宝塔面板部署
+
+以下以站点目录 `/www/wwwroot/infowe.site` 为例。
+
+### 1. 安装环境
+
+宝塔 → 软件商店：
+
+- 安装 **Python 项目管理器**（或使用系统的 Python 3.10+）
+- 安装 **Nginx**
+
+### 2. 拉取代码
 
 ```bash
 cd /www/wwwroot
-git clone https://gitee.com/infowe/infowe_blog.git python_blog
-cd python_blog
+git clone https://gitee.com/infowe/infowe_blog.git infowe.site
+cd infowe.site
 ```
 
-2. 创建虚拟环境并安装依赖（宝塔「软件商店 → Python 项目管理器」也可代劳）：
+### 3. 创建虚拟环境并安装依赖
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt gunicorn
+.venv/bin/pip install -r requirements.txt
 ```
 
-3. 首次启动会自动建库、创建默认管理员 `admin / admin123` 和示例文章。
-   如需自定义管理员，可执行（仅在无管理员时有效）：
+如果用 uWSGI，还需要：
+
+```bash
+.venv/bin/pip install uwsgi
+```
+
+如果用 gunicorn：
+
+```bash
+.venv/bin/pip install gunicorn
+```
+
+### 4. 初始化
+
+首次启动会自动创建数据库、管理员和示例文章，无需手动执行。
+
+如需自定义管理员（仅空库有效）：
 
 ```bash
 .venv/bin/python -m flask --app app create-admin --username admin
 ```
 
-若已上传本地 `data/blog.db`，会直接使用其中的数据与管理员。
+### 5. 在宝塔添加 Python 项目
 
-4. 宝塔「Python 项目管理器 → 添加项目」：
+宝塔 → **Python 项目管理器 → 添加项目**：
 
-| 项 | 值 |
+| 配置 | 值 |
 | --- | --- |
-| 项目路径 | `/www/wwwroot/python_blog` |
-| 启动方式 | `gunicorn` |
+| 项目名称 | infowe |
+| 项目路径 | `/www/wwwroot/infowe.site` |
+| Python 版本 | 3.10+ |
+| 启动方式 | uWSGI 或 gunicorn |
 | 启动文件 | `app.py` |
 | 端口 | `5000` |
 | 运行用户 | `www` |
-| 依赖安装 | 勾选（或命令行安装） |
 
-启动命令等价于：
+#### uWSGI 配置示例
 
-```bash
-gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
+`uwsgi.ini`：
+
+```ini
+[uwsgi]
+chdir = /www/wwwroot/infowe.site
+module = app:app
+master = true
+processes = 2
+threads = 2
+http = 127.0.0.1:5000
+venv = /www/wwwroot/infowe.site/.venv
+vacuum = true
+die-on-term = true
 ```
 
-5. 网站 → 添加站点 → 反向代理到 `http://127.0.0.1:5000`，或使用 Python 项目管理器的域名映射。
+> 端口必须是 `127.0.0.1:5000`，不要用 `0.0.0.0:5000`，避免绕过 Nginx/HTTPS。
 
-6. 目录权限（SQLite、上传、备份都要可写）：
+#### gunicorn 启动命令
 
 ```bash
-chown -R www:www uploads backups data storage
+/www/wwwroot/infowe.site/.venv/bin/gunicorn \
+  -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
 ```
 
-7. 后台「博客设置」填写 `site_url`，开启 HTTPS，再申请 SSL。
+启动后验证：
 
-Nginx 反向代理核心配置：
+```bash
+curl -I http://127.0.0.1:5000/
+```
+
+应返回 `200 OK`。
+
+### 6. 网站与反向代理
+
+宝塔 → 网站 → 添加站点：
+
+- 域名：`www.infowe.site`、`infowe.site`
+- 根目录：`/www/wwwroot/infowe.site`
+- PHP：纯静态
+- 不要创建 FTP/数据库
+
+站点设置 → **反向代理 → 添加**：
+
+| 项 | 值 |
+| --- | --- |
+| 代理名称 | python |
+| 目标 URL | `http://127.0.0.1:5000` |
+| 发送域名 | `$host` |
+
+保存后，确认 **80 和 443 的 server 块都包含**：
 
 ```nginx
 location / {
@@ -182,10 +356,59 @@ location / {
 }
 ```
 
-> 项目已启用 `ProxyFix`，会信任一层代理的 `Host` / `X-Forwarded-Proto` / `X-Forwarded-For`，
-> 因此宝塔开启 HTTPS 后不会出现重定向循环。
+> 宝塔的反向代理有时只写入 80，443 仍是静态配置，会导致 **403**。
+> 遇到 403 时，检查 443 的 `server {}` 是否也有 `location /`。
 
-### systemd（不使用宝塔进程管理时）
+### 7. 申请 SSL
+
+站点设置 → SSL：
+
+- Let's Encrypt 申请证书
+- 开启「强制 HTTPS」
+- 后台「博客设置」填写 `site_url`，如 `https://www.infowe.site`
+- 开启「强制 HTTPS」开关
+
+项目已启用 `ProxyFix`，会信任一层代理的 `X-Forwarded-Proto`，不会出现 HTTPS 重定向循环。
+
+### 8. 目录权限
+
+```bash
+cd /www/wwwroot/infowe.site
+chown -R www:www data uploads backups storage
+```
+
+### 9. 防火墙 / 安全组
+
+- 放行 `80`、`443`
+- **不要**放行 `5000`（只给本机 Nginx 访问）
+
+### 10. 更新
+
+```bash
+cd /www/wwwroot/infowe.site
+git pull
+.venv/bin/pip install -r requirements.txt
+```
+
+然后在宝塔 Python 项目管理器中点「重启」。
+
+### 宝塔常见错误
+
+| 现象 | 原因 | 处理 |
+| --- | --- | --- |
+| 403 Forbidden（nginx） | 443 server 没有反代，落到静态目录 | 在 443 加 `location /` |
+| 502 Bad Gateway | uWSGI/gunicorn 未启动、端口/目录不对 | 查看项目日志，确认 5000 返回 200 |
+| 413 Request Entity Too Large | Nginx 上传上限太小 | `client_max_body_size 64m` |
+| 上传/备份 500 | 目录无写权限 | `chown -R www:www data uploads backups storage` |
+| 登录后重定向循环 | `site_url` 与访问域名不一致，或未传 `X-Forwarded-Proto` | 修改 `site_url`，检查 Nginx 头 |
+| 证书 key usage 错误 | 证书类型/链不对 | 重新申请或重新部署证书 |
+| 样式/图片 404 | 只代理了 `/`，漏了 `/static`、`/uploads` | 全部路径统一反代 |
+
+---
+
+## 其他部署方式
+
+### systemd（Linux）
 
 ```ini
 [Unit]
@@ -195,9 +418,9 @@ After=network.target
 [Service]
 User=www
 Group=www
-WorkingDirectory=/www/wwwroot/python_blog
-Environment="PATH=/www/wwwroot/python_blog/.venv/bin"
-ExecStart=/www/wwwroot/python_blog/.venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
+WorkingDirectory=/www/wwwroot/infowe.site
+Environment="PATH=/www/wwwroot/infowe.site/.venv/bin"
+ExecStart=/www/wwwroot/infowe.site/.venv/bin/gunicorn -w 2 -b 127.0.0.1:5000 --timeout 120 app:app
 Restart=always
 RestartSec=3
 
@@ -210,135 +433,75 @@ systemctl daemon-reload
 systemctl enable --now python-blog
 ```
 
-### 更新
+### Windows
 
-```bash
-cd /www/wwwroot/python_blog
-git pull
-.venv/bin/pip install -r requirements.txt
-systemctl restart python-blog   # 或宝塔面板重启项目
+```powershell
+.\.venv\Scripts\python.exe -m pip install waitress
+.\.venv\Scripts\waitress-serve.exe --listen=0.0.0.0:5000 app:app
 ```
 
-### 升级与数据库结构
-
-升级**不会覆盖** `data/blog.db`。每次启动都会以 `schema.sql` 为基准自动同步表结构：
-
-- 新增字段：自动 `ALTER TABLE ADD COLUMN`
-- 删除字段：SQLite 3.35+ 自动 `DROP COLUMN`；低版本会跳过并在日志中提示
-- 检测到结构变化时，先自动备份到 `backups/schema_upgrade_YYYYmmdd_HHMMSS.db`
-- 只同步字段，不删除表、不修改已有字段类型
-
-建议升级前仍在后台「数据管理」手动备份一次。查看当前 SQLite 版本：
-
-```bash
-.venv/bin/python -c "import sqlite3; print(sqlite3.sqlite_version)"
-```
-
-Nginx 反向代理要点：
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:5000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    client_max_body_size 64m;
-}
-```
-
-> 反向代理下会读取 `X-Forwarded-For`（仅当直连地址是回环/私网时）。
-> `site_url` 建议在后台「博客设置」中填写完整站点地址，用于 RSS/分享/邮件中的绝对链接。
+---
 
 ## 数据迁移
 
 ### 从 PHP 版（MySQL）迁移
 
-项目内置了迁移脚本，会直接连接旧站 MySQL，把 10 张表、设置、管理员、
-上传文件与 GitHub README 缓存一次性写入 SQLite（写入前自动备份当前库）：
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install pymysql bcrypt
-
-# 先试运行，确认源库表与行数
-.\.venv\Scripts\python.exe tools\migrate_from_php.py --dry-run
-
-# 正式迁移（默认读取 D:\fnos\blog\config\config.php）
-.\.venv\Scripts\python.exe tools\migrate_from_php.py
+```bash
+pip install pymysql bcrypt
+python tools/migrate_from_php.py --source-dir /path/to/php-blog --dry-run
+python tools/migrate_from_php.py --source-dir /path/to/php-blog
 ```
 
-可选参数：
+脚本会读取 PHP 项目的 `config/config.php`，把 10 张表、设置、管理员、上传文件与 README 缓存写入 SQLite：
 
-| 参数 | 说明 |
-| --- | --- |
-| `--source-dir PATH` | PHP 项目根目录（默认 `D:\fnos\blog`） |
-| `--keep-otp` | 保留旧站 OTP 密钥/开关（默认关闭，避免没有旧验证器无法登录） |
-| `--keep-users` | 保留当前管理员，不导入旧站 users 表 |
-| `--dry-run` | 只连接并统计，不写入 |
-
-迁移后管理员账号/密码沿用 PHP 版（bcrypt 哈希已兼容）。若忘记密码：
-
-```powershell
-.\.venv\Scripts\python.exe -m flask --app app reset-password
-```
+- 写入前自动备份当前数据库
+- 默认关闭 OTP（避免没有旧验证器无法登录）
+- 管理员沿用 PHP 版账号与密码（bcrypt 兼容）
+- `--keep-otp` 保留 OTP
+- `--keep-users` 保留当前管理员
 
 ### 从旧 Flask 版迁移
 
-后台「数据管理 → SQLite 导入」上传旧 `blog.db` 即可。导入会：
+后台上传旧 `blog.db`，或在服务器执行：
 
-- 校验必需表；
-- 自动备份当前数据库；
-- 覆盖业务表（可勾选保留当前管理员账号）；
-- 自动补齐缺失设置项。
-
-### 备份与导出
-
-- 数据库备份：`backups/blog_YYYYmmdd_HHMMSS.db`（SQLite 在线备份 API）
-- JSON 导出：全表数据
-- Markdown 导出：文章 + YAML front matter 的 zip
-
-## 主要配置（后台 → 博客设置）
-
-| 分组 | 说明 |
-| --- | --- |
-| 站点信息 | 站名、副标题、作者、简介、技能、社交链接 |
-| 导航菜单 | 文章/标签/项目/友链/关于/状态 开关 |
-| 评论 | 总开关、审核、邮件通知、评论图片上传、敏感词 |
-| 上传 | 图片/媒体/附件扩展名白名单、单文件大小上限、水印 |
-| 邮件 | SMTP 服务器、端口、账号、通知收件人、测试发送 |
-| 账号安全 | 管理员账号名、密码、OTP 双重验证与恢复码 |
-| 后台入口 | `admin_path`：自定义后台路径（2-32 位字母/数字/下划线/连字符），重启生效，旧 `/admin` 不再可用 |
-| 站点地址 | `site_url`、强制 HTTPS、同主域 www 归一 |
-| 统计代码 | 仅保留 `<script>`，剥离事件属性与 `javascript:` |
-
-## 与 PHP 版的差异
-
-| 项目 | 说明 |
-| --- | --- |
-| 数据库 | MySQL → SQLite（WAL，零外部依赖） |
-| 在线升级 | 改为版本检查 + `git pull`，不覆盖运行中的代码 |
-| 插件 | 保留 `services/hooks.py` 扩展位，不加载 PHP 插件 |
-| IP 归属地 | 默认内网/回环识别；安装 `ip2region` 并放置 `data/ip2region_v4.xdb` 可离线解析 |
-| 云到期查询 | 保留配置与界面，到期日期以手工填写为准 |
-| MySQL SQL 导入 | 提示改用 SQLite 导入/JSON 迁移 |
-
-## 开发与测试
-
-```powershell
-# 语法检查
-.\.venv\Scripts\python.exe -m compileall -q .
-
-# 冒烟（启动后）
-curl http://127.0.0.1:5000/
-curl http://127.0.0.1:5000/feed.xml
+```bash
+python - <<'PY'
+from app import app
+from services import backup
+print(backup.import_sqlite('/path/to/blog.db', keep_users=True))
+PY
 ```
 
-## 安全提示
+---
 
-- 生产环境务必修改初始密码，建议开启 OTP；
-- 使用 HTTPS，并在后台设置 `site_url`；
-- `data/`、`uploads/`、`backups/` 不要暴露为静态目录（本项目的 Flask 路由已做限制）；
-- 上传目录禁止脚本扩展名（`.php/.html/.svg` 等已在白名单与黑名单双重拦截）。
+## 升级与数据库结构
+
+升级**不会覆盖** `data/blog.db`。每次启动都会以 `schema.sql` 为基准自动同步表结构：
+
+- 新增字段：自动 `ALTER TABLE ADD COLUMN`
+- 删除字段：SQLite 3.35+ 自动 `DROP COLUMN`，低版本跳过并记录
+- 检测到结构变化时，先自动备份到 `backups/schema_upgrade_YYYYmmdd_HHMMSS.db`
+- 只同步字段，不删除表、不修改已有字段类型
+- 旧版 `instance/blog.db` 会自动迁移到 `data/blog.db`
+
+查看 SQLite 版本：
+
+```bash
+.venv/bin/python -c "import sqlite3; print(sqlite3.sqlite_version)"
+```
+
+建议升级前仍在后台「数据管理」手动备份一次。
+
+---
+
+## 备份与恢复
+
+- 后台「数据管理 → 数据库备份」使用 SQLite 在线备份，运行中也可安全备份
+- 备份文件：`backups/blog_YYYYmmdd_HHMMSS.db`
+- 恢复：后台上传 SQLite 备份，或停止服务后用备份文件覆盖 `data/blog.db`
+- 支持 JSON 全量导出、Markdown（zip）导出
+
+---
 
 ## 常见问题
 
@@ -348,42 +511,51 @@ curl http://127.0.0.1:5000/feed.xml
 .venv/bin/python -m flask --app app reset-password
 ```
 
-默认账号为 `admin / admin123`（首次启动创建）。
-
 ### 数据库在哪里
 
-主库：`data/blog.db`；备份：`backups/`。可直接复制 `blog.db` 迁移。
+`data/blog.db`；备份在 `backups/`。
 
 ### 首次启动没有文章
 
-空库会自动写入《致使用者的一封信》。如果使用了自己的数据库，以数据库内容为准；检查 `data/blog.db` 是否存在、目录是否可写。
+空库会自动写入《致使用者的一封信》。如果使用了自己的数据库，以数据库内容为准。
 
 ### 上传 / 备份失败
 
-确保这些目录对运行用户可写：
-
 ```bash
-chown -R www:www uploads backups data storage
+chown -R www:www data uploads backups storage
 ```
-
-### 后台 403 / 502
-
-- 403：Nginx 的 443 server 没有 `location / { proxy_pass http://127.0.0.1:5000; }`
-- 502：gunicorn/uWSGI 未启动、端口不对、工作目录不对
 
 ### 修改后台入口后进不去
 
-重启服务使新路径生效；如果路径写错，可在数据库把 `settings.admin_path` 改回 `admin`：
+重启服务；如果路径写错，把 `settings.admin_path` 改回 `admin`（见上文命令）。
 
-```bash
-.venv/bin/python -c "from app import app; from services import settings; ctx=app.app_context(); ctx.push(); settings.set_value('admin_path','admin')"
-```
+### SQLite 报 database is locked
+
+- 已启用 WAL 与 8 秒 busy_timeout
+- 建议 gunicorn/uWSGI 使用 2 个 worker，不要开太多写进程
+- 避免多个实例共用同一个 `data/blog.db`
+
+---
+
+## 安全建议
+
+- 首次登录后立即修改默认密码
+- 建议开启 OTP 双重验证
+- 使用 HTTPS，并在后台配置正确的 `site_url`
+- 把后台入口改成不易猜到的路径
+- 定期备份 `data/blog.db` 与 `uploads/`
+- 不要把 `data/`、`uploads/`、`backups/` 暴露为静态目录
+- 生产环境只开放 80/443，5000 仅监听 `127.0.0.1`
+
+---
 
 ## 更新日志
 
-- 当前版本：v3.0.1
-- GitHub Releases：https://github.com/Contribuv/infowe_blog/releases
-- Gitee Releases：https://gitee.com/infowe/infowe_blog/releases
+- 版本：**v3.0.2**
+- GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
+- Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+---
 
 ## License
 
