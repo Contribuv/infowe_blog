@@ -523,7 +523,9 @@ def admin_orphans():
 
 @LOGIN
 def admin_orphan_clean():
-    selected = request.form.getlist("path")
+    # 前端批量删除使用 path[]；兼容旧表单的 path
+    selected = request.form.getlist("path") + request.form.getlist("path[]")
+    selected = list(dict.fromkeys(selected))
     results = []
     deleted = failed = 0
     for rel in selected:

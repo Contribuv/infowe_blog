@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.6)
+[![version](https://img.shields.io/badge/version-3.2.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.7)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -730,9 +730,9 @@ EOF
 chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
 ```
 
-**第三步：宝塔计划任务兜底（建议必配）**
+**第三步：宝塔计划任务兜底（可选，但推荐）**
 
-`post-merge` 不是所有升级路径都会触发；手动 `git pull`、脚本执行异常、或者 hook 被挡住时，计划任务可以兜底。
+`post-merge` 正常触发时，其实不需要计划任务。它不是强制项；但当前如果 hook 偶尔不触发，计划任务是最简单的兜底。
 
 宝塔 → 计划任务 → 添加任务：
 
@@ -741,7 +741,7 @@ chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
 - 周期：每分钟
 - 脚本：`/root/infowe-auto-restart.sh`
 
-脚本里有 `flock` 和 HEAD 记录，hook 和计划任务同时存在也不会重复重启。
+脚本里有 `flock` 和 HEAD 记录，hook 和计划任务同时存在也不会重复重启。如果不加计划任务，就至少确认 `post-merge` 确实收到触发，并检查 `/var/log/infowe-auto-restart.log`。
 
 **验证**
 
@@ -937,7 +937,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.2.6**
+- 版本：**v3.2.7**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 

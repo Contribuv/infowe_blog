@@ -60,7 +60,7 @@
             <tr data-rel="{{ o.rel }}" data-size="{{ o.size_bytes }}"
                 data-mtime="{{ o.mtime }}" data-img="{{ 1 if o.ext in image_exts else 0 }}">
                 <td class="col-check" data-label="选择">
-                    <input type="checkbox" class="row-check" value="{{ o.rel }}" aria-label="选择 {{ o.rel }}">
+                    <input type="checkbox" class="row-check" name="path[]" value="{{ o.rel }}" aria-label="选择 {{ o.rel }}">
                 </td>
                 <td class="col-preview" data-label="预览">
                     {% if o.ext in image_exts %}
