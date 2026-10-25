@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.5)
+[![version](https://img.shields.io/badge/version-3.2.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -635,7 +635,9 @@ kill -HUP <master_pid>
 
 宝塔默认不会因为 `git pull` 自动重启。项目里的在线升级只更新代码和依赖，最后把 `data/upgrade_state.json` 写成 `done`，然后等人工重启。
 
-如果希望升级完成后自动重启，用一个脚本就够了：脚本负责等待安装完成、清页面缓存、给 Gunicorn master 发 HUP；`post-merge` hook 负责即时触发，宝塔计划任务可以选做兜底。
+如果希望升级完成后自动重启，用一个脚本就够了：脚本负责等待安装完成、清页面缓存、给 Gunicorn master 发 HUP；`post-merge` hook 负责即时触发，宝塔计划任务负责兜底。
+
+脚本不再依赖 `upgrade_state.json` 的修改时间，而是记录**上次重启时的 Git commit**。只要 HEAD 变了（不管是后台在线升级还是手动 `git pull`），就会在安装完成后重启一次；没有新提交时直接退出。
 
 > 下面内容都在服务器上配置，不属于项目代码，`git pull` 不会覆盖。
 
@@ -649,14 +651,21 @@ set -u
 
 BASE=/www/wwwroot/infowe.site
 STATE="$BASE/data/upgrade_state.json"
-STAMP="$BASE/data/.auto-restart.stamp"
+HEADFILE="$BASE/data/.auto-restart.head"
 LOCK="$BASE/data/.auto-restart.lock"
 
 exec 9>"$LOCK"
 flock -n 9 || exit 0
 
+CURRENT=$(git -C "$BASE" rev-parse HEAD 2>/dev/null || true)
+LAST=$(cat "$HEADFILE" 2>/dev/null || true)
+[ -n "$CURRENT" ] || exit 1
+[ "$CURRENT" = "$LAST" ] && exit 0
+
 # 在线升级中：等 pip install 完成
+running=0
 if grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"' "$STATE" 2>/dev/null; then
+  running=1
   for i in $(seq 1 300); do
     if grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null; then
       break
@@ -669,14 +678,13 @@ if grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"' "$STATE" 2>/dev/null; th
   done
 fi
 
-# 只处理 done 状态
-if ! grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null; then
-  exit 0
+if [ "$running" = "1" ]; then
+  grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null || exit 1
 fi
 
-# 防止重复重启
-if [ -f "$STAMP" ] && [ ! "$STATE" -nt "$STAMP" ]; then
-  exit 0
+# 失败状态不自动重启，避免带着未装好的依赖启动
+if grep -Eq '"state"[[:space:]]*:[[:space:]]*"failed"' "$STATE" 2>/dev/null; then
+  exit 1
 fi
 
 # 取最老的 gunicorn 进程，即 master
@@ -697,8 +705,8 @@ fi
 rm -rf "$BASE/storage/cache/pages"/* 2>/dev/null || true
 
 if kill -HUP "$MASTER"; then
-  touch "$STAMP"
-  echo "$(date '+%F %T') reloaded gunicorn master $MASTER"
+  echo "$CURRENT" > "$HEADFILE"
+  echo "$(date '+%F %T') reloaded gunicorn master $MASTER commit ${CURRENT:0:8}"
 fi
 ```
 
@@ -722,7 +730,9 @@ EOF
 chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
 ```
 
-**第三步：可选，宝塔计划任务兜底**
+**第三步：宝塔计划任务兜底（建议必配）**
+
+`post-merge` 不是所有升级路径都会触发；手动 `git pull`、脚本执行异常、或者 hook 被挡住时，计划任务可以兜底。
 
 宝塔 → 计划任务 → 添加任务：
 
@@ -731,31 +741,40 @@ chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
 - 周期：每分钟
 - 脚本：`/root/infowe-auto-restart.sh`
 
-脚本里有 `flock` 和 stamp，hook 和计划任务同时存在也不会重复重启。
+脚本里有 `flock` 和 HEAD 记录，hook 和计划任务同时存在也不会重复重启。
 
 **验证**
 
 ```bash
 cat /www/wwwroot/infowe.site/data/upgrade_state.json
-/www/wwwroot/infowe.site/.git/hooks/post-merge
-sleep 3
+cat /www/wwwroot/infowe.site/data/.auto-restart.head
+
+/root/infowe-auto-restart.sh
+sleep 2
 
 cat /var/log/infowe-auto-restart.log
-ls -l /www/wwwroot/infowe.site/data/.auto-restart.stamp
 ps -eo pid,ppid,lstart,args | grep '[g]unicorn'
 ```
 
 预期：
 
-- 日志出现 `reloaded gunicorn master ...`
-- 生成 `.auto-restart.stamp`
+- 日志出现 `reloaded gunicorn master ... commit ...`
+- 生成或更新 `.auto-restart.head`
 - master PID 不变
 - worker PID 变新、启动时间变新
 
-如果 `upgrade_state.json` 当前不是 `done`，脚本会正常退出，不会重启；等下一次在线升级即可。
+手动测试时如果 HEAD 和 `.auto-restart.head` 已经相同，脚本会直接退出，这是正常的。要测试真实重启，可以用一次后台在线升级，或在测试前删掉：
+
+```bash
+rm -f /www/wwwroot/infowe.site/data/.auto-restart.head
+```
+
+> 旧的 `.auto-restart.stamp` 可以删掉，新脚本不再使用。
+
+如果 `upgrade_state.json` 是 `running`，脚本会等它结束；如果是 `failed`，不会自动重启，避免带着未装好的依赖启动。其他情况下，只要 Git HEAD 变了就会重启。
 
 > `HUP` 只对 master 发，不要对 worker 发。
-> 手动 SSH 执行 `git pull` 不会自动更新 `upgrade_state.json`，需要手动 `kill -HUP <master>`，或者删掉 stamp 后再运行脚本。
+> 手动 SSH 执行 `git pull` 后，只要 HEAD 变了，hook 和计划任务都会触发自动重启；如果本次升级状态是 `failed`，会跳过自动重启，需要先处理依赖再手动 `kill -HUP <master>`。
 > 如果以后 Web 服务从 root 改成 www 运行，`.git/hooks` 通常没有权限操作 root 的 Gunicorn master，这时把脚本放到 root 的宝塔计划任务里执行。
 > Gunicorn 的 `--reload` 只监听 Python 文件变化，不处理 `pip install` 的新依赖，也不适合替代这里的明确重启。
 
@@ -918,7 +937,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.2.5**
+- 版本：**v3.2.6**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 
