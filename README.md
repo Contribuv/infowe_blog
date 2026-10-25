@@ -220,6 +220,21 @@ git pull
 systemctl restart python-blog   # 或宝塔面板重启项目
 ```
 
+### 升级与数据库结构
+
+升级**不会覆盖** `instance/blog.db`。每次启动都会以 `schema.sql` 为基准自动同步表结构：
+
+- 新增字段：自动 `ALTER TABLE ADD COLUMN`
+- 删除字段：SQLite 3.35+ 自动 `DROP COLUMN`；低版本会跳过并在日志中提示
+- 检测到结构变化时，先自动备份到 `backups/schema_upgrade_YYYYmmdd_HHMMSS.db`
+- 只同步字段，不删除表、不修改已有字段类型
+
+建议升级前仍在后台「数据管理」手动备份一次。查看当前 SQLite 版本：
+
+```bash
+.venv/bin/python -c "import sqlite3; print(sqlite3.sqlite_version)"
+```
+
 Nginx 反向代理要点：
 
 ```nginx
