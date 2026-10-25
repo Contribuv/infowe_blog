@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.1.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.5)
+[![version](https://img.shields.io/badge/version-3.1.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.1.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -384,7 +384,7 @@ location ^~ /themes/ {
     access_log off;
 }
 
-location ^~ /uploads/ {
+location /uploads/ {
     alias /www/wwwroot/infowe.site/uploads/;
     expires 7d;
     access_log off;
@@ -394,13 +394,13 @@ location ^~ /uploads/ {
 location ~ ^/uploads/\. {
     deny all;
 }
-
 gzip on;
 gzip_min_length 1k;
 gzip_types text/plain text/css application/javascript application/json application/rss+xml image/svg+xml;
 ```
 
 > `alias` 末尾斜杠要与 `location` 一致；`/share-thumb`、`/avatar`、`/readme-img` 是动态生成，不要 alias。
+> `/uploads/` **不要写 `^~`**，否则下面的 `location ~ ^/uploads/\.` 不会执行，`.originals` 无痕原图可能被直接下载。
 > 静态资源直出后不再经过 Flask 的白名单校验，因此必须保留 `deny` 规则，且不要放开脚本扩展名上传。
 
 > **CSS/JS 中文乱码**：如果静态文件由 Nginx 直出，必须确认响应头带 `charset=utf-8`：
@@ -634,7 +634,7 @@ chown -R www:www data uploads backups storage
 
 ## 更新日志
 
-- 版本：**v3.1.5**
+- 版本：**v3.1.6**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 

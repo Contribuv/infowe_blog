@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import secrets
 import shutil
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
@@ -25,6 +26,8 @@ BLOCKED_EXTS = {
     "exe", "dll", "sh", "bat", "cmd", "com", "scr", "msi", "vbs",
     "html", "htm", "xhtml", "svg",
 }
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_ext_input(raw: str, fallback: set[str]) -> set[str]:
@@ -82,10 +85,28 @@ def random_stem() -> str:
     return secrets.token_hex(8)
 
 
+def _watermark_text() -> str:
+    """后台自定义文本优先；留空回退「站点名 · 域名」，与 PHP 版一致。"""
+    text = settings.get_str("watermark_text", "").strip()
+    if text:
+        return text
+    name = settings.get_str("blog_name", "").strip()
+    host = ""
+    try:
+        from services import site_url
+
+        host = urlparse(site_url.base()).hostname or ""
+    except Exception:
+        host = ""
+    if host in {"127.0.0.1", "localhost", "::1"}:
+        host = ""
+    return " · ".join(part for part in (name, host) if part)
+
+
 def _apply_watermark(path: Path) -> None:
     if not settings.bool_of("watermark_enabled", True):
         return
-    text = settings.get_str("watermark_text", "").strip()
+    text = _watermark_text()
     if not text or path.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
         return
     from PIL import Image, ImageDraw, ImageFont
@@ -94,10 +115,14 @@ def _apply_watermark(path: Path) -> None:
         with Image.open(path) as img:
             img = img.convert("RGBA")
             width, height = img.size
-            short = min(width, height)
-            size_key = settings.get_str("watermark_size", "m")
-            ratio = {"s": 0.022, "m": 0.032, "l": 0.045}.get(size_key, 0.032)
-            font_size = max(12, int(short * ratio))
+            size_key = settings.get_str("watermark_size", "m").strip().lower()
+            # 与表单「图宽 2% / 3% / 4%」和 PHP 版一致，并限制最小/最大字号
+            ratio, min_px, max_px = {
+                "s": (0.02, 14, 28),
+                "m": (0.03, 18, 52),
+                "l": (0.04, 24, 76),
+            }.get(size_key, (0.03, 18, 52))
+            font_size = max(min_px, min(max_px, int(round(width * ratio))))
             font = None
             font_path = FONTS_DIR / "wqy-microhei.ttc"
             if font_path.is_file():
@@ -106,9 +131,16 @@ def _apply_watermark(path: Path) -> None:
             draw = ImageDraw.Draw(overlay)
             bbox = draw.textbbox((0, 0), text, font=font)
             tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-            pad = max(12, int(short * 0.02))
-            pos = settings.get_str("watermark_position", "br")
-            x = width - tw - pad if "r" in pos else pad
+            pad = max(10, int(round(font_size * 0.45)))
+            pos = settings.get_str("watermark_position", "br").strip().lower()
+            if pos not in {"br", "bl", "tr", "tl", "bc"}:
+                pos = "br"
+            if pos == "bc":
+                x = max(pad, (width - tw) // 2)
+            elif "r" in pos:
+                x = max(pad, width - tw - pad)
+            else:
+                x = pad
             y = height - th - pad if "b" in pos else pad
             draw.text((x + 1, y + 1), text, font=font, fill=(0, 0, 0, 110))
             draw.text((x, y), text, font=font, fill=(255, 255, 255, 170))
@@ -117,7 +149,8 @@ def _apply_watermark(path: Path) -> None:
                 out.convert("RGB").save(path, quality=90, optimize=True)
             else:
                 out.save(path)
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("watermark failed for %s: %s", path, exc)
         return
 
 
@@ -161,17 +194,25 @@ def save(
             from PIL import Image
             with Image.open(dest) as img:
                 img.verify()
-            _apply_watermark(dest)
         except Exception:
             dest.unlink(missing_ok=True)
             return "", "图片文件损坏或格式不受支持"
+        # 先备份无痕原图（公网不可达），再叠水印；关闭水印时原图和展示图一致
+        try:
+            origin = root() / ".originals" / sub / filename
+            origin.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dest, origin)
+        except OSError:
+            pass
+        _apply_watermark(dest)
     return f"/uploads/{sub}/{filename}", ""
 
 
 def resolve(filename: str) -> Path | None:
-    """安全拼接 uploads 下路径，防目录穿越。"""
+    """安全拼接 uploads 下路径，防目录穿越；隐藏目录（.originals 等）不可访问。"""
     rel = unquote(str(filename or "")).replace("\\", "/").lstrip("/")
-    if not rel or ".." in rel.split("/"):
+    parts = rel.split("/")
+    if not rel or ".." in parts or any(part.startswith(".") for part in parts):
         return None
     path = (root() / rel).resolve()
     try:
