@@ -211,7 +211,9 @@ def save(form: dict, post_id: int | None = None) -> int:
     category_id = int(cat_raw) if cat_raw.isdigit() else None
 
     excerpt = (form.get("excerpt") or "").strip()
-    if not excerpt and content:
+    # 默认每次保存都按最新正文重新生成摘要；只有用户手动编辑摘要时才保留
+    excerpt_manual = str(form.get("excerpt_manual") or "0") == "1"
+    if (not excerpt or not excerpt_manual) and content:
         excerpt = strip_markdown(content)[:200]
 
     created_at = (form.get("created_at") or "").strip().replace("T", " ")

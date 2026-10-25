@@ -95,6 +95,7 @@
                     <textarea name="excerpt" class="textarea-sm" rows="3"
                               id="excerpt-input"
                               placeholder="文章简短摘要...">{{ post.excerpt if post else '' }}</textarea>
+                    <input type="hidden" name="excerpt_manual" id="excerpt-manual" value="0">
                     <small class="form-hint"><button type="button" class="btn-link" id="excerpt-auto-btn">从正文自动获取</button></small>
                 </div>
             </div>
@@ -183,6 +184,12 @@
     // -- 摘要自动获取：从正文提取纯文本前 200 字符 --
     var excerptInput = document.getElementById('excerpt-input');
     var excerptBtn = document.getElementById('excerpt-auto-btn');
+    var excerptManual = document.getElementById('excerpt-manual');
+    if (excerptInput && excerptManual) {
+        excerptInput.addEventListener('input', function () {
+            excerptManual.value = '1';
+        });
+    }
     if (excerptBtn) {
         excerptBtn.addEventListener('click', function () {
             var raw = '';
@@ -194,6 +201,7 @@
                            .trim();
             if (plain) {
                 excerptInput.value = plain.slice(0, 200);
+                if (excerptManual) excerptManual.value = '0';
             } else {
                 alert('未能从正文提取有效文字内容');
             }

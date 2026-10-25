@@ -786,6 +786,7 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
 .upgrade-banner-icon svg { width: 22px; height: 22px; }
 .upgrade-banner-text { flex: 1; min-width: 0; font-size: var(--fz-sm); color: var(--text); line-height: 1.6; }
 .upgrade-banner-text strong { color: var(--warning); }
+.upgrade-banner-text strong + span { margin-left: 6px; }
 .upgrade-banner .btn { flex: none; }
 
 /* 已是最新 / 尚未探测：横幅转中性色，避免用警示色误导「有新版」 */
