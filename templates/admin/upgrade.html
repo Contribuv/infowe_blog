@@ -82,7 +82,10 @@
     // 上次探测时间的相对描述
     function srcTime(ts) {
         if (!ts) return '尚未探测';
-        var diff = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+        var stamp = Number(ts);
+        if (!isFinite(stamp) || stamp <= 0) return '尚未探测';
+        var diff = Math.max(0, Math.floor(Date.now() / 1000 - stamp));
+        if (diff < 5) return '刚刚';
         if (diff < 60) return diff + ' 秒前';
         if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前';
         return Math.floor(diff / 3600) + ' 小时前';
