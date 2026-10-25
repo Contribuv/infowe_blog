@@ -9,7 +9,7 @@
 {% if tag_groups %}
 <div class="tech-tags-cloud">
     {% for tag, posts in tag_groups %}
-    <a href="/?tag={{ tag }}" class="tech-tag-cloud-item">
+    <a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag-cloud-item">
         # {{ tag }}
         <span class="tech-tag-cloud-count">{{ posts|length }}</span>
     </a>

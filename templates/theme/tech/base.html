@@ -65,7 +65,7 @@
                     {% endfor %}
                 </div>
                 <div class="tech-nav-actions">
-                    <a href="/admin" class="tech-icon-btn {% if request.path.startswith('/admin') %}active{% endif %}" aria-label="写作" title="写作">
+                    <a href="{{ admin_prefix }}" class="tech-icon-btn {% if request.path.startswith(admin_prefix) %}active{% endif %}" aria-label="写作" title="写作">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-4.5L17 3z"/></svg>
                     </a>
                     <button type="button" class="tech-icon-btn" id="tech-search-open" aria-label="搜索文章" aria-haspopup="dialog" aria-expanded="false" title="搜索文章">
@@ -86,7 +86,7 @@
     <!-- 全局搜索下拉面板（独立 sticky：移出 nav 避免 backdrop-filter 嵌套失效；top 紧贴 nav 下方，视觉无缝衔接） -->
     <div class="tech-search-layer" id="tech-search-layer">
         <div class="tech-shell">
-            <form class="tech-search-form" action="/" method="GET" role="search">
+            <form class="tech-search-form" action="/search" method="GET" role="search">
                 <input type="search" name="q" id="tech-search-input" class="tech-search-input" placeholder="搜索文章标题、标签、内容…" autocomplete="off" aria-label="搜索文章">
                 <button type="submit" class="tech-search-btn">搜索</button>
                 <button type="button" class="tech-search-close" id="tech-search-close" aria-label="关闭搜索" title="关闭">&times;</button>
@@ -105,7 +105,7 @@
         {% for item in nav_pages %}
         <a href="{{ item.href }}" class="tech-drawer-link {% if request.path == item.href %}active{% endif %}">{{ item.label }}</a>
         {% endfor %}
-        <a href="/admin" class="tech-drawer-link {% if request.path.startswith('/admin') %}active{% endif %}">写作</a>
+        <a href="{{ admin_prefix }}" class="tech-drawer-link {% if request.path.startswith(admin_prefix) %}active{% endif %}">写作</a>
     </aside>
 
     <!-- 主内容 -->

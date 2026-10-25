@@ -73,6 +73,16 @@ def create_app(test_config: dict | None = None) -> Flask:
     init_db_app(app)
     init_db(app)
 
+    # 后台入口前缀（可在后台设置；修改后需重启服务）
+    with app.app_context():
+        admin_path = str(settings_service.get_str("admin_path", "admin") or "admin").strip().strip("/")
+    if (
+        not __import__("re").fullmatch(r"[A-Za-z0-9_-]{2,32}", admin_path)
+        or (admin_path.lower() in config.ADMIN_PATH_RESERVED and admin_path.lower() != "admin")
+    ):
+        admin_path = "admin"
+    app.config["ADMIN_PREFIX"] = "/" + admin_path
+
     from routes import admin as admin_routes
     from routes import api as api_routes
     from routes import assets as assets_routes
@@ -157,6 +167,7 @@ def _register_hooks(app: Flask) -> None:
             "nav_pages": nav_pages,
             "nav_all": nav_all,
             "version": config.VERSION,
+            "admin_prefix": app.config.get("ADMIN_PREFIX", "/admin"),
             "theme_asset_ver": theme_service.asset_version(),
             "admin_ver": theme_service.admin_asset_version(),
             "now_year": __import__("datetime").datetime.now().year,

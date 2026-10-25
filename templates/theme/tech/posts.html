@@ -59,7 +59,7 @@
         <h3 class="tech-post-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
         <p class="tech-post-excerpt">{{ post.excerpt }}</p>
         <div class="tech-post-tags">
-            {% for tag in post.tags %}<a href="/?tag={{ tag }}" class="tech-tag">{{ tag }}</a>{% endfor %}
+            {% for tag in post.tags %}<a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag">{{ tag }}</a>{% endfor %}
         </div>
         <span class="tech-post-arrow" aria-hidden="true">→</span>
     </li>
@@ -76,9 +76,16 @@
 
 <!-- 分页 -->
 {% if total_pages > 1 %}
+{% if active_year %}
+    {% set page_endpoint = 'archive_page' %}{% set page_params = {'year': active_year} %}
+{% elif active_tag %}
+    {% set page_endpoint = 'tag_page' %}{% set page_params = {'tag': active_tag} %}
+{% else %}
+    {% set page_endpoint = 'posts_page' %}{% set page_params = {} %}
+{% endif %}
 <nav class="tech-pagination" aria-label="分页导航">
     {% if page > 1 %}
-    <a href="{{ url_for('posts_page', page=page-1, tag=active_tag or None, year=active_year or None) }}" class="tech-page-btn">上一页</a>
+    <a href="{{ url_for(page_endpoint, page=page-1, **page_params) }}" class="tech-page-btn">上一页</a>
     {% endif %}
 
     {% for p in range(1, total_pages + 1) %}
@@ -86,7 +93,7 @@
             {% if p == page %}
             <span class="tech-page-btn active" aria-current="page">{{ p }}</span>
             {% else %}
-            <a href="{{ url_for('posts_page', page=p, tag=active_tag or None, year=active_year or None) }}" class="tech-page-btn">{{ p }}</a>
+            <a href="{{ url_for(page_endpoint, page=p, **page_params) }}" class="tech-page-btn">{{ p }}</a>
             {% endif %}
         {% elif p == page - 3 or p == page + 3 %}
             <span class="tech-page-ellipsis">…</span>
@@ -94,7 +101,7 @@
     {% endfor %}
 
     {% if page < total_pages %}
-    <a href="{{ url_for('posts_page', page=page+1, tag=active_tag or None, year=active_year or None) }}" class="tech-page-btn">下一页</a>
+    <a href="{{ url_for(page_endpoint, page=page+1, **page_params) }}" class="tech-page-btn">下一页</a>
     {% endif %}
 </nav>
 {% endif %}
@@ -122,13 +129,19 @@
 
     /* 标签/年份下拉：按当前选中项跳转筛选 URL（等价原 select change） */
     function goFilter() {
-        var params = new URLSearchParams();
         var tag = doc.querySelector('[data-cs-role="tag"] .is-selected');
         var year = doc.querySelector('[data-cs-role="year"] .is-selected');
-        if (tag && tag.getAttribute('data-cs-value')) params.set('tag', tag.getAttribute('data-cs-value'));
-        if (year && year.getAttribute('data-cs-value')) params.set('year', year.getAttribute('data-cs-value'));
-        var qs = params.toString();
-        location.href = '/posts' + (qs ? '?' + qs : '');
+        var tagValue = tag ? tag.getAttribute('data-cs-value') : '';
+        var yearValue = year ? year.getAttribute('data-cs-value') : '';
+        if (tagValue) {
+            location.href = '/tag/' + encodeURIComponent(tagValue);
+            return;
+        }
+        if (yearValue) {
+            location.href = '/archive/' + encodeURIComponent(yearValue);
+            return;
+        }
+        location.href = '/posts';
     }
 
     /* 自定义下拉组件：开合、选中、外部点击/Esc 关闭 */

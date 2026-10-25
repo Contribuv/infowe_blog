@@ -65,6 +65,7 @@ DEFAULTS: dict[str, str] = {
     "force_https": "0",
     "unify_www": "0",
     "active_theme": "tech",
+    "admin_path": "admin",
     "upload_max_size": "20",
     "upload_image_ext": "jpg,jpeg,png,gif,webp,ico,avif",
     "upload_media_ext": "mp4,webm,mp3,wav,ogg,m4a,flac",

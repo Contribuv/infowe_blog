@@ -308,6 +308,7 @@ def admin_otp_clear_emergency():
 
 
 def register(app) -> None:
+    prefix = app.config.get("ADMIN_PREFIX", "/admin")
     rules = [
         ("/admin", "admin_index", admin_index, ["GET"]),
         ("/admin/login", "admin_login", admin_login, ["GET", "POST"]),
@@ -319,4 +320,6 @@ def register(app) -> None:
         ("/admin/otp/clear-emergency", "admin_otp_clear_emergency", admin_otp_clear_emergency, ["POST"]),
     ]
     for rule, endpoint, view, methods in rules:
+        if prefix != "/admin" and rule.startswith("/admin"):
+            rule = prefix + rule[len("/admin"):]
         app.add_url_rule(rule, endpoint=endpoint, view_func=view, methods=methods)

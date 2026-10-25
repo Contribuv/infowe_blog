@@ -28,31 +28,111 @@ def _decorate_categories(posts: list[dict]) -> list[dict]:
 
 def index():
     tag = (request.args.get("tag") or "").strip()
+    if tag:
+        # 旧链接 /?tag=x → /tag/x
+        page = request.args.get("page", 1, type=int) or 1
+        if page > 1:
+            return redirect(url_for("tag_page", tag=tag, page=page), code=301)
+        return redirect(url_for("tag_page", tag=tag), code=301)
     search = (request.args.get("q") or "").strip()
+    if search:
+        # 旧链接 /?q=x → /search/x
+        return redirect(url_for("search_page", q=search), code=301)
     home_count = settings.get_int("home_posts_count", 6) or 6
 
-    if tag or search:
-        posts, total = Post.load("published", tag or None, search or None, None, 1, Post.PAGE_SIZE)
-        featured: list[dict] = []
-    else:
-        featured = Post.featured(3)
-        posts = Post.home_posts(home_count, True)
-        _, total = Post.load("published", None, None, None, 1)
+    featured = Post.featured(3)
+    posts = Post.home_posts(home_count, True)
+    _, total = Post.load("published", None, None, None, 1)
 
     posts = _decorate_categories(posts)
     featured = _decorate_categories(featured)
-    home_links = Link.load("approved") if not tag and not search else []
+    home_links = Link.load("approved")
     return render_template(
         "index.html",
         posts=posts,
         featured=featured,
         links=home_links,
-        current_tag=tag,
-        search_query=search,
+        current_tag="",
+        search_query="",
         page=1,
         total_pages=1,
         total=total,
         total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+    )
+
+
+def _list_page(page: int, per_page: int):
+    page = max(1, int(page or 1))
+    _, total = Post.load("published", None, None, None, 1, per_page)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    return page, total_pages
+
+
+def tag_page(tag: str):
+    per_page = settings.get_int("posts_per_page", 20) or 20
+    page = request.args.get("page", 1, type=int) or 1
+    posts, total = Post.load("published", tag, None, None, page, per_page)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(1, page), total_pages)
+    posts, total = Post.load("published", tag, None, None, page, per_page)
+    posts = _decorate_categories(posts)
+    return render_template(
+        "index.html",
+        posts=posts,
+        featured=[],
+        links=[],
+        current_tag=tag,
+        search_query="",
+        page=page,
+        total_pages=total_pages,
+        total=total,
+        total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+    )
+
+
+def search_page(q: str):
+    per_page = settings.get_int("posts_per_page", 20) or 20
+    page = request.args.get("page", 1, type=int) or 1
+    posts, total = Post.load("published", None, q, None, page, per_page)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(1, page), total_pages)
+    posts, total = Post.load("published", None, q, None, page, per_page)
+    posts = _decorate_categories(posts)
+    return render_template(
+        "index.html",
+        posts=posts,
+        featured=[],
+        links=[],
+        current_tag="",
+        search_query=q,
+        page=page,
+        total_pages=total_pages,
+        total=total,
+        total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+    )
+
+
+def archive_page(year: int):
+    per_page = settings.get_int("posts_per_page", 20) or 20
+    page = request.args.get("page", 1, type=int) or 1
+    posts, total = Post.load("published", None, None, str(year), page, per_page)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(1, page), total_pages)
+    posts, total = Post.load("published", None, None, str(year), page, per_page)
+    posts = _decorate_categories(posts)
+    return render_template(
+        "posts.html",
+        posts=posts,
+        groups=None,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        filtered=True,
+        all_tags=Post.all_tags(),
+        all_years=Post.all_years(),
+        active_tag="",
+        active_year=str(year),
     )
 
 
@@ -61,8 +141,18 @@ def posts_page():
         abort(404)
     tag = (request.args.get("tag") or "").strip() or None
     year = (request.args.get("year") or "").strip() or None
+    page = request.args.get("page", 1, type=int) or 1
+    if tag:
+        return redirect(url_for("tag_page", tag=tag, page=page) if page > 1 else url_for("tag_page", tag=tag), code=301)
+    if year:
+        if year.isdigit():
+            return redirect(
+                url_for("archive_page", year=int(year), page=page) if page > 1 else url_for("archive_page", year=int(year)),
+                code=301,
+            )
+        year = None
     per_page = settings.get_int("posts_per_page", 20) or 20
-    page = max(1, request.args.get("page", 1, type=int) or 1)
+    page = max(1, page)
 
     _, total = Post.load("published", tag, None, year, 1, per_page)
     total_pages = max(1, (total + per_page - 1) // per_page)
@@ -206,7 +296,7 @@ def search():
     q = (request.args.get("q") or "").strip()
     if not q:
         return redirect(url_for("index"))
-    return redirect(url_for("index", q=q))
+    return redirect(url_for("search_page", q=q), code=301)
 
 
 def about():
@@ -395,6 +485,9 @@ def rss_feed():
 def register(app) -> None:
     rules = [
         ("/", "index", index, ["GET"]),
+        ("/tag/<tag>", "tag_page", tag_page, ["GET"]),
+        ("/search/<path:q>", "search_page", search_page, ["GET"]),
+        ("/archive/<int:year>", "archive_page", archive_page, ["GET"]),
         ("/posts", "posts_page", posts_page, ["GET"]),
         ("/post/<int:post_id>", "post_detail", post_detail, ["GET"]),
         ("/post/<int:post_id>/view", "post_view", post_view, ["POST"]),

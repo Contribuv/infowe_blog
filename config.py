@@ -64,3 +64,11 @@ NAV_PAGES = [
     ("about", "关于", "/about"),
     ("status", "状态", "/status"),
 ]
+
+# 自定义后台入口时禁止占用的前台/系统路径
+ADMIN_PATH_RESERVED = {
+    "admin", "tag", "tags", "search", "archive", "posts", "post", "projects",
+    "links", "about", "status", "api", "uploads", "themes", "static",
+    "feed.xml", "robots.txt", "sitemap.xml", "favicon.ico", "assets",
+    "login", "logout", "comment", "avatar", "share-thumb", "readme-img",
+}

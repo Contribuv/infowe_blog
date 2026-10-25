@@ -18,6 +18,12 @@
                 <span class="form-hint">修改后将自动更新当前登录会话。</span>
             </div>
             <div class="form-group">
+                <label>后台入口路径</label>
+                <input type="text" name="admin_path" class="input-text" value="{{ admin_path }}"
+                       placeholder="admin" autocomplete="off" maxlength="32">
+                <span class="form-hint">仅支持字母、数字、下划线、连字符（2-32 位）。修改并重启服务后生效，旧入口立即失效。</span>
+            </div>
+            <div class="form-group">
                 <label>头像</label>
                 <div class="avatar-edit">
                     <div class="avatar-preview">
@@ -582,7 +588,7 @@
       testRes.textContent = '正在发送…';
       testRes.className = 'form-hint';
       testRes.style.display = 'block';
-      fetch('/admin/settings/test-email', {
+      fetch("{{ url_for('admin_settings_test_email') }}", {
         method: 'POST',
         body: fd,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -635,7 +641,7 @@
 
     function fetchSecret() {
       bindHint.textContent = '正在生成密钥…';
-      fetch('/admin/otp/setup')
+      fetch("{{ url_for('admin_otp_setup') }}")
         .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
         .then(function (j) {
           secret = j.secret || '';

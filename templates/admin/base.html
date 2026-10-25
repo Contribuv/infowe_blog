@@ -42,46 +42,46 @@
             <nav class="admin-nav">
                 <div class="admin-nav-group">
                     <div class="admin-nav-title">内容运营</div>
-                    <a href="{{ url_for('admin_dashboard') }}" class="admin-nav-item {% if request.path == '/admin/dashboard' %}active{% endif %}">
+                    <a href="{{ url_for('admin_dashboard') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/dashboard' %}active{% endif %}">
                         {{ icon('layout-dashboard', 20, 'admin-nav-icon') | safe }}<span>博客面板</span>
                     </a>
-                    <a href="{{ url_for('admin_posts') }}" class="admin-nav-item {% if request.path.startswith('/admin/posts') %}active{% endif %}">
+                    <a href="{{ url_for('admin_posts') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/posts') %}active{% endif %}">
                         {{ icon('file-text', 20, 'admin-nav-icon') | safe }}<span>文章管理</span>
                     </a>
-                    <a href="{{ url_for('admin_categories') }}" class="admin-nav-item {% if request.path.startswith('/admin/categories') %}active{% endif %}">
+                    <a href="{{ url_for('admin_categories') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/categories') %}active{% endif %}">
                         {{ icon('tag', 20, 'admin-nav-icon') | safe }}<span>文章分类</span>
                     </a>
-                    <a href="{{ url_for('admin_comments') }}" class="admin-nav-item {% if request.path == '/admin/comments' %}active{% endif %}">
+                    <a href="{{ url_for('admin_comments') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/comments' %}active{% endif %}">
                         {{ icon('message-circle', 20, 'admin-nav-icon') | safe }}<span>评论管理</span>
                     </a>
                 </div>
                 <div class="admin-nav-group">
                     <div class="admin-nav-title">站点模块</div>
-                    <a href="{{ url_for('admin_projects') }}" class="admin-nav-item {% if request.path.startswith('/admin/projects') %}active{% endif %}">
+                    <a href="{{ url_for('admin_projects') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/projects') %}active{% endif %}">
                         {{ icon('folder', 20, 'admin-nav-icon') | safe }}<span>项目管理</span>
                     </a>
-                    <a href="{{ url_for('admin_links') }}" class="admin-nav-item {% if request.path.startswith('/admin/links') %}active{% endif %}">
+                    <a href="{{ url_for('admin_links') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/links') %}active{% endif %}">
                         {{ icon('link', 20, 'admin-nav-icon') | safe }}<span>友情链接</span>
                     </a>
-                    <a href="{{ url_for('admin_timeline') }}" class="admin-nav-item {% if request.path.startswith('/admin/timeline') %}active{% endif %}">
+                    <a href="{{ url_for('admin_timeline') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/timeline') %}active{% endif %}">
                         {{ icon('calendar', 20, 'admin-nav-icon') | safe }}<span>博客历程</span>
                     </a>
                 </div>
                 <div class="admin-nav-group">
                     <div class="admin-nav-title">系统</div>
-                    <a href="{{ url_for('admin_settings') }}" class="admin-nav-item {% if request.path == '/admin/settings' %}active{% endif %}">
+                    <a href="{{ url_for('admin_settings') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/settings' %}active{% endif %}">
                         {{ icon('settings', 20, 'admin-nav-icon') | safe }}<span>博客设置</span>
                     </a>
-                    <a href="{{ url_for('admin_themes') }}" class="admin-nav-item {% if request.path.startswith('/admin/themes') %}active{% endif %}">
+                    <a href="{{ url_for('admin_themes') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/themes') %}active{% endif %}">
                         {{ icon('palette', 20, 'admin-nav-icon') | safe }}<span>主题管理</span>
                     </a>
-                    <a href="{{ url_for('admin_export') }}" class="admin-nav-item {% if request.path == '/admin/export' %}active{% endif %}">
+                    <a href="{{ url_for('admin_export') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/export' %}active{% endif %}">
                         {{ icon('database', 20, 'admin-nav-icon') | safe }}<span>数据管理</span>
                     </a>
-                    <a href="{{ url_for('admin_status') }}" class="admin-nav-item {% if request.path.startswith('/admin/status') %}active{% endif %}">
+                    <a href="{{ url_for('admin_status') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/status') %}active{% endif %}">
                         {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>服务时效</span>
                     </a>
-                    <a href="{{ url_for('admin_orphans') }}" class="admin-nav-item {% if request.path.startswith('/admin/orphans') %}active{% endif %}">
+                    <a href="{{ url_for('admin_orphans') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/orphans') %}active{% endif %}">
                         {{ icon('trash-2', 20, 'admin-nav-icon') | safe }}<span>文件清理</span>
                     </a>
                 </div>

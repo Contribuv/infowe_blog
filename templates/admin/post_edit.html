@@ -425,8 +425,8 @@
         if (kind === '') {
             return Promise.reject(new Error('不支持的文件类型：' + extOf(file.name)));
         }
-        var endpoint = kind === 'image' ? '/admin/upload/image'
-            : (kind === 'media' ? '/admin/upload/media' : '/admin/upload/file');
+        var endpoint = kind === 'image' ? "{{ url_for('admin_upload_image') }}"
+            : (kind === 'media' ? "{{ url_for('admin_upload_media') }}" : "{{ url_for('admin_upload_file') }}");
         var field = kind === 'image' ? 'image' : 'file';
         return uploadOne(endpoint, field, file, onProgress).then(function (d) {
             return { type: kind, url: d.url, name: d.name };

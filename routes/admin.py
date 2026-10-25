@@ -14,7 +14,7 @@ from flask import (
 )
 
 import db
-from config import BACKUPS_DIR, DATA_DIR, UPLOADS_DIR, VERSION
+from config import BACKUPS_DIR, DATA_DIR, UPLOADS_DIR, VERSION, ADMIN_PATH_RESERVED
 from models import Category, Comment, Link, Post, Project, Timeline, User
 from services import auth, avatar, backup, github, lang, markdown, notify, otp, project_sync
 from services import settings, status, theme, upload
@@ -640,6 +640,7 @@ def _settings_view() -> dict:
 
     return {
         "admin_username": (auth.current_user() or {}).get("username", "admin"),
+        "admin_path": settings.get_str("admin_path", "admin"),
         "admin_avatar": settings.get_str("avatar", ""),
         "avatar_exists": avatar.configured_avatar_exists(),
         "site_url": settings.get_str("site_url", ""),
@@ -738,6 +739,18 @@ def _save_settings():
         field = f"nav_{key}"
         if full_form or field in request.form:
             settings.set_value(field, "1" if str(request.form.get(field, "")) == "1" else "0")
+
+    # 后台入口路径（需重启生效）
+    new_admin_path = (request.form.get("admin_path") or "").strip().strip("/")
+    if full_form and new_admin_path:
+        current_path = settings.get_str("admin_path", "admin")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{2,32}", new_admin_path):
+            flash("后台入口路径不合法（仅支持字母、数字、下划线、连字符，2-32 位）", "error")
+        elif new_admin_path.lower() in ADMIN_PATH_RESERVED and new_admin_path.lower() != "admin":
+            flash("该路径为系统保留路径，请换一个", "error")
+        elif new_admin_path != current_path:
+            settings.set_value("admin_path", new_admin_path)
+            flash(f"后台入口已修改为 /{new_admin_path}，请重启服务后使用新入口登录", "success")
 
     # 账号名
     new_username = (request.form.get("admin_username") or "").strip()
@@ -966,6 +979,7 @@ def admin_upgrade_reset():
 
 # ── 注册 ──────────────────────────────────────────────
 def register(app) -> None:
+    prefix = app.config.get("ADMIN_PREFIX", "/admin")
     rules = [
         ("/admin/dashboard", "admin_dashboard", admin_dashboard, ["GET"]),
         ("/admin/posts", "admin_posts", admin_posts, ["GET"]),
@@ -1032,4 +1046,6 @@ def register(app) -> None:
         ("/admin/upgrade/reset", "admin_upgrade_reset", admin_upgrade_reset, ["POST"]),
     ]
     for rule, endpoint, view, methods in rules:
+        if prefix != "/admin" and rule.startswith("/admin"):
+            rule = prefix + rule[len("/admin"):]
         app.add_url_rule(rule, endpoint=endpoint, view_func=view, methods=methods)
