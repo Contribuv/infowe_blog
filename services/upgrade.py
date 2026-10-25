@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import subprocess
 import sys
@@ -17,6 +18,8 @@ import config
 STATE_FILE = Path(config.DATA_DIR) / "upgrade_state.json"
 CACHE_FILE = Path(config.DATA_DIR) / "upgrade_check.json"
 CACHE_TTL = 600
+
+logger = logging.getLogger(__name__)
 
 _lock = threading.Lock()
 _thread: threading.Thread | None = None
@@ -59,24 +62,80 @@ def _fetch_github() -> dict | None:
 
 
 def _fetch_gitee() -> dict | None:
-    try:
-        resp = requests.get(
-            f"https://gitee.com/api/v5/repos/{GITEE_REPO}/releases/latest",
-            timeout=8,
-        )
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"
+        ),
+        "Accept": "application/json, text/plain, */*",
+        "Referer": f"https://gitee.com/{GITEE_REPO}/releases",
+    }
+    errors: list[str] = []
+
+    # Gitee 的匿名 API 有时会限流或拦截云服务器 IP。
+    # 先试 latest，再试列表接口，最后退到 raw config.py 读取 VERSION。
+    endpoints = (
+        f"https://gitee.com/api/v5/repos/{GITEE_REPO}/releases/latest",
+        f"https://gitee.com/api/v5/repos/{GITEE_REPO}/releases?per_page=1",
+    )
+    for endpoint in endpoints:
+        try:
+            resp = requests.get(endpoint, headers=headers, timeout=10)
+        except requests.RequestException as exc:
+            errors.append(f"{endpoint}: {exc}")
+            continue
         if resp.status_code != 200:
-            return None
-        data = resp.json()
+            errors.append(f"{endpoint}: HTTP {resp.status_code}")
+            continue
+        try:
+            data = resp.json()
+        except ValueError:
+            errors.append(f"{endpoint}: invalid JSON")
+            continue
+        if isinstance(data, list):
+            data = data[0] if data else None
+        if not isinstance(data, dict) or not data.get("tag_name"):
+            errors.append(f"{endpoint}: empty release")
+            continue
+        tag = _clean_version(data.get("tag_name", ""))
         return {
             "source": "gitee",
             "label": "Gitee",
-            "tag": _clean_version(data.get("tag_name", "")),
-            "url": f"https://gitee.com/{GITEE_REPO}/releases/tag/v{_clean_version(data.get('tag_name', ''))}",
+            "tag": tag,
+            "url": f"https://gitee.com/{GITEE_REPO}/releases/tag/v{tag}",
             "notes": (data.get("body") or "")[:4000],
             "published_at": data.get("created_at") or "",
         }
-    except (requests.RequestException, ValueError):
-        return None
+
+    for branch in ("main", "master"):
+        try:
+            resp = requests.get(
+                f"https://gitee.com/{GITEE_REPO}/raw/{branch}/config.py",
+                headers=headers,
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            errors.append(f"raw/{branch}: {exc}")
+            continue
+        if resp.status_code != 200:
+            errors.append(f"raw/{branch}: HTTP {resp.status_code}")
+            continue
+        match = re.search(r'(?m)^\s*VERSION\s*=\s*["\']([^"\']+)', resp.text)
+        if not match:
+            errors.append(f"raw/{branch}: VERSION not found")
+            continue
+        tag = _clean_version(match.group(1))
+        return {
+            "source": "gitee",
+            "label": "Gitee",
+            "tag": tag,
+            "url": f"https://gitee.com/{GITEE_REPO}/releases/tag/v{tag}",
+            "notes": "",
+            "published_at": "",
+        }
+    if errors:
+        logger.warning("Gitee check failed: %s", " | ".join(errors[-4:]))
+    return None
 
 
 def check(force: bool = False) -> dict:
