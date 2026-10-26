@@ -46,15 +46,16 @@
     <div class="card themes-help">
         <div class="card-header"><h3>如何制作 / 安装新主题</h3></div>
         <p class="themes-help-tip">
-            在项目 <code>templates/</code> 下新建一个文件夹（如 <code>templates/mytheme/</code>），上传以下文件即可，保存后本页自动识别：
+            在项目 <code>themes/</code> 下新建一个文件夹（如 <code>themes/mytheme/</code>），推荐结构：
         </p>
         <ul class="themes-help-list">
-            <li><code>theme.css</code> —— 覆盖默认配色。推荐改写 <code>static/css/style.css</code> 中定义的 CSS 变量（如 <code>--accent</code>、<code>--bg</code>）实现一键换肤；</li>
-            <li>同名模板 —— 整体重排页面结构。如 <code>index.html</code>、<code>posts.html</code>，优先级高于默认主题；</li>
+            <li><code>templates/</code> —— 前台模板（<code>base.html</code>、<code>index.html</code>、<code>post.html</code> 等），缺失的模板自动回退默认主题；</li>
+            <li><code>static/theme.css</code> —— 覆盖默认配色。推荐改写全局 <code>style.css</code> 中定义的 CSS 变量（如 <code>--accent</code>、<code>--bg</code>）实现一键换肤；</li>
+            <li><code>static/theme.js</code>（可选）—— 主题交互脚本；</li>
             <li><code>info.json</code>（可选）—— 元数据：<code>{"name": "主题名", "author": "作者", "description": "简介", "version": "1.0.0"}</code>；</li>
             <li><code>preview.png</code>（可选）—— 本页展示的主题预览图（缺省显示调色板图标）。</li>
         </ul>
-        <p class="themes-help-tip">复制 <code>templates/default/</code> 作为底稿是最快的上手方式。修改模板 / theme.css 后无需重启，刷新前台即可看到效果。</p>
+        <p class="themes-help-tip">复制 <code>themes/tech/</code> 作为底稿是最快的上手方式。修改模板 / theme.css 后无需重启，刷新前台即可看到效果。</p>
     </div>
 </form>
 {% endblock %}

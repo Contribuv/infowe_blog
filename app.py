@@ -49,6 +49,8 @@ def _secret_key() -> str:
 def create_app(test_config: dict | None = None) -> Flask:
     migrate_legacy_storage()
     _ensure_dirs()
+    # 旧的两处主题结构（templates/theme/<key> + themes/<key>/*.css）合并到单目录
+    theme_service.migrate_legacy_layout()
     app = Flask(__name__, static_folder=str(config.STATIC_DIR), static_url_path="/static")
     app.config.update(
         SECRET_KEY=_secret_key(),

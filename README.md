@@ -162,11 +162,14 @@ Windows 可直接双击 `run.bat`。
 ├── services/              # 业务服务：认证/OTP/Markdown/上传/备份/同步/状态
 ├── routes/                # 路由：前台/后台/认证/静态资源/API
 ├── templates/
-│   ├── theme/tech/        # 前台主题模板
 │   ├── admin/             # 后台模板
 │   └── shared/            # 公共模板片段
 ├── static/                # 后台 CSS/JS、Vditor、highlight.js、图标
-├── themes/tech/           # 主题静态资源（theme.css/theme.min.css/theme.js/info.json/preview.png）
+├── themes/tech/           # 前台主题（模板 + 静态资源 + 元数据，单目录自包含）
+│   ├── templates/         # base.html、index.html、post.html ...
+│   ├── static/            # theme.css / theme.min.css / theme.js
+│   ├── info.json          # 主题名称/作者/版本
+│   └── preview.png        # 后台主题页预览图
 ├── var/                   # 运行时数据（可用 BLOG_DATA_DIR 指到项目外）
 │   ├── blog.db            # SQLite 数据库、密钥、同步/升级状态
 │   ├── uploads/           # 文章图片、评论图片、README 图片
@@ -187,8 +190,8 @@ Windows 可直接双击 `run.bat`。
 | `var/backups/` | 备份与导出文件 | 可按需清理旧备份 |
 | `var/storage/cache/` | 运行缓存 | 可删，会自动重建 |
 | `static/` | 后台与编辑器资源 | 不可删 |
-| `themes/` | 主题静态资源 | 不可删 |
-| `templates/` | 页面模板 | 不可删 |
+| `themes/` | 前台主题（`templates/` + `static/` + `info.json` + `preview.png`） | 不可删 |
+| `templates/` | 后台与公共模板（前台主题模板在 `themes/<key>/templates/`） | 不可删 |
 | `fonts/` | 水印字体 | 不启用水印时可删 |
 | `tools/` | 迁移工具 | 可删（不再迁移时） |
 
@@ -414,10 +417,17 @@ location ^~ /static/ {
     access_log off;
 }
 
-location ^~ /themes/ {
+# 注意：这里不能写 ^~，否则下面的模板目录 deny 不会执行
+location /themes/ {
     alias /www/wwwroot/infowe.site/themes/;
     expires 7d;
     access_log off;
+}
+
+# 主题模板源码不对外（/themes/<key>/templates/）
+location ~ ^/themes/[^/]+/templates/ {
+    deny all;
+    return 404;
 }
 
 location /uploads/ {
@@ -492,10 +502,17 @@ server {
         access_log off;
     }
 
-    location ^~ /themes/ {
+    # 注意：这里不能写 ^~，否则下面的模板目录 deny 不会执行
+    location /themes/ {
         alias /www/wwwroot/infowe.site/themes/;
         expires 7d;
         access_log off;
+    }
+
+    # 主题模板源码不对外（/themes/<key>/templates/）
+    location ~ ^/themes/[^/]+/templates/ {
+        deny all;
+        return 404;
     }
 
     # 注意：这里不能写 ^~，否则下面的隐藏文件 deny 不会执行

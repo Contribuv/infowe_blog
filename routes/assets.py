@@ -20,12 +20,23 @@ def uploaded_file(filename: str):
     return send_file(path, conditional=True, max_age=604800)
 
 
+_THEME_STATIC_EXTS = {
+    ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
+    ".json", ".woff", ".woff2", ".ttf", ".otf", ".mp4", ".webm",
+}
+
+
 def theme_static(filename: str):
     base = Path(THEMES_DIR).resolve()
     target = (base / filename).resolve()
     try:
-        target.relative_to(base)
+        relative = target.relative_to(base)
     except ValueError:
+        abort(404)
+    # templates/ 是模板源码，绝不通过 /themes/ 公开（Nginx 侧也要同样 deny）
+    if "templates" in relative.parts:
+        abort(404)
+    if target.suffix.lower() not in _THEME_STATIC_EXTS:
         abort(404)
     if not target.is_file():
         abort(404)
