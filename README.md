@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.14-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.14)
+[![version](https://img.shields.io/badge/version-3.2.15-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.15)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -140,7 +140,7 @@ Windows 可直接双击 `run.bat`。
 
 | 项目 | 内容 |
 | --- | --- |
-| 数据库 | `data/blog.db`（自动建表） |
+| 数据库 | `var/blog.db`（自动建表） |
 | 管理员 | `admin` / `admin123` |
 | 示例分类 | 随笔 |
 | 示例文章 | 《致使用者的一封信》 |
@@ -167,10 +167,11 @@ Windows 可直接双击 `run.bat`。
 │   └── shared/            # 公共模板片段
 ├── static/                # 后台 CSS/JS、Vditor、highlight.js、图标
 ├── themes/tech/           # 主题静态资源（theme.css/theme.min.css/theme.js/info.json/preview.png）
-├── uploads/               # 文章图片、评论图片、README 图片
-├── data/                  # SQLite 数据库、密钥、项目同步状态
-├── backups/               # 数据库备份、JSON/Markdown 导出
-├── storage/cache/         # 运行缓存（头像/分享图/README 图/页面缓存）
+├── var/                   # 运行时数据（可用 BLOG_DATA_DIR 指到项目外）
+│   ├── blog.db            # SQLite 数据库、密钥、同步/升级状态
+│   ├── uploads/           # 文章图片、评论图片、README 图片
+│   ├── backups/           # 数据库备份、JSON/Markdown 导出
+│   └── storage/cache/     # 运行缓存（头像/分享图/README 图/页面缓存）
 ├── fonts/                 # 水印字体
 ├── tools/                 # 数据迁移脚本
 ├── run.bat                # Windows 一键启动
@@ -181,17 +182,22 @@ Windows 可直接双击 `run.bat`。
 
 | 目录 | 作用 | 是否可删 |
 | --- | --- | --- |
-| `data/` | 数据库、密钥、同步状态 | **不可删**（删了等于重置站点） |
-| `uploads/` | 用户上传文件 | 不可删（文章图片会失效） |
-| `backups/` | 备份与导出文件 | 可按需清理旧备份 |
-| `storage/cache/` | 运行缓存 | 可删，会自动重建 |
+| `var/blog.db` | 数据库、密钥、同步状态 | **不可删**（删了等于重置站点） |
+| `var/uploads/` | 用户上传文件 | 不可删（文章图片会失效） |
+| `var/backups/` | 备份与导出文件 | 可按需清理旧备份 |
+| `var/storage/cache/` | 运行缓存 | 可删，会自动重建 |
 | `static/` | 后台与编辑器资源 | 不可删 |
 | `themes/` | 主题静态资源 | 不可删 |
 | `templates/` | 页面模板 | 不可删 |
 | `fonts/` | 水印字体 | 不启用水印时可删 |
 | `tools/` | 迁移工具 | 可删（不再迁移时） |
 
-> `data/`、`uploads/`、`backups/`、`storage/` 不要暴露为静态目录，本项目已通过路由限制访问。
+> `var/` 不要暴露为静态目录，本项目已通过路由限制访问；生产环境建议用 `BLOG_DATA_DIR` 把它放到 Web 根之外。
+>
+> 生产示例：`export BLOG_DATA_DIR=/var/lib/infowe_blog`，同时把 Nginx 的 `/uploads/` alias 指到该目录。
+>
+> 从旧版本升级时，根目录的 `data/`、`uploads/`、`backups/`、`storage/` 以及更早的 `instance/` 会在首次启动时
+> 自动合并进 `var/`，不需要手动搬；重名文件不会被覆盖，统一保留在 `var/.legacy-<时间戳>/`。
 > `theme.min.css` 由 `theme.css` 自动生成；修改主题源文件后首次访问会重新压缩。目录不可写或缺少 `csscompressor` 时自动回退到 `theme.css`。
 
 ---
@@ -415,7 +421,7 @@ location ^~ /themes/ {
 }
 
 location /uploads/ {
-    alias /www/wwwroot/infowe.site/uploads/;
+    alias /www/wwwroot/infowe.site/var/uploads/;
     expires 7d;
     access_log off;
 }
@@ -494,7 +500,7 @@ server {
 
     # 注意：这里不能写 ^~，否则下面的隐藏文件 deny 不会执行
     location /uploads/ {
-        alias /www/wwwroot/infowe.site/uploads/;
+        alias /www/wwwroot/infowe.site/var/uploads/;
         expires 7d;
         access_log off;
     }
@@ -570,7 +576,7 @@ curl -I https://www.infowe.site/archive/2026
 
 项目已内置应用层页面缓存，不需要额外 Nginx 模块：
 
-- 存储：`storage/cache/pages/`
+- 存储：`var/storage/cache/pages/`
 - 只缓存匿名 GET 的 HTML / RSS
 - 管理员、提交过评论的访客（`blog_commenter` cookie）自动绕过
 - 默认 TTL：
@@ -604,7 +610,7 @@ curl -I https://www.infowe.site/archive/2026
 
 ```bash
 cd /www/wwwroot/infowe.site
-chown -R www:www data uploads backups storage
+chown -R www:www var
 ```
 
 ### 9. 防火墙 / 安全组
@@ -635,88 +641,46 @@ kill -HUP <master_pid>
 
 #### 10.2 Gunicorn 自动重启（可选）
 
-宝塔默认不会因为 `git pull` 自动重启。项目里的在线升级只更新代码和依赖，最后把 `data/upgrade_state.json` 写成 `done`，然后等人工重启。
+宝塔默认不会因为 `git pull` 自动重启。项目里的在线升级只更新代码和依赖，最后把 `var/upgrade_state.json` 写成 `done`，然后等人工重启。
 
-如果希望升级完成后自动重启，用一个脚本就够了：脚本负责等待安装完成、清页面缓存、给 Gunicorn master 发 HUP；`post-merge` hook 负责即时触发，宝塔计划任务负责兜底。
+如果希望升级完成后自动重启，用仓库里的脚本就够了：它负责等待安装完成、补装依赖、必要时停机迁移数据目录、清页面缓存，再平滑重载或完整启动；`post-merge` hook 负责即时触发，宝塔计划任务负责兜底。
 
 脚本不再依赖 `upgrade_state.json` 的修改时间，而是记录**上次重启时的 Git commit**。只要 HEAD 变了（不管是后台在线升级还是手动 `git pull`），就会在安装完成后重启一次；没有新提交时直接退出。
 
-> 下面内容都在服务器上配置，不属于项目代码，`git pull` 不会覆盖。
+> 脚本随仓库提供（`tools/infowe-auto-restart.sh`）；hook 与计划任务在服务器上配置，`git pull` 不会覆盖。
 
-**第一步：创建重启脚本**
+**第一步：安装脚本**
 
-`/root/infowe-auto-restart.sh`：
-
-```bash
-#!/bin/bash
-set -u
-
-BASE=/www/wwwroot/infowe.site
-STATE="$BASE/data/upgrade_state.json"
-HEADFILE="$BASE/data/.auto-restart.head"
-LOCK="$BASE/data/.auto-restart.lock"
-
-exec 9>"$LOCK"
-flock -n 9 || exit 0
-
-CURRENT=$(git --git-dir="$BASE/.git" --work-tree="$BASE" rev-parse HEAD 2>/dev/null || true)
-LAST=$(cat "$HEADFILE" 2>/dev/null || true)
-[ -n "$CURRENT" ] || exit 1
-[ "$CURRENT" = "$LAST" ] && exit 0
-
-# 在线升级中：等 pip install 完成
-running=0
-if grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"' "$STATE" 2>/dev/null; then
-  running=1
-  for i in $(seq 1 300); do
-    if grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null; then
-      break
-    fi
-    if grep -Eq '"state"[[:space:]]*:[[:space:]]*"failed"' "$STATE" 2>/dev/null; then
-      echo "upgrade failed, skip restart"
-      exit 1
-    fi
-    sleep 2
-  done
-fi
-
-if [ "$running" = "1" ]; then
-  grep -Eq '"state"[[:space:]]*:[[:space:]]*"done"' "$STATE" 2>/dev/null || exit 1
-fi
-
-# 失败状态不自动重启，避免带着未装好的依赖启动
-if grep -Eq '"state"[[:space:]]*:[[:space:]]*"failed"' "$STATE" 2>/dev/null; then
-  exit 1
-fi
-
-# 取最老的 gunicorn 进程，即 master
-MASTER=$(pgrep -o -f 'gunicorn.*infowe\.site' || true)
-
-if [ -z "${MASTER:-}" ]; then
-  MASTER=$(ps -eo pid,args | awk '
-    /[g]unicorn/ && $0 !~ /worker/ && /infowe\.site/ { print $1; exit }
-  ')
-fi
-
-if [ -z "${MASTER:-}" ] || ! kill -0 "$MASTER" 2>/dev/null; then
-  echo "gunicorn master not found"
-  exit 1
-fi
-
-# 清页面缓存，再平滑替换 worker
-rm -rf "$BASE/storage/cache/pages"/* 2>/dev/null || true
-
-if kill -HUP "$MASTER"; then
-  echo "$CURRENT" > "$HEADFILE"
-  echo "$(date '+%F %T') reloaded gunicorn master $MASTER commit ${CURRENT:0:8}"
-fi
-```
+完整脚本已随仓库提供：`tools/infowe-auto-restart.sh`。它负责比较 Git HEAD、等待在线升级、补装依赖、停机迁移数据目录、清页面缓存、平滑重载和健康检查。
 
 ```bash
+cp /www/wwwroot/infowe.site/tools/infowe-auto-restart.sh /root/infowe-auto-restart.sh
 chown root:root /root/infowe-auto-restart.sh
 chmod 755 /root/infowe-auto-restart.sh
 sh -n /root/infowe-auto-restart.sh
 ```
+
+脚本顶部可改的变量（也可用同名环境变量传入）：
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `BASE` | `/www/wwwroot/infowe.site` | 项目目录 |
+| `PY` | `$BASE/.venv/bin/python` | 项目 venv 的解释器 |
+| `PORT` | `5000` | 健康检查用的本地端口 |
+| `STOP_CMD` | 空 | 停止命令，如 `systemctl stop infowe`；留空则对 gunicorn master 发 QUIT |
+| `START_CMD` | 空 | 启动命令，如 `systemctl start infowe`；留空则重放原 gunicorn 命令行 |
+| `BLOG_DATA_DIR` | `$BASE/var` | 数据目录，需与站点实际配置一致 |
+
+行为说明：
+
+- `post-merge` 和计划任务同时触发也不会重复执行（`flock` + HEAD 记录）
+- 在线升级状态是 `running` 时最多等 10 分钟；`failed` 或超时直接退出，不带坏依赖重启
+- `requirements.txt` 哈希变化时先在 venv 里 `pip install -r requirements.txt`（手动 `git pull` 也会补装）
+- **首次迁移到 `var/`**：停服 → `python -m services.storage --force` → 清页面缓存 → 启动 → 健康检查；迁移失败则不启动，避免旧库继续写入
+- 普通升级：清页面缓存 → `kill -HUP <master>` 平滑重载，不中断请求
+- 启动方式：优先用 `START_CMD`；没配置时按原 master 的 gunicorn 命令行重放，日志写到 `var/gunicorn-restart.log`
+
+> 用宝塔 / systemd / supervisor 守护时，建议显式配置 `STOP_CMD`、`START_CMD`，比脚本重放进程命令行更可靠。
 
 **第二步：可选，配置即时触发**
 
@@ -748,8 +712,8 @@ chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
 **验证**
 
 ```bash
-cat /www/wwwroot/infowe.site/data/upgrade_state.json
-cat /www/wwwroot/infowe.site/data/.auto-restart.head
+cat /www/wwwroot/infowe.site/var/upgrade_state.json
+cat /www/wwwroot/infowe.site/var/.auto-restart.head
 
 /root/infowe-auto-restart.sh
 sleep 2
@@ -760,15 +724,15 @@ ps -eo pid,ppid,lstart,args | grep '[g]unicorn'
 
 预期：
 
-- 日志出现 `reloaded gunicorn master ... commit ...`
-- 生成或更新 `.auto-restart.head`
-- master PID 不变
-- worker PID 变新、启动时间变新
+- 普通升级：日志出现 `已平滑重载 gunicorn master ...`，master PID 不变、worker 变新
+- 首次迁移：日志依次出现 `检测到旧版数据目录`、`迁移数据目录`、`服务已恢复`，迁移完成后 `var/.migrated` 生成
+- 生成或更新 `var/.auto-restart.head`、`var/.auto-restart.req`
+- 迁移完成后旧的 `data/`、`uploads/`、`backups/`、`storage/` 为空目录（脚本会尽力清理）
 
 手动测试时如果 HEAD 和 `.auto-restart.head` 已经相同，脚本会直接退出，这是正常的。要测试真实重启，可以用一次后台在线升级，或在测试前删掉：
 
 ```bash
-rm -f /www/wwwroot/infowe.site/data/.auto-restart.head
+rm -f /www/wwwroot/infowe.site/var/.auto-restart.head
 ```
 
 > 旧的 `.auto-restart.stamp` 可以删掉，新脚本不再使用。
@@ -788,7 +752,7 @@ rm -f /www/wwwroot/infowe.site/data/.auto-restart.head
 | 403 Forbidden（nginx） | 443 server 没有反代，落到静态目录 | 在 443 加 `location /` |
 | 502 Bad Gateway | uWSGI/gunicorn 未启动、端口/目录不对 | 查看项目日志，确认 5000 返回 200 |
 | 413 Request Entity Too Large | Nginx 上传上限太小 | `client_max_body_size 64m` |
-| 上传/备份 500 | 目录无写权限 | `chown -R www:www data uploads backups storage` |
+| 上传/备份 500 | 目录无写权限 | `chown -R www:www var` |
 | 登录后重定向循环 | `site_url` 与访问域名不一致，或未传 `X-Forwarded-Proto` | 修改 `site_url`，检查 Nginx 头 |
 | 证书 key usage 错误 | 证书类型/链不对 | 重新申请或重新部署证书 |
 | 样式/图片 404 | 只代理了 `/`，漏了 `/static`、`/uploads` | 全部路径统一反代 |
@@ -865,13 +829,14 @@ PY
 
 ## 升级与数据库结构
 
-升级**不会覆盖** `data/blog.db`。每次启动都会以 `schema.sql` 为基准自动同步表结构：
+升级**不会覆盖** `var/blog.db`。每次启动都会以 `schema.sql` 为基准自动同步表结构：
 
 - 新增字段：自动 `ALTER TABLE ADD COLUMN`
 - 删除字段：SQLite 3.35+ 自动 `DROP COLUMN`，低版本跳过并记录
-- 检测到结构变化时，先自动备份到 `backups/schema_upgrade_YYYYmmdd_HHMMSS.db`
+- 检测到结构变化时，先自动备份到 `var/backups/schema_upgrade_YYYYmmdd_HHMMSS.db`
 - 只同步字段，不删除表、不修改已有字段类型
-- 旧版 `instance/blog.db` 会自动迁移到 `data/blog.db`
+- 更早版本的 `instance/` 数据会自动迁移到 `var/`；`data/`、`uploads/`、`backups/`、`storage/` 首次启动时同样自动合并
+- 重名文件不会被覆盖，统一保留在 `var/.legacy-<时间戳>/`
 
 查看 SQLite 版本：
 
@@ -886,8 +851,8 @@ PY
 ## 备份与恢复
 
 - 后台「数据管理 → 数据库备份」使用 SQLite 在线备份，运行中也可安全备份
-- 备份文件：`backups/blog_YYYYmmdd_HHMMSS.db`
-- 恢复：后台上传 SQLite 备份，或停止服务后用备份文件覆盖 `data/blog.db`
+- 备份文件：`var/backups/blog_YYYYmmdd_HHMMSS.db`
+- 恢复：后台上传 SQLite 备份，或停止服务后用备份文件覆盖 `var/blog.db`
 - 支持 JSON 全量导出、Markdown（zip）导出
 
 ---
@@ -902,7 +867,7 @@ PY
 
 ### 数据库在哪里
 
-`data/blog.db`；备份在 `backups/`。
+`var/blog.db`；备份在 `var/backups/`。
 
 ### 首次启动没有文章
 
@@ -911,7 +876,7 @@ PY
 ### 上传 / 备份失败
 
 ```bash
-chown -R www:www data uploads backups storage
+chown -R www:www var
 ```
 
 ### 修改后台入口后进不去
@@ -922,7 +887,7 @@ chown -R www:www data uploads backups storage
 
 - 已启用 WAL 与 8 秒 busy_timeout
 - 建议 gunicorn/uWSGI 使用 2 个 worker，不要开太多写进程
-- 避免多个实例共用同一个 `data/blog.db`
+- 避免多个实例共用同一个 `var/blog.db`
 
 ---
 
@@ -932,27 +897,26 @@ chown -R www:www data uploads backups storage
 - 建议开启 OTP 双重验证
 - 使用 HTTPS，并在后台配置正确的 `site_url`
 - 把后台入口改成不易猜到的路径
-- 定期备份 `data/blog.db` 与 `uploads/`
-- 不要把 `data/`、`uploads/`、`backups/` 暴露为静态目录
+- 定期备份 `var/blog.db` 与 `var/uploads/`
+- 不要把 `var/` 暴露为静态目录
 - 生产环境只开放 80/443，5000 仅监听 `127.0.0.1`
 
 ---
 
 ## 更新日志
 
-- 版本：**v3.2.14**
+- 版本：**v3.2.15**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
 
-### v3.2.14
+### v3.2.15
 
-- 评论通知规则修正：博主自己评论 / 回复不再给自己发信；访客回复访客时，评论审核通过后才通知被回复者；私密评论、回复自己、同一收件人均不会重复发送
-- 通知邮件改为 HTML + 纯文本双版本，强调色跟随主题 `--accent`，页脚显示「首页标题（留空回退站点名）」，并支持直接回复评论者
-- 评论分页：前台按顶层评论分页，每页条数可配置（默认 10，0 为不分页），楼中楼跟随根评论
-- 评论翻页改为局部刷新：只替换评论区，不再整页跳转，消除主题跨文档过渡造成的闪屏，并自动定位到评论区开头
-- 后台评论管理列表支持分页，每页条数可配置（默认 20）
-- 修复后台评论列表无空格长链接溢出单元格
-- 静态资源缓存戳改按文件修改时间生成，改 CSS / JS 后无需再改版本号
+- 运行时数据（数据库、上传、备份、缓存）统一收敛到 `var/`，代码目录不再混入数据，`var/` 整目录被 git 忽略
+- 新增 `BLOG_DATA_DIR` 环境变量，可把数据放到 Web 根之外（如 `/var/lib/infowe_blog`），升级或回滚代码不影响数据
+- 首次启动自动迁移旧 `data/`、`uploads/`、`backups/`、`storage/` 与更早的 `instance/`：带文件锁、幂等执行，重名文件保留在 `var/.legacy-<时间戳>/`
+- 新增 `python -m services.storage [--force]` 手动迁移命令，部署脚本可在停服后先迁移再启动
+- 重写自动重启脚本 `tools/infowe-auto-restart.sh`：支持停机迁移、依赖补装、健康检查、`STOP_CMD` / `START_CMD` 配置
+- 部署文档同步：Nginx `/uploads/` alias、目录权限、自动重启脚本路径全部改为 `var/`
 
 ---
 

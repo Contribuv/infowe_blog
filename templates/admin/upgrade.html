@@ -30,7 +30,7 @@
 <div class="card">
     <div class="card-header"><h3>升级说明</h3></div>
     <ul class="upgrade-help">
-        <li><strong>数据安全：</strong>升级前自动备份数据库（<code>blog.sql</code>）与上传文件到 <code>backups/upgrade_时间_版本/</code>。文章、分类、评论、设置等数据保留不变。</li>
+        <li><strong>数据安全：</strong>升级前自动备份数据库（<code>blog.sql</code>）与上传文件到 <code>var/backups/upgrade_时间_版本/</code>。文章、分类、评论、设置等数据保留不变。</li>
         <li><strong>不覆盖内容：</strong><code>data/</code>、<code>uploads/</code>、<code>storage/</code>、<code>backups/</code>、<code>config/config.php</code> 不会被新代码覆盖。</li>
         <li><strong>生效方式：</strong>PHP 不需要重启服务，代码替换后下一次请求即生效；若服务器开启了 opcache，可等缓存到期，或重启一次 PHP-FPM 立即生效。</li>
         <li><strong>更新源：</strong>GitHub 与 Gitee 两个平台同时检测、取版本更高者；两平台版本相同时轮流下载（公平竞争），不再固定只走其中一个。连不上 / 超时 / 限流时自动切换另一个，某个平台连续失败会临时「熔断」几分钟，不会反复干等超时。</li>

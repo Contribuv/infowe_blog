@@ -33,6 +33,8 @@ import db  # noqa: E402
 from app import create_app  # noqa: E402
 from services import backup, settings as settings_service  # noqa: E402
 
+import config  # noqa: E402
+
 TABLES: dict[str, dict] = {
     "categories": {
         "columns": ["id", "name", "slug", "sort_order", "created_at"],
@@ -293,11 +295,11 @@ def main() -> int:
                 sql_conn.commit()
 
                 # 5) 上传文件
-                uploads_files, uploads_bytes = copy_uploads(source_dir, BASE_DIR / "uploads")
+                uploads_files, uploads_bytes = copy_uploads(source_dir, config.UPLOADS_DIR)
                 print(f"  [文件] uploads {uploads_files} 个（{uploads_bytes / 1024 / 1024:.2f} MB）")
 
                 # 6) 项目 README 缓存
-                cache_count = migrate_project_cache(source_dir, BASE_DIR / "data" / "project_cache")
+                cache_count = migrate_project_cache(source_dir, config.DATA_DIR / "project_cache")
                 if cache_count:
                     print(f"  [缓存] 项目 README {cache_count} 个")
 

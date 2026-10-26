@@ -162,7 +162,7 @@ def sync_schema(conn: sqlite3.Connection, schema_text: str) -> list[str]:
     """按 schema.sql 同步表结构：新增缺失列、删除多余列。
 
     - 先建缺失表，补/删列，最后建索引与触发器（避免旧表缺列导致索引创建失败）
-    - 只在检测到差异时备份当前数据库（backups/schema_upgrade_*.db）
+    - 只在检测到差异时备份当前数据库（var/backups/schema_upgrade_*.db）
     - 删除列需要 SQLite 3.35+；低版本会跳过并记录
     - 不删除表、不修改已有列类型，避免误伤数据
     """
