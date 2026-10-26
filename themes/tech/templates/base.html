@@ -199,21 +199,9 @@
                     {% if nav_on.links %}<a href="/links">友情链接</a>{% endif %}
                     {% if nav_on.about %}<a href="/about">关于我</a>{% endif %}
                     <a href="/feed.xml">RSS</a>
-                </div>
-                {# 备案号与十年之约标识同一行：左备案右标识，成员标识不再单独占一排 #}
-                <div class="tech-footer-bottom">
-                    {% if icp_beian or police_beian %}
-                    <div class="tech-footer-beian">
-                        {% if icp_beian %}
-                        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">{{ icp_beian }}</a>
-                        {% endif %}
-                        {% if police_beian %}
-                        <a href="https://beian.mps.gov.cn" target="_blank" rel="noopener">{{ police_beian }}</a>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    <!-- 十年之约成员标识：官方提供的双色图片，按当前主题切换；
-                         与备案同行靠右，关于页因正中有完整成员卡而隐藏 -->
+                    <!-- 十年之约成员标识：跟在链接行末尾当「一员」，不做独立展位——
+                         链接行 flex-wrap，窄屏自然换行不溢出；双色图按当前主题切换；
+                         关于页正中有完整虫洞区块，用 :has 隐藏避免同页重复 -->
                     <a class="tech-footer-member" href="https://www.foreverblog.cn/" target="_blank" rel="noopener"
                        title="十年之约成员博客" aria-label="十年之约成员博客">
                         <img class="tech-footer-member-logo tech-footer-member-logo--light"
@@ -224,6 +212,17 @@
                              alt="" aria-hidden="true" width="125" height="32" decoding="async">
                     </a>
                 </div>
+                {# 备案号整行独占（第二个 flex 行），窄屏折行 #}
+                {% if icp_beian or police_beian %}
+                <div class="tech-footer-beian">
+                    {% if icp_beian %}
+                    <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">{{ icp_beian }}</a>
+                    {% endif %}
+                    {% if police_beian %}
+                    <a href="https://beian.mps.gov.cn" target="_blank" rel="noopener">{{ police_beian }}</a>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
     </footer>

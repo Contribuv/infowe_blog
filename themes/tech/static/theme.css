@@ -457,28 +457,20 @@ html.page-enter .tech-main {
   display: flex; flex-wrap: wrap; gap: 8px 20px;
   align-items: center; justify-content: space-between;
 }
-.tech-footer-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.tech-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .tech-footer-links a { color: var(--text-secondary); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-footer-links a:hover { color: var(--accent); } }
 .tech-footer-copy { margin: 0; }
-/* 备案号 + 十年之约标识同一行：左备案右标识，标识不再单独占一排；
-   无备案号时只有标识一个子元素，space-between 自动靠左 */
-.tech-footer-bottom {
-  width: 100%;
-  display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-}
-.tech-footer-beian { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+/* 备案号整行独占（inner 第二个 flex 行），窄屏折行 */
+.tech-footer-beian { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .tech-footer-beian a { color: var(--text-secondary); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-footer-beian a:hover { color: var(--accent); } }
-/* 十年之约成员标识：与备案号同一行靠右（.tech-footer-bottom 控制）。
-   20px 高 + .55 透明度是「印章」量级——之前 28px 与 14px 的备案小字同排失衡，
-   右下角像挂了块广告；现在比备案文字略重一点但不抢眼，悬停略提亮。
-   双色图按 data-theme 切换，避免黑标压在深色底上；
+/* 十年之约成员标识：跟在链接行 RSS 后面，当链接行的一员而非独立展位。
+   20px 高 + .55 透明度，与 14px 链接文字同排不突兀；links 行 flex-wrap，
+   窄屏放不下就整体换行，永远不会溢出。双色图按 data-theme 切换；
    关于页正中有完整虫洞区块，用 :has 隐藏页脚标识，避免同页重复。 */
 .tech-footer-member {
-  display: flex; align-items: center;
+  display: inline-flex; align-items: center;
   max-width: 100%;
   opacity: .55;
   transition: opacity .18s ease;
@@ -1834,9 +1826,8 @@ html { touch-action: manipulation; }
   .tech-links-grid { grid-template-columns: 1fr; }
   .tech-project-grid { grid-template-columns: 1fr; }
 
-  /* 页脚：窄屏 inner 转纵向、链接行左对齐；
-     bottom 行一行放不下「双备案号 + 标识」，也转纵向——
-     备案占整行，标识缩到 18px 贴右下角，像一枚小印章，不和左对齐的备案文字打架 */
+  /* 页脚：窄屏 inner 转纵向、链接行（含成员标识）左对齐自然换行；
+     标识缩到 18px，跟在 RSS 后面或换到下一行，都不会溢出 */
   .tech-footer-inner {
     flex-direction: column;
     align-items: flex-start;
@@ -1844,8 +1835,6 @@ html { touch-action: manipulation; }
   }
   .tech-footer-links { justify-content: flex-start; }
   .tech-footer-beian a { margin-right: 0; }
-  .tech-footer-bottom { flex-direction: column; align-items: stretch; }
-  .tech-footer-member { align-self: flex-end; }
   .tech-footer-member-logo { height: 18px; }
 }
 
