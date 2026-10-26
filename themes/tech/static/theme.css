@@ -1348,6 +1348,35 @@ html.page-enter .tech-main {
 }
 .tech-timeline-content { font-size: 14px; margin: 0; }
 
+/* 十年之约：关于页成员卡（透明底 + 边框，与作者卡同语言） */
+.tech-about-fb {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  background: transparent;
+}
+.tech-about-fb-text {
+  margin: 0 0 14px;
+  font-size: 14px; line-height: 1.75; color: var(--text-secondary);
+}
+.tech-about-fb-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+}
+.tech-about-fb-badge {
+  display: inline-flex; align-items: center;
+  opacity: .82; transition: opacity .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) and (pointer: fine) { .tech-about-fb-badge:hover { opacity: 1; } }
+.tech-about-fb-badge img { display: block; width: auto; height: 32px; }
+/* 双色标识按主题二选一：选择器要带上 .tech-about-fb-badge，
+   否则会被上面 `.tech-about-fb-badge img` 的 display:block 覆盖，两张图同时显示 */
+.tech-about-fb-badge .tech-about-fb-logo--dark { display: none; }
+[data-theme="dark"] .tech-about-fb-badge .tech-about-fb-logo--light { display: none; }
+[data-theme="dark"] .tech-about-fb-badge .tech-about-fb-logo--dark { display: block; }
+/* 虫洞是 64 高的方图，略放高一点，和 32 高的成员标识视觉重量接近 */
+.tech-about-fb-wormhole img { height: 40px; }
+
 /* ── 项目页：间距统一 8px 基准（分隔线两侧 12，卡内 16，卡间 12） ── */
 .tech-lang-stats {
   display: flex; flex-wrap: wrap; gap: 8px;
@@ -1722,6 +1751,11 @@ html { touch-action: manipulation; }
   .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 24px; }
   /* 关于页：移动端作者卡收紧内边距（透明底与桌面一致） */
   .tech-about-hero { padding: 24px 16px 20px; margin-bottom: 20px; }
+  /* 十年之约成员卡：移动端缩小内距与标识高度，让两枚标识一行放得下 */
+  .tech-about-fb { padding: 16px; }
+  .tech-about-fb-text { font-size: 13.5px; }
+  .tech-about-fb-badge img { height: 28px; }
+  .tech-about-fb-wormhole img { height: 34px; }
   .tech-page-head--center .tech-page-title { font-size: 26px; }
   .tech-page-head--center .tech-page-desc { font-size: 14px; }
   .tech-about-hero .tech-page-title { font-size: 20px; }
