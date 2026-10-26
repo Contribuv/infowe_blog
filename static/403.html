@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
       (function () {
@@ -18,7 +18,7 @@
     </script>
     <title>请求被拒绝 - infowe.site</title>
     <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
-    <link rel="stylesheet" href="/themes/tech/theme.css?t=1792670204">
+    <link rel="stylesheet" href="/themes/tech/static/theme.css?t=1792670204">
     <link rel="alternate" type="application/rss+xml" title="infowe.site RSS" href="/feed.xml">
     <!-- 社交分享：Open Graph + Twitter Card -->
     <meta property="og:site_name" content="infowe.site">
@@ -1222,7 +1222,7 @@ html[data-theme-mode="auto"] #theme-toggle::after {
 .tech-lang-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--lang-color, #8b949e); }
 
 /* ── 项目详情页（从列表卡片点击进入） ── */
-/* 禁用双击缩放 / 捏合缩放的 CSS 兜底（disable-zoom.js 为 iOS 主力拦截） */
+/* 只去掉双击缩放的 300ms 延迟；双指缩放保持可用（不再拦截手势） */
 html { touch-action: manipulation; }
 
 .tech-proj { padding: 0 0 8px; }
@@ -1879,8 +1879,7 @@ X-CSRF: <span class="hl-error">rejected</span></pre>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
 
-    <script src="/themes/tech/theme.js?t=1792670204" defer></script>
-    <script src="/static/js/disable-zoom.js?t=v2.7.10"></script>
+    <script src="/themes/tech/static/theme.js?t=1792670204" defer></script>
     <script>
     // 项目页「反馈」按钮：点击平滑滚动到评论区并聚焦输入框
     (function () {

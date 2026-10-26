@@ -43,16 +43,36 @@
   var overlay = document.getElementById('tech-drawer-overlay');
   var drawer = document.getElementById('tech-drawer');
   var closeBtn = document.getElementById('tech-drawer-close');
+  var lastFocus = null;
 
   function openDrawer() {
+    lastFocus = document.activeElement;
     overlay.classList.add('open');
     drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    if (burger) burger.setAttribute('aria-expanded', 'true');
     document.body.style.overflow = 'hidden';
+    if (closeBtn) {
+      closeBtn.focus();
+      // 兜底：个别浏览器在 display/visibility 刚切换的同一帧仍拒绝聚焦，
+      // 下一帧再试一次（此时 .open 的 visibility 已确定生效）
+      if (document.activeElement !== closeBtn) {
+        requestAnimationFrame(function () {
+          if (drawer.classList.contains('open')) closeBtn.focus();
+        });
+      }
+    }
   }
   function closeDrawer() {
+    if (!drawer.classList.contains('open')) return;
     overlay.classList.remove('open');
     drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    if (burger) burger.setAttribute('aria-expanded', 'false');
     document.body.style.overflow = '';
+    // 键盘关闭后焦点回到触发按钮，避免焦点掉到 body
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    lastFocus = null;
   }
 
   if (burger && overlay && drawer) {
@@ -63,7 +83,15 @@
       a.addEventListener('click', closeDrawer);
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeDrawer();
+      if (!drawer.classList.contains('open')) return;
+      if (e.key === 'Escape') { closeDrawer(); return; }
+      // 焦点圈定在抽屉内（简单的 Tab 首尾循环）
+      if (e.key !== 'Tab') return;
+      var items = drawer.querySelectorAll('a[href], button:not([disabled])');
+      if (!items.length) return;
+      var first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
   }
 
@@ -282,7 +310,16 @@
   function setActive(id) {
     links.forEach(function (a) { a.classList.remove('is-active'); });
     var a = map[id];
-    if (a) a.classList.add('is-active');
+    if (!a) return;
+    a.classList.add('is-active');
+    // 长目录（20+ 条）在 60vh 容器里滚动，当前项可能不在视野内：
+    // 只调整容器 scrollTop，不能用 scrollIntoView（会带动整页跳动）
+    var box = a.closest('.tech-toc-body');
+    if (!box || box.scrollHeight <= box.clientHeight + 1) return;
+    var ar = a.getBoundingClientRect();
+    var br = box.getBoundingClientRect();
+    if (ar.top < br.top + 8) box.scrollTop += ar.top - br.top - 8;
+    else if (ar.bottom > br.bottom - 8) box.scrollTop += ar.bottom - br.bottom + 8;
   }
 
   var visible = {};

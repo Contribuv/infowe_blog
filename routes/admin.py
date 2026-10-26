@@ -659,6 +659,24 @@ def _activate_theme():
         flash(f"主题已切换为：{new_theme}", "success")
     else:
         flash(f"无效的主题：{new_theme}", "error")
+
+    # 主题页的「页面背景装饰」跟随主题一起保存
+    if "pattern_enabled" in request.form or "pattern_opacity" in request.form:
+        settings.set_value(
+            "pattern_enabled", "1" if request.form.get("pattern_enabled") else "0"
+        )
+        try:
+            opacity = int(request.form.get("pattern_opacity") or "20")
+        except ValueError:
+            opacity = 20
+        settings.set_value("pattern_opacity", str(max(0, min(30, opacity))))
+
+    if "pattern_image" in request.form:
+        image = request.form.get("pattern_image", "3").strip()
+        if image not in {"1", "2", "3"}:
+            image = "3"
+        settings.set_value("pattern_image", image)
+
     return redirect(url_for("admin_themes"))
 
 
@@ -770,7 +788,8 @@ def _save_settings():
             settings.set_value("site_url", "")
 
     for key in (
-        "force_https", "unify_www", "comments_enabled", "comment_notify",        "comment_image_upload", "sensitive_filter_enabled", "watermark_enabled",
+        "force_https", "unify_www", "comments_enabled", "comment_notify",
+        "comment_image_upload", "sensitive_filter_enabled", "watermark_enabled",
     ):
         if full_form or key in request.form:
             settings.set_value(key, "1" if request.form.get(key) else "0")

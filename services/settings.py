@@ -44,6 +44,9 @@ DEFAULTS: dict[str, str] = {
     "comment_image_upload": "1",
     "comments_per_page": "10",
     "admin_comments_per_page": "20",
+    "pattern_enabled": "1",
+    "pattern_opacity": "20",
+    "pattern_image": "3",
     "sensitive_filter_enabled": "0",
     "sensitive_words": "",
     "smtp_host": "",
@@ -102,7 +105,7 @@ BOOL_KEYS = {
     "comments_enabled", "comment_notify", "comment_image_upload",
     "sensitive_filter_enabled", "nav_posts", "nav_tags", "nav_projects",
     "nav_links", "nav_status", "nav_about", "force_https", "unify_www",
-    "watermark_enabled", "otp_enabled",
+    "watermark_enabled", "otp_enabled", "pattern_enabled",
 }
 
 

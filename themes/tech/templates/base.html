@@ -2,11 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+    <!-- 允许双指缩放（WCAG 1.4.4）；旧版曾加 maximum-scale/user-scalable=no 并用
+         disable-zoom.js 拦截手势，会让低视力用户无法放大，已整体移除 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- 防白屏闪烁：主题 CSS 加载前先给 html 上色，避免深色主题刷新/跳转时闪白 -->
     <style>
-      html { background: #0d1117; color-scheme: dark; }
-      html[data-theme="light"] { background: #ffffff; color-scheme: light; }
+      html { background: #191c22; color-scheme: dark; }
+      html[data-theme="light"] { background: #faf9f7; color-scheme: light; }
     </style>
     <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
@@ -40,6 +42,8 @@
       })();
     </script>
     <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>
+    <!-- SEO 描述与 og:description 同源（self 取子模板覆盖后的值），避免两处文案漂移 -->
+    <meta name="description" content="{% block meta_description %}{{ self.og_description() }}{% endblock %}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/static/' ~ theme_css_name, t=theme_asset_ver) }}">
     <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
@@ -66,6 +70,24 @@
     <!-- 文章分享面板样式（两主题通用） -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t=static_ver) }}">
     {% endif %}
+    <!-- 页面装饰：主题底图与透明度（主题管理页可调，0 表示关闭） -->
+    {% set pattern_img = pattern_image|default('3') %}
+    {# 两套分辨率：1x 给普通屏，@2x 给 DPR≥1.25 的高分屏，避免放大发虚 #}
+    <style>
+      :root {
+        --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) / 100) }};
+        --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light.webp', v='18') }}");
+        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light@2x.webp', v='18') }}");
+      }
+      [data-theme="dark"] {
+        --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) * 0.9 / 100) }};
+        --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark.webp', v='18') }}");
+        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark@2x.webp', v='18') }}");
+      }
+      {% if pattern_enabled|default('1') not in ('1', 'on', 'true', 'yes') %}
+      :root, [data-theme="dark"] { --pattern-opacity: 0; }
+      {% endif %}
+    </style>
 </head>
 <body>
     {# 阅读/滚动进度条：文章页与项目页在各自模板里指定「正文」锚点；
@@ -80,7 +102,7 @@
     <nav class="tech-nav" aria-label="主导航">
         <div class="tech-shell">
             <div class="tech-nav-inner">
-                <a href="{{ url_for('index') }}" class="tech-logo" aria-label="返回首页" title="返回首页">{{ blog_name }}<span class="tech-logo-cursor tech-logo-blink">|</span></a><div class="tech-nav-links">
+                <a href="{{ url_for('index') }}" class="tech-logo" aria-label="{{ blog_name }}，返回首页" title="返回首页">{{ blog_name }}<span class="tech-logo-cursor tech-logo-blink">|</span></a><div class="tech-nav-links">
                     <a href="{{ url_for('index') }}" class="tech-nav-link {% if request.path == '/' %}active{% endif %}">首页</a>
                     {# 可开关页面：由后台「导航菜单」控制，关闭后不渲染 #}
                     {% for item in nav_pages %}
@@ -95,10 +117,11 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
                     </button>
                     <button class="tech-icon-btn" id="theme-toggle" aria-label="切换主题">
+                        <svg class="icon-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" opacity=".32"/></svg>
                         <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                         <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                     </button>
-                    <button class="tech-icon-btn tech-burger" id="tech-burger" aria-label="打开菜单">
+                    <button class="tech-icon-btn tech-burger" id="tech-burger" aria-label="打开菜单" aria-controls="tech-drawer" aria-expanded="false">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
                     </button>
                 </div>
@@ -119,7 +142,7 @@
 
     <!-- 移动端抽屉 -->
     <div class="tech-drawer-overlay" id="tech-drawer-overlay"></div>
-    <aside class="tech-drawer" id="tech-drawer" aria-label="移动端菜单">
+    <aside class="tech-drawer" id="tech-drawer" role="dialog" aria-modal="true" aria-label="移动端菜单" aria-hidden="true">
         <div class="tech-drawer-head">
             <span class="tech-drawer-title">菜单</span>
             <button class="tech-drawer-close" id="tech-drawer-close" aria-label="关闭菜单">&times;</button>
@@ -169,7 +192,6 @@
     </button>
 
     <script src="{{ url_for('theme_static', filename=active_theme ~ '/static/theme.js', t=theme_asset_ver) }}" defer></script>
-    <script src="{{ url_for('static', filename='js/disable-zoom.js', t=static_ver) }}"></script>
     <script>
     // 项目页「反馈」按钮：点击平滑滚动到评论区并聚焦输入框
     (function () {

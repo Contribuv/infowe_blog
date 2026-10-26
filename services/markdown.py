@@ -41,7 +41,8 @@ def _nest_toc(tokens: list[dict], level: int = 2) -> str:
         name = token.get("name") or ""
         ident = token.get("id") or ""
         text = html_lib.escape(name)
-        parts.append(f'<li><a href="#{ident}">{text}</a>')
+        # title 兜底：宽屏右侧 180px 悬浮目录会把长标题单行截断，悬停可看全
+        parts.append(f'<li><a href="#{ident}" title="{text}">{text}</a>')
         children = token.get("children") or []
         if children:
             parts.append(_nest_toc(children, level + 1))

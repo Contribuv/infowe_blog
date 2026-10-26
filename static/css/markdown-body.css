@@ -13,28 +13,30 @@
 /* ── 设计令牌（GitHub Primer） ── */
 :root,
 [data-theme="light"] {
-  --mb-fg: #1f2328;            /* 正文主色 */
-  --mb-fg-muted: #59636e;      /* 引用/次级文字 */
-  --mb-link: #0969da;          /* 链接 */
-  --mb-border: #d1d9e0;        /* 表格/代码块边框 */
-  --mb-border-muted: #d1d9e0;  /* 引用条 / hr */
-  --mb-code-bg: #f6f8fa;       /* 代码块底色 */
-  --mb-inline-code: rgba(175, 184, 193, .2); /* 行内 code 底色 */
-  --mb-hr: #d1d9e0;
-  --mb-mark: #fff8c5;
-  --mb-th-bg: #f6f8fa;
+  /* 日间配色与 tech 浅色主题对齐：暖白底 + 暖黑字，降低反差 */
+  --mb-fg: #2b2a27;            /* 正文主色 */
+  --mb-fg-muted: #6b6862;      /* 引用/次级文字 */
+  --mb-link: #2f6feb;          /* 链接 */
+  --mb-border: #e3e0da;        /* 表格/代码块边框 */
+  --mb-border-muted: #e8e5df;  /* 引用条 / hr */
+  --mb-code-bg: #f5f3ef;       /* 代码块底色 */
+  --mb-inline-code: rgba(120, 115, 105, .14); /* 行内 code 底色 */
+  --mb-hr: #e8e5df;
+  --mb-mark: #fff3c4;
+  --mb-th-bg: #f5f3ef;
 }
 [data-theme="dark"] {
-  --mb-fg: #e6edf3;
-  --mb-fg-muted: #8b949e;
-  --mb-link: #58a6ff;
-  --mb-border: #30363d;
-  --mb-border-muted: #21262d;
-  --mb-code-bg: #161b22;
-  --mb-inline-code: rgba(110, 118, 129, .4);
-  --mb-hr: #21262d;
-  --mb-mark: rgba(187, 128, 9, .35);
-  --mb-th-bg: #161b22;
+  /* 夜间配色与 tech 深色主题对齐：不用纯黑底、纯白字 */
+  --mb-fg: #c7ccd8;
+  --mb-fg-muted: #949cab;
+  --mb-link: #7aa2f7;
+  --mb-border: #2d323c;
+  --mb-border-muted: #262b34;
+  --mb-code-bg: #1d2129;
+  --mb-inline-code: rgba(140, 150, 170, .18);
+  --mb-hr: #262b34;
+  --mb-mark: rgba(187, 128, 9, .28);
+  --mb-th-bg: #1d2129;
 }
 
 /* ── 容器基线 ── */
@@ -136,8 +138,9 @@
   font-size: 13.5px;
   line-height: 1.6;
   color: var(--mb-fg);
-  background: var(--mb-code-bg);
-  border: 1px solid var(--mb-border);
+  /* 透明代码块：不做毛玻璃，让页面底图直接透上来 */
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--mb-border) 55%, transparent);
   border-radius: 6px;
   word-wrap: normal;
   white-space: pre;
@@ -227,59 +230,59 @@
 [data-theme="light"] .hljs-doctag, [data-theme="light"] .hljs-template-tag,
 [data-theme="light"] .hljs-template-variable, [data-theme="light"] .hljs-type,
 [data-theme="light"] .hljs-variable.language_,
-[data-theme="light"] .hljs-meta .hljs-keyword { color: #d73a49; }
+[data-theme="light"] .hljs-meta .hljs-keyword { color: #b4232f; }
 [data-theme="light"] .hljs-title, [data-theme="light"] .hljs-title.class_,
 [data-theme="light"] .hljs-title.class_.inherited__,
-[data-theme="light"] .hljs-title.function_ { color: #6f42c1; }
+[data-theme="light"] .hljs-title.function_ { color: #7c5cad; }
 [data-theme="light"] .hljs-attr, [data-theme="light"] .hljs-attribute,
 [data-theme="light"] .hljs-literal, [data-theme="light"] .hljs-meta,
 [data-theme="light"] .hljs-number, [data-theme="light"] .hljs-operator,
 [data-theme="light"] .hljs-variable, [data-theme="light"] .hljs-selector-attr,
 [data-theme="light"] .hljs-selector-class, [data-theme="light"] .hljs-selector-id,
-[data-theme="light"] .hljs-property { color: #005cc5; }
+[data-theme="light"] .hljs-property { color: #2f6feb; }
 [data-theme="light"] .hljs-regexp, [data-theme="light"] .hljs-string,
-[data-theme="light"] .hljs-meta .hljs-string { color: #032f62; }
+[data-theme="light"] .hljs-meta .hljs-string { color: #2d5f8b; }
 [data-theme="light"] .hljs-built_in, [data-theme="light"] .hljs-symbol,
-[data-theme="light"] .hljs-bullet { color: #e36209; }
+[data-theme="light"] .hljs-bullet { color: #8a5a00; }
 [data-theme="light"] .hljs-comment, [data-theme="light"] .hljs-code,
-[data-theme="light"] .hljs-formula { color: #6a737d; font-style: italic; }
+[data-theme="light"] .hljs-formula { color: #7a766f; font-style: italic; }
 [data-theme="light"] .hljs-name, [data-theme="light"] .hljs-quote,
-[data-theme="light"] .hljs-selector-pseudo { color: #22863a; }
-[data-theme="light"] .hljs-subst { color: #1f2328; }
-[data-theme="light"] .hljs-section { color: #005cc5; font-weight: 700; }
+[data-theme="light"] .hljs-selector-pseudo { color: #2f7a46; }
+[data-theme="light"] .hljs-subst { color: #2b2a27; }
+[data-theme="light"] .hljs-section { color: #2f6feb; font-weight: 700; }
 [data-theme="light"] .hljs-emphasis { font-style: italic; }
 [data-theme="light"] .hljs-strong { font-weight: 700; }
-[data-theme="light"] .hljs-addition { color: #22863a; background: rgba(46, 160, 67, .12); }
-[data-theme="light"] .hljs-deletion  { color: #b31d28; background: rgba(248, 81, 73, .12); }
+[data-theme="light"] .hljs-addition { color: #2f7a46; background: rgba(46, 160, 67, .12); }
+[data-theme="light"] .hljs-deletion  { color: #b4232f; background: rgba(248, 81, 73, .12); }
 
 [data-theme="dark"] .hljs-keyword, [data-theme="dark"] .hljs-selector-tag,
 [data-theme="dark"] .hljs-doctag, [data-theme="dark"] .hljs-template-tag,
 [data-theme="dark"] .hljs-template-variable, [data-theme="dark"] .hljs-type,
 [data-theme="dark"] .hljs-variable.language_,
-[data-theme="dark"] .hljs-meta .hljs-keyword { color: #ff7b72; }
+[data-theme="dark"] .hljs-meta .hljs-keyword { color: #bb9af7; }
 [data-theme="dark"] .hljs-title, [data-theme="dark"] .hljs-title.class_,
 [data-theme="dark"] .hljs-title.class_.inherited__,
-[data-theme="dark"] .hljs-title.function_ { color: #d2a8ff; }
+[data-theme="dark"] .hljs-title.function_ { color: #7dcfff; }
 [data-theme="dark"] .hljs-attr, [data-theme="dark"] .hljs-attribute,
+[data-theme="dark"] .hljs-property { color: #7dcfff; }
 [data-theme="dark"] .hljs-literal, [data-theme="dark"] .hljs-meta,
 [data-theme="dark"] .hljs-number, [data-theme="dark"] .hljs-operator,
 [data-theme="dark"] .hljs-variable, [data-theme="dark"] .hljs-selector-attr,
-[data-theme="dark"] .hljs-selector-class, [data-theme="dark"] .hljs-selector-id,
-[data-theme="dark"] .hljs-property { color: #79c0ff; }
+[data-theme="dark"] .hljs-selector-class, [data-theme="dark"] .hljs-selector-id { color: #ff9e64; }
 [data-theme="dark"] .hljs-regexp, [data-theme="dark"] .hljs-string,
-[data-theme="dark"] .hljs-meta .hljs-string { color: #a5d6ff; }
+[data-theme="dark"] .hljs-meta .hljs-string { color: #9ece6a; }
 [data-theme="dark"] .hljs-built_in, [data-theme="dark"] .hljs-symbol,
-[data-theme="dark"] .hljs-bullet { color: #ffa657; }
+[data-theme="dark"] .hljs-bullet { color: #e0af68; }
 [data-theme="dark"] .hljs-comment, [data-theme="dark"] .hljs-code,
-[data-theme="dark"] .hljs-formula { color: #8b949e; font-style: italic; }
+[data-theme="dark"] .hljs-formula { color: #6b7484; font-style: italic; }
 [data-theme="dark"] .hljs-name, [data-theme="dark"] .hljs-quote,
-[data-theme="dark"] .hljs-selector-pseudo { color: #7ee787; }
-[data-theme="dark"] .hljs-subst { color: #e6edf3; }
-[data-theme="dark"] .hljs-section { color: #79c0ff; font-weight: 700; }
+[data-theme="dark"] .hljs-selector-pseudo { color: #7dcfff; }
+[data-theme="dark"] .hljs-subst { color: #c7ccd8; }
+[data-theme="dark"] .hljs-section { color: #7dcfff; font-weight: 700; }
 [data-theme="dark"] .hljs-emphasis { font-style: italic; }
 [data-theme="dark"] .hljs-strong { font-weight: 700; }
-[data-theme="dark"] .hljs-addition { color: #aff5b4; background: rgba(46, 160, 67, .15); }
-[data-theme="dark"] .hljs-deletion  { color: #ffdcd7; background: rgba(248, 81, 73, .15); }
+[data-theme="dark"] .hljs-addition { color: #9ece6a; background: rgba(120, 180, 120, .12); }
+[data-theme="dark"] .hljs-deletion  { color: #e08593; background: rgba(224, 133, 147, .12); }
 
 /* =========================================================================
    移动端：代码块/表格保持横向滚动（pre 自身 white-space:pre + overflow-x:auto，

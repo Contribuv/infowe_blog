@@ -1,4 +1,4 @@
-@charset "UTF-8";
+﻿@charset "UTF-8";
 /* ═══════════════════════════════════════════════
    tech 主题 · 极简单栏 · 移动端优先 · GitHub 风格
    导航/页脚容器 .tech-shell（max-width 1000px）
@@ -26,80 +26,96 @@
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #ffffff;
-  /* 导航毛玻璃半透明背景：72% 不透明保留底色识别，blur 14px + saturate 180% 让背后内容更鲜亮 */
-  --nav-bg: rgba(255, 255, 255, .72);
-  --bg-subtle: #f6f8fa;
-  --bg-code: #f6f8fa;
-  --border: #d0d7de;
-  --border-strong: #afb8c1;
-  --text: #1f2328;
-  --text-secondary: #656d76;
-  --accent: #0969da;
-  --accent-weak: #ddf4ff;
-  --quote-bg: #eef1f6;
-  --success: #1a7f37;
-  --warning: #9a6700;
-  --danger: #cf222e;
-  --shadow: 0 1px 3px rgba(31, 35, 40, .06);
-  --overlay: rgba(31, 35, 40, .5);
-  --code-bg: #f6f8fa;
-  --hl-keyword: #cf222e;
-  --hl-string: #0a3069;
-  --hl-title: #8250df;
-  --hl-comment: #6e7781;
-  --hl-number: #0550ae;
-  --hl-builtin: #953800;
-  --hl-variable: #953800;
-  --hl-tag: #116329;
-  --hl-attr: #0550ae;
-  --hl-symbol: #8250df;
-  --hl-meta: #1f2328;
-  /* 头像光环配色（亮色：半透明蓝→紫渐变，避免高饱和割裂感） */
-  --ring-a: rgba(9, 105, 218, .32);
-  --ring-b: rgba(130, 80, 223, .32);
+  /* 日间配色：暖白纸感，避免纯白底 + 近黑字的强反差 */
+  --bg: #faf9f7;
+  /* 导航毛玻璃半透明背景：与底色同源，保留底色识别 */
+  --nav-bg: rgba(250, 249, 247, .78);
+  --bg-subtle: #f3f1ed;
+  --bg-code: #f5f3ef;
+  --border: #e3e0da;
+  --border-strong: #cbc7bf;
+  --text: #2b2a27;
+  --text-secondary: #6b6862;
+  /* 加深后的蓝：白字 5.73:1、浅底文字 5.23:1（原 #2f6feb 仅 4.34:1，12–14px 不达 AA） */
+  --accent: #1f5fd6;
+  --accent-weak: #e9f0ff;
+  --quote-bg: #f4f1ec;
+  --success: #2f7a46;
+  --warning: #8a5a00;
+  --danger: #b4232f;
+  --shadow: 0 1px 3px rgba(42, 38, 32, .06);
+  --overlay: rgba(42, 38, 32, .45);
+  --code-bg: #f5f3ef;
+  --hl-keyword: #b4232f;
+  --hl-string: #2d5f8b;
+  --hl-title: #7c5cad;
+  --hl-comment: #6b6862;
+  --hl-number: #1f5fd6;
+  --hl-builtin: #8a5a00;
+  --hl-variable: #8a5a00;
+  --hl-tag: #2f7a46;
+  --hl-attr: #1f5fd6;
+  --hl-symbol: #7c5cad;
+  --hl-meta: #2b2a27;
+  /* 头像光环配色（亮色：低饱和蓝→紫渐变，避免割裂感） */
+  --ring-a: rgba(31, 95, 214, .26);
+  --ring-b: rgba(124, 92, 173, .26);
+  /* 毛玻璃层（浅色）：代码块 / 目录卡 .74，评论表单 .72；
+     移动端另用 --glass-bg-mobile 提高不透明度，兼顾代码可读与 GPU 开销 */
+  --glass-bg: rgba(250, 249, 247, .74);
+  --glass-bg-form: rgba(250, 249, 247, .72);
+  --glass-bg-mobile: rgba(250, 249, 247, .86);
+  /* 背景底图由 tech/templates/base.html 按后台设置注入（--pattern-image / --pattern-opacity） */
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0d1117;
+  /* 夜间配色：深灰蓝底 + 柔白文字，避免纯黑/纯白的高对比刺眼感 */
+  --bg: #191c22;
   /* 暗色导航毛玻璃：与底色同源同透明度，背景透出更自然 */
-  --nav-bg: rgba(13, 17, 23, .72);
-  --bg-subtle: #161b22;
-  --bg-code: #161b22;
-  --border: #30363d;
-  --border-strong: #484f58;
-  --text: #e6edf3;
-  --text-secondary: #8b949e;
-  --accent: #58a6ff;
-  --accent-weak: rgba(56, 139, 253, .15);
-  /* 头像光环配色（暗色：亮蓝→淡紫渐变，深底上呈发光感） */
-  --ring-a: #58a6ff;
-  --ring-b: #d2a8ff;
-  --quote-bg: #1b222c;
-  --success: #3fb950;
-  --warning: #d29922;
-  --danger: #f85149;
-  --shadow: 0 1px 3px rgba(1, 4, 9, .4);
-  --overlay: rgba(1, 4, 9, .6);
-  --code-bg: #161b22;
-  --hl-keyword: #ff7b72;
-  --hl-string: #a5d6ff;
-  --hl-title: #d2a8ff;
-  --hl-comment: #8b949e;
-  --hl-number: #79c0ff;
-  --hl-builtin: #ffa657;
-  --hl-variable: #ffa657;
-  --hl-tag: #7ee787;
-  --hl-attr: #79c0ff;
-  --hl-symbol: #d2a8ff;
-  --hl-meta: #ffa657;
+  --nav-bg: rgba(25, 28, 34, .78);
+  --bg-subtle: #20242c;
+  --bg-code: #1d2129;
+  --border: #2d323c;
+  --border-strong: #3c424f;
+  --text: #c7ccd8;
+  --text-secondary: #949cab;
+  --accent: #7aa2f7;
+  --accent-weak: rgba(122, 162, 247, .14);
+  /* 头像光环配色（暗色：柔和蓝→淡紫渐变，深底上不刺眼） */
+  --ring-a: #7aa2f7;
+  --ring-b: #bb9af7;
+  /* 毛玻璃层（深色）：比浅色再透一档，深底上更接近导航的观感 */
+  --glass-bg: rgba(25, 28, 34, .70);
+  --glass-bg-form: rgba(25, 28, 34, .68);
+  --glass-bg-mobile: rgba(25, 28, 34, .82);
+  /* 背景底图由 base.html 按后台设置注入（深色版整体再乘 0.9） */
+  --quote-bg: #20232b;
+  --success: #86b87c;
+  --warning: #d4b06a;
+  --danger: #e08593;
+  --shadow: 0 1px 3px rgba(8, 10, 14, .35);
+  --overlay: rgba(8, 10, 14, .62);
+  --code-bg: #1d2129;
+  --hl-keyword: #bb9af7;
+  --hl-string: #9ece6a;
+  --hl-title: #7dcfff;
+  --hl-comment: #8d95a4;
+  --hl-number: #ff9e64;
+  --hl-builtin: #e0af68;
+  --hl-variable: #c0caf5;
+  --hl-tag: #f7768e;
+  --hl-attr: #7dcfff;
+  --hl-symbol: #bb9af7;
+  --hl-meta: #e0af68;
 }
 
 /* ── 基础 ── */
 * { box-sizing: border-box; }
 html {
   -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scrollbar-gutter: stable;
+  /* 页面底色放在 html 上，body 透明，背景水印才能显示在内容之下 */
+  background: var(--bg);
   /* 移动端全站禁用系统点按高亮块（Android Chrome 默认灰/蓝半透明方块）。
      该属性可继承，在 html 声明一次即可覆盖所有可点元素，无需逐个选择器声明 */
   -webkit-tap-highlight-color: transparent;
@@ -107,15 +123,60 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  position: relative;
   display: flex;
   flex-direction: column;
   font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.7;
   color: var(--text);
-  background: var(--bg);
+  background: transparent;
   -webkit-font-smoothing: antialiased;
-  transition: background .2s, color .2s;
+  transition: color .2s;
+}
+
+/* ── 页面背景：重庆山城手绘线稿 ──
+   深浅主题各一张同构图 WebP，线条色写死在图片里，整体透明度由后台「页面装饰」注入。
+   fixed + inset:0：滚动页面时图案始终贴在视口上，不随内容移动，也不遮挡阅读。
+
+   宽度与高度都用 cover：图案始终等比放大到覆盖整个视口，任何屏幕比例、任何分辨率下
+   都不会出现留白。代价是比例不一致时会裁边——
+     · 16:9（1920×1080、2560×1440）→ 恰好铺满，无裁切
+     · 更宽（21:9、带鱼屏）→ 高度方向裁掉上下
+     · 更窄（16:10、竖屏、缩小窗口）→ 宽度方向裁掉左右
+   裁切从底边对齐、居中裁，图案主体始终留在画面里；遮罩从容器顶端开始淡入，
+   所以无论裁掉多少都不会出现硬边。 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--pattern-image);
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: cover;
+  /* 顶部淡入：三段式缓坡，从完全透明到实色，避免图片上沿出现硬边 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .22) 20%, rgba(0, 0, 0, .62) 48%, #000 78%);
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .22) 20%, rgba(0, 0, 0, .62) 48%, #000 78%);
+  opacity: var(--pattern-opacity, .10);
+}
+/* 高分屏换用 3840×2160 的 @2x 版：在 2560CSS×DPR1.5（3840 设备像素）上正好 1:1，
+   不再由浏览器把 2048 的图实时放大，线条不会发虚。
+   只在桌面断点启用——手机屏窄，1x 图已经够用，没必要多花 1MB 流量。 */
+@media (min-width: 768px) and (min-resolution: 1.25dppx) {
+  body::before {
+    background-image: var(--pattern-image-hd, var(--pattern-image));
+  }
+}
+/* 移动端：图案铺满底边 46vh。cover 按高度撑满、左右裁切，
+   避免 16:9 在此宽度下只剩一条 219px 的窄带。 */
+@media (max-width: 767px) {
+  body::before {
+    inset: auto 0 0;
+    height: 46vh;
+    background-size: cover;
+  }
 }
 a { color: var(--accent); }
 img { max-width: 100%; }
@@ -217,15 +278,14 @@ img { max-width: 100%; }
 }
 @media (hover: hover) and (pointer: fine) { .tech-icon-btn:hover { color: var(--text); background: var(--bg-subtle); } }
 .tech-icon-btn.active { color: var(--accent); }
-[data-theme="light"] .icon-sun { display: none; }
-[data-theme="dark"] .icon-moon { display: none; }
-/* 三态主题切换：auto（跟随系统）态按钮右上角小圆点标识 */
-.tech-icon-btn { position: relative; }
-html[data-theme-mode="auto"] #theme-toggle::after {
-  content: ''; position: absolute; top: 3px; right: 3px;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent); pointer-events: none;
-}
+/* 三态主题切换：图标表示「当前模式」而非「将要切换到」。
+   原方案 auto 态靠右上角 7px 圆点 + 明暗兜底，系统本就是浅色时
+   首点 auto→light 视觉零变化；改成 auto 专属图标后，点击必定有反馈。 */
+.icon-sun, .icon-moon { display: none; }
+html[data-theme-mode="light"] .icon-sun,
+html[data-theme-mode="dark"] .icon-moon { display: block; }
+html[data-theme-mode="light"] .icon-auto,
+html[data-theme-mode="dark"] .icon-auto { display: none; }
 
 .tech-burger { display: none; }
 
@@ -244,11 +304,16 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   border-left: 1px solid var(--border);
   transform: translateX(100%);
   visibility: hidden;
-  transition: transform .25s ease, visibility .25s;
+  /* 关闭时等滑出动画结束再隐藏；打开时（.open）visibility 立即生效，
+     否则 openDrawer() 里的 closeBtn.focus() 会因元素仍 hidden 而失败 */
+  transition: transform .25s ease, visibility 0s linear .25s;
   display: flex; flex-direction: column;
   padding-bottom: env(safe-area-inset-bottom);
 }
-.tech-drawer.open { transform: none; visibility: visible; }
+.tech-drawer.open {
+  transform: none; visibility: visible;
+  transition: transform .25s ease, visibility 0s;
+}
 .tech-drawer-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px; border-bottom: 1px solid var(--border);
@@ -311,7 +376,9 @@ html.page-enter .tech-main {
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); color: var(--text-secondary);
   cursor: pointer; box-shadow: var(--shadow);
-  opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s;
+  opacity: 0; visibility: hidden;
+  transition: opacity .2s, visibility .2s, width .2s ease, height .2s ease,
+              right .2s ease, bottom .2s ease, border-radius .2s ease;
 }
 .tech-top.show { opacity: 1; visibility: visible; }
 @media (hover: hover) and (pointer: fine) { .tech-top:hover { color: var(--accent); border-color: var(--accent); } }
@@ -422,7 +489,7 @@ html.page-enter .tech-main {
 .tech-search-input {
   flex: 1; min-width: 0; height: 44px; padding: 0 14px;
   font-size: 16px; color: var(--text);
-  background: var(--bg); border: 1px solid var(--border);
+  background: var(--bg); border: 1px solid var(--border-strong);
   border-radius: 8px; outline: none;
 }
 .tech-search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
@@ -431,7 +498,11 @@ html.page-enter .tech-main {
   font-size: 15px; font-weight: 600; color: #fff;
   background: var(--accent); border: none; border-radius: 8px; cursor: pointer;
 }
+/* 深色 accent 实底：白字仅 2.52:1，改深字后 7.05:1（与 .tech-btn-primary 同款） */
+[data-theme="dark"] .tech-search-btn { color: #16181d; }
 @media (hover: hover) and (pointer: fine) { .tech-search-btn:hover { filter: brightness(1.1); } }
+/* 深色下 hover 提亮会让深字与底色更接近，改为压暗 */
+@media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-search-btn:hover { filter: brightness(.92); } }
 .tech-search-close {
   flex: none; width: 44px; height: 44px; display: flex;
   align-items: center; justify-content: center;
@@ -482,7 +553,7 @@ html.page-enter .tech-main {
   display: flex; flex-wrap: wrap; gap: 6px 16px;
   font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;
 }
-/* 精选徽标：用主题强调色 --accent（亮 #0969da / 暗 #58a6ff），
+/* 精选徽标：用主题强调色 --accent（亮 #0969da / 暗 #7aa2f7），
    与标题 hover、箭头、彩条同色系，亮色下清晰不糊灰；金色 chip 方案观感偏脏已弃 */
 .tech-badge-featured {
   display: inline-block; flex: none;
@@ -525,10 +596,10 @@ html.page-enter .tech-main {
   width: 100%; height: 40px; padding: 0 12px;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   font-size: 14px; color: var(--text); background: var(--bg);
-  border: 1px solid var(--border); border-radius: 6px; outline: none;
+  border: 1px solid var(--border-strong); border-radius: 6px; outline: none;
   cursor: pointer; transition: border-color .15s, box-shadow .15s;
 }
-@media (hover: hover) and (pointer: fine) { .tech-cs-trigger:hover { border-color: var(--border-strong); } }
+@media (hover: hover) and (pointer: fine) { .tech-cs-trigger:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong)); } }
 .tech-cs.is-open .tech-cs-trigger,
 .tech-cs-trigger:focus-visible {
   border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak);
@@ -554,6 +625,9 @@ html.page-enter .tech-main {
 }
 @media (hover: hover) and (pointer: fine) { .tech-cs-item:hover { background: var(--bg-subtle); } }
 .tech-cs-item.is-selected { color: var(--accent); font-weight: 600; background: var(--accent-weak); }
+/* 键盘移动时的落点高亮：与 hover 同源，选中项保留自身底色不掉色 */
+.tech-cs-item:focus-visible { background: var(--bg-subtle); }
+.tech-cs-item.is-selected:focus-visible { background: var(--accent-weak); }
 
 /* ── 分页 ── */
 .tech-more-wrap { display: flex; justify-content: center; margin-top: 32px; }
@@ -561,11 +635,12 @@ html.page-enter .tech-main {
 .tech-page-btn {
   min-width: 40px; height: 40px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border); border-radius: 6px;
+  border: 1px solid var(--border-strong); border-radius: 6px;
   color: var(--text-secondary); text-decoration: none; font-size: 14px;
 }
 @media (hover: hover) and (pointer: fine) { .tech-page-btn:hover { border-color: var(--accent); color: var(--accent); } }
 .tech-page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+[data-theme="dark"] .tech-page-btn.active { color: #16181d; }
 .tech-page-ellipsis { display: flex; align-items: center; color: var(--text-secondary); padding: 0 4px; }
 
 /* ── 空状态 ── */
@@ -594,7 +669,9 @@ html.page-enter .tech-main {
   .tech-toc-sidebar {
     position: fixed;
     top: 80px;
-    left: calc(50% + 520px);
+    /* 1400px 视口下原 calc(50% + 520px) 会把右缘顶到 0 边距（1440px 才 20px），
+       这里用 min() 保证任何宽度都留出 20px 右边距 */
+    left: min(calc(50% + 520px), calc(100vw - 200px));
     width: 180px;
     margin: 0;
   }
@@ -616,8 +693,13 @@ html.page-enter .tech-main {
 
 /* 目录 */
 .tech-toc {
-  border: 1px solid var(--border); border-radius: 8px;
-  background: var(--bg-subtle);
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  /* 毛玻璃：窄屏是折叠条、宽屏变成右侧常驻悬浮卡，背后是底图与正文，
+     浅 .74 / 深 .70 + 16px 模糊，既能透出底图又不干扰目录文字。
+     底色统一写在文件末尾「毛玻璃降级」段（默认实色，特性查询命中再升级为玻璃），
+     避免同一属性两处赋值、靠加载顺序决胜。 */
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(16px);
 }
 .tech-toc-summary {
   padding: 10px 14px; font-size: 14px; font-weight: 600;
@@ -653,7 +735,12 @@ html.page-enter .tech-main {
 .tech-toc-body a {
   display: block; padding: 3px 0; font-size: 13px; line-height: 1.6;
   color: var(--text-secondary); text-decoration: none;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* 折叠态宽度充足，允许长标题换行；只有宽屏 180px 悬浮栏才截断
+     （见下方 min-width:1400px），避免窄栏里 23 条目录每条都变「…」 */
+  overflow-wrap: anywhere;
+}
+@media (min-width: 1400px) {
+  .tech-toc-body a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (hover: hover) and (pointer: fine) { .tech-toc-body a:hover { color: var(--accent); } }
 .tech-toc-body a.is-active {
@@ -734,6 +821,16 @@ html.page-enter .tech-main {
   border-radius: 8px; padding: 16px; overflow-x: auto;
   margin: 0 0 10px; line-height: 1.5; text-align: left;
 }
+/* 代码块毛玻璃：markdown-body.css 的 .markdown-body pre 与本条同为 (0,1,1) 且后加载，
+   必须用双类 (0,2,1) 才能覆盖（文章页与项目页容器都同时带 markdown-body）。
+   只改背景/边框色，不重写 margin/padding，避免打乱项目页 README 的既有节奏。 */
+.tech-post-body.markdown-body pre,
+.tech-proj-readme-body.markdown-body pre {
+  /* 底色同样交给末尾「毛玻璃降级」段统一管理 */
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+  border-color: var(--border-strong);
+}
 .tech-post-body pre code { background: none; padding: 0; font-size: 13.5px; }
 
 /* 代码块复制按钮（JS 包 .code-wrap 容器） */
@@ -742,10 +839,15 @@ html.page-enter .tech-main {
 .code-copy {
   position: absolute; top: 8px; right: 8px; z-index: 1;
   padding: 3px 10px; font-size: 12px; line-height: 1.5;
-  border: 1px solid var(--border); border-radius: 4px;
-  background: var(--bg); color: var(--text-secondary);
-  cursor: pointer; opacity: 0; transition: opacity .2s;
+  border: 1px solid var(--border-strong); border-radius: 6px;
+  /* 浮在毛玻璃代码块上：半透明 + 轻模糊，避免变成一块实色补丁 */
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  color: var(--text-secondary);
+  cursor: pointer; opacity: 0; transition: opacity .2s, color .15s, border-color .15s;
 }
+/* 触控热区：视觉 45×25 不变，点击范围扩到约 61×41 */
+.code-copy::after { content: ''; position: absolute; inset: -8px; }
 @media (hover: hover) and (pointer: fine) { .code-wrap:hover .code-copy, .code-copy:focus { opacity: 1; } }
 @media (hover: hover) and (pointer: fine) { .code-copy:hover { color: var(--accent); border-color: var(--accent); } }
 @media (hover: none) { .code-copy { opacity: 1; } }
@@ -821,22 +923,57 @@ html.page-enter .tech-main {
 
 /* 附件链接图标改由 markdown-body.css 按扩展名前置（见 --doc-icon） */
 
-/* ── 代码高亮（GitHub 风格，深浅色变量） ── */
-.hljs { color: var(--text); background: transparent; }
-.hljs-keyword, .hljs-selector-tag, .hljs-subst { color: var(--hl-keyword); }
-.hljs-string, .hljs-attr, .hljs-template-tag, .hljs-regexp { color: var(--hl-string); }
-.hljs-title, .hljs-section, .hljs-function .hljs-title { color: var(--hl-title); }
-.hljs-comment, .hljs-quote { color: var(--hl-comment); font-style: italic; }
-.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet { color: var(--hl-number); }
-.hljs-built_in, .hljs-type, .hljs-class .hljs-title { color: var(--hl-builtin); }
-.hljs-variable, .hljs-template-variable, .hljs-params { color: var(--hl-variable); }
-.hljs-tag, .hljs-name { color: var(--hl-tag); }
-.hljs-attribute { color: var(--hl-attr); }
-.hljs-meta, .hljs-meta .hljs-keyword { color: var(--hl-meta); }
-.hljs-addition { color: var(--hl-tag); }
-.hljs-deletion { color: var(--hl-keyword); }
-.hljs-emphasis { font-style: italic; }
-.hljs-strong { font-weight: 700; }
+/* ── 代码高亮（GitHub 风格，深浅色变量） ──
+   markdown-body.css 用 `[data-theme] .hljs-*` + 硬编码色（特异性 0,2,0 且后加载），
+   会整体盖掉这里 0,1,0 的变量规则。统一加容器前缀抬到 0,3,0，
+   让文章页与项目页 README 都走主题变量（同时修掉深色注释仅 3.62:1 的问题）。 */
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs { color: var(--text); background: transparent; }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-keyword,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-selector-tag,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-subst { color: var(--hl-keyword); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-string,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-attr,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-template-tag,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-regexp { color: var(--hl-string); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-title,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-section,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-function .hljs-title { color: var(--hl-title); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-comment,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-quote,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-code,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-formula { color: var(--hl-comment); font-style: italic; }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-section { color: var(--hl-title); font-weight: 700; }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-number,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-literal,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-symbol,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-bullet { color: var(--hl-number); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-built_in,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-type,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-class .hljs-title { color: var(--hl-builtin); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-variable,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-template-variable,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-params { color: var(--hl-variable); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-tag,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-name { color: var(--hl-tag); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-attribute { color: var(--hl-attr); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-meta,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-meta .hljs-keyword { color: var(--hl-meta); }
+/* markdown-body.css 里这些 token 仍是硬编码（浅色沿用已废弃的 #2f6feb），一并接管 */
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-property,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-operator,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-selector-attr,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-selector-class,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-selector-id { color: var(--hl-attr); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-doctag,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-variable.language_ { color: var(--hl-keyword); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-title.class_,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-title.class_.inherited__,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-title.function_ { color: var(--hl-title); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-selector-pseudo { color: var(--hl-tag); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-addition { color: var(--hl-tag); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-deletion { color: var(--hl-keyword); }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-emphasis { font-style: italic; }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body .hljs-strong { font-weight: 700; }
 
 /* ── 上一篇 / 下一篇 ── */
 .tech-post-pager {
@@ -888,37 +1025,18 @@ html.page-enter .tech-main {
 }
 @media (hover: hover) and (pointer: fine) { .tech-btn:hover { border-color: var(--accent); color: var(--accent); } }
 .tech-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-/* 深色主题：accent 是亮天蓝（#58a6ff），配白字对比仅约 2.4:1 会发糊，改深色字（约 8.9:1） */
-[data-theme="dark"] .tech-btn-primary { color: #0d1117; }
+/* 深色主题：accent 是柔和蓝（#7aa2f7），配白字对比不足，改用深色字（约 7:1） */
+[data-theme="dark"] .tech-btn-primary { color: #16181d; }
 /* primary hover：浅色加深 / 深色提亮——两端都朝「对比度变好」的方向反馈，不再无脑提亮 */
 @media (hover: hover) and (pointer: fine) {
   .tech-btn-primary:hover { filter: brightness(.92); color: #fff; }
-  [data-theme="dark"] .tech-btn-primary:hover { filter: brightness(1.12); color: #0d1117; }
+  [data-theme="dark"] .tech-btn-primary:hover { filter: brightness(1.12); color: #16181d; }
 }
 /* 许可文字与按钮组同排，靠右对齐；窄屏折行时恢复左对齐 */
 .tech-license { font-size: 13px; color: var(--text-secondary); margin: 0 0 0 auto; }
 
-/* ── 轻提示 toast（分享/复制反馈，全站可用） ── */
-.tech-toast {
-  position: fixed; left: 50%; bottom: 28px; z-index: 300;
-  transform: translateX(-50%) translateY(6px);
-  max-width: min(86vw, 420px);
-  padding: 9px 18px;
-  font-size: 13px; font-weight: 500; line-height: 1.5;
-  color: var(--text); background: var(--nav-bg);
-  border: 1px solid var(--border-strong); border-radius: 8px;
-  /* toast 毛玻璃：浮起反馈更明显，复用 nav-bg 保持视觉一致 */
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  opacity: 0; visibility: hidden; pointer-events: none;
-  transition: opacity .2s ease, transform .2s ease, visibility .2s;
-}
-.tech-toast.show {
-  opacity: 1; visibility: visible;
-  transform: translateX(-50%) translateY(0);
-}
+/* 注：早期自绘的 .tech-toast 已废弃（模板统一使用 static/js/toast.js + toast.css），
+   原样式是死代码，2026-10 清理，避免与全局 .toast 维护两份毛玻璃。 */
 
 /* ── 相关文章 ── */
 .tech-related { margin: 26px 0 0; }
@@ -1216,7 +1334,7 @@ html.page-enter .tech-main {
 .tech-lang-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--lang-color, #8b949e); }
 
 /* ── 项目详情页（从列表卡片点击进入） ── */
-/* 禁用双击缩放 / 捏合缩放的 CSS 兜底（disable-zoom.js 为 iOS 主力拦截） */
+/* 只去掉双击缩放的 300ms 延迟；双指缩放保持可用（WCAG 1.4.4） */
 html { touch-action: manipulation; }
 
 .tech-proj { padding: 0 0 8px; }
@@ -1256,7 +1374,10 @@ html { touch-action: manipulation; }
 @media (hover: hover) and (pointer: fine) { .tech-proj-btn:hover { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); } }
 .tech-proj-btn-icon { display: inline-block; vertical-align: middle; }
 .tech-proj-btn--gh { color: #fff; background: var(--accent); border-color: var(--accent); }
+/* 深色 accent 实底改深字（白字 2.52:1 不达标） */
+[data-theme="dark"] .tech-proj-btn--gh { color: #16181d; }
 @media (hover: hover) and (pointer: fine) { .tech-proj-btn--gh:hover { color: #fff; filter: brightness(1.1); background: var(--accent); } }
+@media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-proj-btn--gh:hover { color: #16181d; filter: brightness(.92); background: var(--accent); } }
 
 /* 项目信息行：简介 + topics + 语言（单栏，标题行下方紧凑排版） */
 .tech-proj-info {
@@ -1338,20 +1459,7 @@ html { touch-action: manipulation; }
 .tech-proj-readme-empty p { margin: 0 0 8px; }
 .tech-proj-readme-empty a { color: var(--accent); }
 
-/* README 代码块复制按钮：tech 不加载全局 style.css，在此补同款皮肤 */
-.markdown-body .code-wrap .code-copy {
-  position: absolute; top: 8px; right: 8px; z-index: 1;
-  padding: 3px 10px; font-size: 12px; line-height: 1.5;
-  border: 1px solid var(--border); border-radius: 6px;
-  background: var(--bg); color: var(--text-secondary);
-  cursor: pointer; opacity: 0; transition: opacity .15s;
-}
-@media (hover: hover) and (pointer: fine) {
-  .markdown-body .code-wrap:hover .code-copy,
-  .markdown-body .code-wrap .code-copy:focus { opacity: 1; }
-}
-@media (hover: hover) and (pointer: fine) { .markdown-body .code-wrap .code-copy:hover { color: var(--accent); border-color: var(--accent); } }
-@media (hover: none) { .markdown-body .code-wrap .code-copy { opacity: 1; } }
+/* README 代码块复制按钮复用全局 .code-copy（见上文），此处不再重复定义皮肤 */
 
 /* 详情页移动端：信息行与 README 卡片间距收紧 + 字号收敛（与文章正文同档） */
 @media (max-width: 720px) {
@@ -1643,7 +1751,7 @@ html { touch-action: manipulation; }
 :where(a[href], button, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 6px;
+  /* 不覆盖 border-radius：否则圆形头像/回顶按钮在键盘聚焦时会被掰成 6px 圆角 */
 }
 /* 导航链接 hover 平滑 */
 .tech-nav-link { transition: color .15s ease; }
@@ -1659,7 +1767,7 @@ html { touch-action: manipulation; }
 }
 .tech-btn:active { transform: translateY(1px); }
 .tech-btn-primary:active { filter: brightness(.95); color: #fff; }
-[data-theme="dark"] .tech-btn-primary:active { color: #0d1117; }
+[data-theme="dark"] .tech-btn-primary:active { color: #16181d; }
 /* 项目筛选芯片：可点击语义 + hover/焦点平滑 */
 .tech-lang-link { cursor: pointer; transition: color .15s ease, transform .15s ease, border-color .15s ease; }
 @media (hover: hover) and (pointer: fine) { .tech-lang-link:hover { transform: translateY(-1px); } }
@@ -1674,6 +1782,11 @@ html { touch-action: manipulation; }
   .tech-link-card:hover { transform: translateY(-3px); }
   .tech-tag-cloud-item:hover { transform: translateY(-2px); }
 }
+/* 触控热区：小图标/小按钮视觉尺寸不变，用伪元素把可点范围扩大。
+   水平方向按相邻 gap 计算（项目按钮 gap 8 → 各扩 4；分页 gap 6 → 各扩 3），避免互相盖住。 */
+.tech-quote-refresh, .tech-proj-btn { position: relative; }
+.tech-quote-refresh::after { content: ''; position: absolute; inset: -6px -8px; }
+.tech-proj-btn::after { content: ''; position: absolute; inset: -8px -4px; }
 
 /* ── 图片画廊：连续纯图由 JS 合并为网格，点击进灯箱 ── */
 .img-gallery {
@@ -1748,3 +1861,39 @@ html { touch-action: manipulation; }
 .markdown-body details[open] summary { margin-bottom: .5em; }
 .tech-form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .tech-form-actions .tech-btn { width: auto; }
+
+/* ═══ 毛玻璃降级 ═══
+   注意：不能用 `@supports not (...)`——csscompressor 会把 `not (` 压成 `not(`，
+   浏览器将其解析为函数 token，条件恒 false，降级规则会静默失效（已实测）。
+   这里改用等价的「默认实色 + 正向特性查询」写法，压缩后仍然有效。
+   1) 不支持 backdrop-filter：退化为实色底，不留「透明无底」的坑；
+   2) 移动端：同时可见的 blur 层更少，把半径降到 8–10px、不透明度提一档，
+      保证代码/目录可读性与滚动流畅度。
+   评论表单的同类降级写在 comments-tech.css 内（该文件后加载，避免被覆盖）。 */
+.tech-toc,
+.tech-post-body.markdown-body pre,
+.tech-proj-readme-body.markdown-body pre { background: var(--bg); }
+@supports (backdrop-filter: blur(1px)) {
+  .tech-toc,
+  .tech-post-body.markdown-body pre,
+  .tech-proj-readme-body.markdown-body pre { background: var(--glass-bg); }
+}
+/* Safari 17 及更早只认 -webkit- 前缀 */
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  .tech-toc,
+  .tech-post-body.markdown-body pre,
+  .tech-proj-readme-body.markdown-body pre { background: var(--glass-bg); }
+}
+@media (max-width: 767px) {
+  .tech-toc {
+    background: var(--glass-bg-mobile);
+    -webkit-backdrop-filter: saturate(150%) blur(10px);
+    backdrop-filter: saturate(150%) blur(10px);
+  }
+  .tech-post-body.markdown-body pre,
+  .tech-proj-readme-body.markdown-body pre {
+    background: var(--glass-bg-mobile);
+    -webkit-backdrop-filter: saturate(150%) blur(8px);
+    backdrop-filter: saturate(150%) blur(8px);
+  }
+}

@@ -1832,3 +1832,17 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
       qrBox.style.display='flex'），内联样式必须能覆盖工具类。
    ========================================================== */
 .hidden { display: none; }
+
+
+/* ── 主题底图选择（外观与主题页） ── */
+.pattern-picker { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.pattern-option {
+  width: 180px; border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; cursor: pointer; background: var(--bg-surface, #fff);
+  transition: border-color .18s, box-shadow .18s;
+}
+.pattern-option img { display: block; width: 100%; height: 92px; object-fit: cover; background: #faf9f7; }
+.pattern-option span { display: block; padding: 6px 10px; font-size: 12px; color: var(--text-secondary); }
+@media (hover: hover) and (pointer: fine) { .pattern-option:hover { border-color: var(--accent); } }
+.pattern-option.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-weak); }
+.pattern-option.active span { color: var(--accent); font-weight: 600; }

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.15-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.15)
+[![version](https://img.shields.io/badge/version-3.2.16-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.16)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,21 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.15**
+- 版本：**v3.2.16**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.16
+
+tech 主题视觉与可访问性整修：重做深浅色分层（实色 / 半透明 / 毛玻璃 / 透明），并补齐键盘与读屏细节。
+
+- 页面底图：深浅各 3 套图案、1x/2x 双分辨率，随主题切换；后台「主题」页可选择图案、调整透明度（0 关闭），设置项为 `pattern_image` / `pattern_opacity` / `pattern_enabled`
+- 毛玻璃分层：代码块、目录卡、评论表单三处采用毛玻璃（浅 `.74` / 深 `.70`，14–16px 模糊）；不支持 `backdrop-filter` 时回退实色，移动端降低模糊半径并提高不透明度
+- 代码高亮改由主题变量统一驱动，覆盖 `markdown-body.css` 的硬编码色；深浅两态所有 token 对比度均 ≥4.5:1
+- 配色修正：浅色强调色加深至 `#1f5fd6`；深色强调色实底按钮改用深字（对比度 2.52 → 7.05）；交互控件描边统一提一档到 `--border-strong`
+- 交互：主题按钮三态图标（自动/浅色/深色）、文章筛选下拉支持 ↑↓/Home/End/Esc/Tab、移动端抽屉增加焦点圈定与焦点回收、目录当前项自动滚入视野、复制按钮等触控热区扩大
+- 可访问性与 SEO：移除 `user-scalable=no` 与手势拦截脚本恢复缩放；补齐 `aria-controls`/`aria-expanded`/`aria-modal`/`aria-hidden`；新增 `<meta name="description">`（与 `og:description` 同源）；文章列表标题层级修正
+- 构建：`csscompressor` 会把 `@supports not (` 压成 `not(` 导致降级规则静默失效，降级写法改为「默认实色 + 正向特性查询」
 
 ### v3.2.15
 
