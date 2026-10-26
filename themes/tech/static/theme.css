@@ -448,6 +448,21 @@ html.page-enter .tech-main {
 .tech-footer-beian { width: 100%; }
 .tech-footer-beian a { color: var(--text-secondary); text-decoration: none; margin-right: 16px; }
 @media (hover: hover) and (pointer: fine) { .tech-footer-beian a:hover { color: var(--accent); } }
+/* 十年之约成员标识：一行独占页脚宽度，放最底部当「印章」；
+   平时 .72 透明度不抢正文，悬停恢复实色。双色图按 data-theme 切换，避免黑标压在深色底上。 */
+.tech-footer-member {
+  width: 100%;
+  display: flex; align-items: center;
+  margin-top: 2px;
+  opacity: .72;
+  transition: opacity .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) and (pointer: fine) { .tech-footer-member:hover { opacity: 1; } }
+.tech-footer-member-logo { display: block; width: auto; height: 28px; }
+.tech-footer-member-logo--dark { display: none; }
+[data-theme="dark"] .tech-footer-member-logo--light { display: none; }
+[data-theme="dark"] .tech-footer-member-logo--dark { display: block; }
 
 /* ── 回到顶部 ── */
 .tech-top {
@@ -613,9 +628,21 @@ html.page-enter .tech-main {
    - (pointer: fine) 过滤 iPad / 触屏 Android 误报，避免点按后 :hover 滞留高亮卡死
    - (min-width: 768px) 让移动端与 PC 窄窗口一律不显示 hover 背景，退化为纯分割线列表 */
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+  /* 悬停用毛玻璃：底图在卡片下方被模糊成一层很淡的影，卡片边界仍清晰；
+     比实色 --bg-subtle 更轻，不打断整页的阅读节奏 */
   .tech-post-item:hover { background: var(--bg-subtle); }
   .tech-post-item:hover .tech-post-title a { color: var(--accent); }
   .tech-post-item:hover .tech-post-arrow { opacity: 1; transform: translateX(0); }
+}
+/* 支持 backdrop-filter 时，悬停底换成毛玻璃（写在后面覆盖实色兜底） */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+    .tech-post-item:hover {
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      backdrop-filter: saturate(180%) blur(14px);
+    }
+  }
 }
 .tech-post-arrow {
   position: absolute; top: 17px; right: 8px;
@@ -1193,17 +1220,15 @@ html.page-enter .tech-main {
 
 /* ── 关于页：人物卡 Hero（与首页居中极简同语言）+ 单列叙事 ── */
 /* 作者卡：圆角卡片容器，取代裸居中堆叠，成为有边界的设计对象。
-   底色用毛玻璃（与评论区卡片一致），页面底图会隐约透出；
-   不支持 backdrop-filter 的浏览器回退为实色，避免整卡透明。 */
+   底色保持透明，只留 1px 边框框住内容，底图能完整透上来——
+   加毛玻璃反而在浅色下显灰、深色下压暗，观感不如直接透明。 */
 .tech-about-hero {
   display: flex; flex-direction: column; align-items: center;
   padding: 32px 24px 24px;
   margin: 0 0 24px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
-  backdrop-filter: saturate(180%) blur(14px);
+  background: transparent;
 }
 /* 卡片化后不再需要页头底部渐变彩条 */
 .tech-about-hero::after { display: none; }
@@ -1695,14 +1720,8 @@ html { touch-action: manipulation; }
   .tech-page-title { font-size: 20px; }
   .tech-page-desc { font-size: 14px; }
   .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 24px; }
-  /* 关于页：移动端作者卡收紧内边距；玻璃底提高不透明度并减小模糊半径，兼顾可读与 GPU 开销 */
-  .tech-about-hero {
-    padding: 24px 16px 20px;
-    margin-bottom: 20px;
-    background: var(--glass-bg-mobile);
-    -webkit-backdrop-filter: saturate(150%) blur(10px);
-    backdrop-filter: saturate(150%) blur(10px);
-  }
+  /* 关于页：移动端作者卡收紧内边距（透明底与桌面一致） */
+  .tech-about-hero { padding: 24px 16px 20px; margin-bottom: 20px; }
   .tech-page-head--center .tech-page-title { font-size: 26px; }
   .tech-page-head--center .tech-page-desc { font-size: 14px; }
   .tech-about-hero .tech-page-title { font-size: 20px; }
@@ -1778,6 +1797,9 @@ html { touch-action: manipulation; }
     gap: 4px 16px;
   }
   .tech-footer-beian a { margin-right: 0; }
+  /* 成员标识跟着页脚左对齐，略缩小高度，避免比备案文字更抢眼 */
+  .tech-footer-member { margin-top: 0; }
+  .tech-footer-member-logo { height: 24px; }
 }
 
 /* 打印：正文全宽 */
@@ -1988,8 +2010,4 @@ html { touch-action: manipulation; }
     backdrop-filter: saturate(150%) blur(8px);
   }
 }
-/* 关于页作者卡的毛玻璃降级：放在文件末尾，确保覆盖上面的移动端规则。
-   不支持 backdrop-filter 时半透明底会变成「透空 + 文字压在底图上」，所以退回实色。 */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .tech-about-hero { background: var(--bg); }
-}
+
