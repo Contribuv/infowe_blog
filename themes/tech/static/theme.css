@@ -176,6 +176,13 @@ body::before {
     background-image: var(--pattern-image-uhd, var(--pattern-image-hd, var(--pattern-image)));
   }
 }
+/* 深色主题：底图用 screen 混合——朝天门是夜景，亮色灯线 (160,174,199) 与深底
+   screen 后呈「发光」效果，整片均匀的低 alpha 雾也被混合稀释掉；
+   浅色保持 normal（深线压浅底，换混合模式反而显脏） */
+[data-theme="dark"] body::before,
+[data-theme="dark"] body::after {
+  mix-blend-mode: screen;
+}
 /* 移动端：图案按屏幕宽度完整显示（16:9 等比，不裁左右），贴底并沿用上沿渐隐。
    竖屏若继续用 46vh + cover，会把 16:9 图放大到只剩中间约 56%，
    朝天门两侧的江面和建筑会被裁掉，所以这里改成整图宽度铺满。 */
