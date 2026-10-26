@@ -673,20 +673,20 @@ def _activate_theme():
 
     if "pattern_image" in request.form:
         image = request.form.get("pattern_image", "3").strip()
-        if image not in {"1", "2", "3"}:
+        if image not in {"1", "2", "3", "4"}:
             image = "3"
         settings.set_value("pattern_image", image)
 
     # 左右固定模式的左右两张图：各自独立选择，允许相同
     if "pattern_left_image" in request.form:
         left = request.form.get("pattern_left_image", "1").strip()
-        if left not in {"1", "2", "3"}:
+        if left not in {"1", "2", "3", "4"}:
             left = "1"
         settings.set_value("pattern_left_image", left)
 
     if "pattern_right_image" in request.form:
         right = request.form.get("pattern_right_image", "").strip()
-        if right not in {"1", "2", "3"}:
+        if right not in {"1", "2", "3", "4"}:
             right = ""
         settings.set_value("pattern_right_image", right)
 
