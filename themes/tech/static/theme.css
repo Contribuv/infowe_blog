@@ -65,11 +65,13 @@
   --glass-bg: rgba(250, 249, 247, .84);
   --glass-bg-form: rgba(250, 249, 247, .84);
   --glass-bg-mobile: rgba(250, 249, 247, .9);
-  /* 液态玻璃：悬停卡片的「镜面」语言——斜向高光渐变 + 内描边高光 + 悬浮投影，
-     比纯磨砂多一层光泽；深色下白光整体调弱，避免夜色里泛白发灰 */
-  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 55%, rgba(255,255,255,.10));
-  --glass-inset: inset 0 1px 0 rgba(255,255,255,.5), inset 0 0 0 1px rgba(255,255,255,.28);
-  --glass-drop: 0 8px 28px rgba(42, 38, 32, .12);
+  /* 液态玻璃：悬停卡片的「镜面」语言——斜向高光渐变 + 内描边高光 + 悬浮投影。
+     卡片用比表单更透的 --glass-card（.72），否则 blur 只作用在透出的两成里，
+     玻璃感完全看不出来；深色下白光约浅色的 2/3，投影换纯黑加深悬浮 */
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,255,255,.08) 55%, rgba(255,255,255,.15));
+  --glass-inset: inset 0 1px 0 rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.45);
+  --glass-drop: 0 8px 28px rgba(42, 38, 32, .16);
+  --glass-card: rgba(250, 249, 247, .72);
   /* 背景底图由 tech/templates/base.html 按后台设置注入（--pattern-image / --pattern-opacity） */
 }
 
@@ -95,10 +97,12 @@
   --glass-bg: rgba(25, 28, 34, .80);
   --glass-bg-form: rgba(25, 28, 34, .80);
   --glass-bg-mobile: rgba(25, 28, 34, .88);
-  /* 液态玻璃（深色）：白光降到约浅色的 1/3，投影换成纯黑加深悬浮感 */
-  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.03) 55%, rgba(255,255,255,.06));
-  --glass-inset: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(255,255,255,.07);
-  --glass-drop: 0 8px 28px rgba(0, 0, 0, .35);
+  /* 液态玻璃（深色）：白光约浅色的 2/3——再淡就淹没在深底里；
+     投影纯黑加深悬浮感；卡片底 .66，让 screen 混合的灯线透进来被 blur 晕成光斑 */
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 55%, rgba(255,255,255,.10));
+  --glass-inset: inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 1px rgba(255,255,255,.2);
+  --glass-drop: 0 8px 28px rgba(0, 0, 0, .5);
+  --glass-card: rgba(25, 28, 34, .66);
   /* 背景底图由 base.html 按后台设置注入（深色版整体再乘 0.9） */
   --quote-bg: #20232b;
   --success: #86b87c;
@@ -678,9 +682,9 @@ html.page-enter .tech-main {
       transition: background-color .18s ease, box-shadow .18s ease;
     }
     .tech-post-item:hover {
-      background: var(--glass-sheen), var(--glass-bg);
-      -webkit-backdrop-filter: saturate(200%) blur(16px);
-      backdrop-filter: saturate(200%) blur(16px);
+      background: var(--glass-sheen), var(--glass-card);
+      -webkit-backdrop-filter: saturate(200%) blur(22px);
+      backdrop-filter: saturate(200%) blur(22px);
       box-shadow: var(--glass-inset), var(--glass-drop);
     }
   }
