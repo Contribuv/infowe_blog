@@ -1846,3 +1846,17 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
 @media (hover: hover) and (pointer: fine) { .pattern-option:hover { border-color: var(--accent); } }
 .pattern-option.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-weak); }
 .pattern-option.active span { color: var(--accent); font-weight: 600; }
+
+/* 底图显示位置：三张文字卡片，与底图选择器视觉同源 */
+.pattern-pos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.pattern-pos-option {
+  display: flex; flex-direction: column; gap: 3px; width: 200px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; background: var(--bg-surface, #fff);
+  transition: border-color .18s, box-shadow .18s;
+}
+.pattern-pos-option b { font-size: 13px; font-weight: 600; }
+.pattern-pos-option small { font-size: 11px; line-height: 1.45; color: var(--text-secondary); }
+@media (hover: hover) and (pointer: fine) { .pattern-pos-option:hover { border-color: var(--accent); } }
+.pattern-pos-option.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-weak); }
+.pattern-pos-option.active b { color: var(--accent); }

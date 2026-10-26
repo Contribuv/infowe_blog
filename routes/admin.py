@@ -677,6 +677,12 @@ def _activate_theme():
             image = "3"
         settings.set_value("pattern_image", image)
 
+    if "pattern_position" in request.form:
+        position = request.form.get("pattern_position", "cover").strip()
+        if position not in {"cover", "left", "right"}:
+            position = "cover"
+        settings.set_value("pattern_position", position)
+
     return redirect(url_for("admin_themes"))
 
 

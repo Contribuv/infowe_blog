@@ -57,6 +57,24 @@
             <span class="form-hint">三张线稿底图，选中后前台按当前深浅主题自动换色。</span>
         </div>
         <div class="form-group">
+            <label>显示位置</label>
+            {% set pattern_pos = pattern_position|default('cover') %}
+            <div class="pattern-pos" role="radiogroup" aria-label="底图显示位置">
+                {% for key, label, hint in [
+                    ('cover', '跟随分辨率', '铺满视口，随窗口大小缩放（默认）'),
+                    ('left', 'PC 左侧固定', '固定尺寸贴左下，右侧与上沿淡化'),
+                    ('right', 'PC 右侧固定', '固定尺寸贴右下，左侧与上沿淡化')
+                ] %}
+                <label class="pattern-pos-option{{ ' active' if pattern_pos == key }}">
+                    <input type="radio" name="pattern_position" value="{{ key }}"{{ ' checked' if pattern_pos == key }} hidden>
+                    <b>{{ label }}</b>
+                    <small>{{ hint }}</small>
+                </label>
+                {% endfor %}
+            </div>
+            <span class="form-hint">固定模式在桌面端保持图片尺寸不变，不随分辨率拉伸；移动端仍自动铺满底部。</span>
+        </div>
+        <div class="form-group">
             <label class="switch-label">
                 <span class="switch">
                     <input type="checkbox" name="pattern_enabled" value="1"{{ ' checked' if pattern_enabled|default('1') in ('1','on','true','yes') else '' }}>
@@ -125,6 +143,17 @@
         if (!input) return;
         input.addEventListener('change', function () {
             picks.forEach(function (item) { item.classList.remove('active'); });
+            label.classList.add('active');
+        });
+    });
+
+    // 底图显示位置选中态
+    var posPicks = Array.prototype.slice.call(document.querySelectorAll('.pattern-pos-option'));
+    posPicks.forEach(function (label) {
+        var input = label.querySelector('input[type="radio"]');
+        if (!input) return;
+        input.addEventListener('change', function () {
+            posPicks.forEach(function (item) { item.classList.remove('active'); });
             label.classList.add('active');
         });
     });

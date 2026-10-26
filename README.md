@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.16-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.16)
+[![version](https://img.shields.io/badge/version-3.2.17-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.17)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,14 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.16**
+- 版本：**v3.2.17**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.17
+
+- 底图位置：后台「页面背景装饰」新增「显示位置」三选项——跟随分辨率（默认，现状铺满视口）/ PC 左侧固定 / PC 右侧固定；固定模式在桌面端按固定尺寸贴底，不随分辨率缩放，并用双层 `mask` 交叉淡化上沿与内侧边缘，移动端仍铺满底部；设置项为 `pattern_position`
+- 链接样式：补齐全局 `a { text-decoration: none }` 兜底，清掉没有类名的链接（如友链页「申请友链」）与头像/图标链接残留的浏览器默认下划线；正文悬停下划线保持不变
 
 ### v3.2.16
 

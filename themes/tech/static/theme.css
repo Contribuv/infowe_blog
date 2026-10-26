@@ -178,7 +178,47 @@ body::before {
     background-size: cover;
   }
 }
-a { color: var(--accent); }
+/* ── 底图位置：默认 / PC 左固定 / PC 右固定 ──
+   固定模式只在桌面断点生效：按 2048 原图的一半（1152×648）显示，
+   尺寸不随视口分辨率缩放，避免 cover 在全屏下越拉越大；
+   视口窄于 1252px 时用 92vw 兜底，防止整张图被右侧裁掉。
+   贴底摆放，上沿与内侧边缘用双层 mask 交叉淡化，避免出现硬边。 */
+@media (min-width: 768px) {
+  html[data-pattern-pos="left"] body::before,
+  html[data-pattern-pos="right"] body::before {
+    inset: auto auto 0 0;
+    width: min(1152px, 92vw);
+    height: auto;
+    aspect-ratio: 16 / 9;
+    background-size: 100% 100%;
+    background-position: left bottom;
+  }
+  /* 左固定：右侧（内侧）淡出 */
+  html[data-pattern-pos="left"] body::before {
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
+      linear-gradient(to right, #000 74%, transparent 100%);
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
+      linear-gradient(to right, #000 74%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+  /* 右固定：左侧（内侧）淡出 */
+  html[data-pattern-pos="right"] body::before {
+    inset: auto 0 0 auto;
+    background-position: right bottom;
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
+      linear-gradient(to left, #000 74%, transparent 100%);
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
+      linear-gradient(to left, #000 74%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+}
+a { color: var(--accent); text-decoration: none; }
 img { max-width: 100%; }
 ::selection { background: var(--accent-weak); }
 
