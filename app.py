@@ -492,7 +492,7 @@ def _start_status_scheduler(app: Flask) -> None:
         while True:
             try:
                 with app.app_context():
-                    from models.service_check import ServiceCheck
+                    from models import ServiceCheck
                     from services import status as status_service
 
                     services = status_service.parse_services()
@@ -513,7 +513,7 @@ def _start_status_scheduler(app: Flask) -> None:
                                 else:
                                     status_service.probe_all(True)
             except Exception:
-                pass
+                app.logger.exception("status probe scheduler failed")
             time.sleep(60)
 
     threading.Thread(target=loop, daemon=True, name="status-probe").start()

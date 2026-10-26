@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.20-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.20)
+[![version](https://img.shields.io/badge/version-3.2.21-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.21)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,13 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.20**
+- 版本：**v3.2.21**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.21
+
+- 修复：状态页自动探测线程的 ServiceCheck 导入写错模块（models.service_check 里没有同名类），异常被静默吞掉，调度器实际从未执行；改为 rom models import ServiceCheck，并把异常写入日志
 
 ### v3.2.20
 
