@@ -26,30 +26,32 @@
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  /* 日间配色：暖白纸感，避免纯白底 + 近黑字的强反差 */
-  --bg: #faf9f7;
+  /* 日间配色：冷蓝灰纸感——与底图线条色 (160,174,199) 同一色系，
+     避免暖白纸底 (#faf9f7) 与冷色底图「两套色温」的割裂；
+     文字从暖黑改为中性深灰，对比度 14.9:1，AA 无忧 */
+  --bg: #f6f8fb;
   /* 导航毛玻璃半透明背景：与底色同源，保留底色识别 */
-  --nav-bg: rgba(250, 249, 247, .78);
-  --bg-subtle: #f3f1ed;
-  --bg-code: #f5f3ef;
-  --border: #e3e0da;
-  --border-strong: #cbc7bf;
-  --text: #2b2a27;
-  --text-secondary: #6b6862;
+  --nav-bg: rgba(246, 248, 251, .78);
+  --bg-subtle: #eef1f6;
+  --bg-code: #f1f4f8;
+  --border: #dce2ea;
+  --border-strong: #c5ced9;
+  --text: #2a3038;
+  --text-secondary: #646c78;
   /* 加深后的蓝：白字 5.73:1、浅底文字 5.23:1（原 #2f6feb 仅 4.34:1，12–14px 不达 AA） */
   --accent: #1f5fd6;
   --accent-weak: #e9f0ff;
-  --quote-bg: #f4f1ec;
+  --quote-bg: #f0f3f7;
   --success: #2f7a46;
   --warning: #8a5a00;
   --danger: #b4232f;
-  --shadow: 0 1px 3px rgba(42, 38, 32, .06);
-  --overlay: rgba(42, 38, 32, .45);
-  --code-bg: #f5f3ef;
+  --shadow: 0 1px 3px rgba(30, 40, 56, .06);
+  --overlay: rgba(30, 40, 56, .45);
+  --code-bg: #f1f4f8;
   --hl-keyword: #b4232f;
   --hl-string: #2d5f8b;
   --hl-title: #7c5cad;
-  --hl-comment: #6b6862;
+  --hl-comment: #646c78;
   --hl-number: #1f5fd6;
   --hl-builtin: #8a5a00;
   --hl-variable: #8a5a00;
@@ -62,20 +64,22 @@
   --ring-b: rgba(124, 92, 173, .26);
   /* 毛玻璃层（浅色）：底图会从玻璃后面透出来，不透明度低于 .8 时
      卡片后面的线条清晰可辨，显得「透」而不「磨砂」，浅色下尤其明显 */
-  --glass-bg: rgba(250, 249, 247, .84);
-  --glass-bg-form: rgba(250, 249, 247, .84);
-  --glass-bg-mobile: rgba(250, 249, 247, .9);
+  --glass-bg: rgba(246, 248, 251, .84);
+  --glass-bg-form: rgba(246, 248, 251, .84);
+  --glass-bg-mobile: rgba(246, 248, 251, .9);
   /* 液态玻璃：悬停卡片的「镜面」语言——斜向高光渐变 + 内描边高光 + 悬浮投影。
      卡片用比表单更透的 --glass-card（.72），否则 blur 只作用在透出的两成里，
      玻璃感完全看不出来；深色下白光约浅色的 2/3，投影换纯黑加深悬浮 */
   --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,255,255,.08) 55%, rgba(255,255,255,.15));
   --glass-inset: inset 0 1px 0 rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.45);
-  --glass-drop: 0 8px 28px rgba(42, 38, 32, .16);
-  --glass-card: rgba(250, 249, 247, .72);
+  --glass-drop: 0 8px 28px rgba(30, 40, 56, .16);
+  --glass-card: rgba(246, 248, 251, .72);
   /* 背景底图由 tech/templates/base.html 按后台设置注入（--pattern-image / --pattern-opacity） */
 }
 
 [data-theme="dark"] {
+  /* ponytail: per-pattern color schemes – define custom colors per pattern id, e.g.,
+     :root[data-pattern="1"] { --bg: #..., --text: #... } */
   color-scheme: dark;
   /* 夜间配色：深灰蓝底 + 柔白文字，避免纯黑/纯白的高对比刺眼感 */
   --bg: #191c22;

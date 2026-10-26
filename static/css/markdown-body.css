@@ -13,17 +13,17 @@
 /* ── 设计令牌（GitHub Primer） ── */
 :root,
 [data-theme="light"] {
-  /* 日间配色与 tech 浅色主题对齐：暖白底 + 暖黑字，降低反差 */
-  --mb-fg: #2b2a27;            /* 正文主色 */
-  --mb-fg-muted: #6b6862;      /* 引用/次级文字 */
+  /* 日间配色与 tech 浅色主题对齐：冷蓝灰底 + 中性深灰字，与底图同色系 */
+  --mb-fg: #2a3038;            /* 正文主色 */
+  --mb-fg-muted: #646c78;      /* 引用/次级文字 */
   --mb-link: #2f6feb;          /* 链接 */
-  --mb-border: #e3e0da;        /* 表格/代码块边框 */
-  --mb-border-muted: #e8e5df;  /* 引用条 / hr */
-  --mb-code-bg: #f5f3ef;       /* 代码块底色 */
-  --mb-inline-code: rgba(120, 115, 105, .14); /* 行内 code 底色 */
-  --mb-hr: #e8e5df;
+  --mb-border: #dce2ea;        /* 表格/代码块边框 */
+  --mb-border-muted: #e3e8ef;  /* 引用条 / hr */
+  --mb-code-bg: #f1f4f8;       /* 代码块底色 */
+  --mb-inline-code: rgba(100, 115, 135, .14); /* 行内 code 底色 */
+  --mb-hr: #e3e8ef;
   --mb-mark: #fff3c4;
-  --mb-th-bg: #f5f3ef;
+  --mb-th-bg: #f1f4f8;
 }
 [data-theme="dark"] {
   /* 夜间配色与 tech 深色主题对齐：不用纯黑底、纯白字 */
@@ -249,7 +249,7 @@
 [data-theme="light"] .hljs-formula { color: #7a766f; font-style: italic; }
 [data-theme="light"] .hljs-name, [data-theme="light"] .hljs-quote,
 [data-theme="light"] .hljs-selector-pseudo { color: #2f7a46; }
-[data-theme="light"] .hljs-subst { color: #2b2a27; }
+[data-theme="light"] .hljs-subst { color: #2a3038; }
 [data-theme="light"] .hljs-section { color: #2f6feb; font-weight: 700; }
 [data-theme="light"] .hljs-emphasis { font-style: italic; }
 [data-theme="light"] .hljs-strong { font-weight: 700; }
