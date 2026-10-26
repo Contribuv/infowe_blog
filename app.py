@@ -183,6 +183,8 @@ def _register_hooks(app: Flask) -> None:
             "pattern_enabled": conf.get("pattern_enabled", "1"),
             "pattern_opacity": conf.get("pattern_opacity", "20"),
             "pattern_image": conf.get("pattern_image", "3"),
+            "pattern_left_image": conf.get("pattern_left_image", "1"),
+            "pattern_right_image": conf.get("pattern_right_image", ""),
             "pattern_position": conf.get("pattern_position", "cover"),
             "home_posts_count": conf.get("home_posts_count", "6"),
             "posts_per_page": conf.get("posts_per_page", "20"),

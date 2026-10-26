@@ -1860,3 +1860,11 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
 @media (hover: hover) and (pointer: fine) { .pattern-pos-option:hover { border-color: var(--accent); } }
 .pattern-pos-option.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-weak); }
 .pattern-pos-option.active b { color: var(--accent); }
+
+/* 左右固定：左右两张图各一组选择器，只在「PC 左右固定」时显示。
+   .form-group 自带 display:flex，必须显式压掉 [hidden]，否则隐藏失效。 */
+.pattern-both-picker[hidden] { display: none; }
+.pattern-both-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.pattern-both-label { flex: 0 0 32px; font-size: 12px; color: var(--text-secondary); }
+.pattern-both-row .pattern-picker { margin-top: 0; }
+.pattern-picker-sm .pattern-option { width: 152px; }

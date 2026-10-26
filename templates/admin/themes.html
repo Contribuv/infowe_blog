@@ -64,7 +64,7 @@
                     ('cover', '跟随分辨率', '铺满视口，随窗口大小缩放（默认）'),
                     ('left', 'PC 左侧固定', '固定尺寸贴左下，右侧与上沿淡化'),
                     ('right', 'PC 右侧固定', '固定尺寸贴右下，左侧与上沿淡化'),
-                    ('both', 'PC 左右固定', '宽屏左随机 + 右选中，窄屏只显示右侧')
+                    ('both', 'PC 左右固定', '宽屏左右各一张，窄屏只显示右侧')
                 ] %}
                 <label class="pattern-pos-option{{ ' active' if pattern_pos == key }}">
                     <input type="radio" name="pattern_position" value="{{ key }}"{{ ' checked' if pattern_pos == key }} hidden>
@@ -74,6 +74,26 @@
                 {% endfor %}
             </div>
             <span class="form-hint">固定模式在桌面端保持图片尺寸不变，不随分辨率拉伸；移动端仍自动铺满底部。</span>
+        </div>
+        <div class="form-group pattern-both-picker"{% if pattern_pos != 'both' %} hidden{% endif %}>
+            <label>左右固定底图</label>
+            {% set pat_left = pattern_left_image|default('1') %}
+            {% set pat_right = (pattern_right_image|default('') or pattern_image|default('3')) %}
+            {% for field, side, current in [('pattern_left_image', '左侧', pat_left), ('pattern_right_image', '右侧', pat_right)] %}
+            <div class="pattern-both-row">
+                <span class="pattern-both-label">{{ side }}</span>
+                <div class="pattern-picker pattern-picker-sm">
+                    {% for key, label in [('1', '洪崖洞吊脚楼'), ('2', '长江索道跨江'), ('3', '山城老街梯坎')] %}
+                    <label class="pattern-option{{ ' active' if current == key }}">
+                        <input type="radio" name="{{ field }}" value="{{ key }}"{{ ' checked' if current == key }} hidden>
+                        <img src="{{ url_for('theme_static', filename='tech/static/cq-bg-' ~ key ~ '-light.webp', v='18') }}" alt="{{ label }}" loading="lazy">
+                        <span>{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <span class="form-hint">左右各选一张，可选相同；仅在「PC 左右固定」时生效。</span>
         </div>
         <div class="form-group">
             <label class="switch-label">
@@ -137,27 +157,37 @@
     });
     syncPanels();
 
-    // 底图选中态
-    var picks = Array.prototype.slice.call(document.querySelectorAll('.pattern-option'));
-    picks.forEach(function (label) {
-        var input = label.querySelector('input[type="radio"]');
-        if (!input) return;
-        input.addEventListener('change', function () {
-            picks.forEach(function (item) { item.classList.remove('active'); });
-            label.classList.add('active');
+    // 底图选中态：每个选择器组内部互斥（主图 / 左右固定左图 / 右图）
+    Array.prototype.slice.call(document.querySelectorAll('.pattern-picker')).forEach(function (group) {
+        var picks = Array.prototype.slice.call(group.querySelectorAll('.pattern-option'));
+        picks.forEach(function (label) {
+            var input = label.querySelector('input[type="radio"]');
+            if (!input) return;
+            input.addEventListener('change', function () {
+                picks.forEach(function (item) { item.classList.remove('active'); });
+                label.classList.add('active');
+            });
         });
     });
 
     // 底图显示位置选中态
     var posPicks = Array.prototype.slice.call(document.querySelectorAll('.pattern-pos-option'));
+    var bothPicker = document.querySelector('.pattern-both-picker');
+    function syncBothPicker() {
+        if (!bothPicker) return;
+        var checked = document.querySelector('input[name="pattern_position"]:checked');
+        bothPicker.hidden = !(checked && checked.value === 'both');
+    }
     posPicks.forEach(function (label) {
         var input = label.querySelector('input[type="radio"]');
         if (!input) return;
         input.addEventListener('change', function () {
             posPicks.forEach(function (item) { item.classList.remove('active'); });
             label.classList.add('active');
+            syncBothPicker();
         });
     });
+    syncBothPicker();
 })();
 </script>
 {% endblock %}

@@ -47,6 +47,8 @@ DEFAULTS: dict[str, str] = {
     "pattern_enabled": "1",
     "pattern_opacity": "20",
     "pattern_image": "3",
+    "pattern_left_image": "1",
+    "pattern_right_image": "",
     "pattern_position": "cover",
     "sensitive_filter_enabled": "0",
     "sensitive_words": "",

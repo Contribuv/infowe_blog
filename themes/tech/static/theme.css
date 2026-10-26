@@ -181,8 +181,8 @@ body::before {
 /* ── 底图位置：默认 / PC 左固定 / PC 右固定 / PC 左右固定 ──
    单侧固定：按 2048 原图的一半（1152×648）显示，尺寸不随视口分辨率缩放，
    避免 cover 在全屏下越拉越大；视口窄于 1252px 时用 92vw 兜底，防止被裁掉。
-   左右固定：右侧固定显示后台选中的图（必选），左侧从其余两张随机一张；
-   ≥1440px 才左右各一张，更窄时只保留右侧，左右宽度按 48vw 对分。
+   左右固定：左右各用一张后台选定的图（可相同），≥1440px 才同时显示，
+   更窄时只保留右侧；左右宽度按 48vw 对分。
    所有固定位置都贴底，上沿与内侧边缘用双层 mask 交叉淡化，避免硬边。 */
 @media (min-width: 768px) {
   html[data-pattern-pos="left"] body::before,
@@ -201,7 +201,7 @@ body::before {
     inset: auto 0 0 auto;
     background-position: right bottom;
   }
-  /* 左侧图（左固定 / 左右模式的随机图）：右侧（内侧）淡出 */
+  /* 左侧图（左固定 / 左右模式的左图）：右侧（内侧）淡出 */
   html[data-pattern-pos="left"] body::before,
   html[data-pattern-pos="both"] body::after {
     -webkit-mask-image:
@@ -213,7 +213,7 @@ body::before {
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
   }
-  /* 右侧图（右固定 / 左右模式的选中图）：左侧（内侧）淡出 */
+  /* 右侧图（右固定 / 左右模式的右图）：左侧（内侧）淡出 */
   html[data-pattern-pos="right"] body::before,
   html[data-pattern-pos="both"] body::before {
     -webkit-mask-image:
@@ -225,18 +225,22 @@ body::before {
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
   }
-  /* 左右模式的随机左图：窄屏隐藏，宽屏由下面的查询打开 */
+  /* 左右固定：右侧用右图，左侧用左图；窄屏只显示右侧 */
+  html[data-pattern-pos="both"] body::before {
+    background-image: var(--pattern-image-right, var(--pattern-image));
+  }
+  /* 左右模式的左图：窄屏隐藏，宽屏由下面的查询打开 */
   html[data-pattern-pos="both"] body::after {
     content: "";
     position: fixed;
     z-index: -1;
     pointer-events: none;
     opacity: var(--pattern-opacity, .10);
-    background-image: var(--pattern-image-alt, none);
+    background-image: var(--pattern-image-left, none);
     display: none;
   }
 }
-/* 宽屏才左右各一张；窄屏只保留右侧选中图 */
+/* 宽屏才左右各一张；窄屏只保留右侧 */
 @media (min-width: 1440px) {
   html[data-pattern-pos="both"] body::before,
   html[data-pattern-pos="both"] body::after {
@@ -244,10 +248,13 @@ body::before {
   }
   html[data-pattern-pos="both"] body::after { display: block; }
 }
-/* 随机左图的 @2x 版本：放在基础规则之后，避免被 1x 覆盖 */
+/* 左右模式两张图的 @2x 版本：放在基础规则之后，避免被 1x 覆盖 */
 @media (min-width: 768px) and (min-resolution: 1.25dppx) {
+  html[data-pattern-pos="both"] body::before {
+    background-image: var(--pattern-image-right-hd, var(--pattern-image-right));
+  }
   html[data-pattern-pos="both"] body::after {
-    background-image: var(--pattern-image-alt-hd, var(--pattern-image-alt));
+    background-image: var(--pattern-image-left-hd, var(--pattern-image-left));
   }
 }
 a { color: var(--accent); text-decoration: none; }
