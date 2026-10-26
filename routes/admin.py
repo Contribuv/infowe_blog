@@ -679,7 +679,7 @@ def _activate_theme():
 
     if "pattern_position" in request.form:
         position = request.form.get("pattern_position", "cover").strip()
-        if position not in {"cover", "left", "right"}:
+        if position not in {"cover", "left", "right", "both"}:
             position = "cover"
         settings.set_value("pattern_position", position)
 

@@ -72,17 +72,24 @@
     {% endif %}
     <!-- 页面装饰：主题底图与透明度（主题管理页可调，0 表示关闭） -->
     {% set pattern_img = pattern_image|default('3') %}
+    {# 左右固定模式：选中图固定在右（必选），左图从其余两张随机抽一张 #}
+    {% set pattern_alt_candidates = ['1', '2', '3'] | reject('equalto', pattern_img) | list %}
+    {% set pattern_img_alt = (pattern_alt_candidates | random) if pattern_alt_candidates else pattern_img %}
     {# 两套分辨率：1x 给普通屏，@2x 给 DPR≥1.25 的高分屏，避免放大发虚 #}
     <style>
       :root {
         --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) / 100) }};
         --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light.webp', v='18') }}");
         --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light@2x.webp', v='18') }}");
+        --pattern-image-alt: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img_alt ~ '-light.webp', v='18') }}");
+        --pattern-image-alt-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img_alt ~ '-light@2x.webp', v='18') }}");
       }
       [data-theme="dark"] {
         --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) * 0.9 / 100) }};
         --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark.webp', v='18') }}");
         --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark@2x.webp', v='18') }}");
+        --pattern-image-alt: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img_alt ~ '-dark.webp', v='18') }}");
+        --pattern-image-alt-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img_alt ~ '-dark@2x.webp', v='18') }}");
       }
       {% if pattern_enabled|default('1') not in ('1', 'on', 'true', 'yes') %}
       :root, [data-theme="dark"] { --pattern-opacity: 0; }

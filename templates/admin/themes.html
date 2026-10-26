@@ -63,7 +63,8 @@
                 {% for key, label, hint in [
                     ('cover', '跟随分辨率', '铺满视口，随窗口大小缩放（默认）'),
                     ('left', 'PC 左侧固定', '固定尺寸贴左下，右侧与上沿淡化'),
-                    ('right', 'PC 右侧固定', '固定尺寸贴右下，左侧与上沿淡化')
+                    ('right', 'PC 右侧固定', '固定尺寸贴右下，左侧与上沿淡化'),
+                    ('both', 'PC 左右固定', '宽屏左随机 + 右选中，窄屏只显示右侧')
                 ] %}
                 <label class="pattern-pos-option{{ ' active' if pattern_pos == key }}">
                     <input type="radio" name="pattern_position" value="{{ key }}"{{ ' checked' if pattern_pos == key }} hidden>

@@ -134,6 +134,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .cmt-toggle{padding:0}
 .cmt-form .cmt-box[open] .cmt-toggle{padding-bottom:12px}
 .cmt-form .cmt-box-body{padding:0}
+/* 折叠态整卡都是展开热区：内边距与空白处也给手型，避免只有「写评论」可点 */
+.cmt-form:has(.cmt-box:not([open])){cursor:pointer}
 .cmt-form .row{display:flex;gap:9px;margin-bottom:9px}
 .cmt-form input,.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
 .cmt-form textarea{min-height:76px;resize:vertical;margin-bottom:10px}

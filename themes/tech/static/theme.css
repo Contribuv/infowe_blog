@@ -178,14 +178,17 @@ body::before {
     background-size: cover;
   }
 }
-/* ── 底图位置：默认 / PC 左固定 / PC 右固定 ──
-   固定模式只在桌面断点生效：按 2048 原图的一半（1152×648）显示，
-   尺寸不随视口分辨率缩放，避免 cover 在全屏下越拉越大；
-   视口窄于 1252px 时用 92vw 兜底，防止整张图被右侧裁掉。
-   贴底摆放，上沿与内侧边缘用双层 mask 交叉淡化，避免出现硬边。 */
+/* ── 底图位置：默认 / PC 左固定 / PC 右固定 / PC 左右固定 ──
+   单侧固定：按 2048 原图的一半（1152×648）显示，尺寸不随视口分辨率缩放，
+   避免 cover 在全屏下越拉越大；视口窄于 1252px 时用 92vw 兜底，防止被裁掉。
+   左右固定：右侧固定显示后台选中的图（必选），左侧从其余两张随机一张；
+   ≥1440px 才左右各一张，更窄时只保留右侧，左右宽度按 48vw 对分。
+   所有固定位置都贴底，上沿与内侧边缘用双层 mask 交叉淡化，避免硬边。 */
 @media (min-width: 768px) {
   html[data-pattern-pos="left"] body::before,
-  html[data-pattern-pos="right"] body::before {
+  html[data-pattern-pos="right"] body::before,
+  html[data-pattern-pos="both"] body::before,
+  html[data-pattern-pos="both"] body::after {
     inset: auto auto 0 0;
     width: min(1152px, 92vw);
     height: auto;
@@ -193,8 +196,14 @@ body::before {
     background-size: 100% 100%;
     background-position: left bottom;
   }
-  /* 左固定：右侧（内侧）淡出 */
-  html[data-pattern-pos="left"] body::before {
+  html[data-pattern-pos="right"] body::before,
+  html[data-pattern-pos="both"] body::before {
+    inset: auto 0 0 auto;
+    background-position: right bottom;
+  }
+  /* 左侧图（左固定 / 左右模式的随机图）：右侧（内侧）淡出 */
+  html[data-pattern-pos="left"] body::before,
+  html[data-pattern-pos="both"] body::after {
     -webkit-mask-image:
       linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
       linear-gradient(to right, #000 74%, transparent 100%);
@@ -204,10 +213,9 @@ body::before {
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
   }
-  /* 右固定：左侧（内侧）淡出 */
-  html[data-pattern-pos="right"] body::before {
-    inset: auto 0 0 auto;
-    background-position: right bottom;
+  /* 右侧图（右固定 / 左右模式的选中图）：左侧（内侧）淡出 */
+  html[data-pattern-pos="right"] body::before,
+  html[data-pattern-pos="both"] body::before {
     -webkit-mask-image:
       linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
       linear-gradient(to left, #000 74%, transparent 100%);
@@ -216,6 +224,30 @@ body::before {
       linear-gradient(to left, #000 74%, transparent 100%);
     -webkit-mask-composite: source-in;
     mask-composite: intersect;
+  }
+  /* 左右模式的随机左图：窄屏隐藏，宽屏由下面的查询打开 */
+  html[data-pattern-pos="both"] body::after {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--pattern-opacity, .10);
+    background-image: var(--pattern-image-alt, none);
+    display: none;
+  }
+}
+/* 宽屏才左右各一张；窄屏只保留右侧选中图 */
+@media (min-width: 1440px) {
+  html[data-pattern-pos="both"] body::before,
+  html[data-pattern-pos="both"] body::after {
+    width: min(1152px, 48vw);
+  }
+  html[data-pattern-pos="both"] body::after { display: block; }
+}
+/* 随机左图的 @2x 版本：放在基础规则之后，避免被 1x 覆盖 */
+@media (min-width: 768px) and (min-resolution: 1.25dppx) {
+  html[data-pattern-pos="both"] body::after {
+    background-image: var(--pattern-image-alt-hd, var(--pattern-image-alt));
   }
 }
 a { color: var(--accent); text-decoration: none; }

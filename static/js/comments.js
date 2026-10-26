@@ -91,6 +91,16 @@
     cmtBox.addEventListener('toggle', function () {
       if (cmtBox.open) scrollFormIntoView();
     });
+
+    /* 折叠态整卡可点：卡片四周有内边距，原先只有「写评论」那一行是热区，
+       点旁边空白没反应。未展开时点击 form 任意位置都展开并聚焦输入框；
+       展开后不拦截，summary 收起与表单控件保持原生行为。 */
+    form.addEventListener('click', function (e) {
+      if (cmtBox.open) return;
+      e.preventDefault();
+      cmtBox.open = true;
+      if (textarea) textarea.focus();
+    });
   }
 
   /* ── 1. 回复：把表单挂到该评论所属楼层组的回复区末尾 ── */

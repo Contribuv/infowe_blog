@@ -63,16 +63,18 @@
     <div class="tech-links-section">
         <h2>本站信息（加友链可直接复制）</h2>
         {% set site_title = home_title or blog_name %}
+        {% set site_bio = blog_subtitle or '记录折腾与思考' %}
         <div class="tech-links-card">
             <img class="tech-links-card-avatar" src="{{ avatar_url }}" alt="{{ site_title }}" loading="lazy" onerror="this.style.display='none'">
             <div class="tech-links-card-main">
                 <span class="tech-links-card-name">{{ site_title }}</span>
-                <span class="tech-links-card-bio">{% if blog_subtitle %}{{ blog_subtitle }}{% else %}记录折腾与思考{% endif %}</span>
+                <span class="tech-links-card-bio">{{ site_bio }}</span>
                 <span class="tech-links-card-url">{{ site_url }}/</span>
             </div>
         </div>
         <div class="tech-links-copyrow">
             <button type="button" class="tech-copy" data-copy="{{ site_title }}">复制站名</button>
+            <button type="button" class="tech-copy" data-copy="{{ site_bio }}">复制介绍</button>
             <button type="button" class="tech-copy" data-copy="{{ site_url }}/">复制站点地址</button>
             <button type="button" class="tech-copy" data-copy="{{ avatar_url }}">复制头像地址</button>
             <button type="button" class="tech-copy" data-copy='<a href="{{ site_url }}/" target="_blank">{{ site_title }}</a>'>复制 HTML 代码</button>
