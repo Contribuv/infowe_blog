@@ -19,3 +19,6 @@ Thumbs.db
 # 本地计划文档（不推送）
 PLAN.md
 docs/
+
+# 本地页面分享包（不推送）
+.trae-html-share-packages/

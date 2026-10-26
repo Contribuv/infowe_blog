@@ -3,10 +3,14 @@
 {% block content %}
 <div class="tech-page-head">
     <h1 class="tech-page-title">服务状态</h1>
-    <p class="tech-page-desc">云资源到期时间与在线服务可用性一览，数据每 5 分钟自动更新</p>
+    <p class="tech-page-desc">云资源到期时间与在线服务可用性，每 5 分钟自动探测</p>
 </div>
 
 <div class="tech-status">
+    {% if services %}
+    <p class="status-hint" id="status-hint"></p>
+    {% endif %}
+
     <!-- 云资源到期时间 -->
     <section class="tech-status-section">
         <h2>到期时间 <span class="svc-count">云资源</span></h2>
@@ -60,9 +64,6 @@
             </div>
             {% endfor %}
         </div>
-        {% if services %}
-        <p class="status-hint" id="status-hint"></p>
-        {% endif %}
     </section>
 </div>
 {% endblock %}

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.17-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.17)
+[![version](https://img.shields.io/badge/version-3.2.18-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.18)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,22 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.17**
+- 版本：**v3.2.18**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.18
+
+tech 主题回到「纯色底 + 内容优先」，并补齐首屏性能。
+
+- 背景：移除全部照片底图、雾带、山脊、江面、江岸灯带与李子坝轻轨动画，页面只剩 --bg 纯色；后台「页面背景装饰」面板与 pattern_* 设置一并删除，	hemes/tech/static 不再包含任何图片
+- 浅色配色：底色 #f4f6f9 → #fbfcfd（近白纸面），文字 #161b24，主色 #1c5b8f，边框 #e1e6ed，次级底 #f0f3f7；正文对比约 16:1
+- 卡片悬停：撤掉液态玻璃（斜向高光 + 白色内描边 + 大投影），首页文章卡 / 相关推荐 / 上下篇 / 项目卡 / 友链卡 / 搜索建议统一为「实色一档 + 1px 淡描边 + 标题变主色」，深色 #171b25、浅色 #eef2f7
+- 评论区：.cmt-form 透明无底色（去掉 ackdrop-filter 与 @supports 覆盖），只留 1px 描边；「以博主身份评论」提示条改用面板色 #161a24 / #f0f3f7 + 细边
+- 状态页：改为卡片分区（到期时间 / 服务状态），行内指标做成 pill、状态点带光晕，移动端指标换行；status.js 轮询接口不变
+- 首屏性能：新增 gzip 兜底（HTML 34→11.6KB、CSS 63→11.5KB、JS 17.5→7KB），静态压缩结果按 mtime 缓存；页面缓存命中时输出 Cache-Control: public, max-age=30, stale-while-revalidate=120
+- 修复：主题静态文件扩展名合法但文件不存在时返回 500，改为 404
+- 主题信息：info.json 升到 2.7.1，描述精简为一行
 
 ### v3.2.17
 

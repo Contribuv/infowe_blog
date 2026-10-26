@@ -660,42 +660,6 @@ def _activate_theme():
     else:
         flash(f"无效的主题：{new_theme}", "error")
 
-    # 主题页的「页面背景装饰」跟随主题一起保存
-    if "pattern_enabled" in request.form or "pattern_opacity" in request.form:
-        settings.set_value(
-            "pattern_enabled", "1" if request.form.get("pattern_enabled") else "0"
-        )
-        try:
-            opacity = int(request.form.get("pattern_opacity") or "20")
-        except ValueError:
-            opacity = 20
-        settings.set_value("pattern_opacity", str(max(0, min(30, opacity))))
-
-    if "pattern_image" in request.form:
-        image = request.form.get("pattern_image", "3").strip()
-        if image not in {"1", "2", "3", "4"}:
-            image = "3"
-        settings.set_value("pattern_image", image)
-
-    # 左右固定模式的左右两张图：各自独立选择，允许相同
-    if "pattern_left_image" in request.form:
-        left = request.form.get("pattern_left_image", "1").strip()
-        if left not in {"1", "2", "3", "4"}:
-            left = "1"
-        settings.set_value("pattern_left_image", left)
-
-    if "pattern_right_image" in request.form:
-        right = request.form.get("pattern_right_image", "").strip()
-        if right not in {"1", "2", "3", "4"}:
-            right = ""
-        settings.set_value("pattern_right_image", right)
-
-    if "pattern_position" in request.form:
-        position = request.form.get("pattern_position", "cover").strip()
-        if position not in {"cover", "left", "right", "both"}:
-            position = "cover"
-        settings.set_value("pattern_position", position)
-
     return redirect(url_for("admin_themes"))
 
 

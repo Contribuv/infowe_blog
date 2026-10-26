@@ -158,10 +158,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-hint{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px;color:var(--c-accent)}
 .cmt-hint button{font-size:11.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer}
 @media (hover:hover) and (pointer:fine){ .cmt-hint button:hover{color:var(--c-text2)} }
-.cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:12.5px;color:var(--c-text3)}
+.cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--c-hairline);font-size:12.5px;color:var(--c-text3)}
 .cmt-remember button{flex:none;font-size:11.5px;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
 /* 博主身份条：登录后替代昵称/邮箱/网址输入行（与 .cmt-remember 同为卡内 tint 块，不加描边） */
-.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:13px;color:var(--c-text)}
+.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--c-hairline);font-size:13px;color:var(--c-text)}
 .cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none}
 
 /* ── 空态 ── */
@@ -257,17 +257,18 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-suggest-item+.cmt-suggest-item{border-top:1px solid var(--c-border)}
 @media (hover:hover) and (pointer:fine){ .cmt-suggest-item:hover{color:var(--c-accent)} }
 
-/* ═══ 评论表单毛玻璃降级（与 theme.css 同策略）═══
-   不支持 backdrop-filter 时回退实色；移动端提一档不透明度并降低模糊半径。
-   这里同样避开 `@supports not`（压缩后会失效），用「默认实色 + 正向查询」。
+/* ═══ 评论表单：透明底 ═══
+   表单不要底色块，只留 1px 描边和圆角，让页面本身的墨蓝底直接透出来；
+   边框保留是为了在深色背景上仍能看出输入区域的范围。
+   这里同样避开 `@supports not`（压缩后会失效），用「默认透明 + 正向查询兜底」。
    注意 .cmt-form.is-inline 的 background:none 特异性更高，不受影响。 */
-.cmt-form{background:var(--bg)}
+.cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 @supports (backdrop-filter: blur(1px)){
-  .cmt-form{background:var(--glass-bg-form,rgba(250,249,247,.84))}
+  .cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 @supports (-webkit-backdrop-filter: blur(1px)){
-  .cmt-form{background:var(--glass-bg-form,rgba(250,249,247,.84))}
+  .cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 @media (max-width:767px){
-  .cmt-form{background:var(--glass-bg-mobile,rgba(250,249,247,.9));-webkit-backdrop-filter:saturate(150%) blur(10px);backdrop-filter:saturate(150%) blur(10px)}
+  .cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 }

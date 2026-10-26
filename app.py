@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import os
 import re
 import secrets
@@ -20,6 +21,23 @@ from services import theme as theme_service
 from services import quotes as quotes_service
 from services.storage import migrate_legacy_storage
 from services.settings import get_str
+
+# 走 gzip 的文本类型（图片/字体/视频不在其中）
+_GZIP_TYPES = {
+    "text/html",
+    "text/css",
+    "text/plain",
+    "text/xml",
+    "application/javascript",
+    "text/javascript",
+    "application/json",
+    "application/rss+xml",
+    "application/atom+xml",
+    "image/svg+xml",
+}
+
+# 静态文件压缩结果按「路径 + Last-Modified」缓存，避免每次请求都重新压
+_STATIC_GZIP_CACHE: dict[str, bytes] = {}
 
 
 def _ensure_dirs() -> None:
@@ -180,12 +198,6 @@ def _register_hooks(app: Flask) -> None:
             "blog_subtitle": conf.get("blog_subtitle", ""),
             "home_title": conf.get("home_title", ""),
             "home_quotes": quotes_service.parse(conf.get("home_quotes", "")),
-            "pattern_enabled": conf.get("pattern_enabled", "1"),
-            "pattern_opacity": conf.get("pattern_opacity", "20"),
-            "pattern_image": conf.get("pattern_image", "3"),
-            "pattern_left_image": conf.get("pattern_left_image", "1"),
-            "pattern_right_image": conf.get("pattern_right_image", ""),
-            "pattern_position": conf.get("pattern_position", "cover"),
             "home_posts_count": conf.get("home_posts_count", "6"),
             "posts_per_page": conf.get("posts_per_page", "20"),
             "comments_enabled": conf.get("comments_enabled", "1"),
@@ -224,6 +236,60 @@ def _register_hooks(app: Flask) -> None:
             "lang_color": _lang_color,
             "icon": icon_svg,
         }
+
+    @app.after_request
+    def _gzip_response(response):
+        """gzip 兜底：Nginx 已压缩时响应会带 Content-Encoding，这里直接跳过。
+
+        只压 HTML / CSS / JS / JSON 这类文本；静态文件的结果按
+        「路径 + Last-Modified」缓存，避免每次请求都重新压一遍。
+        """
+        if request.method == "HEAD":
+            return response
+        if response.headers.get("Content-Encoding"):
+            return response
+        accept = (request.headers.get("Accept-Encoding") or "").lower()
+        if "gzip" not in accept:
+            return response
+        ctype = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype not in _GZIP_TYPES:
+            return response
+        if response.direct_passthrough:
+            # Flask 的静态文件默认直通发送；只在站内静态目录上关掉直通，
+            # 走下面的读文件 + 压缩流程
+            if not request.path.startswith(("/static/", "/themes/")):
+                return response
+            response.direct_passthrough = False
+
+        last_mod = response.headers.get("Last-Modified") or ""
+        cache_key = f"{request.path}|{last_mod}" if last_mod else ""
+        packed = _STATIC_GZIP_CACHE.get(cache_key) if cache_key else None
+        if packed is None:
+            try:
+                raw = response.get_data()
+            except RuntimeError:
+                return response
+            if len(raw) < 1024:
+                return response
+            packed = gzip.compress(raw, compresslevel=6)
+            if len(packed) >= len(raw) * 0.9:
+                return response
+            if cache_key:
+                if len(_STATIC_GZIP_CACHE) > 200:
+                    _STATIC_GZIP_CACHE.clear()
+                _STATIC_GZIP_CACHE[cache_key] = packed
+
+        response.set_data(packed)
+        response.headers["Content-Encoding"] = "gzip"
+        response.headers["Content-Length"] = str(len(packed))
+        vary = response.headers.get("Vary")
+        if vary:
+            if "Accept-Encoding" not in vary:
+                response.headers["Vary"] = vary + ", Accept-Encoding"
+        else:
+            response.headers["Vary"] = "Accept-Encoding"
+        response.headers.pop("ETag", None)
+        return response
 
     @app.after_request
     def _security_headers(response):

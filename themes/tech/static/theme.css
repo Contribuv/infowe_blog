@@ -10,7 +10,7 @@
    支持的浏览器在站内跳转时淡出旧页、淡入新页；
    不支持时由 base.html 的 page-enter 兜底，仅做新页淡入。 */
 @view-transition { navigation: auto; }
-::view-transition { background: var(--bg, #ffffff); }
+::view-transition { background: var(--bg, #fbfcfd); }
 ::view-transition-group(root) { animation-duration: 140ms; }
 ::view-transition-old(root) { animation: tech-vt-out 100ms ease-out both; }
 ::view-transition-new(root) { animation: tech-vt-in 140ms ease-out both; }
@@ -26,113 +26,137 @@
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  /* 日间配色：冷蓝灰纸感——与底图线条色 (160,174,199) 同一色系，
-     避免暖白纸底 (#faf9f7) 与冷色底图「两套色温」的割裂；
-     文字从暖黑改为中性深灰，对比度 14.9:1，AA 无忧 */
-  --bg: #f6f8fb;
+  /* 日间配色：近白纸面 + 冷灰描边 + 墨蓝点缀。
+     底色不再压成灰蓝（#f4f6f9 那种整页发灰的观感），改成接近纯白的 #fbfcfd，
+     层级靠 --bg-subtle / 1px 边框拉开；文字用墨黑 #161b24，正文对比约 16:1。
+     交互色统一收在 --hover-* 两个令牌里：深色浅色都只是「极淡一层」，
+     不再有会发白的玻璃高光。 */
+  --bg: #fbfcfd;
   /* 导航毛玻璃半透明背景：与底色同源，保留底色识别 */
-  --nav-bg: rgba(246, 248, 251, .78);
-  --bg-subtle: #eef1f6;
-  --bg-code: #f1f4f8;
-  --border: #dce2ea;
-  --border-strong: #c5ced9;
-  --text: #2a3038;
-  --text-secondary: #646c78;
-  /* 加深后的蓝：白字 5.73:1、浅底文字 5.23:1（原 #2f6feb 仅 4.34:1，12–14px 不达 AA） */
-  --accent: #1f5fd6;
-  --accent-weak: #e9f0ff;
-  --quote-bg: #f0f3f7;
-  --success: #2f7a46;
-  --warning: #8a5a00;
-  --danger: #b4232f;
-  --shadow: 0 1px 3px rgba(30, 40, 56, .06);
-  --overlay: rgba(30, 40, 56, .45);
-  --code-bg: #f1f4f8;
-  --hl-keyword: #b4232f;
-  --hl-string: #2d5f8b;
-  --hl-title: #7c5cad;
-  --hl-comment: #646c78;
-  --hl-number: #1f5fd6;
-  --hl-builtin: #8a5a00;
-  --hl-variable: #8a5a00;
-  --hl-tag: #2f7a46;
-  --hl-attr: #1f5fd6;
-  --hl-symbol: #7c5cad;
-  --hl-meta: #2b2a27;
-  /* 头像光环配色（亮色：低饱和蓝→紫渐变，避免割裂感） */
-  --ring-a: rgba(31, 95, 214, .26);
-  --ring-b: rgba(124, 92, 173, .26);
-  /* 毛玻璃层（浅色）：底图会从玻璃后面透出来，不透明度低于 .8 时
-     卡片后面的线条清晰可辨，显得「透」而不「磨砂」，浅色下尤其明显 */
-  --glass-bg: rgba(246, 248, 251, .84);
-  --glass-bg-form: rgba(246, 248, 251, .84);
-  --glass-bg-mobile: rgba(246, 248, 251, .9);
-  /* 液态玻璃：悬停卡片的「镜面」语言——斜向高光渐变 + 内描边高光 + 悬浮投影。
-     卡片用比表单更透的 --glass-card（.72），否则 blur 只作用在透出的两成里，
-     玻璃感完全看不出来；深色下白光约浅色的 2/3，投影换纯黑加深悬浮 */
-  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.25), rgba(255,255,255,.08) 55%, rgba(255,255,255,.15));
-  --glass-inset: inset 0 1px 0 rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.45);
-  --glass-drop: 0 8px 28px rgba(30, 40, 56, .16);
-  --glass-card: rgba(246, 248, 251, .72);
-  /* 背景底图由 tech/templates/base.html 按后台设置注入（--pattern-image / --pattern-opacity） */
+  --nav-bg: rgba(251, 252, 253, .82);
+  --bg-subtle: #f0f3f7;
+  --bg-code: #f2f5f9;
+  --border: #e1e6ed;
+  --border-strong: #c6ced9;
+  --text: #161b24;
+  --text-secondary: #5a6575;
+  /* 墨蓝：白字 7.9:1、浅底文字约 6.9:1，14px 以下也稳过 AA */
+  --accent: #1c5b8f;
+  --accent-soft: #4a7fae;
+  --accent-weak: #e7eff7;
+  --quote-bg: #f2f5f9;
+  --success: #2b6e52;
+  --warning: #8a6314;
+  --danger: #a83545;
+  --shadow: 0 1px 2px rgba(16, 27, 43, .06);
+  --overlay: rgba(16, 27, 43, .45);
+  --code-bg: #f2f5f9;
+  --hl-keyword: #a03a52;
+  --hl-string: #2f6b57;
+  --hl-title: #6a4fa3;
+  --hl-comment: #63718a;
+  --hl-number: #a35c1a;
+  --hl-builtin: #7d5a1a;
+  --hl-variable: #35566f;
+  --hl-tag: #9c3f56;
+  --hl-attr: #1c5b8f;
+  --hl-symbol: #6a4fa3;
+  --hl-meta: #45566b;
+  /* 头像光环配色（亮色：墨蓝→靛紫渐变） */
+  --ring-a: rgba(28, 91, 143, .26);
+  --ring-b: rgba(106, 79, 163, .26);
+  /* 毛玻璃层（浅色）：只给 TOC / 搜索面板这类浮层用，不参与卡片悬停 */
+  --glass-bg: rgba(251, 252, 253, .86);
+  --glass-bg-form: rgba(251, 252, 253, .86);
+  --glass-bg-mobile: rgba(251, 252, 253, .92);
+  /* 卡片悬停：实色一档（不叠半透明），深/浅都能预期；再配一条淡描边 */
+  --hover-bg: #eef2f7;
+  --hover-ring: rgba(28, 91, 143, .18);
 }
 
 [data-theme="dark"] {
-  /* ponytail: per-pattern color schemes – define custom colors per pattern id, e.g.,
-     :root[data-pattern="1"] { --bg: #..., --text: #... } */
   color-scheme: dark;
-  /* 夜间配色：深灰蓝底 + 柔白文字，避免纯黑/纯白的高对比刺眼感 */
-  --bg: #191c22;
-  /* 暗色导航毛玻璃：与底色同源同透明度，背景透出更自然 */
-  --nav-bg: rgba(25, 28, 34, .78);
-  --bg-subtle: #20242c;
-  --bg-code: #1d2129;
-  --border: #2d323c;
-  --border-strong: #3c424f;
-  --text: #c7ccd8;
-  --text-secondary: #949cab;
-  --accent: #7aa2f7;
-  --accent-weak: rgba(122, 162, 247, .14);
-  /* 头像光环配色（暗色：柔和蓝→淡紫渐变，深底上不刺眼） */
-  --ring-a: #7aa2f7;
-  --ring-b: #bb9af7;
-  /* 毛玻璃层（深色）：深底上玻璃感天然更弱，同样压到 .8 起，
-     否则底图线条会从评论表单后面透出来 */
-  --glass-bg: rgba(25, 28, 34, .80);
-  --glass-bg-form: rgba(25, 28, 34, .80);
-  --glass-bg-mobile: rgba(25, 28, 34, .88);
-  /* 液态玻璃（深色）：白光约浅色的 2/3——再淡就淹没在深底里；
-     投影纯黑加深悬浮感；卡片底 .66，让 screen 混合的灯线透进来被 blur 晕成光斑 */
-  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 55%, rgba(255,255,255,.10));
-  --glass-inset: inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 1px rgba(255,255,255,.2);
-  --glass-drop: 0 8px 28px rgba(0, 0, 0, .5);
-  --glass-card: rgba(25, 28, 34, .66);
-  /* 背景底图由 base.html 按后台设置注入（深色版整体再乘 0.9） */
-  --quote-bg: #20232b;
-  --success: #86b87c;
-  --warning: #d4b06a;
-  --danger: #e08593;
-  --shadow: 0 1px 3px rgba(8, 10, 14, .35);
-  --overlay: rgba(8, 10, 14, .62);
-  --code-bg: #1d2129;
-  --hl-keyword: #bb9af7;
-  --hl-string: #9ece6a;
-  --hl-title: #7dcfff;
-  --hl-comment: #8d95a4;
-  --hl-number: #ff9e64;
-  --hl-builtin: #e0af68;
-  --hl-variable: #c0caf5;
-  --hl-tag: #f7768e;
-  --hl-attr: #7dcfff;
-  --hl-symbol: #bb9af7;
-  --hl-meta: #e0af68;
+  /* 夜间配色：与后台设计系统对齐——近黑的冷灰蓝底 + 中性柔白文字。
+     层级不再靠蓝调变化区分，而是照后台用 #161a24 / #12151f 两档表面，
+     边框改成低透明度白线，整体更接近后台那种「干净的深色面板」 */
+  --bg: #0f1117;
+  /* 暗色导航毛玻璃：与底色同源同透明度 */
+  --nav-bg: rgba(15, 17, 23, .78);
+  --bg-subtle: #161a24;
+  --bg-code: #12151f;
+  --border: rgba(255, 255, 255, .07);
+  --border-strong: rgba(255, 255, 255, .14);
+  --text: #e8eaf0;
+  --text-secondary: #a0a6b5;
+  /* 主蓝取后台的 #5b8def，深底上约 5.6:1，链接与按钮均过 AA */
+  --accent: #5b8def;
+  --accent-soft: #7aa5f5;
+  --accent-weak: rgba(91, 141, 239, .14);
+  /* 头像光环配色（暗色：后台主蓝→淡紫渐变，深底上不刺眼） */
+  --ring-a: #5b8def;
+  --ring-b: #a78bfa;
+  /* 毛玻璃层（深色）：玻璃底取后台面板色 #161a24 而非页面底色，
+     半透明叠在 #0f1117 上仍比页面亮一档，代码块/TOC 才有「浮起来」的面板感 */
+  --glass-bg: rgba(22, 26, 36, .80);
+  --glass-bg-form: rgba(22, 26, 36, .80);
+  --glass-bg-mobile: rgba(22, 26, 36, .88);
+  --quote-bg: #161a24;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 4px 16px rgba(0, 0, 0, .18);
+  --overlay: rgba(4, 6, 12, .62);
+  --code-bg: #12151f;
+  /* 语法高亮：以主蓝为中心，紫/绿/橙只作区分色；
+     全部避开高饱和荧光色，长文阅读不累眼 */
+  --hl-keyword: #a78bfa;
+  --hl-string: #6fcf97;
+  --hl-title: #5b8def;
+  --hl-comment: #7b8494;
+  --hl-number: #e0a44f;
+  --hl-builtin: #d9c07a;
+  --hl-variable: #d5dae4;
+  --hl-tag: #f87171;
+  --hl-attr: #7aa5f5;
+  --hl-symbol: #a78bfa;
+  --hl-meta: #d9c07a;
+  /* 卡片悬停：直接用比页面亮一档的面板色，再配一条淡描边；
+     不要再叠白色玻璃高光（那会让卡片在深底上突然发白） */
+  --hover-bg: #171b25;
+  --hover-ring: rgba(255, 255, 255, .13);
+}
+
+/* ── 接管 markdown 正文令牌（markdown-body.css 后加载，用 html[...] 提高特异性）
+   --mb-* 只覆盖前台主题作用域，后台编辑器预览不受影响 */
+html[data-theme="light"] {
+  --mb-fg: #161b24;
+  --mb-fg-muted: #5a6575;
+  --mb-link: #1c5b8f;
+  --mb-border: #e1e6ed;
+  --mb-border-muted: #eceff4;
+  --mb-code-bg: #f2f5f9;
+  --mb-inline-code: rgba(28, 91, 143, .09);
+  --mb-hr: #eceff4;
+  --mb-mark: #f7ecd2;
+  --mb-th-bg: #f2f5f9;
+}
+html[data-theme="dark"] {
+  --mb-fg: #e8eaf0;
+  --mb-fg-muted: #a0a6b5;
+  --mb-link: #5b8def;
+  --mb-border: rgba(255, 255, 255, .07);
+  --mb-border-muted: rgba(255, 255, 255, .045);
+  --mb-code-bg: #12151f;
+  --mb-inline-code: rgba(91, 141, 239, .14);
+  --mb-hr: rgba(255, 255, 255, .06);
+  --mb-mark: rgba(251, 191, 36, .22);
+  --mb-th-bg: #161a24;
 }
 
 /* ── 基础 ── */
 * { box-sizing: border-box; }
 html {
   -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scrollbar-gutter: stable;
-  /* 页面底色放在 html 上，body 透明，背景水印才能显示在内容之下 */
   background: var(--bg);
   /* 移动端全站禁用系统点按高亮块（Android Chrome 默认灰/蓝半透明方块）。
      该属性可继承，在 html 声明一次即可覆盖所有可点元素，无需逐个选择器声明 */
@@ -142,163 +166,18 @@ body {
   margin: 0;
   min-height: 100vh;
   position: relative;
+  isolation: isolate; /* 让背景伪元素的 z-index:-1 停在内容下方，而不是跑到 html 背景后面 */
   display: flex;
   flex-direction: column;
   font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.7;
   color: var(--text);
-  background: transparent;
+  background: transparent; /* 底色在 html 上，body 保持透明 */
   -webkit-font-smoothing: antialiased;
   transition: color .2s;
 }
 
-/* ── 页面背景：重庆山城手绘线稿 ──
-   深浅主题各一张同构图 WebP，线条色写死在图片里，整体透明度由后台「页面装饰」注入。
-   fixed + inset:0：滚动页面时图案始终贴在视口上，不随内容移动，也不遮挡阅读。
-
-   宽度与高度都用 cover：图案始终等比放大到覆盖整个视口，任何屏幕比例、任何分辨率下
-   都不会出现留白。代价是比例不一致时会裁边——
-     · 16:9（1920×1080、2560×1440）→ 恰好铺满，无裁切
-     · 更宽（21:9、带鱼屏）→ 高度方向裁掉上下
-     · 更窄（16:10、竖屏、缩小窗口）→ 宽度方向裁掉左右
-   裁切从底边对齐、居中裁，图案主体始终留在画面里；遮罩从容器顶端开始淡入，
-   所以无论裁掉多少都不会出现硬边。 */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: var(--pattern-image);
-  background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: cover;
-  /* 顶部淡入：三段式缓坡，从完全透明到实色，避免图片上沿出现硬边 */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .22) 20%, rgba(0, 0, 0, .62) 48%, #000 78%);
-  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .22) 20%, rgba(0, 0, 0, .62) 48%, #000 78%);
-  opacity: var(--pattern-opacity, .10);
-}
-/* 高分屏换用 2560×1440 的 hd 档：在 1920CSS×DPR1.25–2、2560CSS×DPR1 的组合上基本 1:1，
-   不再由浏览器把 2048 的图实时放大，线条不会发虚。
-   4K 全屏（CSS 宽 ≥2200 且高分屏）才升到 3840 的 uhd 档，避免大多数访客白下 1.4MB。
-   只在桌面断点启用——手机屏窄，1x 图已经够用，没必要多花流量。 */
-@media (min-width: 768px) and (min-resolution: 1.25dppx) {
-  body::before {
-    background-image: var(--pattern-image-hd, var(--pattern-image));
-  }
-}
-@media (min-width: 2200px) and (min-resolution: 1.25dppx) {
-  body::before {
-    background-image: var(--pattern-image-uhd, var(--pattern-image-hd, var(--pattern-image)));
-  }
-}
-/* 深色主题：底图用 screen 混合——朝天门是夜景，亮色灯线 (160,174,199) 与深底
-   screen 后呈「发光」效果，整片均匀的低 alpha 雾也被混合稀释掉；
-   浅色保持 normal（深线压浅底，换混合模式反而显脏） */
-[data-theme="dark"] body::before,
-[data-theme="dark"] body::after {
-  mix-blend-mode: screen;
-}
-/* 移动端：图案按屏幕宽度完整显示（16:9 等比，不裁左右），贴底并沿用上沿渐隐。
-   竖屏若继续用 46vh + cover，会把 16:9 图放大到只剩中间约 56%，
-   朝天门两侧的江面和建筑会被裁掉，所以这里改成整图宽度铺满。 */
-@media (max-width: 767px) {
-  body::before {
-    inset: auto 0 0;
-    height: 56.25vw;
-    background-size: 100% 100%;
-    background-position: center bottom;
-  }
-}
-/* ── 底图位置：默认 / PC 左固定 / PC 右固定 / PC 左右固定 ──
-   单侧固定：按 2048 原图的一半（1152×648）显示，尺寸不随视口分辨率缩放，
-   避免 cover 在全屏下越拉越大；视口窄于 1252px 时用 92vw 兜底，防止被裁掉。
-   左右固定：左右各用一张后台选定的图（可相同），≥1440px 才同时显示，
-   更窄时只保留右侧；左右宽度按 48vw 对分。
-   所有固定位置都贴底，上沿与内侧边缘用双层 mask 交叉淡化，避免硬边。 */
-@media (min-width: 768px) {
-  html[data-pattern-pos="left"] body::before,
-  html[data-pattern-pos="right"] body::before,
-  html[data-pattern-pos="both"] body::before,
-  html[data-pattern-pos="both"] body::after {
-    inset: auto auto 0 0;
-    width: min(1152px, 92vw);
-    height: auto;
-    aspect-ratio: 16 / 9;
-    background-size: 100% 100%;
-    background-position: left bottom;
-  }
-  html[data-pattern-pos="right"] body::before,
-  html[data-pattern-pos="both"] body::before {
-    inset: auto 0 0 auto;
-    background-position: right bottom;
-  }
-  /* 左侧图（左固定 / 左右模式的左图）：右侧（内侧）淡出 */
-  html[data-pattern-pos="left"] body::before,
-  html[data-pattern-pos="both"] body::after {
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
-      linear-gradient(to right, #000 74%, transparent 100%);
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
-      linear-gradient(to right, #000 74%, transparent 100%);
-    -webkit-mask-composite: source-in;
-    mask-composite: intersect;
-  }
-  /* 右侧图（右固定 / 左右模式的右图）：左侧（内侧）淡出 */
-  html[data-pattern-pos="right"] body::before,
-  html[data-pattern-pos="both"] body::before {
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
-      linear-gradient(to left, #000 74%, transparent 100%);
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .3) 22%, #000 58%),
-      linear-gradient(to left, #000 74%, transparent 100%);
-    -webkit-mask-composite: source-in;
-    mask-composite: intersect;
-  }
-  /* 左右固定：右侧用右图，左侧用左图；窄屏只显示右侧 */
-  html[data-pattern-pos="both"] body::before {
-    background-image: var(--pattern-image-right, var(--pattern-image));
-  }
-  /* 左右模式的左图：窄屏隐藏，宽屏由下面的查询打开 */
-  html[data-pattern-pos="both"] body::after {
-    content: "";
-    position: fixed;
-    z-index: -1;
-    pointer-events: none;
-    opacity: var(--pattern-opacity, .10);
-    background-image: var(--pattern-image-left, none);
-    display: none;
-  }
-}
-/* 宽屏才左右各一张；窄屏只保留右侧 */
-@media (min-width: 1440px) {
-  html[data-pattern-pos="both"] body::before,
-  html[data-pattern-pos="both"] body::after {
-    width: min(1152px, 48vw);
-  }
-  html[data-pattern-pos="both"] body::after { display: block; }
-}
-/* 左右模式两张图的高分屏版本：放在基础规则之后，避免被 1x 覆盖；
-   4K 全屏再升 uhd（仅第 4 张素材有真 4K 源，其余素材 hd/uhd 都回落 1x） */
-@media (min-width: 768px) and (min-resolution: 1.25dppx) {
-  html[data-pattern-pos="both"] body::before {
-    background-image: var(--pattern-image-right-hd, var(--pattern-image-right));
-  }
-  html[data-pattern-pos="both"] body::after {
-    background-image: var(--pattern-image-left-hd, var(--pattern-image-left));
-  }
-}
-@media (min-width: 2200px) and (min-resolution: 1.25dppx) {
-  html[data-pattern-pos="both"] body::before {
-    background-image: var(--pattern-image-right-uhd, var(--pattern-image-right-hd, var(--pattern-image-right)));
-  }
-  html[data-pattern-pos="both"] body::after {
-    background-image: var(--pattern-image-left-uhd, var(--pattern-image-left-hd, var(--pattern-image-left)));
-  }
-}
 a { color: var(--accent); text-decoration: none; }
 img { max-width: 100%; }
 ::selection { background: var(--accent-weak); }
@@ -638,7 +517,7 @@ html.page-enter .tech-main {
   background: var(--accent); border: none; border-radius: 8px; cursor: pointer;
 }
 /* 深色 accent 实底：白字仅 2.52:1，改深字后 7.05:1（与 .tech-btn-primary 同款） */
-[data-theme="dark"] .tech-search-btn { color: #16181d; }
+[data-theme="dark"] .tech-search-btn { color: #0f1117; }
 @media (hover: hover) and (pointer: fine) { .tech-search-btn:hover { filter: brightness(1.1); } }
 /* 深色下 hover 提亮会让深字与底色更接近，改为压暗 */
 @media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-search-btn:hover { filter: brightness(.92); } }
@@ -664,34 +543,22 @@ html.page-enter .tech-main {
   border-radius: 10px;
   border-bottom: 1px solid var(--border);
   -webkit-tap-highlight-color: transparent;
-  transition: background-color .18s ease;
+  transition: background-color .18s ease, box-shadow .18s ease;
 }
 .tech-post-item:last-child { border-bottom: none; }
 /* hover 仅在「宽屏 + 支持悬停 + 精确指针（鼠标）」的设备生效：
    - (pointer: fine) 过滤 iPad / 触屏 Android 误报，避免点按后 :hover 滞留高亮卡死
    - (min-width: 768px) 让移动端与 PC 窄窗口一律不显示 hover 背景，退化为纯分割线列表 */
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
-  /* 悬停用毛玻璃：底图在卡片下方被模糊成一层很淡的影，卡片边界仍清晰；
-     比实色 --bg-subtle 更轻，不打断整页的阅读节奏 */
-  .tech-post-item:hover { background: var(--bg-subtle); }
+  /* 悬停只加一层几乎看不出的主色底 + 一条淡描边；
+     以前那套「液态玻璃 + 白色高光 + 大投影」会让卡片在深底上突然发白，
+     在浅底上又像贴纸，已经整段撤掉 */
+  .tech-post-item:hover {
+    background: var(--hover-bg);
+    box-shadow: inset 0 0 0 1px var(--hover-ring);
+  }
   .tech-post-item:hover .tech-post-title a { color: var(--accent); }
   .tech-post-item:hover .tech-post-arrow { opacity: 1; transform: translateX(0); }
-}
-/* 支持 backdrop-filter 时，悬停换成液态玻璃（写在后面覆盖实色兜底）：
-   斜向高光渐变让玻璃有「镜面反光」，内描边高光勾出玻璃边缘，
-   saturate 提到 200% 增强折射饱和，投影让卡片微微浮起 */
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
-    .tech-post-item {
-      transition: background-color .18s ease, box-shadow .18s ease;
-    }
-    .tech-post-item:hover {
-      background: var(--glass-sheen), var(--glass-card);
-      -webkit-backdrop-filter: saturate(200%) blur(var(--glass-blur, 22px));
-      backdrop-filter: saturate(200%) blur(var(--glass-blur, 22px));
-      box-shadow: var(--glass-inset), var(--glass-drop);
-    }
-  }
 }
 .tech-post-arrow {
   position: absolute; top: 17px; right: 8px;
@@ -710,7 +577,7 @@ html.page-enter .tech-main {
   display: flex; flex-wrap: wrap; gap: 6px 16px;
   font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;
 }
-/* 精选徽标：用主题强调色 --accent（亮 #0969da / 暗 #7aa2f7），
+/* 精选徽标：用主题强调色 --accent（亮 #1d4e7e / 暗 #5b8def），
    与标题 hover、箭头、彩条同色系，亮色下清晰不糊灰；金色 chip 方案观感偏脏已弃 */
 .tech-badge-featured {
   display: inline-block; flex: none;
@@ -780,7 +647,7 @@ html.page-enter .tech-main {
   border: 0; border-radius: 5px; cursor: pointer;
   transition: background .12s, color .12s;
 }
-@media (hover: hover) and (pointer: fine) { .tech-cs-item:hover { background: var(--bg-subtle); } }
+@media (hover: hover) and (pointer: fine) { .tech-cs-item:hover { background: var(--hover-bg); } }
 .tech-cs-item.is-selected { color: var(--accent); font-weight: 600; background: var(--accent-weak); }
 /* 键盘移动时的落点高亮：与 hover 同源，选中项保留自身底色不掉色 */
 .tech-cs-item:focus-visible { background: var(--bg-subtle); }
@@ -797,7 +664,7 @@ html.page-enter .tech-main {
 }
 @media (hover: hover) and (pointer: fine) { .tech-page-btn:hover { border-color: var(--accent); color: var(--accent); } }
 .tech-page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-[data-theme="dark"] .tech-page-btn.active { color: #16181d; }
+[data-theme="dark"] .tech-page-btn.active { color: #0f1117; }
 .tech-page-ellipsis { display: flex; align-items: center; color: var(--text-secondary); padding: 0 4px; }
 
 /* ── 空状态 ── */
@@ -1039,17 +906,17 @@ html.page-enter .tech-main {
 .tech-post-body .admonition p:last-child { margin-bottom: 0; }
 .tech-post-body .admonition.note { border-left-color: var(--accent); background: var(--accent-weak); }
 .tech-post-body .admonition.note .admonition-title { color: var(--accent); }
-.tech-post-body .admonition.tip { border-left-color: var(--success); background: rgba(26, 127, 55, .08); }
+.tech-post-body .admonition.tip { border-left-color: var(--success); background: color-mix(in srgb, var(--success) 8%, transparent); }
 .tech-post-body .admonition.tip .admonition-title { color: var(--success); }
-.tech-post-body .admonition.warning { border-left-color: var(--warning); background: rgba(154, 103, 0, .08); }
+.tech-post-body .admonition.warning { border-left-color: var(--warning); background: color-mix(in srgb, var(--warning) 8%, transparent); }
 .tech-post-body .admonition.warning .admonition-title { color: var(--warning); }
-.tech-post-body .admonition.danger { border-left-color: var(--danger); background: rgba(207, 34, 46, .08); }
+.tech-post-body .admonition.danger { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .tech-post-body .admonition.danger .admonition-title { color: var(--danger); }
 
 /* 删除线 / 高亮 / 键盘键 */
 .tech-post-body del { color: var(--text-secondary); }
 .tech-post-body mark {
-  background: rgba(154, 103, 0, .18); color: inherit;
+  background: color-mix(in srgb, var(--warning) 18%, transparent); color: inherit;
   padding: 0 4px; border-radius: 3px;
 }
 .tech-post-body kbd {
@@ -1143,7 +1010,7 @@ html.page-enter .tech-main {
   border: 1px solid var(--border); border-radius: 8px;
   text-decoration: none; color: var(--text);
 }
-@media (hover: hover) and (pointer: fine) { .tech-pager-link:not(.tech-pager-empty):hover { border-color: var(--accent); } }
+@media (hover: hover) and (pointer: fine) { .tech-pager-link:not(.tech-pager-empty):hover { border-color: var(--accent); background: var(--hover-bg); } }
 /* 方向标用内联 SVG：字符箭头（←/→）在部分字体栈会被回退渲染成彩色 emoji */
 .tech-pager-dir {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1182,12 +1049,12 @@ html.page-enter .tech-main {
 }
 @media (hover: hover) and (pointer: fine) { .tech-btn:hover { border-color: var(--accent); color: var(--accent); } }
 .tech-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-/* 深色主题：accent 是柔和蓝（#7aa2f7），配白字对比不足，改用深色字（约 7:1） */
-[data-theme="dark"] .tech-btn-primary { color: #16181d; }
+/* 深色主题：accent 是后台主蓝（#5b8def），配白字对比不足，改用深色字（约 5.6:1） */
+[data-theme="dark"] .tech-btn-primary { color: #0f1117; }
 /* primary hover：浅色加深 / 深色提亮——两端都朝「对比度变好」的方向反馈，不再无脑提亮 */
 @media (hover: hover) and (pointer: fine) {
   .tech-btn-primary:hover { filter: brightness(.92); color: #fff; }
-  [data-theme="dark"] .tech-btn-primary:hover { filter: brightness(1.12); color: #16181d; }
+  [data-theme="dark"] .tech-btn-primary:hover { filter: brightness(1.12); color: #0f1117; }
 }
 /* 许可文字与按钮组同排，靠右对齐；窄屏折行时恢复左对齐 */
 .tech-license { font-size: 13px; color: var(--text-secondary); margin: 0 0 0 auto; }
@@ -1222,7 +1089,7 @@ html.page-enter .tech-main {
   text-decoration: none; color: var(--text);
   transition: border-color .15s, background .15s;
 }
-@media (hover: hover) and (pointer: fine) { .tech-related-card:hover { border-color: var(--accent); background: var(--bg-subtle); } }
+@media (hover: hover) and (pointer: fine) { .tech-related-card:hover { border-color: var(--accent); background: var(--hover-bg); } }
 .tech-related-card-title {
   font-size: 14px; font-weight: 600; line-height: 1.5;
   overflow: hidden; text-overflow: ellipsis;
@@ -1451,7 +1318,7 @@ html.page-enter .tech-main {
   background: var(--bg);
   transition: border-color .2s, box-shadow .2s;
 }
-@media (hover: hover) and (pointer: fine) { .tech-project-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0, 0, 0, .08); } }
+@media (hover: hover) and (pointer: fine) { .tech-project-card:hover { border-color: var(--accent); background: var(--hover-bg); box-shadow: var(--shadow); } }
 .tech-project-card-head { display: flex; align-items: center; gap: 8px; }
 .tech-project-name {
   font-size: 17px; font-weight: 600; color: var(--text); text-decoration: none;
@@ -1554,9 +1421,9 @@ html { touch-action: manipulation; }
 .tech-proj-btn-icon { display: inline-block; vertical-align: middle; }
 .tech-proj-btn--gh { color: #fff; background: var(--accent); border-color: var(--accent); }
 /* 深色 accent 实底改深字（白字 2.52:1 不达标） */
-[data-theme="dark"] .tech-proj-btn--gh { color: #16181d; }
+[data-theme="dark"] .tech-proj-btn--gh { color: #0f1117; }
 @media (hover: hover) and (pointer: fine) { .tech-proj-btn--gh:hover { color: #fff; filter: brightness(1.1); background: var(--accent); } }
-@media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-proj-btn--gh:hover { color: #16181d; filter: brightness(.92); background: var(--accent); } }
+@media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-proj-btn--gh:hover { color: #0f1117; filter: brightness(.92); background: var(--accent); } }
 
 /* 项目信息行：简介 + topics + 语言（单栏，标题行下方紧凑排版） */
 .tech-proj-info {
@@ -1668,7 +1535,7 @@ html { touch-action: manipulation; }
   border: 1px solid var(--border);
   border-radius: 8px; text-decoration: none; color: var(--text);
 }
-@media (hover: hover) and (pointer: fine) { .tech-link-card:hover { border-color: var(--accent); } }
+@media (hover: hover) and (pointer: fine) { .tech-link-card:hover { border-color: var(--accent); background: var(--hover-bg); } }
 .tech-link-avatar {
   width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%;
   object-fit: cover; display: flex; align-items: center; justify-content: center;
@@ -1719,31 +1586,59 @@ html { touch-action: manipulation; }
 .tech-copy:hover { color: var(--accent); border-color: var(--accent); }
 .tech-copy.copied { color: var(--success); border-color: var(--success); }
 
-/* ── 状态页（官方 svc-* 类名，status.js 依赖） ── */
-.tech-status-section { margin-bottom: 32px; }
+/* ── 状态页（官方 svc-* 类名，status.js 依赖）──
+   和其它页面同一套语言：卡片分区 + 1px 描边 + 行内指标 pill。
+   以前是两条裸分割线、指标全挤在右端，整页像半成品。 */
+.tech-status { display: flex; flex-direction: column; gap: 16px; }
+.tech-status-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px 6px;
+}
 .tech-status-section h2 {
-  font-size: 17px; font-weight: 600; margin: 0 0 6px;
-  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600; margin: 0 0 12px;
+  display: flex; align-items: center; gap: 10px;
 }
-.svc-list { border-top: 1px solid var(--border); }
+.svc-count {
+  font-size: 12px; font-weight: 500; color: var(--text-secondary);
+  background: var(--bg-subtle); border-radius: 999px; padding: 2px 9px;
+}
+.svc-list { border: 0; }
 .svc-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 0; border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center; gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
 }
-.svc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.svc-dot.st-ok { background: var(--success); }
-.svc-dot.st-warn { background: var(--warning); }
-.svc-dot.st-down { background: var(--danger); }
+.svc-row:first-child { border-top: 0; }
+.svc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.svc-dot.st-ok { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 16%, transparent); }
+.svc-dot.st-warn { background: var(--warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 16%, transparent); }
+.svc-dot.st-down { background: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent); }
+.svc-dot.st-expired { background: var(--danger); }
 .svc-dot.st-none { background: var(--text-secondary); opacity: .4; }
 .svc-main { flex: 1; min-width: 0; }
-.svc-name { font-size: 15px; font-weight: 600; }
+.svc-name { font-size: 15px; font-weight: 500; }
 .expiry-label { font-size: 15px; }
-.svc-metrics { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: flex-end; }
-.svc-metric { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
-.svc-count { font-size: 13px; color: var(--text-secondary); font-weight: 400; }
-.svc-empty { padding: 24px 0; text-align: center; color: var(--text-secondary); font-size: 14px; }
-.svc-empty-sub { font-size: 13px; opacity: .8; }
-.status-hint { font-size: 13px; color: var(--text-secondary); margin-top: 12px; }
+.svc-metrics { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.svc-metric {
+  font-size: 12.5px; color: var(--text-secondary); white-space: nowrap;
+  background: var(--bg-subtle); border-radius: 6px; padding: 3px 9px;
+  font-variant-numeric: tabular-nums;
+}
+/* 到期状态徽章：按行状态着色，而不是所有指标一个灰 */
+.svc-row.st-ok [data-expiry-field="badge"] { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.svc-row.st-warn [data-expiry-field="badge"] { color: var(--warning); background: color-mix(in srgb, var(--warning) 14%, transparent); }
+.svc-row.st-expired [data-expiry-field="badge"] { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.svc-empty { padding: 26px 0; text-align: center; color: var(--text-secondary); font-size: 14px; }
+.svc-empty-sub { font-size: 13px; opacity: .8; margin-top: 4px; }
+.status-hint { font-size: 12.5px; color: var(--text-secondary); margin: 0; }
+@media (max-width: 640px) {
+  .tech-status-section { padding: 16px 16px 4px; }
+  .svc-row { grid-template-columns: 8px minmax(0, 1fr); row-gap: 9px; }
+  .svc-metrics { grid-column: 2; justify-content: flex-start; }
+}
 
 /* ── 表单（友链申请） ── */
 .tech-form-row { display: flex; gap: 10px; }
@@ -1946,7 +1841,7 @@ html { touch-action: manipulation; }
 }
 .tech-btn:active { transform: translateY(1px); }
 .tech-btn-primary:active { filter: brightness(.95); color: #fff; }
-[data-theme="dark"] .tech-btn-primary:active { color: #16181d; }
+[data-theme="dark"] .tech-btn-primary:active { color: #0f1117; }
 /* 项目筛选芯片：可点击语义 + hover/焦点平滑 */
 .tech-lang-link { cursor: pointer; transition: color .15s ease, transform .15s ease, border-color .15s ease; }
 @media (hover: hover) and (pointer: fine) { .tech-lang-link:hover { transform: translateY(-1px); } }

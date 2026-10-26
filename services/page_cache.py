@@ -108,7 +108,9 @@ def load():
     response = make_response(html)
     response.headers["Content-Type"] = meta.get("content_type") or "text/html; charset=utf-8"
     response.headers["X-Cache"] = "HIT"
-    response.headers["Cache-Control"] = "no-cache"
+    # 命中页缓存时给浏览器一小段缓存：回访/连点页面直接吃本地副本，
+    # 过期后仍允许先展示旧页、后台再校验（stale-while-revalidate）
+    response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=120"
     g._page_cache_hit = True
     return response
 

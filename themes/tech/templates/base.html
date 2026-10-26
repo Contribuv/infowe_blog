@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-pattern-pos="{{ pattern_position|default('cover') }}">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <!-- 允许双指缩放（WCAG 1.4.4）；旧版曾加 maximum-scale/user-scalable=no 并用
@@ -7,8 +7,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <!-- 防白屏闪烁：主题 CSS 加载前先给 html 上色，避免深色主题刷新/跳转时闪白 -->
     <style>
-      html { background: #191c22; color-scheme: dark; }
-      html[data-theme="light"] { background: #f6f8fb; color-scheme: light; }
+      html { background: #0f1117; color-scheme: dark; }
+      html[data-theme="light"] { background: #fbfcfd; color-scheme: light; }
     </style>
     <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
@@ -70,52 +70,6 @@
     <!-- 文章分享面板样式（两主题通用） -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t=static_ver) }}">
     {% endif %}
-    <!-- 页面装饰：主题底图与透明度（主题管理页可调，0 表示关闭） -->
-    {% set pattern_img = pattern_image|default('3') %}
-    {# 左右固定模式：左右各用一张后台选定的图；右图未单独设置时沿用主图 #}
-    {% set pattern_left = pattern_left_image|default('1') %}
-    {% set pattern_right = (pattern_right_image|default('') or pattern_img) %}
-    {# 两套分辨率：1x 给普通屏，@2x 给 DPR≥1.25 的高分屏，避免放大发虚 #}
-    <style>
-      :root {
-        --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) / 100) }};
-        {# 分辨率分档：1x=2048 / hd=2560（主流高分屏）/ uhd=3840（4K 全屏才用）。
-           前三张素材的真实数据只有 2048，3840 是上采样、没有细节增益，
-           所以它们的 hd/uhd 直接回落 1x 文件，省一半以上流量；
-           第 4 张是真 4K 源，2560 由源图缩出（alpha 保持 16 级量化结构，压缩率不崩），
-           3840 的 @2x 文件继续作为 uhd 档保留。 #}
-        {% set img_hd = '-2560.webp' if pattern_img == '4' else '.webp' %}
-        {% set img_uhd = '@2x.webp' if pattern_img == '4' else '.webp' %}
-        {% set left_hd = '-2560.webp' if pattern_left == '4' else '.webp' %}
-        {% set left_uhd = '@2x.webp' if pattern_left == '4' else '.webp' %}
-        {% set right_hd = '-2560.webp' if pattern_right == '4' else '.webp' %}
-        {% set right_uhd = '@2x.webp' if pattern_right == '4' else '.webp' %}
-        --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light.webp', v='18') }}");
-        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light' ~ img_hd, v='18') }}");
-        --pattern-image-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light' ~ img_uhd, v='18') }}");
-        --pattern-image-left: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-light.webp', v='18') }}");
-        --pattern-image-left-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-light' ~ left_hd, v='18') }}");
-        --pattern-image-left-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-light' ~ left_uhd, v='18') }}");
-        --pattern-image-right: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-light.webp', v='18') }}");
-        --pattern-image-right-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-light' ~ right_hd, v='18') }}");
-        --pattern-image-right-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-light' ~ right_uhd, v='18') }}");
-      }
-      [data-theme="dark"] {
-        --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) * 0.9 / 100) }};
-        --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark.webp', v='18') }}");
-        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark' ~ img_hd, v='18') }}");
-        --pattern-image-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark' ~ img_uhd, v='18') }}");
-        --pattern-image-left: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-dark.webp', v='18') }}");
-        --pattern-image-left-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-dark' ~ left_hd, v='18') }}");
-        --pattern-image-left-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-dark' ~ left_uhd, v='18') }}");
-        --pattern-image-right: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-dark.webp', v='18') }}");
-        --pattern-image-right-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-dark' ~ right_hd, v='18') }}");
-        --pattern-image-right-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-dark' ~ right_uhd, v='18') }}");
-      }
-      {% if pattern_enabled|default('1') not in ('1', 'on', 'true', 'yes') %}
-      :root, [data-theme="dark"] { --pattern-opacity: 0; }
-      {% endif %}
-    </style>
 </head>
 <body>
     {# 阅读/滚动进度条：文章页与项目页在各自模板里指定「正文」锚点；
@@ -149,6 +103,7 @@
                         <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
                         <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                     </button>
+                    {# 声音开关已随动画景观带一并移除 #}
                     <button class="tech-icon-btn tech-burger" id="tech-burger" aria-label="打开菜单" aria-controls="tech-drawer" aria-expanded="false">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
                     </button>
