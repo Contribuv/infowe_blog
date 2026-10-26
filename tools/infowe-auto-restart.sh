@@ -25,12 +25,29 @@
 
 set -uo pipefail
 
+# 可选：/root/.infowe-auto-restart.env 可覆盖下面的默认配置（如宝塔共享环境的 PY）
+ENV_FILE=${ENV_FILE:-/root/.infowe-auto-restart.env}
+if [ -f "$ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+fi
+
 BASE=${BASE:-/www/wwwroot/infowe.site}
-PY=${PY:-$BASE/.venv/bin/python}
 PORT=${PORT:-5000}
 STOP_CMD=${STOP_CMD:-}
 START_CMD=${START_CMD:-}
 DATA_DIR=${BLOG_DATA_DIR:-$BASE/var}
+
+# 解释器：优先项目 venv；宝塔等共享环境请在部署时显式指定 PY（或传同名环境变量）
+if [ -z "${PY:-}" ]; then
+  if [ -x "$BASE/.venv/bin/python" ]; then
+    PY="$BASE/.venv/bin/python"
+  elif command -v python3 >/dev/null 2>&1; then
+    PY=$(command -v python3)
+  else
+    PY=python
+  fi
+fi
 
 HEADFILE="$DATA_DIR/.auto-restart.head"
 LOCK="$DATA_DIR/.auto-restart.lock"
