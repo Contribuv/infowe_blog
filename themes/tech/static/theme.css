@@ -479,6 +479,7 @@ html.page-enter .tech-main {
    关于页正中有完整虫洞区块，用 :has 隐藏页脚标识，避免同页重复。 */
 .tech-footer-member {
   display: flex; align-items: center;
+  max-width: 100%;
   opacity: .55;
   transition: opacity .18s ease;
   -webkit-tap-highlight-color: transparent;
@@ -1392,7 +1393,7 @@ html.page-enter .tech-main {
   -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) and (pointer: fine) { .tech-about-fb-wormhole:hover { opacity: 1; } }
-.tech-about-fb-wormhole img { display: block; width: auto; height: 40px; }
+.tech-about-fb-wormhole img { display: block; width: auto; height: 36px; }
 
 /* ── 项目页：间距统一 8px 基准（分隔线两侧 12，卡内 16，卡间 12） ── */
 .tech-lang-stats {
@@ -1768,9 +1769,9 @@ html { touch-action: manipulation; }
   .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 24px; }
   /* 关于页：移动端作者卡收紧内边距（透明底与桌面一致） */
   .tech-about-hero { padding: 24px 16px 20px; margin-bottom: 20px; }
-  /* 十年之约收尾区：移动端文字略收、虫洞缩到 34px，居中不占边距 */
+  /* 十年之约收尾区：移动端虫洞缩到 30px，居中不占边距 */
   .tech-about-fb-text { font-size: 13.5px; }
-  .tech-about-fb-wormhole img { height: 34px; }
+  .tech-about-fb-wormhole img { height: 30px; }
   .tech-page-head--center .tech-page-title { font-size: 26px; }
   .tech-page-head--center .tech-page-desc { font-size: 14px; }
   .tech-about-hero .tech-page-title { font-size: 20px; }
