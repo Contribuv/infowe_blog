@@ -65,6 +65,11 @@
   --glass-bg: rgba(250, 249, 247, .84);
   --glass-bg-form: rgba(250, 249, 247, .84);
   --glass-bg-mobile: rgba(250, 249, 247, .9);
+  /* 液态玻璃：悬停卡片的「镜面」语言——斜向高光渐变 + 内描边高光 + 悬浮投影，
+     比纯磨砂多一层光泽；深色下白光整体调弱，避免夜色里泛白发灰 */
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.05) 55%, rgba(255,255,255,.10));
+  --glass-inset: inset 0 1px 0 rgba(255,255,255,.5), inset 0 0 0 1px rgba(255,255,255,.28);
+  --glass-drop: 0 8px 28px rgba(42, 38, 32, .12);
   /* 背景底图由 tech/templates/base.html 按后台设置注入（--pattern-image / --pattern-opacity） */
 }
 
@@ -90,6 +95,10 @@
   --glass-bg: rgba(25, 28, 34, .80);
   --glass-bg-form: rgba(25, 28, 34, .80);
   --glass-bg-mobile: rgba(25, 28, 34, .88);
+  /* 液态玻璃（深色）：白光降到约浅色的 1/3，投影换成纯黑加深悬浮感 */
+  --glass-sheen: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.03) 55%, rgba(255,255,255,.06));
+  --glass-inset: inset 0 1px 0 rgba(255,255,255,.16), inset 0 0 0 1px rgba(255,255,255,.07);
+  --glass-drop: 0 8px 28px rgba(0, 0, 0, .35);
   /* 背景底图由 base.html 按后台设置注入（深色版整体再乘 0.9） */
   --quote-bg: #20232b;
   --success: #86b87c;
@@ -660,13 +669,19 @@ html.page-enter .tech-main {
   .tech-post-item:hover .tech-post-title a { color: var(--accent); }
   .tech-post-item:hover .tech-post-arrow { opacity: 1; transform: translateX(0); }
 }
-/* 支持 backdrop-filter 时，悬停底换成毛玻璃（写在后面覆盖实色兜底） */
+/* 支持 backdrop-filter 时，悬停换成液态玻璃（写在后面覆盖实色兜底）：
+   斜向高光渐变让玻璃有「镜面反光」，内描边高光勾出玻璃边缘，
+   saturate 提到 200% 增强折射饱和，投影让卡片微微浮起 */
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
+    .tech-post-item {
+      transition: background-color .18s ease, box-shadow .18s ease;
+    }
     .tech-post-item:hover {
-      background: var(--glass-bg);
-      -webkit-backdrop-filter: saturate(180%) blur(14px);
-      backdrop-filter: saturate(180%) blur(14px);
+      background: var(--glass-sheen), var(--glass-bg);
+      -webkit-backdrop-filter: saturate(200%) blur(16px);
+      backdrop-filter: saturate(200%) blur(16px);
+      box-shadow: var(--glass-inset), var(--glass-drop);
     }
   }
 }
