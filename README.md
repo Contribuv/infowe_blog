@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.18-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.18)
+[![version](https://img.shields.io/badge/version-3.2.19-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.19)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,14 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.18**
+- 版本：**v3.2.19**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.19
+
+- 修复：.gitattributes 漏标 *.avif binary，Git 会把 AVIF 当文本做 CRLF→LF 转换，线上每次 git pull 都报 Your local changes ... would be overwritten by merge，升级因此卡住；补齐二进制标记后不再转换，工作区与索引保持一致
+- 修复：状态页 SSL 剩余天数一直显示「—」——部分服务器系统 CA 不全，ssl.create_default_context() 报 unable to get local issuer certificate；改为用 certifi 根证书建 context（requests 已依赖，无新增包）
 
 ### v3.2.18
 

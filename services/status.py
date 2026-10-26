@@ -36,10 +36,21 @@ def parse_services() -> list[dict]:
 
 
 def cert_days(hostname: str, port: int = 443, timeout: float = 5) -> int:
+    """读对端证书剩余天数。
+
+    优先用 certifi 的根证书建 context：部分服务器（宝塔 / 精简版镜像）
+    系统 CA 不全，`ssl.create_default_context()` 会直接报
+    `unable to get local issuer certificate`，状态页的 SSL 列就一直是「—」。
+    requests 本身就依赖 certifi，所以这里不需要新增依赖。
+    """
     if not hostname:
         return -1
     try:
-        context = ssl.create_default_context()
+        try:
+            import certifi
+            context = ssl.create_default_context(cafile=certifi.where())
+        except Exception:
+            context = ssl.create_default_context()
         with socket.create_connection((hostname, port), timeout=timeout) as sock:
             with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                 cert = ssock.getpeercert()
