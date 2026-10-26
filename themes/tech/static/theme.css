@@ -683,8 +683,8 @@ html.page-enter .tech-main {
     }
     .tech-post-item:hover {
       background: var(--glass-sheen), var(--glass-card);
-      -webkit-backdrop-filter: saturate(200%) blur(22px);
-      backdrop-filter: saturate(200%) blur(22px);
+      -webkit-backdrop-filter: saturate(200%) blur(var(--glass-blur, 22px));
+      backdrop-filter: saturate(200%) blur(var(--glass-blur, 22px));
       box-shadow: var(--glass-inset), var(--glass-drop);
     }
   }
