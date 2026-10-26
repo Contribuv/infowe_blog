@@ -263,11 +263,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
    注意 .cmt-form.is-inline 的 background:none 特异性更高，不受影响。 */
 .cmt-form{background:var(--bg)}
 @supports (backdrop-filter: blur(1px)){
-  .cmt-form{background:var(--glass-bg-form,rgba(250,249,247,.72))}
+  .cmt-form{background:var(--glass-bg-form,rgba(250,249,247,.84))}
 }
 @supports (-webkit-backdrop-filter: blur(1px)){
-  .cmt-form{background:var(--glass-bg-form,rgba(250,249,247,.72))}
+  .cmt-form{background:var(--glass-bg-form,rgba(250,249,247,.84))}
 }
 @media (max-width:767px){
-  .cmt-form{background:var(--glass-bg-mobile,rgba(250,249,247,.86));-webkit-backdrop-filter:saturate(150%) blur(10px);backdrop-filter:saturate(150%) blur(10px)}
+  .cmt-form{background:var(--glass-bg-mobile,rgba(250,249,247,.9));-webkit-backdrop-filter:saturate(150%) blur(10px);backdrop-filter:saturate(150%) blur(10px)}
 }

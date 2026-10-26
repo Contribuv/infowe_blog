@@ -88,9 +88,10 @@
 .markdown-body mark { background: var(--mb-mark); color: inherit; padding: 0 .3em; border-radius: 4px; }
 .markdown-body sup { font-size: .75em; }
 
-/* ── 链接 ── */
+/* ── 链接 ──
+   全站约定：链接一律无下划线，悬停也不加——正文链接靠 --mb-link 的
+   蓝色与周围文字区分，去掉悬停下划线后观感与全站一致 */
 .markdown-body a { color: var(--mb-link); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) { .markdown-body a:hover { text-decoration: underline; } }
 
 /* ── 列表 ── */
 .markdown-body ul, .markdown-body ol {

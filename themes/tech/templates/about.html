@@ -48,6 +48,36 @@
 </div>
 
 <div class="tech-about">
+    <!-- 十年之约：成员标识 + 虫洞入口。紧跟人物卡，作为站长的「身份标识」展示；
+         页脚在含此区块的页面会自动隐藏标识（:has），避免同页两枚重复 -->
+    <section class="tech-about-section">
+        <h2>十年之约</h2>
+        <div class="tech-about-fb">
+            <p class="tech-about-fb-text">本站已加入「十年之约」：从加入那天起，博客十年不关，一直写下去。点一下虫洞，随机去一位同样在约的博主那里串门。</p>
+            <div class="tech-about-fb-actions">
+                <a class="tech-about-fb-badge" href="https://www.foreverblog.cn/" target="_blank" rel="noopener"
+                   title="十年之约成员博客" aria-label="十年之约成员博客">
+                    <img class="tech-about-fb-logo tech-about-fb-logo--light"
+                         src="https://www.foreverblog.cn/assets/logo/logo_v2_black.png"
+                         alt="十年之约" width="125" height="32" decoding="async">
+                    <img class="tech-about-fb-logo tech-about-fb-logo--dark"
+                         src="https://www.foreverblog.cn/assets/logo/logo_v2_light.png"
+                         alt="" aria-hidden="true" width="125" height="32" decoding="async">
+                </a>
+                <a class="tech-about-fb-badge tech-about-fb-wormhole" href="https://www.foreverblog.cn/go.html"
+                   target="_blank" rel="noopener" title="虫洞 · 随机访问十年之约成员博客"
+                   aria-label="虫洞 · 随机访问十年之约成员博客">
+                    <!-- 官方虫洞是 68 帧动图，只按当前主题加载一张；src 由下方脚本按 data-theme 切换 -->
+                    <img class="tech-about-fb-wormhole-img"
+                         data-light="https://www.foreverblog.cn/assets/logo/wormhole_v2_dark.webp"
+                         data-dark="https://www.foreverblog.cn/assets/logo/wormhole_v2_light.webp"
+                         src="https://www.foreverblog.cn/assets/logo/wormhole_v2_dark.webp"
+                         alt="十年之约虫洞" width="163" height="64" loading="lazy" decoding="async">
+                </a>
+            </div>
+        </div>
+    </section>
+
     <!-- 技术栈 -->
     {% if skills %}
     <section class="tech-about-section">
@@ -85,35 +115,6 @@
         {% else %}
         <p class="tech-about-empty">暂无历程记录</p>
         {% endif %}
-    </section>
-
-    <!-- 十年之约：成员标识 + 虫洞入口 -->
-    <section class="tech-about-section">
-        <h2>十年之约</h2>
-        <div class="tech-about-fb">
-            <p class="tech-about-fb-text">本站已加入「十年之约」：从加入那天起，博客十年不关，一直写下去。点一下虫洞，随机去一位同样在约的博主那里串门。</p>
-            <div class="tech-about-fb-actions">
-                <a class="tech-about-fb-badge" href="https://www.foreverblog.cn/" target="_blank" rel="noopener"
-                   title="十年之约成员博客" aria-label="十年之约成员博客">
-                    <img class="tech-about-fb-logo tech-about-fb-logo--light"
-                         src="https://www.foreverblog.cn/assets/logo/logo_v2_black.png"
-                         alt="十年之约" width="125" height="32" decoding="async">
-                    <img class="tech-about-fb-logo tech-about-fb-logo--dark"
-                         src="https://www.foreverblog.cn/assets/logo/logo_v2_light.png"
-                         alt="" aria-hidden="true" width="125" height="32" decoding="async">
-                </a>
-                <a class="tech-about-fb-badge tech-about-fb-wormhole" href="https://www.foreverblog.cn/go.html"
-                   target="_blank" rel="noopener" title="虫洞 · 随机访问十年之约成员博客"
-                   aria-label="虫洞 · 随机访问十年之约成员博客">
-                    <!-- 官方虫洞是 68 帧动图，只按当前主题加载一张；src 由下方脚本按 data-theme 切换 -->
-                    <img class="tech-about-fb-wormhole-img"
-                         data-light="https://www.foreverblog.cn/assets/logo/wormhole_v2_dark.webp"
-                         data-dark="https://www.foreverblog.cn/assets/logo/wormhole_v2_light.webp"
-                         src="https://www.foreverblog.cn/assets/logo/wormhole_v2_dark.webp"
-                         alt="十年之约虫洞" width="163" height="64" loading="lazy" decoding="async">
-                </a>
-            </div>
-        </div>
     </section>
 </div>
 {% endblock %}

@@ -79,21 +79,38 @@
     <style>
       :root {
         --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) / 100) }};
+        {# 分辨率分档：1x=2048 / hd=2560（主流高分屏）/ uhd=3840（4K 全屏才用）。
+           前三张素材的真实数据只有 2048，3840 是上采样、没有细节增益，
+           所以它们的 hd/uhd 直接回落 1x 文件，省一半以上流量；
+           第 4 张是真 4K 源，2560 由源图缩出（alpha 保持 16 级量化结构，压缩率不崩），
+           3840 的 @2x 文件继续作为 uhd 档保留。 #}
+        {% set img_hd = '-2560.webp' if pattern_img == '4' else '.webp' %}
+        {% set img_uhd = '@2x.webp' if pattern_img == '4' else '.webp' %}
+        {% set left_hd = '-2560.webp' if pattern_left == '4' else '.webp' %}
+        {% set left_uhd = '@2x.webp' if pattern_left == '4' else '.webp' %}
+        {% set right_hd = '-2560.webp' if pattern_right == '4' else '.webp' %}
+        {% set right_uhd = '@2x.webp' if pattern_right == '4' else '.webp' %}
         --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light.webp', v='18') }}");
-        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light@2x.webp', v='18') }}");
+        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light' ~ img_hd, v='18') }}");
+        --pattern-image-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-light' ~ img_uhd, v='18') }}");
         --pattern-image-left: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-light.webp', v='18') }}");
-        --pattern-image-left-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-light@2x.webp', v='18') }}");
+        --pattern-image-left-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-light' ~ left_hd, v='18') }}");
+        --pattern-image-left-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-light' ~ left_uhd, v='18') }}");
         --pattern-image-right: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-light.webp', v='18') }}");
-        --pattern-image-right-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-light@2x.webp', v='18') }}");
+        --pattern-image-right-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-light' ~ right_hd, v='18') }}");
+        --pattern-image-right-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-light' ~ right_uhd, v='18') }}");
       }
       [data-theme="dark"] {
         --pattern-opacity: {{ '%.3f'|format((pattern_opacity|default(20)|int) * 0.9 / 100) }};
         --pattern-image: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark.webp', v='18') }}");
-        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark@2x.webp', v='18') }}");
+        --pattern-image-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark' ~ img_hd, v='18') }}");
+        --pattern-image-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_img ~ '-dark' ~ img_uhd, v='18') }}");
         --pattern-image-left: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-dark.webp', v='18') }}");
-        --pattern-image-left-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-dark@2x.webp', v='18') }}");
+        --pattern-image-left-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-dark' ~ left_hd, v='18') }}");
+        --pattern-image-left-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_left ~ '-dark' ~ left_uhd, v='18') }}");
         --pattern-image-right: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-dark.webp', v='18') }}");
-        --pattern-image-right-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-dark@2x.webp', v='18') }}");
+        --pattern-image-right-hd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-dark' ~ right_hd, v='18') }}");
+        --pattern-image-right-uhd: url("{{ url_for('theme_static', filename=active_theme ~ '/static/cq-bg-' ~ pattern_right ~ '-dark' ~ right_uhd, v='18') }}");
       }
       {% if pattern_enabled|default('1') not in ('1', 'on', 'true', 'yes') %}
       :root, [data-theme="dark"] { --pattern-opacity: 0; }
@@ -183,27 +200,30 @@
                     {% if nav_on.about %}<a href="/about">关于我</a>{% endif %}
                     <a href="/feed.xml">RSS</a>
                 </div>
-                {% if icp_beian or police_beian %}
-                <div class="tech-footer-beian">
-                    {% if icp_beian %}
-                    <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">{{ icp_beian }}</a>
+                {# 备案号与十年之约标识同一行：左备案右标识，成员标识不再单独占一排 #}
+                <div class="tech-footer-bottom">
+                    {% if icp_beian or police_beian %}
+                    <div class="tech-footer-beian">
+                        {% if icp_beian %}
+                        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener">{{ icp_beian }}</a>
+                        {% endif %}
+                        {% if police_beian %}
+                        <a href="https://beian.mps.gov.cn" target="_blank" rel="noopener">{{ police_beian }}</a>
+                        {% endif %}
+                    </div>
                     {% endif %}
-                    {% if police_beian %}
-                    <a href="https://beian.mps.gov.cn" target="_blank" rel="noopener">{{ police_beian }}</a>
-                    {% endif %}
+                    <!-- 十年之约成员标识：官方提供的双色图片，按当前主题切换；
+                         与备案同行靠右，关于页因正中有完整成员卡而隐藏 -->
+                    <a class="tech-footer-member" href="https://www.foreverblog.cn/" target="_blank" rel="noopener"
+                       title="十年之约成员博客" aria-label="十年之约成员博客">
+                        <img class="tech-footer-member-logo tech-footer-member-logo--light"
+                             src="https://www.foreverblog.cn/assets/logo/logo_v2_black.png"
+                             alt="十年之约" width="125" height="32" decoding="async">
+                        <img class="tech-footer-member-logo tech-footer-member-logo--dark"
+                             src="https://www.foreverblog.cn/assets/logo/logo_v2_light.png"
+                             alt="" aria-hidden="true" width="125" height="32" decoding="async">
+                    </a>
                 </div>
-                {% endif %}
-                <!-- 十年之约成员标识：官方提供的双色图片，按当前主题切换；
-                     固定在页脚最底部一行，随页脚一起在移动端左对齐 -->
-                <a class="tech-footer-member" href="https://www.foreverblog.cn/" target="_blank" rel="noopener"
-                   title="十年之约成员博客" aria-label="十年之约成员博客">
-                    <img class="tech-footer-member-logo tech-footer-member-logo--light"
-                         src="https://www.foreverblog.cn/assets/logo/logo_v2_black.png"
-                         alt="十年之约" width="125" height="32" decoding="async">
-                    <img class="tech-footer-member-logo tech-footer-member-logo--dark"
-                         src="https://www.foreverblog.cn/assets/logo/logo_v2_light.png"
-                         alt="" aria-hidden="true" width="125" height="32" decoding="async">
-                </a>
             </div>
         </div>
     </footer>

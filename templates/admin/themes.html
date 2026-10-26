@@ -29,6 +29,15 @@
                 {% if t.author %}<span class="theme-author">作者：{{ t.author }}</span>{% endif %}
                 {% if t.version %}<span class="theme-author">版本：v{{ t.version }}</span>{% endif %}
                 {% if t.description %}<span class="theme-desc">{{ t.description }}</span>{% endif %}
+                {# 主题专属配置入口：只有声明了配置面板的主题才渲染按钮，
+                    避免其它主题也顶着一块不属于自己的配置卡片 #}
+                {% if t.key == 'tech' %}
+                <button type="button" class="theme-config-btn" data-theme-config="tech"
+                        aria-expanded="false" aria-controls="theme-panel-tech">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span class="theme-config-btn-text">配置</span>
+                </button>
+                {% endif %}
             </span>
         </label>
         {% else %}
@@ -38,7 +47,7 @@
         {% endfor %}
     </div>
 
-    <div class="card themes-appearance" data-theme-panel="tech"{% if active_theme != 'tech' %} hidden{% endif %}>
+    <div class="card themes-appearance" id="theme-panel-tech" data-theme-panel="tech" hidden>
         <div class="card-header card-header--hint">
             <h3>页面背景装饰</h3>
             <span class="card-hint">tech 主题专属 · 保存后立即生效</span>
@@ -140,22 +149,47 @@
 <script>
 (function () {
     'use strict';
-    // 主题专属设置面板：选中哪个主题就显示哪个面板
-    var radios = Array.prototype.slice.call(document.querySelectorAll('input[name="active_theme"]'));
+    // 主题专属设置面板：默认收起，点主题卡内的「配置」按钮展开/收起；
+    // 切换主题时自动收起，避免 A 主题的配置挂在 B 主题下面
     var panels = Array.prototype.slice.call(document.querySelectorAll('[data-theme-panel]'));
+    var btns = Array.prototype.slice.call(document.querySelectorAll('.theme-config-btn'));
 
-    function syncPanels() {
-        var checked = document.querySelector('input[name="active_theme"]:checked');
-        var key = checked ? checked.value : '';
+    function setPanel(key, open) {
         panels.forEach(function (panel) {
-            panel.hidden = panel.getAttribute('data-theme-panel') !== key;
+            if (panel.getAttribute('data-theme-panel') !== key) return;
+            panel.hidden = !open;
+            if (open) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        btns.forEach(function (btn) {
+            if (btn.getAttribute('data-theme-config') !== key) return;
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            var text = btn.querySelector('.theme-config-btn-text');
+            if (text) text.textContent = open ? '收起配置' : '配置';
         });
     }
 
-    radios.forEach(function (radio) {
-        radio.addEventListener('change', syncPanels);
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            // 阻止把点击转发给外层 label 的 radio（按钮嵌在主题卡 label 内）
+            e.preventDefault();
+            e.stopPropagation();
+            var key = btn.getAttribute('data-theme-config');
+            var panel = panels.find(function (p) { return p.getAttribute('data-theme-panel') === key; });
+            setPanel(key, !panel || panel.hidden);
+        });
     });
-    syncPanels();
+
+    // 换选主题时收起所有配置面板
+    Array.prototype.slice.call(document.querySelectorAll('input[name="active_theme"]')).forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            panels.forEach(function (panel) { panel.hidden = true; });
+            btns.forEach(function (btn) {
+                btn.setAttribute('aria-expanded', 'false');
+                var text = btn.querySelector('.theme-config-btn-text');
+                if (text) text.textContent = '配置';
+            });
+        });
+    });
 
     // 底图选中态：每个选择器组内部互斥（主图 / 左右固定左图 / 右图）
     Array.prototype.slice.call(document.querySelectorAll('.pattern-picker')).forEach(function (group) {

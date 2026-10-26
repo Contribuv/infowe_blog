@@ -60,11 +60,11 @@
   /* 头像光环配色（亮色：低饱和蓝→紫渐变，避免割裂感） */
   --ring-a: rgba(31, 95, 214, .26);
   --ring-b: rgba(124, 92, 173, .26);
-  /* 毛玻璃层（浅色）：代码块 / 目录卡 .74，评论表单 .72；
-     移动端另用 --glass-bg-mobile 提高不透明度，兼顾代码可读与 GPU 开销 */
-  --glass-bg: rgba(250, 249, 247, .74);
-  --glass-bg-form: rgba(250, 249, 247, .72);
-  --glass-bg-mobile: rgba(250, 249, 247, .86);
+  /* 毛玻璃层（浅色）：底图会从玻璃后面透出来，不透明度低于 .8 时
+     卡片后面的线条清晰可辨，显得「透」而不「磨砂」，浅色下尤其明显 */
+  --glass-bg: rgba(250, 249, 247, .84);
+  --glass-bg-form: rgba(250, 249, 247, .84);
+  --glass-bg-mobile: rgba(250, 249, 247, .9);
   /* 背景底图由 tech/templates/base.html 按后台设置注入（--pattern-image / --pattern-opacity） */
 }
 
@@ -85,10 +85,11 @@
   /* 头像光环配色（暗色：柔和蓝→淡紫渐变，深底上不刺眼） */
   --ring-a: #7aa2f7;
   --ring-b: #bb9af7;
-  /* 毛玻璃层（深色）：比浅色再透一档，深底上更接近导航的观感 */
-  --glass-bg: rgba(25, 28, 34, .70);
-  --glass-bg-form: rgba(25, 28, 34, .68);
-  --glass-bg-mobile: rgba(25, 28, 34, .82);
+  /* 毛玻璃层（深色）：深底上玻璃感天然更弱，同样压到 .8 起，
+     否则底图线条会从评论表单后面透出来 */
+  --glass-bg: rgba(25, 28, 34, .80);
+  --glass-bg-form: rgba(25, 28, 34, .80);
+  --glass-bg-mobile: rgba(25, 28, 34, .88);
   /* 背景底图由 base.html 按后台设置注入（深色版整体再乘 0.9） */
   --quote-bg: #20232b;
   --success: #86b87c;
@@ -161,12 +162,18 @@ body::before {
   mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, .22) 20%, rgba(0, 0, 0, .62) 48%, #000 78%);
   opacity: var(--pattern-opacity, .10);
 }
-/* 高分屏换用 3840×2160 的 @2x 版：在 2560CSS×DPR1.5（3840 设备像素）上正好 1:1，
+/* 高分屏换用 2560×1440 的 hd 档：在 1920CSS×DPR1.25–2、2560CSS×DPR1 的组合上基本 1:1，
    不再由浏览器把 2048 的图实时放大，线条不会发虚。
-   只在桌面断点启用——手机屏窄，1x 图已经够用，没必要多花 1MB 流量。 */
+   4K 全屏（CSS 宽 ≥2200 且高分屏）才升到 3840 的 uhd 档，避免大多数访客白下 1.4MB。
+   只在桌面断点启用——手机屏窄，1x 图已经够用，没必要多花流量。 */
 @media (min-width: 768px) and (min-resolution: 1.25dppx) {
   body::before {
     background-image: var(--pattern-image-hd, var(--pattern-image));
+  }
+}
+@media (min-width: 2200px) and (min-resolution: 1.25dppx) {
+  body::before {
+    background-image: var(--pattern-image-uhd, var(--pattern-image-hd, var(--pattern-image)));
   }
 }
 /* 移动端：图案按屏幕宽度完整显示（16:9 等比，不裁左右），贴底并沿用上沿渐隐。
@@ -250,13 +257,22 @@ body::before {
   }
   html[data-pattern-pos="both"] body::after { display: block; }
 }
-/* 左右模式两张图的 @2x 版本：放在基础规则之后，避免被 1x 覆盖 */
+/* 左右模式两张图的高分屏版本：放在基础规则之后，避免被 1x 覆盖；
+   4K 全屏再升 uhd（仅第 4 张素材有真 4K 源，其余素材 hd/uhd 都回落 1x） */
 @media (min-width: 768px) and (min-resolution: 1.25dppx) {
   html[data-pattern-pos="both"] body::before {
     background-image: var(--pattern-image-right-hd, var(--pattern-image-right));
   }
   html[data-pattern-pos="both"] body::after {
     background-image: var(--pattern-image-left-hd, var(--pattern-image-left));
+  }
+}
+@media (min-width: 2200px) and (min-resolution: 1.25dppx) {
+  html[data-pattern-pos="both"] body::before {
+    background-image: var(--pattern-image-right-uhd, var(--pattern-image-right-hd, var(--pattern-image-right)));
+  }
+  html[data-pattern-pos="both"] body::after {
+    background-image: var(--pattern-image-left-uhd, var(--pattern-image-left-hd, var(--pattern-image-left)));
   }
 }
 a { color: var(--accent); text-decoration: none; }
@@ -445,15 +461,23 @@ html.page-enter .tech-main {
 .tech-footer-links a { color: var(--text-secondary); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-footer-links a:hover { color: var(--accent); } }
 .tech-footer-copy { margin: 0; }
-.tech-footer-beian { width: 100%; }
-.tech-footer-beian a { color: var(--text-secondary); text-decoration: none; margin-right: 16px; }
-@media (hover: hover) and (pointer: fine) { .tech-footer-beian a:hover { color: var(--accent); } }
-/* 十年之约成员标识：一行独占页脚宽度，放最底部当「印章」；
-   平时 .72 透明度不抢正文，悬停恢复实色。双色图按 data-theme 切换，避免黑标压在深色底上。 */
-.tech-footer-member {
+/* 备案号 + 十年之约标识同一行：左备案右标识，标识不再单独占一排；
+   无备案号时标识仍在该行内，只是独占（行内 space-between 自动靠右？不——
+   只有一个子元素时 space-between 会靠左，符合预期） */
+.tech-footer-bottom {
   width: 100%;
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.tech-footer-beian { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.tech-footer-beian a { color: var(--text-secondary); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .tech-footer-beian a:hover { color: var(--accent); } }
+/* 十年之约成员标识：与备案号同一行靠右（.tech-footer-bottom 控制），
+   平时 .72 透明度不抢正文，悬停恢复实色。双色图按 data-theme 切换，避免黑标压在深色底上。
+   关于页正中有完整成员卡，用 :has 隐藏页脚标识，避免同页两枚重复。 */
+.tech-footer-member {
   display: flex; align-items: center;
-  margin-top: 2px;
   opacity: .72;
   transition: opacity .18s ease;
   -webkit-tap-highlight-color: transparent;
@@ -463,6 +487,7 @@ html.page-enter .tech-main {
 .tech-footer-member-logo--dark { display: none; }
 [data-theme="dark"] .tech-footer-member-logo--light { display: none; }
 [data-theme="dark"] .tech-footer-member-logo--dark { display: block; }
+.tech-main:has(.tech-about-fb) + .tech-footer .tech-footer-member { display: none; }
 
 /* ── 回到顶部 ── */
 .tech-top {
@@ -1831,8 +1856,9 @@ html { touch-action: manipulation; }
     gap: 4px 16px;
   }
   .tech-footer-beian a { margin-right: 0; }
+  /* 移动端：备案换行显示，成员标识跟在下面一行，不再强制右对齐 */
+  .tech-footer-bottom { flex-direction: column; align-items: flex-start; }
   /* 成员标识跟着页脚左对齐，略缩小高度，避免比备案文字更抢眼 */
-  .tech-footer-member { margin-top: 0; }
   .tech-footer-member-logo { height: 24px; }
 }
 
