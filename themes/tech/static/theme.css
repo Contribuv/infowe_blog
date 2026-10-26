@@ -462,8 +462,7 @@ html.page-enter .tech-main {
 @media (hover: hover) and (pointer: fine) { .tech-footer-links a:hover { color: var(--accent); } }
 .tech-footer-copy { margin: 0; }
 /* 备案号 + 十年之约标识同一行：左备案右标识，标识不再单独占一排；
-   无备案号时标识仍在该行内，只是独占（行内 space-between 自动靠右？不——
-   只有一个子元素时 space-between 会靠左，符合预期） */
+   无备案号时只有标识一个子元素，space-between 自动靠左 */
 .tech-footer-bottom {
   width: 100%;
   display: flex; flex-wrap: wrap; align-items: center;
@@ -473,17 +472,19 @@ html.page-enter .tech-main {
 .tech-footer-beian { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .tech-footer-beian a { color: var(--text-secondary); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-footer-beian a:hover { color: var(--accent); } }
-/* 十年之约成员标识：与备案号同一行靠右（.tech-footer-bottom 控制），
-   平时 .72 透明度不抢正文，悬停恢复实色。双色图按 data-theme 切换，避免黑标压在深色底上。
-   关于页正中有完整成员卡，用 :has 隐藏页脚标识，避免同页两枚重复。 */
+/* 十年之约成员标识：与备案号同一行靠右（.tech-footer-bottom 控制）。
+   20px 高 + .55 透明度是「印章」量级——之前 28px 与 14px 的备案小字同排失衡，
+   右下角像挂了块广告；现在比备案文字略重一点但不抢眼，悬停略提亮。
+   双色图按 data-theme 切换，避免黑标压在深色底上；
+   关于页正中有完整虫洞区块，用 :has 隐藏页脚标识，避免同页重复。 */
 .tech-footer-member {
   display: flex; align-items: center;
-  opacity: .72;
+  opacity: .55;
   transition: opacity .18s ease;
   -webkit-tap-highlight-color: transparent;
 }
-@media (hover: hover) and (pointer: fine) { .tech-footer-member:hover { opacity: 1; } }
-.tech-footer-member-logo { display: block; width: auto; height: 28px; }
+@media (hover: hover) and (pointer: fine) { .tech-footer-member:hover { opacity: .85; } }
+.tech-footer-member-logo { display: block; width: auto; height: 20px; }
 .tech-footer-member-logo--dark { display: none; }
 [data-theme="dark"] .tech-footer-member-logo--light { display: none; }
 [data-theme="dark"] .tech-footer-member-logo--dark { display: block; }
@@ -1373,34 +1374,25 @@ html.page-enter .tech-main {
 }
 .tech-timeline-content { font-size: 14px; margin: 0; }
 
-/* 十年之约：关于页成员卡（透明底 + 边框，与作者卡同语言） */
+/* 十年之约：关于页收尾区（无框、居中，页面在这里轻轻收束）。
+   只放彩色虫洞动图——黑白成员标识与虫洞并排是两枚 logo，互相打架；
+   「了解十年之约」的出口交给正文里的文字链接，出口够了，视觉只剩一个焦点 */
 .tech-about-fb {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px 20px;
-  background: transparent;
+  text-align: center;
+  padding: 10px 0 4px;
 }
 .tech-about-fb-text {
-  margin: 0 0 14px;
-  font-size: 14px; line-height: 1.75; color: var(--text-secondary);
+  margin: 0 0 16px;
+  font-size: 14px; line-height: 1.8; color: var(--text-secondary);
 }
-.tech-about-fb-actions {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
-}
-.tech-about-fb-badge {
+.tech-about-fb-text a { color: var(--accent); text-decoration: none; }
+.tech-about-fb-wormhole {
   display: inline-flex; align-items: center;
-  opacity: .82; transition: opacity .18s ease;
+  opacity: .88; transition: opacity .18s ease;
   -webkit-tap-highlight-color: transparent;
 }
-@media (hover: hover) and (pointer: fine) { .tech-about-fb-badge:hover { opacity: 1; } }
-.tech-about-fb-badge img { display: block; width: auto; height: 32px; }
-/* 双色标识按主题二选一：选择器要带上 .tech-about-fb-badge，
-   否则会被上面 `.tech-about-fb-badge img` 的 display:block 覆盖，两张图同时显示 */
-.tech-about-fb-badge .tech-about-fb-logo--dark { display: none; }
-[data-theme="dark"] .tech-about-fb-badge .tech-about-fb-logo--light { display: none; }
-[data-theme="dark"] .tech-about-fb-badge .tech-about-fb-logo--dark { display: block; }
-/* 虫洞是 64 高的方图，略放高一点，和 32 高的成员标识视觉重量接近 */
-.tech-about-fb-wormhole img { height: 40px; }
+@media (hover: hover) and (pointer: fine) { .tech-about-fb-wormhole:hover { opacity: 1; } }
+.tech-about-fb-wormhole img { display: block; width: auto; height: 40px; }
 
 /* ── 项目页：间距统一 8px 基准（分隔线两侧 12，卡内 16，卡间 12） ── */
 .tech-lang-stats {
@@ -1776,10 +1768,8 @@ html { touch-action: manipulation; }
   .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 24px; }
   /* 关于页：移动端作者卡收紧内边距（透明底与桌面一致） */
   .tech-about-hero { padding: 24px 16px 20px; margin-bottom: 20px; }
-  /* 十年之约成员卡：移动端缩小内距与标识高度，让两枚标识一行放得下 */
-  .tech-about-fb { padding: 16px; }
+  /* 十年之约收尾区：移动端文字略收、虫洞缩到 34px，居中不占边距 */
   .tech-about-fb-text { font-size: 13.5px; }
-  .tech-about-fb-badge img { height: 28px; }
   .tech-about-fb-wormhole img { height: 34px; }
   .tech-page-head--center .tech-page-title { font-size: 26px; }
   .tech-page-head--center .tech-page-desc { font-size: 14px; }
@@ -1843,23 +1833,19 @@ html { touch-action: manipulation; }
   .tech-links-grid { grid-template-columns: 1fr; }
   .tech-project-grid { grid-template-columns: 1fr; }
 
-  /* 页脚：窄屏改为纵向堆叠，备案号整条折行，避免文字溢出 */
+  /* 页脚：窄屏 inner 转纵向、链接行左对齐；
+     bottom 行一行放不下「双备案号 + 标识」，也转纵向——
+     备案占整行，标识缩到 18px 贴右下角，像一枚小印章，不和左对齐的备案文字打架 */
   .tech-footer-inner {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
   .tech-footer-links { justify-content: flex-start; }
-  .tech-footer-beian {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-  }
   .tech-footer-beian a { margin-right: 0; }
-  /* 移动端：备案换行显示，成员标识跟在下面一行，不再强制右对齐 */
-  .tech-footer-bottom { flex-direction: column; align-items: flex-start; }
-  /* 成员标识跟着页脚左对齐，略缩小高度，避免比备案文字更抢眼 */
-  .tech-footer-member-logo { height: 24px; }
+  .tech-footer-bottom { flex-direction: column; align-items: stretch; }
+  .tech-footer-member { align-self: flex-end; }
+  .tech-footer-member-logo { height: 18px; }
 }
 
 /* 打印：正文全宽 */
