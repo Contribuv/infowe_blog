@@ -22,7 +22,7 @@ def uploaded_file(filename: str):
 
 _THEME_STATIC_EXTS = {
     ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
-    ".json", ".woff", ".woff2", ".ttf", ".otf", ".mp4", ".webm",
+    ".json", ".woff", ".woff2", ".ttf", ".otf", ".mp4", ".webm", ".avif",
 }
 
 
@@ -38,9 +38,18 @@ def theme_static(filename: str):
         abort(404)
     if target.suffix.lower() not in _THEME_STATIC_EXTS:
         abort(404)
-    if not target.is_file():
-        abort(404)
-    return send_file(target, conditional=True, max_age=604800)
+    # 底图 AVIF 内容协商：CSS/模板零改动，同一 URL 按浏览器 Accept 头返回更小的
+    # AVIF 副本（约省一半体积），不支持或代理不带 Accept 的请求回落 WebP。
+    # 同一浏览器 Accept 恒定，304 协商不受影响；Vary: Accept 防止代理缓存串格式。
+    negotiated = target
+    if target.suffix.lower() == ".webp" and "image/avif" in (request.headers.get("Accept") or ""):
+        avif = target.with_suffix(".avif")
+        if avif.is_file():
+            negotiated = avif
+    response = send_file(negotiated, conditional=True, max_age=604800)
+    if target.suffix.lower() == ".webp":
+        response.headers["Vary"] = "Accept"
+    return response
 
 
 def share_thumb(filename: str):
