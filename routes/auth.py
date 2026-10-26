@@ -2,21 +2,46 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import random
+import secrets
 import time
 from datetime import datetime, timedelta
 
-from flask import flash, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    current_app, flash, jsonify, redirect, render_template, request, session, url_for,
+)
 
 from models import User
 from services import auth, notify, otp, settings
 from services.comments import request_ip
 
 
+def _captcha_sign(nonce: str, answer: int) -> str:
+    key = (current_app.secret_key or "").encode("utf-8")
+    return hmac.new(key, f"{nonce}:{answer}".encode("utf-8"), hashlib.sha256).hexdigest()
+
+
 def _captcha_question() -> str:
+    """生成加法题，只把 HMAC 签名写进 session。
+
+    旧实现把答案明文放进 Flask session，而 session 是签名 cookie（内容可读），
+    等于把验证码答案直接交给客户端。现在客户端只能看到 nonce 和签名。
+    """
     a, b = random.randint(1, 9), random.randint(1, 9)
-    session["captcha_answer"] = a + b
+    nonce = secrets.token_hex(8)
+    session["_captcha_nonce"] = nonce
+    session["_captcha_sig"] = _captcha_sign(nonce, a + b)
     return f"{a} + {b}"
+
+
+def _captcha_ok(answer: str) -> bool:
+    nonce = session.get("_captcha_nonce")
+    sig = session.get("_captcha_sig")
+    if not nonce or not sig or not str(answer or "").isdigit():
+        return False
+    return hmac.compare_digest(_captcha_sign(str(nonce), int(answer)), str(sig))
 
 
 def admin_index():
@@ -44,7 +69,7 @@ def admin_login():
         )
     required = auth.captcha_required(ip)
     if required:
-        if not session.get("captcha_answer"):
+        if not session.get("_captcha_sig"):
             session["_captcha_q"] = _captcha_question()
         question = session.get("_captcha_q")
     else:
@@ -54,7 +79,7 @@ def admin_login():
     if request.method == "POST":
         if required:
             answer = request.form.get("captcha", "").strip()
-            if not answer.isdigit() or int(answer) != session.get("captcha_answer"):
+            if not _captcha_ok(answer):
                 auth.register_failure(ip)
                 error = "验证码错误"
                 question = _captcha_question()
@@ -67,7 +92,8 @@ def admin_login():
         password = request.form.get("password", "")
         status, message = auth.attempt(username, password, ip)
         if status == "ok":
-            session.pop("captcha_answer", None)
+            session.pop("_captcha_nonce", None)
+            session.pop("_captcha_sig", None)
             session.pop("_captcha_q", None)
             return redirect(url_for("admin_dashboard"))
         if status == "otp":

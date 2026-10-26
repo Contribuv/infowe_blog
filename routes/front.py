@@ -309,6 +309,12 @@ def post_comment(post_id: int):
 def comment_upload():
     if not comments_service.open_comments() or not comments_service.image_upload_on():
         return jsonify({"error": "评论图片上传已关闭"}), 403
+    from services import ratelimit
+
+    ip = comments_service.request_ip()
+    # 匿名接口：限频 15 秒 1 张、单 IP 每天 30 张，避免被拿来刷磁盘
+    if not ratelimit.allow("upload_burst", ip, 15, 1) or not ratelimit.allow("upload_day", ip, 86400, 30):
+        return jsonify({"error": "上传太频繁，请稍后再试"}), 429
     file = request.files.get("image")
     url, error = upload.save(
         file,
@@ -319,6 +325,8 @@ def comment_upload():
     )
     if error:
         return jsonify({"error": error}), 400
+    ratelimit.touch("upload_burst", ip)
+    ratelimit.touch("upload_day", ip)
     return jsonify({"url": url})
 
 
@@ -354,6 +362,7 @@ def about():
         skills=skills,
         about_intro=settings.get_str("about_intro", ""),
         author=settings.get_str("author", ""),
+        avatar=avatar.admin_url(200),
         github=settings.get_str("github_username", "") or settings.get_str("social_github", ""),
         timeline=Timeline.load(),
         post_total=post_total,

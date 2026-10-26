@@ -108,9 +108,8 @@ def snapshot() -> tuple[dict, list[dict], float]:
     generated = 0.0
     for svc in parse_services():
         latest = ServiceCheck.latest(svc["id"])
-        history = ServiceCheck.history(svc["id"], 1)
-        if history:
-            generated = max(generated, float(history[0]["checked_at"]))
+        if latest:
+            generated = max(generated, float(latest["checked_at"]))
         services.append(
             {
                 "id": svc["id"],

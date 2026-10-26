@@ -87,10 +87,31 @@ def _paths(url: str) -> tuple[Path, Path]:
     return folder / f"{digest}.html", folder / f"{digest}.json"
 
 
+def _cleanup() -> None:
+    """清理过期的页面缓存（含冷门 URL：它们不会再被访问，只能主动清）。"""
+    if not PAGE_ROOT.exists():
+        return
+    now = time.time()
+    for meta_path in PAGE_ROOT.rglob("*.json"):
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if now - float(meta.get("created") or 0) <= float(meta.get("ttl") or 600):
+                continue
+            meta_path.unlink(missing_ok=True)
+            meta_path.with_suffix(".html").unlink(missing_ok=True)
+        except (OSError, ValueError):
+            continue
+
+
 def load():
     """命中则返回 Flask Response，否则 None。"""
     if not _cacheable():
         return None
+    # 低概率顺手清理过期缓存，避免冷门 URL 的 html/meta 永久堆在磁盘上
+    import random
+
+    if random.random() < 0.02:
+        _cleanup()
     html_path, meta_path = _paths(_url())
     if not html_path.is_file():
         return None

@@ -165,7 +165,8 @@ def save(
     if file is None or not file.filename:
         return "", "未选择文件或上传失败"
     limit = max_bytes or max_size()
-    data = file.read()
+    # 最多读 limit+1 字节，避免超大盘直接整块读进内存
+    data = file.read(limit + 1)
     if not data:
         return "", "文件为空"
     if len(data) > limit:

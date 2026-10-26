@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.19-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.19)
+[![version](https://img.shields.io/badge/version-3.2.20-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.20)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,28 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.19**
+- 版本：**v3.2.20**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.20
+
+安全与性能整修。
+
+- 头像：修复 configured_avatar_exists() 拼错路径（BASE_DIR/uploads → ar/uploads），后台上传头像后预览和前台关于页一直不显示；上传改为带时间戳文件名，换头像立即生效；关于页补传 vatar
+- 评论图片上传：加 15 秒/张 + 单 IP 30 张/天上限，避免匿名接口被刷磁盘
+- 头像/README 图片缓存：目录文件数上限（2000/3000）+ mtime 淘汰；头像 size 只接受 40/100/640；README 代理校验重定向后的最终域名
+- 限流：评论/浏览冷却从进程内存改到 SQLite 
+ate_events 表，gunicorn 多 worker 下不再失效
+- 批量删除文章：引用扫描只做一次，消除 O(n²)
+- 相关推荐：每个 tag 一次查询合并为一条 OR SQL
+- 页面缓存：低概率清理过期文件，冷门 URL 不再永久残留
+- 后台登录验证码：答案不再明文写 session，改存 HMAC 签名
+- 后台 POST：已登录会话必须带 Origin/Referer，补齐 CSRF 兜底
+- 文章 Markdown：兜底移除 script/style/iframe/object/embed/form、on* 事件与 javascript: URL
+- 关于页作者简介：先转义再换行，避免后台字段注入 HTML
+- 状态页：新增自动探测线程（5 分钟一次，文件锁保证多 worker 只跑一个）；/api/status 加 20 秒缓存
+- 清理 settings.DEFAULTS 里已删除的 pattern_* 配置
 
 ### v3.2.19
 

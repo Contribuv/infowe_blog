@@ -9,7 +9,10 @@ from services import status
 
 def api_status():
     expiry, services, generated = status.snapshot()
-    return jsonify({"expiry": expiry, "services": services, "generated_at": generated})
+    response = jsonify({"expiry": expiry, "services": services, "generated_at": generated})
+    # 前端每 60 秒轮询，20 秒浏览器缓存足够挡掉重复请求
+    response.headers["Cache-Control"] = "public, max-age=20"
+    return response
 
 
 def register(app) -> None:

@@ -87,26 +87,22 @@ def get_by_slug(slug: str) -> dict | None:
 
 
 def related(current_id: int, tags: list[str], limit: int = 4) -> list[dict]:
-    results: list[dict] = []
-    seen: set[int] = set()
-    for tag in tags:
-        if not tag:
-            continue
-        escaped = tag.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        rows = db.query(
-            "SELECT * FROM posts WHERE status = 'published' AND id != ? AND tags LIKE ? ESCAPE '\\' "
-            "ORDER BY created_at DESC LIMIT ?",
-            (current_id, f'%"{escaped}"%', limit),
-        )
-        for row in rows:
-            pid = int(row["id"])
-            if pid in seen:
-                continue
-            seen.add(pid)
-            results.append(hydrate(row))
-            if len(results) >= limit:
-                return results
-    return results[:limit]
+    """一条 SQL 取相关文章：所有 tag 用 OR 拼起来，避免每个 tag 查一次。"""
+    tags = [str(t).strip() for t in (tags or []) if str(t).strip()][:6]
+    if not tags:
+        return []
+    escaped = [
+        t.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        for t in tags
+    ]
+    conds = " OR ".join(["tags LIKE ? ESCAPE '\\'"] * len(escaped))
+    params = [int(current_id), *[f'%"{e}"%' for e in escaped], int(limit)]
+    rows = db.query(
+        f"SELECT * FROM posts WHERE status = 'published' AND id != ? AND ({conds}) "
+        "ORDER BY created_at DESC LIMIT ?",
+        tuple(params),
+    )
+    return [hydrate(r) for r in rows]
 
 
 def featured(limit: int = 3) -> list[dict]:
@@ -276,11 +272,26 @@ def bulk_set_status(ids: list[int], status: str) -> int:
 
 
 def bulk_delete(ids: list[int]) -> int:
-    total = 0
-    for pid in [int(i) for i in ids if int(i) > 0]:
-        delete_with_uploads(pid)
-        total += 1
-    return total
+    """批量删除。引用扫描只做一次，避免每篇都全表扫 6 张表（O(n²)）。"""
+    from services import upload
+
+    ids = [int(i) for i in ids if int(i) > 0]
+    if not ids:
+        return 0
+    gone: set[str] = set()
+    for pid in ids:
+        row = db.one("SELECT title, content, excerpt, tags FROM posts WHERE id = ?", (pid,))
+        if row:
+            gone |= upload.extract_urls(
+                (row["title"] or "", row["content"] or "", row["excerpt"] or "", row["tags"] or "")
+            )
+        db.execute("DELETE FROM posts WHERE id = ?", (pid,))
+    if gone:
+        survivors = upload.referenced_urls()
+        for url in gone:
+            if url and url not in survivors:
+                upload.delete_by_url(url)
+    return len(ids)
 
 
 def adjacent(created_at: str, earlier: bool) -> dict | None:

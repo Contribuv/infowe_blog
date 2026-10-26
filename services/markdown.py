@@ -65,6 +65,33 @@ def _filter_toc(tokens: list[dict], min_level: int = 2) -> list[dict]:
     return out
 
 
+_DANGEROUS_TAGS = re.compile(
+    r"<\s*(script|style|object|embed|form|iframe)\b[^>]*>.*?<\s*/\s*\1\s*>",
+    re.I | re.S,
+)
+
+
+def _sanitize_post_html(html: str) -> str:
+    """文章正文的危险标签兜底。
+
+    管理员写的 HTML 默认信任，但导入外部文章/数据库被污染时，
+    `<script>`、`onerror=`、`javascript:` 就会变成存储型 XSS。
+    这里只删危险项，保留布局用的 div/span/details 等。
+    """
+    if not html:
+        return html
+    html = _DANGEROUS_TAGS.sub("", html)
+    html = re.sub(r"<\s*(script|style|object|embed|form|iframe)\b[^>]*/?>", "", html, flags=re.I)
+    html = re.sub(r"\son[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", "", html, flags=re.I)
+    html = re.sub(
+        r"""\b(href|src)\s*=\s*(["'])\s*(?:javascript|vbscript|data:text/html)[^"']*\2""",
+        r'\1="#"',
+        html,
+        flags=re.I,
+    )
+    return html
+
+
 def render_post(content: str) -> tuple[str, str]:
     if not (content or "").strip():
         return "", ""
@@ -77,6 +104,7 @@ def render_post(content: str) -> tuple[str, str]:
     html = parser.convert(content)
     html = _optimize_images(html)
     html = _harden_links(html)
+    html = _sanitize_post_html(html)
     toc = _nest_toc(_filter_toc(getattr(parser, "toc_tokens", [])))
     return html, toc
 

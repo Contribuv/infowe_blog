@@ -48,8 +48,15 @@ def configured_avatar_exists() -> bool:
     cfg = settings.get_str("avatar", "").strip()
     if not cfg:
         return False
-    rel = cfg.lstrip("/")
-    return (Path(BASE_DIR) / rel).is_file()
+    # /uploads/xxx 实际落在 var/uploads/xxx（UPLOADS_DIR），
+    # 旧实现拼的是 BASE_DIR/uploads/xxx，永远不存在，
+    # 结果就是后台上传成功、预览和前台关于页都不显示头像。
+    rel = cfg.split("/uploads/", 1)[1] if "/uploads/" in cfg else cfg.lstrip("/")
+    rel = rel.split("?", 1)[0]
+    parts = rel.split("/")
+    if not rel or ".." in parts or rel.startswith("/"):
+        return False
+    return (Path(UPLOADS_DIR) / rel).is_file()
 
 
 def admin_url(size: int = 40) -> str:

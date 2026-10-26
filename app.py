@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import Flask, g, redirect, render_template, request, url_for
+from flask import Flask, g, redirect, render_template, request, session, url_for
 from jinja2 import ChoiceLoader, FileSystemLoader
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -62,6 +62,24 @@ def _secret_key() -> str:
     value = secrets.token_hex(32)
     file.write_text(value, encoding="utf-8")
     return value
+
+
+class _LazyCount:
+    """模板里只用到 `all_tags|length`，没必要每个请求都全表扫 posts。
+
+    懒到模板真正取长度时才查一次；不迭代、不取元素，避免误用。
+    """
+
+    __slots__ = ("_factory", "_value")
+
+    def __init__(self, factory):
+        self._factory = factory
+        self._value = None
+
+    def __len__(self):
+        if self._value is None:
+            self._value = len(self._factory())
+        return self._value
 
 
 def create_app(test_config: dict | None = None) -> Flask:
@@ -129,6 +147,8 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     _register_hooks(app)
     _register_cli(app)
+    if not app.config.get("TESTING"):
+        _start_status_scheduler(app)
     return app
 
 
@@ -151,6 +171,10 @@ def _register_hooks(app: Flask) -> None:
                 host_name = request.host.split(":")[0].lower()
                 if parsed.hostname and parsed.hostname.lower() != host_name:
                     return ("跨站请求被拒绝", 403)
+            elif session.get("admin_id"):
+                # 已登录的后台操作必须带 Origin/Referer；匿名评论（无会话）保持放行，
+                # 由评论冷却兜底，避免老客户端/隐私模式误伤。
+                return ("缺少来源校验，请从后台页面操作", 403)
 
         # 强制 HTTPS / www 归一（仅 GET，后台与本地豁免）
         if request.method == "GET" and not request.path.startswith(admin_prefix):
@@ -214,8 +238,7 @@ def _register_hooks(app: Flask) -> None:
             "social_github": conf.get("social_github", ""),
             "contact_email": conf.get("contact_email", ""),
             "avatar": conf.get("avatar", ""),
-            "all_tags": Post.all_tags(),
-            "links": Link.load(),
+            "all_tags": _LazyCount(Post.all_tags),
             "nav_on": nav_on,
             "nav_pages": nav_pages,
             "nav_all": nav_all,
@@ -449,6 +472,51 @@ def _sanitize_stats(html: str) -> str:
     html = re.sub(r"javascript\s*:", "", html, flags=re.I)
     html = re.sub(r"<(?!(script\b|/script>)).*?>", "", html, flags=re.I | re.S)
     return re.sub(r"\n\s*\n+", "\n", html).strip()
+
+
+def _start_status_scheduler(app: Flask) -> None:
+    """状态页自动探测：每 5 分钟跑一次 probe_all。
+
+    线上 gunicorn 4 个 worker 都会起这个线程，用文件锁保证同一时刻只有一个
+    进程真正发请求；没有 fcntl 的平台（本地 Windows）直接不启动。
+    """
+    import threading
+    import time
+
+    def loop() -> None:
+        try:
+            import fcntl
+        except ImportError:
+            return
+        time.sleep(15)
+        while True:
+            try:
+                with app.app_context():
+                    from models.service_check import ServiceCheck
+                    from services import status as status_service
+
+                    services = status_service.parse_services()
+                    if services:
+                        latest = 0.0
+                        for svc in services:
+                            row = ServiceCheck.latest(svc["id"])
+                            if row:
+                                latest = max(latest, float(row["checked_at"]))
+                        if time.time() - latest >= 300:
+                            lock_path = Path(config.CACHE_DIR) / "status_probe.lock"
+                            lock_path.parent.mkdir(parents=True, exist_ok=True)
+                            with open(lock_path, "w") as fh:
+                                try:
+                                    fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                                except OSError:
+                                    pass
+                                else:
+                                    status_service.probe_all(True)
+            except Exception:
+                pass
+            time.sleep(60)
+
+    threading.Thread(target=loop, daemon=True, name="status-probe").start()
 
 
 def _register_cli(app: Flask) -> None:

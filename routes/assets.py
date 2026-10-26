@@ -10,7 +10,7 @@ import requests
 from flask import abort, redirect, request, send_file, Response
 
 from config import CACHE_DIR, THEMES_DIR
-from services import avatar, upload
+from services import avatar, cachefs, upload
 
 
 def uploaded_file(filename: str):
@@ -57,16 +57,19 @@ def avatar_proxy(key: str, size: int):
 
     if key.startswith("q") and key[1:].isdigit():
         qq = key[1:]
-        target = avatar.qq_avatar_size(size)
+        # 只接受实际用到的三档，避免 /avatar/q1/999999.png 这种无限变体
+        if size not in (40, 100, 640):
+            abort(404)
+        target = size
         sources = [f"https://q{i}.qlogo.cn/g?b=qq&nk={qq}&s={target}" for i in (1, 2, 3, 4)]
     elif key.startswith("e") and len(key) == 33:
         digest = key[1:]
         if not all(c in "0123456789abcdef" for c in digest.lower()):
             abort(404)
-        s = max(1, min(size, 640))
+        size = max(1, min(size, 640))
         sources = [
-            f"https://cravatar.cn/avatar/{digest}?s={s}&d=404",
-            f"https://weavatar.com/avatar/{digest}?s={s}&d=404",
+            f"https://cravatar.cn/avatar/{digest}?s={size}&d=404",
+            f"https://weavatar.com/avatar/{digest}?s={size}&d=404",
         ]
     else:
         abort(404)
@@ -80,6 +83,7 @@ def avatar_proxy(key: str, size: int):
             resp = requests.get(url, timeout=4, headers={"User-Agent": "Mozilla/5.0"})
             if resp.status_code == 200 and resp.content:
                 cache_file.write_bytes(resp.content)
+                cachefs.cap(cache_dir, 2000)
                 return send_file(cache_file, max_age=604800, mimetype="image/png")
         except requests.RequestException:
             continue
@@ -133,6 +137,10 @@ def readme_image():
     if not candidates:
         try:
             resp = requests.get(raw, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            final_host = urlparse(resp.url or "").hostname
+            if final_host not in _ALLOWED_README_HOSTS:
+                # 防止白名单域名 302 到内网/任意地址
+                raise requests.RequestException("redirect host not allowed")
             if resp.status_code == 200 and resp.content and len(resp.content) <= 8 * 1024 * 1024:
                 ctype = (resp.headers.get("Content-Type") or "").lower()
                 if not suffix:
@@ -148,6 +156,7 @@ def readme_image():
                         suffix = ".jpg"
                 path = cache_dir / (key + suffix)
                 path.write_bytes(resp.content)
+                cachefs.cap(cache_dir, 3000)
                 candidates = [path]
         except requests.RequestException:
             candidates = []

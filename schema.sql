@@ -130,3 +130,12 @@ WHEN (SELECT COUNT(*) FROM users) >= 1
 BEGIN
     SELECT RAISE(ABORT, 'only one admin account is allowed');
 END;
+
+-- 通用限流事件：评论/图片上传/浏览量等按 (bucket, key) 计数
+CREATE TABLE IF NOT EXISTS rate_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    bucket TEXT NOT NULL,
+    key TEXT NOT NULL,
+    ts REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_rate_events ON rate_events (bucket, key, ts);

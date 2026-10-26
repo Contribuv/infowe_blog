@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-import threading
 import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -21,8 +20,8 @@ VIEW_COOLDOWN = 60
 MAX_IMAGES = 6
 _IMG_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
-_cooldown_lock = threading.Lock()
-_cooldown_data: dict[str, dict[str, float]] = {}
+# 冷却统一走 services.ratelimit（SQLite 表），不再用进程内字典：
+# gunicorn 多 worker 下内存字典各自一份，限流等于没有。
 
 
 def open_comments() -> bool:
@@ -108,19 +107,15 @@ def commenter() -> dict:
 
 
 def _cooldown_allowed(bucket: str, key: str, window: int) -> bool:
-    with _cooldown_lock:
-        now = time.time()
-        data = _cooldown_data.setdefault(bucket, {})
-        for k, ts in list(data.items()):
-            if now - ts > 3600:
-                data.pop(k, None)
-        last = data.get(key, 0)
-        return now - last >= window
+    from services import ratelimit
+
+    return ratelimit.allow(bucket, key, window, 1)
 
 
 def _touch_cooldown(bucket: str, key: str) -> None:
-    with _cooldown_lock:
-        _cooldown_data.setdefault(bucket, {})[key] = time.time()
+    from services import ratelimit
+
+    ratelimit.touch(bucket, key)
 
 
 def count_view(post_id: int) -> bool:

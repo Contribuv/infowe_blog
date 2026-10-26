@@ -902,8 +902,16 @@ def _save_avatar(file) -> None:
         img = img.crop((left, top, left + size, top + size)).resize((144, 144), Image.LANCZOS)
         folder = Path(UPLOADS_DIR) / "avatar"
         folder.mkdir(parents=True, exist_ok=True)
-        img.save(folder / "avatar.jpg", "JPEG", quality=85)
-        settings.set_value("avatar", "/uploads/avatar/avatar.jpg")
+        # 文件名带时间戳：换头像后 URL 立即变化，不会被浏览器 7 天缓存挡住
+        import time as _time
+        name = f"avatar_{int(_time.time())}.jpg"
+        img.save(folder / name, "JPEG", quality=85)
+        old = settings.get_str("avatar", "").strip()
+        settings.set_value("avatar", f"/uploads/avatar/{name}")
+        if "/uploads/avatar/" in old:
+            old_name = old.split("/uploads/avatar/", 1)[1].split("?", 1)[0]
+            if old_name and old_name != name:
+                (folder / old_name).unlink(missing_ok=True)
         flash("头像已更新", "success")
     except Exception:
         flash("头像不是有效的图片", "error")
