@@ -27,6 +27,11 @@
             <input type="url" name="avatar" value="{{ link.avatar if link else '' }}" class="form-input" placeholder="https://">
         </div>
         <div class="form-group">
+            <label>RSS 地址（选填）</label>
+            <input type="url" name="rss" value="{{ link.rss if link else '' }}" class="form-input" placeholder="https://example.com/feed.xml">
+            <span class="form-hint">通过审核后会聚合到前台「博客圈」页面</span>
+        </div>
+        <div class="form-group">
             <label>排序（数字越小越靠前）</label>
             <input type="number" name="sort_order" value="{{ link.sort_order if link else 0 }}" class="form-input" min="0">
         </div>

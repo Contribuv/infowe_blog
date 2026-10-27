@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}博客圈{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">博客圈</h1>
+    <p class="tech-page-desc">友链站点的最新更新，发现更多有温度的文字</p>
+</div>
+
+<div class="circle-stats">
+    <div><b>{{ stats.sites }}</b><span>订阅站点</span></div>
+    <div><b>{{ stats.month }}</b><span>本月文章</span></div>
+    <div><b>{{ stats.week }}</b><span>本周文章</span></div>
+    <div><b>{{ stats.today }}</b><span>今日文章</span></div>
+</div>
+
+{% if items %}
+<div class="circle-list">
+    {% for it in items %}
+    <article class="circle-item">
+        <a class="circle-title" href="{{ it.url }}" target="_blank" rel="noopener nofollow">{{ it.title }}</a>
+        {% if it.summary %}<p class="circle-summary">{{ it.summary }}</p>{% endif %}
+        <div class="circle-meta">
+            <a class="circle-site" href="{{ it.site_url }}" target="_blank" rel="noopener">
+                {% if it.site_avatar %}<img class="circle-avatar" src="{{ it.site_avatar }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}
+                <span>{{ it.site_name }}</span>
+            </a>
+            <time class="circle-time">{{ it.time_text }}</time>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="circle-pager" aria-label="博客圈分页">
+    {% if page > 1 %}<a href="?page={{ page - 1 }}">上一页</a>{% else %}<span class="is-disabled">上一页</span>{% endif %}
+    <span class="is-current">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}<a href="?page={{ page + 1 }}">下一页</a>{% else %}<span class="is-disabled">下一页</span>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="tech-empty">
+    <p>还没有可展示的友链动态。</p>
+    <p class="tech-empty-sub">友链提交 RSS 并通过审核后，这里会自动聚合最新文章。</p>
+</div>
+{% endif %}
+{% endblock %}

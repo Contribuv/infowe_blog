@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.12)
+[![version](https://img.shields.io/badge/version-3.4.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,18 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.12**
+- 版本：**v3.4.0**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.0
+
+- 新增「博客圈」页面 /circle：聚合已通过审核的友链 RSS 最新文章，按时间倒序，带站点头像/名称和相对时间，分页 + 统计（订阅站点、本月/本周/今日文章）
+- 友链新增 
+ss 字段：前台申请表单、后台编辑页都可填；审核通过后自动纳入博客圈
+- 新增 services/feeds.py：支持 RSS 2.0 / Atom，SSRF 防护、2MB/8s 限制、摘要去 HTML、30 分钟定时刷新（文件锁多 worker 只跑一个）
+- 导航增加「博客圈」，后台导航开关默认可控
+- 配色与当前主题一致，移动端 2×2 统计卡 + 单列列表
 
 ### v3.3.12
 

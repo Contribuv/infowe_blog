@@ -57,6 +57,7 @@ DEFAULTS: dict[str, str] = {
     "nav_tags": "1",
     "nav_projects": "1",
     "nav_links": "1",
+    "nav_circle": "1",
     "nav_status": "1",
     "nav_about": "1",
     "icp_beian": "",
@@ -101,7 +102,7 @@ DEFAULTS: dict[str, str] = {
 BOOL_KEYS = {
     "comments_enabled", "comment_notify", "comment_image_upload",
     "sensitive_filter_enabled", "nav_posts", "nav_tags", "nav_projects",
-    "nav_links", "nav_status", "nav_about", "force_https", "unify_www",
+    "nav_links", "nav_circle", "nav_status", "nav_about", "force_https", "unify_www",
     "watermark_enabled", "otp_enabled",
 }
 

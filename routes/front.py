@@ -370,6 +370,24 @@ def about():
     )
 
 
+def circle():
+    if not settings.bool_of("nav_circle", True):
+        abort(404)
+    from services import feeds
+
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    items, total, stats = feeds.aggregate(page)
+    total_pages = max(1, (total + feeds.PER_PAGE - 1) // feeds.PER_PAGE)
+    return render_template(
+        "circle.html",
+        items=items,
+        total=total,
+        stats=stats,
+        page=page,
+        total_pages=total_pages,
+    )
+
+
 def links_page():
     avatar_cfg = settings.get_str("avatar", "").strip()
     if avatar_cfg and not avatar_cfg.startswith("http"):
@@ -400,8 +418,9 @@ def links_apply():
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
         email = (request.form.get("email") or "").strip()
+        rss = (request.form.get("rss") or "").strip()
         link_id = Link.save(
-            {"name": name, "url": url, "description": description, "avatar": avatar_url, "sort_order": 0},
+            {"name": name, "url": url, "description": description, "avatar": avatar_url, "rss": rss, "sort_order": 0},
             None,
             "pending",
         )
@@ -573,6 +592,7 @@ def register(app) -> None:
         ("/tags", "tags", tags, ["GET"]),
         ("/search", "search", search, ["GET"]),
         ("/about", "about", about, ["GET"]),
+        ("/circle", "circle", circle, ["GET"]),
         ("/links", "links_page", links_page, ["GET"]),
         ("/links/apply", "links_apply", links_apply, ["GET", "POST"]),
         ("/links/apply/success", "links_apply_success", links_apply_success, ["GET"]),

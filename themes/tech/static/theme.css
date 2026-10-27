@@ -1972,3 +1972,104 @@ html { touch-action: manipulation; }
   }
 }
 
+/* ── 博客圈（友链 RSS 聚合）── */
+.circle-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0 24px;
+}
+.circle-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+.circle-stats b {
+  font-size: 22px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.circle-stats span { font-size: 12.5px; color: var(--text-secondary); }
+
+.circle-list { display: flex; flex-direction: column; }
+.circle-item {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.circle-item:first-child { border-top: 1px solid var(--border); }
+.circle-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text);
+  text-decoration: none;
+}
+.circle-title:hover { color: var(--accent); }
+.circle-summary {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.circle-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.circle-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.circle-site span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.circle-site:hover { color: var(--accent); }
+.circle-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; flex: none; }
+.circle-time { white-space: nowrap; flex: none; }
+
+.circle-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 28px 0 8px;
+  font-size: 13px;
+}
+.circle-pager a,
+.circle-pager span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.circle-pager a:hover { border-color: var(--accent); color: var(--accent); }
+.circle-pager .is-current { border-color: transparent; background: var(--bg-subtle); color: var(--text); }
+.circle-pager .is-disabled { opacity: .4; }
+
+@media (max-width: 640px) {
+  .circle-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .circle-stats b { font-size: 19px; }
+  .circle-title { font-size: 15px; }
+  .circle-item { padding: 15px 0; }
+}

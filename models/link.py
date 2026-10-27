@@ -27,6 +27,7 @@ def save(form: dict, link_id: int | None = None, status: str | None = None) -> i
     url = (form.get("url") or "").strip()
     description = (form.get("description") or "").strip()
     avatar = (form.get("avatar") or "").strip()
+    rss = (form.get("rss") or "").strip()
     sort_order = int(form.get("sort_order") or 0)
     if link_id is not None:
         existing = get(link_id)
@@ -35,16 +36,16 @@ def save(form: dict, link_id: int | None = None, status: str | None = None) -> i
         if status is None and form.get("status") in STATUSES:
             final_status = str(form["status"])
         db.execute(
-            "UPDATE links SET name=?, url=?, description=?, avatar=?, sort_order=?, status=? WHERE id=?",
-            (name, url, description, avatar, sort_order, final_status, link_id),
+            "UPDATE links SET name=?, url=?, description=?, avatar=?, rss=?, sort_order=?, status=? WHERE id=?",
+            (name, url, description, avatar, rss, sort_order, final_status, link_id),
         )
         return link_id
     final_status = status or "approved"
     if final_status not in STATUSES:
         final_status = "approved"
     return db.insert(
-        "INSERT INTO links (name, url, description, avatar, sort_order, status) VALUES (?,?,?,?,?,?)",
-        (name, url, description, avatar, sort_order, final_status),
+        "INSERT INTO links (name, url, description, avatar, rss, sort_order, status) VALUES (?,?,?,?,?,?,?)",
+        (name, url, description, avatar, rss, sort_order, final_status),
     )
 
 

@@ -77,10 +77,23 @@ CREATE TABLE IF NOT EXISTS links (
     sort_order INTEGER DEFAULT 0,
     status TEXT DEFAULT 'approved',
     email TEXT DEFAULT '',
+    rss TEXT DEFAULT '',
     ai_state TEXT DEFAULT 'idle',
     ai_meta TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
+
+CREATE TABLE IF NOT EXISTS feed_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    link_id INTEGER NOT NULL,
+    title TEXT DEFAULT '',
+    url TEXT DEFAULT '',
+    summary TEXT DEFAULT '',
+    published REAL DEFAULT 0,
+    fetched_at REAL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_items_url ON feed_items (link_id, url);
+CREATE INDEX IF NOT EXISTS idx_feed_items_pub ON feed_items (published DESC);
 
 CREATE TABLE IF NOT EXISTS timeline (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
