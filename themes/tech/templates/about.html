@@ -63,7 +63,8 @@
                 <span class="tech-skill-name">{{ skill.name }}</span>
                 <span class="tech-skill-level">{{ skill.level }}%</span>
             </div>
-            <div class="tech-skill-bar">
+            <div class="tech-skill-bar" role="progressbar" aria-valuenow="{{ skill.level }}"
+                 aria-valuemin="0" aria-valuemax="100" aria-label="{{ skill.name }} 熟练度">
                 <div class="tech-skill-fill" data-level="{{ skill.level }}" style="--sl: {{ skill.level }}%;"></div>
             </div>
         </div>

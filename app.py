@@ -254,6 +254,7 @@ def _register_hooks(app: Flask) -> None:
             "blog_name": conf.get("blog_name", "infowe"),
             "blog_subtitle": conf.get("blog_subtitle", ""),
             "home_title": conf.get("home_title", ""),
+            "home_kicker": conf.get("home_kicker", ""),
             "home_quotes": quotes_service.parse(conf.get("home_quotes", "")),
             "home_posts_count": conf.get("home_posts_count", "6"),
             "posts_per_page": conf.get("posts_per_page", "20"),

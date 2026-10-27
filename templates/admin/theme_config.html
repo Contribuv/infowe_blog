@@ -8,7 +8,27 @@
     </div>
 </div>
 
-<form method="POST" class="theme-config-form">
+<form method="POST" class="theme-config-form" style="display:flex;flex-direction:column;gap:var(--sp-4);">
+    <div class="card">
+        <div class="card-header">
+            <h3>首页标题区</h3>
+            <span class="form-hint">标题上方那行小字，只在首页显示</span>
+        </div>
+        <div class="theme-config-body">
+            <div class="form-group" style="max-width:560px;">
+                <label class="form-label" for="home-kicker">标语 / 一句话介绍</label>
+                <input type="text" id="home-kicker" name="home_kicker" class="form-input"
+                       value="{{ home_kicker }}" maxlength="80"
+                       placeholder="{{ blog_subtitle or 'Python · Code · Life' }}">
+                <p class="form-hint">
+                    留空则自动使用「站点设置 → 博客副标题」的文案（当前：{{ blog_subtitle or 'Python · Code · Life' }}）。
+                    这里只改首页标题区，不影响分享卡片与 RSS 的描述。
+                </p>
+            </div>
+            <p class="form-hint theme-config-tip">首页大标题仍在「站点设置 → 首页标题」中配置。</p>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-header">
             <h3>文章列表布局</h3>
@@ -72,6 +92,12 @@
                 {% endfor %}
             </div>
             <p class="form-hint theme-config-tip">项目卡片会自动等高；窄屏按 2 列 / 1 列递减。</p>
+            <div class="form-group" style="margin-top:var(--sp-3);max-width:320px;">
+                <label class="form-label" for="projects-per-page">每页显示条数</label>
+                <input type="number" id="projects-per-page" name="projects_per_page"
+                       value="{{ projects_per_page }}" min="0" max="100" step="1" class="form-input">
+                <p class="form-hint">0 表示不分页（一次展示全部项目）；建议 12–24。只影响项目列表页。</p>
+            </div>
         </div>
     </div>
 

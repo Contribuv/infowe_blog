@@ -13,6 +13,8 @@ DEFAULTS: dict[str, str] = {
     "blog_name": "infowe",
     "blog_subtitle": "Python · Code · Life",
     "home_title": "",
+    # 首页标题上方的小字标语（tech 主题 Kicker）；留空则回退到 blog_subtitle
+    "home_kicker": "",
     "home_quotes": "",
     "home_posts_count": "6",
     "posts_per_page": "20",
@@ -21,6 +23,8 @@ DEFAULTS: dict[str, str] = {
     "circle_per_page": "30",
     "readers_limit": "10",
     "project_layout": "three",
+    # 项目列表每页条数：0 表示不分页（全部展示）
+    "projects_per_page": "12",
     # 文章列表布局：single 单栏 / double 双栏（tech 主题配置页可切换）
     "post_layout": "single",
     "author": "Linus",

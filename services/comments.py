@@ -47,6 +47,27 @@ def render_content(content: str) -> Markup:
     return Markup(re.sub(r"!\[([^\]]*)\]\((/uploads/[^\s()<>\"']+)\)", repl, escaped))
 
 
+_NICKNAME_URL_RE = re.compile(r"^(?:https?://|www\.)", re.I)
+
+
+def validate_author(author: str) -> str | None:
+    """昵称规则：不能纯数字、不能以网址开头、不能包含违规词。
+
+    违规词与评论正文共用后台「敏感词」词库；昵称是公开展示位，
+    即使正文过滤开关关闭，命中词库的昵称也应拒绝。
+    """
+    value = (author or "").strip()
+    if re.fullmatch(r"\d+", value):
+        return "昵称不能是纯数字，请换一个"
+    if _NICKNAME_URL_RE.match(value):
+        return "昵称不能以 http://、https:// 或 www. 开头"
+    lowered = value.lower()
+    for word in sensitive.words():
+        if word and word.lower() in lowered:
+            return "昵称包含违规词，请换一个"
+    return None
+
+
 def normalize_email(email: str) -> str:
     email = (email or "").strip()
     return email + "@qq.com" if re.fullmatch(r"\d{5,12}", email) else email
@@ -95,15 +116,55 @@ def merge_images(content: str, raw: str) -> str:
     return (content.rstrip() + "\n" + markers).strip()
 
 
+def _is_admin() -> bool:
+    from services import auth
+
+    return auth.is_admin()
+
+
+def _blogger_identity() -> tuple[str, set[str]]:
+    """博主身份标识：昵称 + 后台配置过的博主邮箱（联系邮箱 / 通知邮箱）。"""
+    author = settings.get_str("author", "").strip()
+    emails = {
+        settings.get_str("contact_email", "").strip().lower(),
+        settings.get_str("notify_email", "").strip().lower(),
+    }
+    emails.discard("")
+    return author, emails
+
+
+def is_blogger_identity(data: dict | None) -> bool:
+    """判断「访客记忆」cookie 里存的是否是博主本人资料。
+
+    昵称与博主同名者提交时已被拒绝（见 submit 的占用校验），
+    因此 cookie 里的 author 等于站点作者名时，必然是博主自己留下的。
+    """
+    if not isinstance(data, dict):
+        return False
+    author, emails = _blogger_identity()
+    if author and str(data.get("author") or "").strip() == author:
+        return True
+    email = str(data.get("email") or "").strip().lower()
+    return bool(email and email in emails)
+
+
 def commenter() -> dict:
     raw = request.cookies.get("blog_commenter", "")
     if not raw:
         return {}
     try:
         value = json.loads(raw)
-        return value if isinstance(value, dict) else {}
     except (ValueError, TypeError):
         return {}
+    if not isinstance(value, dict):
+        return {}
+    # 博主身份不外泄：旧版本以博主身份评论时，会把博主昵称与联系邮箱写进这个 cookie，
+    # 退出登录后前台评论表单仍回显博主资料。非管理员身份下直接剔除该身份，
+    # 只保留「我发过的评论」记录（待审核时仍能标记为「仅你可见」）。
+    if not _is_admin() and is_blogger_identity(value):
+        my_comments = value.get("my_comments")
+        return {"my_comments": my_comments} if isinstance(my_comments, dict) else {}
+    return value
 
 
 def _cooldown_allowed(bucket: str, key: str, window: int) -> bool:
@@ -177,14 +238,25 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
 
     parent_raw = (form.get("parent_id") or "").strip()
     is_private = str(form.get("is_private") or "").strip().lower() in {"1", "on", "true", "yes"}
+    # 邮箱通知开关（表单默认勾选）：勾选时邮箱必填，用于接收回复提醒；不勾选则邮箱选填
+    notify_on = str(form.get("notify") or "").strip().lower() in {"1", "on", "true", "yes"}
+    # 博主身份的表单不显示这个开关（博主不会收到「你自己的评论被回复」邮件），按开启入库
+    if is_admin:
+        notify_on = True
 
     if not author or len(author) > 30:
         return {"url": back, "error": "请填写昵称（30 字以内）"}
+    author_error = validate_author(author)
+    if author_error:
+        return {"url": back, "error": author_error}
     blogger = settings.get_str("author", "").strip()
     if not is_admin and blogger and author == blogger:
         return {"url": back, "error": "该昵称已被占用，请换一个"}
     if not content or len(content) > 2000:
         return {"url": back, "error": "评论内容不能为空且不能超过2000字"}
+    # 勾选邮箱通知却没填邮箱：后端兜底（前端 comments.js 也做了同样提示）
+    if notify_on and not email and not is_admin:
+        return {"url": back, "error": "已勾选邮箱通知，请填写邮箱；不需要提醒可取消勾选"}
 
     # 保留过滤前的原文：AI 托管要用它做敏感词硬拦截（过滤后原词已被替换成 *）
     raw_content = content
@@ -228,21 +300,29 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         target_id if is_project else None,
         ip_location.of(ip),
         is_owner=is_admin,
+        notify=notify_on,
     )
     _touch_cooldown("comment", ip)
 
     # 记住评论者信息（30 天）
-    data = {"author": author, "email": email, "website": website}
     old = commenter()
-    for key in ("author", "email", "website"):
-        if old.get(key):
-            data[key] = old[key]
-    my_comments = old.get("my_comments") if isinstance(old.get("my_comments"), dict) else {}
-    if not is_private:
-        my_comments[str(comment_id)] = author
-        if len(my_comments) > 20:
-            my_comments = dict(list(my_comments.items())[-20:])
-    data["my_comments"] = my_comments
+    data: dict | None = None
+    if not is_admin:
+        data = {"author": author, "email": email, "website": website}
+        # 本次提交的值优先，旧记忆只用来补空字段
+        # （此前是旧值无条件覆盖新值，用户点「修改」改完资料后永远存不下来）
+        for key in ("author", "email", "website"):
+            if not data.get(key) and old.get(key):
+                data[key] = old[key]
+        my_comments = old.get("my_comments") if isinstance(old.get("my_comments"), dict) else {}
+        if not is_private:
+            my_comments[str(comment_id)] = author
+            if len(my_comments) > 20:
+                my_comments = dict(list(my_comments.items())[-20:])
+        data["my_comments"] = my_comments
+        # 记住邮箱通知选择，下次打开表单沿用（默认勾选）
+        data["notify"] = "1" if notify_on else "0"
+    # 以博主身份评论时不写 cookie：否则博主退出登录后，同一浏览器仍会回显博主昵称与邮箱
 
     # 异步邮件通知（失败静默，不阻塞请求）
     if settings.bool_of("comment_notify", True):

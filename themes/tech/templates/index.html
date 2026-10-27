@@ -17,7 +17,8 @@
 {% else %}
 <div class="tech-home-head tech-home-head--{{ post_layout }}">
     <div class="tech-home-head-main">
-        <p class="tech-home-kicker">{{ blog_subtitle or 'Python · Code · Life' }}</p>
+        {# 首页标语：优先取主题配置里的独立字段，留空回退站点副标题，再回退主题默认 #}
+        <p class="tech-home-kicker">{{ home_kicker or blog_subtitle or 'Python · Code · Life' }}</p>
         <h1 class="tech-home-title">{{ home_title or blog_name }}</h1>
         <div class="tech-home-stats">
             <span><b>{{ total }}</b>篇文章</span>
@@ -32,11 +33,7 @@
         <!-- 首页格言：后台自定义优先，否则使用主题内置句子库；交互逻辑见 theme.js -->
         <div class="tech-quote">
             <span class="tech-quote-text" id="tech-quote-text"></span>
-            <span class="tech-quote-cursor" aria-hidden="true"></span>
             <span class="tech-quote-src" id="tech-quote-src"></span>
-            <button type="button" class="tech-quote-refresh" id="tech-quote-refresh" title="换一句" aria-label="换一句格言">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            </button>
         </div>
     </div>
 </div>

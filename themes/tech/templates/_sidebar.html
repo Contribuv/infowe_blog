@@ -1,7 +1,7 @@
 <aside class="tech-sidebar" aria-label="站点侧栏">
     {% from "_icons.html" import arrow %}
     <section class="tech-side-card tech-side-profile-card">
-        <a class="tech-side-profile" href="/about" aria-label="关于 {{ author or blog_name }}">
+        <div class="tech-side-profile">
             {% if avatar %}
             <img class="tech-side-avatar" src="{{ avatar }}" alt="{{ author or blog_name }}" loading="lazy"
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
@@ -9,11 +9,11 @@
             {% else %}
             <span class="tech-side-avatar tech-side-avatar--text">{{ (author or blog_name or '?')[0] | upper }}</span>
             {% endif %}
-            <span class="tech-side-profile-main">
+            <div class="tech-side-profile-main">
                 <span class="tech-side-profile-kicker">博主</span>
-                <strong>{{ author or blog_name }}<span class="tech-side-profile-arrow" aria-hidden="true">{{ arrow(14) }}</span></strong>
-            </span>
-        </a>
+                <a class="tech-side-profile-name" href="/about">{{ author or blog_name }}</a>
+            </div>
+        </div>
         {% if author_bio %}
         <p class="tech-side-bio">{{ author_bio | e | replace('\n', ' ') | safe }}</p>
         {% endif %}

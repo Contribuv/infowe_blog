@@ -205,11 +205,8 @@
                 setTimeout(function () { btn.textContent = '复制'; }, 2000);
             } catch (e) {}
         }
-        if (window.hljs) {
-            content.querySelectorAll('pre code').forEach(function (block) {
-                hljs.highlightElement(block);
-            });
-        }
+        /* 语法高亮统一交给 theme.js 的 techHighlightCode：等 defer 脚本就绪，
+           Dockerfile 语法由 base.html 额外加载；未标注/不认识的语言按纯文本处理 */
 
         /* 2.5 表格包 .table-wrap 滚动容器（宽表格横向滑动、单元格不折行） */
         content.querySelectorAll('table').forEach(function (table) {

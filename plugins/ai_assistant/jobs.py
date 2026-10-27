@@ -8,6 +8,7 @@ import re
 import socket
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -16,8 +17,8 @@ from flask import current_app
 
 import db
 from config import CACHE_DIR
-from models import Comment, Link, Post
-from services import notify, plugins, site_url
+from models import Comment, Link, Post, Project
+from services import notify, plugins, settings, site_url
 
 from . import ai_client, config
 
@@ -72,6 +73,21 @@ def _enabled() -> bool:
 
 
 # ── 评论托管 ──────────────────────────────────────────────
+def _in_reply_time_window(cfg: dict) -> bool:
+    mode = str(cfg.get("comment_reply_time_mode") or "all").strip().lower()
+    if mode == "all":
+        return True
+    try:
+        hour = datetime.now().hour
+    except Exception:
+        return True
+    if mode == "day":
+        return 9 <= hour < 21
+    if mode == "night":
+        return hour >= 21 or hour < 9
+    return True
+
+
 def on_comment(payload: dict) -> None:
     if not _enabled():
         return
@@ -102,7 +118,12 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
             if not comment:
                 return
             content = str(comment.get("content") or "").strip()
-            if len(content) < int(cfg.get("comment_min_length") or 10):
+            min_len = int(cfg.get("comment_min_length") or 10)
+            max_len = int(cfg.get("comment_max_length") or 0)
+            if len(content) < min_len:
+                db.execute("UPDATE comments SET ai_state='skipped' WHERE id=?", (cid,))
+                return
+            if max_len > 0 and len(content) > max_len:
                 db.execute("UPDATE comments SET ai_state='skipped' WHERE id=?", (cid,))
                 return
             # 本地硬规则先拦：领导人、官员、政府敏感词直接拒绝，不交给模型判断
@@ -112,16 +133,24 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 db.execute("UPDATE comments SET status='rejected', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
                 return
             post = Post.get(int(comment.get("post_id") or 0)) if comment.get("post_id") else None
-            title = str((post or {}).get("title") or "项目")
-            excerpt = str((post or {}).get("excerpt") or "")[:500]
+            project = Project.get(int(comment.get("project_id") or 0)) if comment.get("project_id") else None
+            title = str((post or {}).get("title") or (project or {}).get("name") or "项目")
+            excerpt = str((post or {}).get("excerpt") or (project or {}).get("description") or "")[:500]
+            # 回复必须只基于当前文章正文：以前只喂标题/摘要，AI 容易自由发挥、答非所问。
+            # 正文压成单行后截断 4000 字，既控制 token，也保留足够上下文。
+            body = re.sub(r"\s+", " ", str((post or {}).get("content") or "")).strip()[:4000]
+            context = body or excerpt
 
             prompt = (
                 "你是博客评论审核助手，只能用简体中文。判断下面评论是否属于："
                 "垃圾广告、辱骂攻击、无意义灌水、违法敏感内容。\n"
                 "涉及中国国家领导人、国家官员、政府敏感话题、分裂国家、政治事件的内容，一律 reject。\n"
+                "回复只能依据「当前内容正文」：正文没有提到的信息不要臆测、不要编造，"
+                "确实没写就直说文章里没有提到；不要营销、不要推广站外内容。\n"
                 "只返回 JSON：{\"decision\":\"approve|reject|review\",\"reason\":\"简短理由\","
-                "\"reply\":\"给这条评论的回复，50-150字中文，可结合文章内容，不要营销\"}\n"
-                f"文章标题：{title}\n文章摘要：{excerpt}\n"
+                "\"reply\":\"给这条评论的回复，50-150字中文，必须紧扣当前内容正文\"}\n"
+                f"当前内容标题：{title}\n当前内容摘要：{excerpt}\n"
+                f"当前内容正文（节选）：\n<<<\n{context}\n>>>\n"
                 f"评论作者：{comment.get('author')}\n评论内容：\n<<<\n{content[:2000]}\n>>>"
             )
             ok, text, _ = ai_client.chat(
@@ -147,7 +176,7 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 return
 
             db.execute("UPDATE comments SET status='approved', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
-            if cfg.get("comment_reply") and reply and not _blocked_word(reply):
+            if cfg.get("comment_reply") and reply and not _blocked_word(reply) and _in_reply_time_window(cfg):
                 profile = config.active_profile()
                 avatar = config.provider_avatar(profile)
                 new_id = Comment.save(
@@ -164,6 +193,25 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 db.execute("UPDATE comments SET ai_meta=? WHERE id=?", (
                     json.dumps({"decision": "approve", "reason": reason, "ai_reply": new_id}, ensure_ascii=False), cid,
                 ))
+                if cfg.get("comment_reply_notify", True):
+                    try:
+                        comment_notify = str(settings.get_str("comment_notify", "0") or "0").lower()
+                        if comment_notify in {"1", "on", "true", "yes"}:
+                            parent_email = str(comment.get("email") or "").strip()
+                            if parent_email and "@" in parent_email and not parent_email.lower().endswith("@qq.com"):
+                                post = Post.get(int(comment.get("post_id") or 0))
+                                title = str((post or {}).get("title") or "")
+                                link = site_url.post_url(post) if post else site_url.base()
+                                content_text = (
+                                    f"你好，{comment.get('author') or '访客'}：\n\n"
+                                    f"你在《{title}》的评论有了新的回复：\n\n"
+                                    f"{reply}\n\n"
+                                    f"查看原文：{link}#comment-{new_id}\n\n"
+                                    "此邮件由系统自动发送，请勿直接回复。"
+                                )
+                                notify.send(parent_email, "[评论回复] " + (title or "博客评论"), content_text)
+                    except Exception:
+                        pass
         except Exception:
             try:
                 db.execute("UPDATE comments SET ai_state='review' WHERE id=?", (cid,))

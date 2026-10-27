@@ -1745,7 +1745,15 @@ html { touch-action: manipulation; }
 }
 
 /* 通用隐藏类：置于末尾以按顺序压过后文同特异度的 display 声明（如 .tech-link-avatar） */
-.hidden { display: none; }</style></head>
+.hidden { display: none; }
+/* 全站横向滚动条统一 6px（与 theme.css 同步） */
+::-webkit-scrollbar { height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+}
+</style></head>
 <body>
     
     

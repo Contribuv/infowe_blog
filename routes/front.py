@@ -496,8 +496,47 @@ def projects_page():
     if not settings.bool_of("nav_projects", True):
         abort(404)
     project_sync.auto_sync()
-    projects = [lang.decorate(p) for p in Project.load()]
-    return render_template("projects.html", projects=projects, languages=lang.tally(projects))
+    # 项目数量少，全量取出后在内存里分页：语言统计需要基于全部项目计算，
+    # 才能保证筛选条上的数量与分页无关
+    all_projects = [lang.decorate(p) for p in Project.load()]
+    total_projects = len(all_projects)
+    languages = lang.tally(all_projects)
+
+    # 语言筛选走 URL（?lang=）：这样翻页、刷新、分享链接都能保住筛选条件。
+    # 之前由前端 JS 隐藏卡片，只能过滤当前页——分页后点语言会看到空列表
+    active_lang = (request.args.get("lang") or "").strip()
+    if active_lang not in languages:
+        active_lang = ""
+    filtered = (
+        [p for p in all_projects if active_lang in p.get("lang_names", "").split(",")]
+        if active_lang else all_projects
+    )
+
+    total = len(filtered)
+    per_page = max(0, min(100, settings.get_int("projects_per_page", 12)))
+    try:
+        page = int(request.args.get("page", 1))
+    except (TypeError, ValueError):
+        page = 1
+    page = max(1, page)
+    if per_page > 0:
+        total_pages = max(1, (total + per_page - 1) // per_page)
+        page = min(page, total_pages)
+        projects = filtered[(page - 1) * per_page: page * per_page]
+    else:
+        total_pages = 1
+        page = 1
+        projects = filtered
+    return render_template(
+        "projects.html",
+        projects=projects,
+        languages=languages,
+        active_lang=active_lang,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        total_projects=total_projects,
+    )
 
 
 def project_detail(project_id: int):

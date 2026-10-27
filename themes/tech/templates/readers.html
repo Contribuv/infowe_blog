@@ -15,9 +15,10 @@
 </div>
 
 {% if items %}
-<!-- 前三名单独展示（仅第一页） -->
+<!-- 前三名单独展示（仅第一页）；不足 3 人时用 tech-podium--one/--two 改排布，
+     避免三列网格把唯一卡片塞在左边、右侧留空 -->
 {% if page == 1 %}
-<div class="tech-podium">
+<div class="tech-podium{% if items|length == 1 %} tech-podium--one{% elif items|length == 2 %} tech-podium--two{% endif %}">
     {% for r in items[:3] %}
     <article class="tech-podium-item tech-podium-item--{{ r.rank }}">
         <span class="tech-podium-rank tech-podium-rank--{{ r.rank }}">{% if r.rank == 1 %}冠军{% elif r.rank == 2 %}亚军{% else %}季军{% endif %}</span>

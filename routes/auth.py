@@ -117,8 +117,17 @@ def admin_login():
 
 
 def admin_logout():
+    from services import comments as comments_service
+
+    # 退出前先看「访客记忆」cookie：旧版本以博主身份评论时会把博主昵称/邮箱写进去，
+    # 退出登录后前台评论表单仍会回显博主资料，这里一并清掉（访客自己的资料不受影响）。
+    # 注意顺序：必须在 auth.logout() 之前读，此时仍能以管理员身份读到原始 cookie。
+    remembered = comments_service.commenter()
+    response = redirect(url_for("admin_login"))
+    if comments_service.is_blogger_identity(remembered):
+        response.delete_cookie("blog_commenter", path="/")
     auth.logout()
-    return redirect(url_for("admin_login"))
+    return response
 
 
 def admin_otp():

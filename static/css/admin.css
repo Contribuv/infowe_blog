@@ -1087,8 +1087,7 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
 }
 .theme-author { font-size: var(--fz-xs); color: var(--text-tertiary); }
 .theme-desc { font-size: var(--fz-xs); color: var(--text-secondary); line-height: 1.5; }
-/* 主题卡内的「配置」按钮：收起时是低调描边小按钮，展开后高亮提示再点一次收起；
-   放在 label 内，点击不会选中 radio（button 是交互元素，label 不转发） */
+/* 主题卡内的「配置」按钮 */
 .theme-config-btn {
   display: inline-flex; align-items: center; gap: 5px;
   margin-top: 6px; padding: 5px 12px;
@@ -1102,6 +1101,11 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
   .theme-config-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 }
 .theme-config-btn[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.theme-config-btn-inline {
+  align-self: flex-start;
+  margin-top: 8px;
+  border-radius: 8px;
+}
 .themes-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .themes-help-tip { padding: var(--sp-3) var(--sp-5) 0; font-size: var(--fz-sm); color: var(--text-secondary); line-height: 1.7; }
 .themes-help-tip:last-child { padding-bottom: var(--sp-4); }
@@ -1917,7 +1921,8 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
   text-decoration: none;
 }
 .theme-config-link:hover { text-decoration: underline; }
-.theme-config-body { padding: 0 var(--sp-5) var(--sp-5); }
+.theme-config-body { padding: var(--sp-4) var(--sp-5) var(--sp-5); }
+.card-header + .theme-config-body { padding-top: var(--sp-4); }
 .layout-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1993,7 +1998,7 @@ html[data-theme=light] .badge-picked {
 .theme-choice-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 .theme-choice { position: relative; display: inline-flex; }
 .theme-choice input {
@@ -2005,20 +2010,22 @@ html[data-theme=light] .badge-picked {
 .theme-choice span {
   display: inline-flex;
   align-items: center;
-  padding: 8px 22px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--bg-surface-2);
+  padding: 5px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-surface);
   color: var(--text-secondary);
   font-size: var(--fz-sm);
+  line-height: 1.6;
   cursor: pointer;
-  transition: border-color var(--transition), background-color var(--transition), color var(--transition);
+  transition: border-color var(--transition), background-color var(--transition), color var(--transition), box-shadow var(--transition);
 }
-.theme-choice:hover span { border-color: var(--border-strong); }
+.theme-choice:hover span { border-color: var(--accent); color: var(--text); }
 .theme-choice input:checked + span {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent);
+  font-weight: 600;
 }
 .theme-choice input:focus-visible + span {
   outline: 2px solid var(--accent);

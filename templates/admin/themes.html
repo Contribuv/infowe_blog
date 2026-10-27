@@ -30,7 +30,7 @@
                 {% if t.version %}<span class="theme-author">版本：v{{ t.version }}</span>{% endif %}
                 {% if t.description %}<span class="theme-desc">{{ t.description }}</span>{% endif %}
                 {% if t.key == 'tech' %}
-                <a class="theme-config-link" href="{{ url_for('admin_theme_config') }}">主题配置 →</a>
+                <a class="btn btn-outline btn-sm theme-config-btn-inline" href="{{ url_for('admin_theme_config') }}">主题配置</a>
                 {% endif %}
             </span>
         </label>

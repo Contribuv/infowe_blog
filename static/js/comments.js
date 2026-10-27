@@ -65,6 +65,7 @@
   var fields = document.getElementById('comment-fields');
   var remember = document.getElementById('comment-remember');
   var editBtn = document.getElementById('comment-remember-edit');
+  var authorInput = form.querySelector('input[name="author"]');
   var emailInput = document.getElementById('comment-email');
   var emailSuggest = document.getElementById('cmt-email-suggest');
   var qqAv = document.getElementById('cmt-qq-av');
@@ -330,26 +331,96 @@
     sync();
   }
 
-  /* ── 4. 提交防重复 ── */
+  /* ── 3.5 邮箱必填：就地拦截（Toast 说明原因 + 邮箱框红边 + 滚动聚焦），不再整页刷新 ── */
+  var EMAIL_HINT = '已勾选邮箱通知，请填写邮箱；不需要提醒可取消勾选';
+  function clearEmailError() {
+    if (emailInput) {
+      emailInput.classList.remove('is-invalid');
+      emailInput.removeAttribute('aria-invalid');
+    }
+  }
+  function showEmailError() {
+    // 「已记住信息」时昵称/邮箱整行是隐藏的，先展开再聚焦，否则用户看不到被提醒的是哪个框
+    if (fields && fields.hidden) {
+      fields.hidden = false;
+      if (remember) remember.hidden = true;
+    }
+    if (emailInput) {
+      emailInput.classList.add('is-invalid');
+      emailInput.setAttribute('aria-invalid', 'true');
+      if (emailInput.scrollIntoView) emailInput.scrollIntoView({ block: 'center' });
+      emailInput.focus();
+    }
+    if (window.toast) window.toast(EMAIL_HINT, 'error');
+  }
+  if (emailInput) emailInput.addEventListener('input', clearEmailError);
+
+  /* ── 4. 提交防重复 + 前置校验 ──
+     注意：addEventListener 的回调里 return false 并不取消默认提交，必须显式 preventDefault。
+     旧写法只弹了 toast、表单照样 POST → 后端拒绝后整页刷新回原页，看起来「居然能提交」。 */
   if (submitBtn) {
-    form.addEventListener('submit', function () {
+    form.addEventListener('submit', function (ev) {
       if (form.dataset.submitting === '1') {
+        ev.preventDefault();
         if (window.toast) window.toast('正在提交，请稍候…', 'info', 2000);
-        return false;
+        return;
       }
       // 邮箱若仍是纯数字 QQ 号，提交前自动补全 @qq.com（后端另有格式校验）
       if (emailInput && QQ_RE.test(emailInput.value.trim())) {
         emailInput.value = emailInput.value.trim() + '@qq.com';
       }
+      /* 昵称前置校验：纯数字 / 网址开头 / 命中敏感词。后端另有同规则兜底，
+         这里只做即时提示，避免提交后跳回页面才看到错误。 */
+      if (authorInput) {
+        var author = authorInput.value.trim();
+        var authorError = '';
+        if (/^\d+$/.test(author)) {
+          authorError = '昵称不能是纯数字，请换一个';
+        } else if (/^(?:https?:\/\/|www\.)/i.test(author)) {
+          authorError = '昵称不能以 http://、https:// 或 www. 开头';
+        } else if (author) {
+          var raw = form.getAttribute('data-sensitive-words') || '';
+          if (raw) {
+            try {
+              var list = JSON.parse(raw);
+              if (Object.prototype.toString.call(list) === '[object Array]') {
+                var lowAuthor = author.toLowerCase();
+                for (var ai = 0; ai < list.length; ai++) {
+                  var word = String(list[ai] || '').toLowerCase();
+                  if (word && lowAuthor.indexOf(word) >= 0) {
+                    authorError = '昵称包含违规词，请换一个';
+                    break;
+                  }
+                }
+              }
+            } catch (e) {}
+          }
+        }
+        if (authorError) {
+          ev.preventDefault();
+          if (window.toast) window.toast(authorError, 'error');
+          authorInput.focus();
+          return;
+        }
+      }
+      /* 邮箱通知：勾选后邮箱必填。用 JS 校验而非原生 required —— 表单在「已记住信息」
+         时整行隐藏，隐藏控件触发原生校验只会报 not focusable 并卡住提交。 */
+      if (notifyInput && notifyInput.checked && emailInput && !emailInput.value.trim()) {
+        ev.preventDefault();
+        showEmailError();
+        return;
+      }
       if (!textarea || !textarea.value.trim()) {
+        ev.preventDefault();
         if (window.toast) window.toast('请先填写评论内容', 'error');
         textarea && textarea.focus();
-        return false;
+        return;
       }
       if (textarea.value.length > MAX_LEN) {
+        ev.preventDefault();
         if (window.toast) window.toast('评论内容不能超过 ' + MAX_LEN + ' 字', 'error');
         textarea.focus();
-        return false;
+        return;
       }
       form.dataset.submitting = '1';
       submitBtn.disabled = true;
@@ -371,6 +442,29 @@
       var first = fields.querySelector('input');
       if (first) first.focus();
     });
+  }
+
+  /* ── 5.5 邮箱通知：勾选时邮箱必填，取消后邮箱可不填 ──
+     仅同步占位/说明文案，真正的必填校验在提交事件里做（避免原生 required + 隐藏控件卡死表单） */
+  var notifyInput = document.getElementById('comment-notify');
+  function syncNotify() {
+    if (!notifyInput || !emailInput) return;
+    var on = notifyInput.checked;
+    emailInput.placeholder = on
+      ? (emailInput.getAttribute('data-ph-on') || 'QQ 号或邮箱（必填）')
+      : (emailInput.getAttribute('data-ph-off') || 'QQ 号或邮箱（选填）');
+    emailInput.title = on
+      ? (emailInput.getAttribute('data-title-on') || '已勾选邮箱通知：邮箱必填，用于接收回复提醒')
+      : (emailInput.getAttribute('data-title-off') || '选填，用于显示头像');
+    emailInput.setAttribute('aria-required', on ? 'true' : 'false');
+  }
+  if (notifyInput) {
+    notifyInput.addEventListener('change', function () {
+      syncNotify();
+      // 取消勾选后邮箱不再是必填，之前的红字提醒要立刻撤掉
+      if (!notifyInput.checked) clearEmailError();
+    });
+    syncNotify();   // 回填记住的选择后同步一次（上次取消勾选则保持取消）
   }
 
   /* ── 6. 待审核评论：轻提示引导（页面上已有提示条，这里补一句可关闭的说明） ── */

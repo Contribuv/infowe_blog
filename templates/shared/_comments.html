@@ -104,9 +104,14 @@
         <details class="cmt-box" id="comment-box">
             <summary class="cmt-toggle">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                写评论
+                {# 折叠态做成「输入框占位条」：灰色提示 + 右侧「写评论」，不用悬停也能看出可点 #}
+                <span class="cmt-toggle-placeholder">写下你的想法…</span>
+                <span class="cmt-toggle-act">写评论</span>
+                <span class="cmt-toggle-close">收起评论框</span>
             </summary>
             <div class="cmt-box-body">
+            {# 邮件通知总开关（后台设置）：决定「邮箱通知」勾选项是否渲染，下方字段与底部选项区共用这一判定 #}
+            {% set notify_ui = comment_notify|default('0') in ('1','on','true','yes') %}
             {% if is_admin %}
             <div class="cmt-admin">
                 {% if admin_avatar %}<img class="cmt-admin-avatar" src="{{ admin_avatar }}" alt="">{% endif %}
@@ -120,16 +125,32 @@
             </div>
             {% endif %}
             <div class="row" id="comment-fields"{% if commenter.author %} hidden{% endif %}>
-                <input type="text" name="author" placeholder="昵称（必填，显示在评论中）" maxlength="30" required value="{{ commenter.author or '' }}">
-                {# 邮箱：输入纯数字 QQ 号时下拉补全 @qq.com 并预览 QQ 头像（comments.js 驱动）；type=text 避免原生 email 校验拦截，格式仍由后端校验 #}
+                {# 占位文案只放最短的必要信息：三列并排时（≥768px）每列约 1/3 宽，
+                   原文案「昵称（必填，显示在评论中）」这类长串会被直接截断；
+                   完整说明移到 title，鼠标悬停仍可看到 #}
+                <input type="text" name="author" placeholder="昵称（必填）" maxlength="30" required
+                       title="昵称会显示在评论中" value="{{ commenter.author or '' }}">
+                {# 邮箱：输入纯数字 QQ 号时下拉补全 @qq.com 并预览 QQ 头像（comments.js 驱动）；type=text 避免原生 email 校验拦截，格式仍由后端校验
+                   占位/说明按「邮箱通知」勾选状态切换（初始文案由 Jinja 给出，JS 随后同步） #}
                 <div class="cmt-field">
-                    <input type="text" name="email" id="comment-email" inputmode="email" autocomplete="off" placeholder="{% if comment_notify|default('0') in ('1','on','true','yes') %}QQ号或邮箱（选填，回复会邮件通知你）{% else %}QQ号或邮箱（选填，用于头像）{% endif %}" maxlength="100" value="{{ commenter.email or '' }}">
+                    <input type="text" name="email" id="comment-email" inputmode="email" autocomplete="off"
+                           placeholder="{% if notify_ui %}QQ 号或邮箱（必填）{% else %}QQ 号或邮箱（选填）{% endif %}"
+                           maxlength="100"
+                           title="{% if notify_ui %}已勾选邮箱通知：邮箱必填，用于接收回复提醒{% else %}选填，用于显示头像{% endif %}"
+                           data-ph-on="QQ 号或邮箱（必填）"
+                           data-ph-off="QQ 号或邮箱（选填）"
+                           data-title-on="已勾选邮箱通知：邮箱必填，用于接收回复提醒"
+                           data-title-off="选填，用于显示头像"
+                           value="{{ commenter.email or '' }}">
                     <img class="cmt-qq-av" id="cmt-qq-av" alt="" hidden>
                     <div class="cmt-suggest" id="cmt-email-suggest" hidden></div>
                 </div>
                 {# 网址：type=text 避免原生 url 校验把 www.demo.com 拦掉；缺协议时由 comments.js 下拉补全 http/https，后端再兜底补 https #}
                 <div class="cmt-field">
-                    <input type="text" name="website" id="comment-website" inputmode="url" autocomplete="off" placeholder="网址（选填，博客 / 个人主页）" maxlength="200" value="{{ commenter.website or '' }}">
+                    <input type="text" name="website" id="comment-website" inputmode="url" autocomplete="off"
+                           placeholder="网址（选填）" maxlength="200"
+                           title="你的博客或个人主页地址"
+                           value="{{ commenter.website or '' }}">
                     <div class="cmt-suggest" id="cmt-website-suggest" hidden></div>
                 </div>
             </div>
@@ -152,7 +173,18 @@
                     <input type="file" id="cmt-imgup-input" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
                 </div>
                 {% endif %}
-                <label class="chk"><input type="checkbox" name="is_private" value="1" id="comment-private"><span>私密评论（仅博主可见）</span></label>
+                {# 两个勾选项与工具按钮同行：只保留短标题（完整说明移到 title 悬停提示），
+                   窄屏放不下时由 flex-wrap 整体换行；管理员不显示邮箱通知（博主不会收到自己被回复的邮件） #}
+                {% if notify_ui and not is_admin %}
+                <label class="chk" title="勾选后邮箱必填，回复时邮件提醒你">
+                    <input type="checkbox" name="notify" value="1" id="comment-notify"{% if commenter.get('notify', '1') not in ('0', 0, False) %} checked{% endif %}>
+                    <span>邮箱通知</span>
+                </label>
+                {% endif %}
+                <label class="chk" title="勾选后仅博主可见">
+                    <input type="checkbox" name="is_private" value="1" id="comment-private">
+                    <span>私密评论</span>
+                </label>
                 <span class="count">0 / 2000</span>
                 <button type="submit" class="submit">提交评论</button>
             </div>

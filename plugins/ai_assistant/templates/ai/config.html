@@ -101,6 +101,10 @@
                     <span><strong>通过后 AI 回复</strong><small>结合文章内容生成中文回复，带「AI 助手」标识</small></span>
                 </label>
                 <label class="ai-switch">
+                    <input type="checkbox" name="comment_reply_notify" {% if cfg.comment_reply_notify|default(true) %}checked{% endif %}>
+                    <span><strong>AI 回复邮件通知</strong><small>AI 自动回复时也发送邮件通知评论者（沿用站点评论邮件通知配置）</small></span>
+                </label>
+                <label class="ai-switch">
                     <input type="checkbox" name="link_moderation" {% if cfg.link_moderation %}checked{% endif %}>
                     <span><strong>友链回链自动审核</strong><small>对方页面出现本站链接后自动通过并发信通知</small></span>
                 </label>
@@ -109,8 +113,22 @@
                     <input type="number" name="comment_min_length" class="input-text" value="{{ cfg.comment_min_length }}" min="0" max="200">
                 </div>
                 <div class="form-group">
+                    <label>评论最长长度（0 表示不限）</label>
+                    <input type="number" name="comment_max_length" class="input-text" value="{{ cfg.comment_max_length|default(0) }}" min="0" max="10000">
+                </div>
+                <div class="form-group">
+                    <label>AI 回复托管时段</label>
+                    <select name="comment_reply_time_mode" class="input-text">
+                        <option value="all" {{ 'selected' if (cfg.comment_reply_time_mode|default('all')) == 'all' else '' }}>全天</option>
+                        <option value="day" {{ 'selected' if (cfg.comment_reply_time_mode|default('all')) == 'day' else '' }}>白天（09:00 - 21:00）</option>
+                        <option value="night" {{ 'selected' if (cfg.comment_reply_time_mode|default('all')) == 'night' else '' }}>夜晚（21:00 - 09:00）</option>
+                    </select>
+                    <span class="form-hint">仅在选定时段内触发 AI 自动回复</span>
+                </div>
+                <div class="form-group">
                     <label>友链复查时长（小时）</label>
                     <input type="number" name="link_check_hours" class="input-text" value="{{ cfg.link_check_hours }}" min="1" max="720">
+                    <span class="form-hint">仅在「友链回链自动审核」定时任务启用时生效</span>
                 </div>
             </div>
         </div>

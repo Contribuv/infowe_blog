@@ -136,14 +136,38 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .cmt-box-body{padding:0}
 /* 折叠态整卡都是展开热区：内边距与空白处也给手型，避免只有「写评论」可点 */
 .cmt-form:has(.cmt-box:not([open])){cursor:pointer}
+/* ── 折叠态：把 summary 做成「输入框占位条」 ──
+   原先只有一行灰字「写评论」，不悬停根本看不出能点。现在整条 = 浅底 + 描边 +
+   灰色提示语「写下你的想法…」+ 右侧强调动作「写评论」，与真正的 textarea 视觉连续；
+   点击仍由 comments.js 的整卡热区接管，展开后换成「收起评论框」保留折叠入口 */
+.cmt-form .cmt-box:not([open]) .cmt-toggle{
+  padding:10px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);
+}
+.cmt-toggle-placeholder{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--c-text3)}
+.cmt-toggle-act{flex:none;font-size:12.5px;font-weight:500;color:var(--c-accent)}
+.cmt-toggle-close{display:none;flex:1 1 auto;font-size:12.5px}
+.cmt-box[open] .cmt-toggle-placeholder,
+.cmt-box[open] .cmt-toggle-act{display:none}
+.cmt-box[open] .cmt-toggle-close{display:inline}
+@media (hover:hover) and (pointer:fine){
+  .cmt-form .cmt-box:not([open]) .cmt-toggle:hover{border-color:var(--c-accent)}
+  .cmt-form .cmt-box:not([open]) .cmt-toggle:hover .cmt-toggle-placeholder{color:var(--c-text2)}
+}
+/* 键盘聚焦：与输入框同款焦点环，明确这里可以按回车展开 */
+.cmt-form .cmt-box:not([open]) .cmt-toggle:focus-visible{
+  outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak);
+}
 .cmt-form .row{display:flex;gap:9px;margin-bottom:9px}
-.cmt-form input,.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
+/* 只作用于文本类输入框：复选框保留原生外观（否则勾选态没有对勾），由 .chk input 单独控制 */
+.cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
 .cmt-form textarea{min-height:76px;resize:vertical;margin-bottom:10px}
 .cmt-form input::placeholder,.cmt-form textarea::placeholder{color:var(--c-text3)}
 .cmt-form input:focus,.cmt-form textarea:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak)}
 .cmt-form .foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .cmt-form .chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--c-text3);cursor:pointer;user-select:none}
 .cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
+/* 邮箱必填被拦截时的红边：提示文案交给全局 Toast（底部弹出），这里只标出是哪个字段 */
+.cmt-form input.is-invalid,.cmt-form textarea.is-invalid{border-color:var(--danger,#b4232f);box-shadow:0 0 0 3px rgba(180,35,47,.14)}
 .cmt-form .count{margin-left:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 .cmt-form .submit{padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
@@ -188,11 +212,21 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-thread{padding:16px 14px}
   .cmt-replies{margin-top:12px;padding:0}
   .cmt-replies .cmt-item+.cmt-item{margin-top:12px}
-  .cmt-form .row{flex-direction:column;gap:9px}
+  .cmt-form .row{flex-direction:column;gap:7px;margin-bottom:8px}
   .cmt-text{font-size:13.5px}
   .cmt-title{font-size:15px}
-  /* iOS Safari 对 <16px 的输入框会自动放大页面（即使 viewport 声明了 user-scalable=no） */
-  .cmt-form input,.cmt-form textarea{font-size:16px}
+  /* 移动端表单：字号贴近正文、内边距压扁，避免输入框比正文大一圈而显得突兀。
+     iOS 也统一 14px（保持视觉一致）：代价是 iOS Safari 聚焦时会整页放大一下，属已知取舍。 */
+  .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{font-size:14px;line-height:1.35;padding:6px 10px}
+  .cmt-form textarea{min-height:60px;padding:7px 10px}
+  /* 点按控件时不铺半透明高亮块：根节点虽已设 transparent，部分浏览器对表单元件仍套用 UA 默认值，
+     这里逐个显式覆盖；appearance:none 只用于文本类输入框，复选框必须保留原生绘制（勾选态要看到对勾） */
+  .cmt-form input,.cmt-form textarea,.cmt-form button,.cmt-form label,.cmt-form .chk{
+    -webkit-tap-highlight-color:transparent;
+  }
+  .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{-webkit-appearance:none;appearance:none}
+  /* 焦点态只保留细一圈的光环：3px 在深色下像铺了一块底，移动端收窄到 2px */
+  .cmt-form input:focus,.cmt-form textarea:focus{box-shadow:0 0 0 2px var(--c-accent-weak)}
 }
 
 /* ── 邮箱字段：纯数字 QQ 号下拉补全 @qq.com + 头像预览 ── */

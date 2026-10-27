@@ -166,14 +166,17 @@ def notify_comment(
     parent_author = ""
     reply_email = ""
     reply_private = False
+    reply_notify = True
     if parent_id:
         parent = db.one(
-            "SELECT author, email, is_private FROM comments WHERE id = ?", (parent_id,)
+            "SELECT author, email, is_private, notify FROM comments WHERE id = ?", (parent_id,)
         )
         if parent:
             parent_author = str(parent["author"] or "")
             reply_email = str(parent["email"] or "").strip()
             reply_private = bool(int(parent["is_private"] or 0))
+            # 被回复者提交时取消了「邮箱通知」→ 不再发回复邮件（旧数据默认 1）
+            reply_notify = bool(int(parent["notify"] if parent["notify"] is not None else 1))
 
     jobs: list[dict] = []
     admin_to = _admin_to()
@@ -204,8 +207,9 @@ def notify_comment(
             }
         )
 
-    # 2) 被回复者提醒：仅评论已公开、非私密、对方不是博主本人、也不是自己回自己
-    if status == "approved" and reply_email and not reply_private and not is_private:
+    # 2) 被回复者提醒：仅评论已公开、非私密、对方不是博主本人、也不是自己回自己，
+    #    且被回复者提交时保留了「邮箱通知」（notify=0 表示他不要邮件提醒）
+    if status == "approved" and reply_email and reply_notify and not reply_private and not is_private:
         reply_lower = reply_email.lower()
         if reply_lower not in _blogger_emails() and reply_lower != commenter.lower():
             text, page = mail_template.reply_notice(
@@ -249,6 +253,9 @@ def notify_approved_reply(comment_id: int) -> None:
 
     parent = Comment.get(int(parent_id))
     if not parent or int(parent.get("is_private") or 0):
+        return
+    # 被回复者提交时取消了「邮箱通知」→ 审核通过后也不再补发
+    if not int(parent.get("notify") if parent.get("notify") is not None else 1):
         return
     reply_email = str(parent.get("email") or "").strip()
     commenter_email = str(comment.get("email") or "").strip()

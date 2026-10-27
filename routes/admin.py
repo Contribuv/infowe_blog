@@ -737,6 +737,15 @@ def admin_theme_config():
         if project_layout not in {"one", "two", "three"}:
             project_layout = "three"
         settings.set_value("project_layout", project_layout)
+        # 项目列表每页条数：0 = 不分页；非法输入回退 12
+        try:
+            projects_pp = int((request.form.get("projects_per_page") or "12").strip())
+        except ValueError:
+            projects_pp = 12
+        settings.set_value("projects_per_page", str(max(0, min(100, projects_pp))))
+        # 首页标题区的小字标语：独立配置，避免为了改首页一句文案而改动站点的 og 描述
+        kicker = " ".join((request.form.get("home_kicker") or "").split())
+        settings.set_value("home_kicker", kicker[:80])
         # 首页和列表页有整页缓存，保存后清掉，返回前台立刻能看到
         from services import page_cache
 
@@ -748,6 +757,9 @@ def admin_theme_config():
         "admin/theme_config.html",
         post_layout=settings.get_str("post_layout", "single"),
         project_layout=settings.get_str("project_layout", "three"),
+        projects_per_page=settings.get_str("projects_per_page", "12"),
+        home_kicker=settings.get_str("home_kicker", ""),
+        blog_subtitle=settings.get_str("blog_subtitle", ""),
     )
 
 

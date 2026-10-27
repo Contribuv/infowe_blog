@@ -3,7 +3,8 @@
    tech 主题 · 极简单栏 · 移动端优先 · GitHub 风格
    导航/页脚容器 .tech-shell（max-width 1000px）
    主内容统一单列 780px：页头 / 横线 / 正文 / 卡片，
-   全站同一列宽基准，无第二档宽度
+   全站同一列宽基准，无第二档宽度 版权 © 2023-2024 haozi
+   联系邮箱：site023@qq.com | 开源项目 商业请联系
    ═══════════════════════════════════════════════ */
 
 /* ── 页面切换过渡（跨文档 View Transition，渐进增强） ──
@@ -201,6 +202,20 @@ img { max-width: 100%; }
 .tech-main .tech-shell {
   max-width: 1000px;
 }
+/* 窄屏（视口尚小于 1000px 上限时）：正文左右各比导航/页脚多收 10px。
+   移动端原先三处都是 100% - 40px，正文与页头页脚等宽、版心层级消失；
+   PC 端是 1000 / 1200 ≈ 83%，移动端不必按同比例（会把正文压到 280px 左右），
+   取「每侧再收 10px」既保留正文可读宽度，又能看出内容确实窄于导航与页脚 */
+@media (max-width: 1000px) {
+  .tech-main .tech-shell { padding: 0 30px; }
+}
+/* ≤480px 导航/页脚收到 16px，正文同步回收到 24px：
+   仍比页头页脚窄 8px/侧，但避免小屏正文被压到 280px 以下（每行不足 16 字） */
+@media (max-width: 480px) {
+  .tech-main .tech-shell { padding: 0 24px; }
+}
+/* 项目列表页与其它内容页同宽 1000px（内宽 960）；
+   语言筛选 chip 可自然换行，不再单独放宽到导航宽度，避免与全站版心不一致 */
 
 /* ── 导航 ── */
 .tech-nav {
@@ -249,7 +264,7 @@ img { max-width: 100%; }
     transition-duration: .001ms !important;
     scroll-behavior: auto !important;
   }
-  .tech-quote-cursor { animation: none !important; }
+  /* 一言不再有打字光标，无需单独关闭动画 */
   /* 页面切换也不做淡出/位移动画 */
   @view-transition { navigation: none; }
   ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
@@ -344,7 +359,8 @@ html.page-enter .tech-main {
   animation: tech-page-enter 140ms ease-out both;
 }
 /* 居中极简 Hero 页面（首页/搜索/标签结果）：main 自身不垫顶部，留白交给 page-head 统一，保证上下对称 */
-.tech-main:has(.tech-page-head--center) { padding-top: 0; }
+.tech-main:has(.tech-page-head--center),
+.tech-main:has(.tech-home-head) { padding-top: 0; }
 /* 关于页：顶部是左对齐「关于」页头 + 下方人物卡 Hero，需与其他子页一致的顶部留白 */
 /* 关于页顶部与其它页面统一：主内容区 24px 上边距 */
 .tech-main:has(.tech-about-hero) { padding-top: 24px; }
@@ -458,40 +474,41 @@ html.page-enter .tech-main {
   .tech-page-head--center .tech-page-title {
     font-size: 34px;
   }
+  /* 首页品牌名与子页居中 Hero 同一级（34px）：原先 28px 比内容页标题还小，
+     宽屏下「首页比内页轻」 */
+  .tech-home-title {
+    font-size: 34px;
+  }
   .tech-quote {
     margin-top: 20px;
-    font-size: 15px;
+    font-size: 14px;
   }
-  .tech-quote .tech-quote-refresh svg { width: 16px; height: 16px; }
 }
 
 /* ── 首页终端格言 ── */
 .tech-quote {
-  display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
-  gap: 4px 10px; margin-top: 28px; min-height: 26px;
-  font-size: 14px; line-height: 1.9; color: var(--text);padding-bottom: 10px;
+  display: flex; align-items: center; justify-content: center; flex-wrap: nowrap;
+  gap: 8px; margin-top: 28px; min-height: 26px;
+  font-size: 14px; line-height: 1.9; color: var(--text); padding-bottom: 10px;
+  min-width: 0;
 }
-.tech-quote-text { word-break: break-word; }
-.tech-quote-src { font-size: 13px; color: var(--text-secondary); }
+/* 长句最多两行，超出才省略；flex: 0 1 auto 让整行按内容宽度居中，
+   不会因为文本占满剩余宽度而把出处挤到右侧、看起来偏左 */
+.tech-quote-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.tech-quote-src { flex: none; font-size: 13px; color: var(--text-secondary); }
 .tech-quote-src:empty { display: none; }
-.tech-quote-cursor {
-  flex: none; width: 2px; height: 17px; margin-left: 1px;
-  background: var(--accent); border-radius: 1px;
-  animation: tech-blink 1.2s steps(2, start) infinite;
-}
-.tech-quote-refresh {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px; padding: 0;
-  color: var(--text-secondary); background: none; border: none;
-  border-radius: 6px; cursor: pointer;
-  transition: color .15s, background .15s;
-}
-.tech-quote-refresh svg { width: 14px; height: 14px; transition: transform .28s ease; }
-@media (hover: hover) and (pointer: fine) { .tech-quote-refresh:hover { color: var(--accent); background: var(--bg-subtle); } }
-.tech-quote-refresh.spin svg { transform: rotate(360deg); }
 
-/* ── 首页 Hero：极简无卡（一行统计 + 居中格言） ── */
-/* 统计行等宽：保留终端质感，但不放假命令 */
+/* ── 首页 Hero：统一信息层级 ── */
 .tech-page-desc--mono {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   letter-spacing: .01em;
@@ -577,10 +594,23 @@ html.page-enter .tech-main {
   transition: opacity .18s ease, transform .18s ease;
   pointer-events: none;
 }
-/* 窄屏（真机移动端 / PC 窄窗口）：本就无 hover 背景，取消左右外扩，
-   让分割线与正文同宽；箭头在 meta 行右侧易与换行标题叠字，直接隐藏 */
-@media (max-width: 767px) {
-  .tech-post-item { margin: 0 0 20px; padding: 14px 0; }
+/* 窄屏（移动端 / PC 窄窗口 / 平板竖向）：统一改成与友链、项目卡同款的独立卡片
+   —— 1px 描边 + 12px 圆角 + 内边距，不再用负 margin 外扩。
+   负 margin 只能在宽屏有多余留白时用；窄屏下 -8px 会把 hover 高亮块推到版心边缘，
+   在触摸设备上就是一整块「背景框溢出」。分割改由卡片间距承担。 */
+@media (max-width: 1000px) {
+  .tech-post-item {
+    margin: 0 0 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .tech-post-item:last-child {
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  /* 窄屏去掉大范围投影，只保留卡片自身的底色/描边变化，避免阴影渗出卡片外 */
+  .tech-post-item:hover { box-shadow: none; }
   .tech-post-arrow { display: none; }
 }
 .tech-post-meta {
@@ -604,19 +634,23 @@ html.page-enter .tech-main {
 .tech-post-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tech-tag {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; color: var(--accent);
-  background: var(--bg-subtle);
-  border: 1px solid var(--border);
-  padding: 2px 10px; border-radius: 12px; text-decoration: none;
+  font-size: 12px; color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  padding: 2px 10px; border-radius: 8px; text-decoration: none;
   cursor: pointer;
-  transition: border-color .15s, color .15s, background-color .15s, transform .1s;
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-tag:hover {
-    border-color: var(--accent); color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 10%, var(--bg-subtle));
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    color: var(--text);
+    background: var(--hover-bg);
+    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
+    transform: translateY(-1px);
   }
 }
+.tech-tag:active { transform: translateY(0); }
 .tech-tag:active { transform: translateY(1px); }
 .tech-tag--more {
   color: var(--text-secondary);
@@ -670,37 +704,74 @@ html.page-enter .tech-main {
 
 /* ── 分页 ── */
 .tech-more-wrap { display: flex; justify-content: center; margin-top: 32px; }
-/* 归档页底部按钮：轻量描边胶囊，和全站按钮同一套视觉 */
+/* 归档页底部按钮：条形圆角，沿用全站按钮语言 */
 .tech-more-wrap .tech-btn-primary {
   height: 38px;
-  padding: 0 18px;
-  border-radius: 999px;
-  border-color: var(--border-strong);
-  background: transparent;
-  color: var(--text-secondary);
-  font-weight: 500;
+  padding: 0 20px;
+  border-radius: 10px;
+  border-color: transparent;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff 8%) 0%, var(--accent) 100%);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, .08), 0 6px 16px rgba(47, 122, 209, .18);
+}
+[data-theme="dark"] .tech-more-wrap .tech-btn-primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 90%, #fff 10%) 0%, var(--accent) 100%);
+  color: #0f1629;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .25), 0 8px 18px rgba(107, 156, 245, .22);
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-more-wrap .tech-btn-primary:hover {
-    background: var(--hover-bg);
-    border-color: var(--accent);
-    color: var(--accent);
+    filter: brightness(1.02);
+    border-color: transparent;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff 8%) 0%, var(--accent) 100%);
+    color: #fff;
+    box-shadow: 0 2px 2px rgba(15, 23, 42, .1), 0 10px 22px rgba(47, 122, 209, .24);
+  }
+  /* 深色 hover 必须重申与常态完全相同的渐变：background 是渐变图，
+     transition 只过渡 background-color，渐变不参与插值 → 一旦被别的规则
+     改成纯色就会瞬间跳变（表现为鼠标划过时「闪」一下）。
+     这里特异性 0,3,1，稳压后面 base 的 [data-theme="dark"] .tech-btn-primary:hover */
+  [data-theme="dark"] .tech-more-wrap .tech-btn-primary:hover {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 90%, #fff 10%) 0%, var(--accent) 100%);
+    color: #0f1629;
+    filter: brightness(1.04);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, .28), 0 10px 22px rgba(107, 156, 245, .26);
   }
 }
 .tech-pagination { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 32px; }
 .tech-page-btn {
-  min-width: 40px; height: 40px; padding: 0 12px;
+  min-width: 38px; height: 38px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border-strong); border-radius: 6px;
+  border: 1px solid var(--border-strong); border-radius: 10px;
   color: var(--text-secondary); text-decoration: none; font-size: 14px;
+  background: var(--bg);
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
 }
-@media (hover: hover) and (pointer: fine) { .tech-page-btn:hover { border-color: var(--accent); color: var(--accent); } }
-.tech-page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-[data-theme="dark"] .tech-page-btn.active { color: var(--bg); }
+@media (hover: hover) and (pointer: fine) {
+  .tech-page-btn:hover {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    color: var(--text);
+    background: var(--hover-bg);
+    box-shadow: 0 4px 14px rgba(16, 27, 43, .06);
+    transform: translateY(-1px);
+  }
+}
+.tech-page-btn.active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff 8%) 0%, var(--accent) 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, .08), 0 6px 16px rgba(47, 122, 209, .18);
+}
+[data-theme="dark"] .tech-page-btn.active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 90%, #fff 10%) 0%, var(--accent) 100%);
+  color: #0f1629;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .25), 0 8px 18px rgba(107, 156, 245, .22);
+}
 .tech-page-ellipsis { display: flex; align-items: center; color: var(--text-secondary); padding: 0 4px; }
 
 /* ── 空状态 ── */
-.tech-empty { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+.tech-empty { text-align: center; padding: 60px 0; color: var(--text-secondary); }
 .tech-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
 .tech-empty h3 { font-size: 18px; color: var(--text); margin: 0 0 6px; }
 .tech-empty p { margin: 0; font-size: 14px; }
@@ -714,8 +785,9 @@ html.page-enter .tech-main {
 }
 
 /* ── 文章详情 ── */
-/* 正文排版修复：容器与项目详情页保持一致（1000 含左右 20 内边距，正文 960），窄屏正文不再贴边 */
-.tech-post-wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+/* 阅读宽度与生产站对齐：正文 920px（1000 壳内宽 960，再收 20px 边距），
+   项目详情页同样使用该宽度；移动端仍占满壳宽，不再二次收窄 */
+.tech-post-wrap { max-width: 920px; margin: 0 auto; }
 .tech-post-layout { display: block; }
 
 /* TOC：窄屏内联折叠框，位于标题下方、正文之前；上下 24px（与相邻块 margin 折叠取较大值）；
@@ -725,8 +797,8 @@ html.page-enter .tech-main {
   .tech-toc-sidebar {
     position: fixed;
     top: 80px;
-    /* 正文排版修复：正文容器 1000（半宽 500），与项目详情页一致；悬浮目录同步留出 20px 间距 */
-    left: min(calc(50% + 500px), calc(100vw - 200px));
+    /* 正文容器 920（半宽 460），悬浮目录再留 20px 间距；文章与项目详情一致 */
+    left: min(calc(50% + 480px), calc(100vw - 200px));
     width: 180px;
     margin: 0;
   }
@@ -889,6 +961,31 @@ html.page-enter .tech-main {
   border-color: var(--border-strong);
 }
 .tech-post-body pre code { background: none; padding: 0; font-size: 13.5px; }
+/* ── 横向滚动条：全站统一 6px 细条 ──
+   Windows 默认滚动条约 15px（两端还带箭头），会吃掉一整行代码 / 表格的高度。
+   注意 Chromium 的 :horizontal 伪类只能配色、改不了尺寸，尺寸必须由基础
+   ::-webkit-scrollbar 的 height 决定（实测 height:6px 对横向生效、对纵向宽度无影响），
+   因此这里写全局规则：代码块、README 表格、错误页代码块以及未来新增的横向滚动区块
+   一次性生效，无需逐个登记选择器。
+   配色只取主题变量（--border-strong / --text-secondary），深浅色自动跟随 */
+::-webkit-scrollbar { height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+@media (hover: hover) and (pointer: fine) {
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+}
+/* Firefox 不支持 ::-webkit-scrollbar，且标准属性无法区分横竖轴：
+   只对已知的横向容器声明 thin，避免把整站纵向滚动条也一起改细 */
+@supports (-moz-appearance: none) {
+  .tech-post-body pre,
+  .tech-proj-readme-body pre,
+  .markdown-body .table-wrap,
+  .tech-post-body table,
+  .tech-error-code-block {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
 
 /* 代码块复制按钮（JS 包 .code-wrap 容器） */
 .code-wrap { position: relative; margin: 0 0 10px; }
@@ -1074,36 +1171,73 @@ html.page-enter .tech-main {
 }
 .tech-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  height: 40px; padding: 0 16px;
+  height: 38px; padding: 0 18px;
   font-size: 14px; font-weight: 600;
-  border: 1px solid var(--border); border-radius: 6px;
+  border: 1px solid var(--border-strong); border-radius: 10px;
   background: var(--bg); color: var(--text);
   cursor: pointer; text-decoration: none;
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) and (pointer: fine) {
-  .tech-btn:hover {
+  /* 普通按钮才换悬停底色；主按钮自带实心底色，若不排除会被这条规则把背景
+     改成 --hover-bg，而主按钮 hover 的白字压在上面 → 浅色下 1.12:1 几乎不可读 */
+  .tech-btn:not(.tech-btn-primary):hover {
     background: var(--hover-bg);
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    color: var(--text);
+    box-shadow: 0 4px 14px rgba(16, 27, 43, .06);
     transform: translateY(-1px);
   }
+  /* 深色下 --hover-bg 与页面底色只差一档，几乎看不出悬停；叠一层极淡主色 */
+  [data-theme="dark"] .tech-btn:not(.tech-btn-primary):hover {
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--border-strong));
+    box-shadow: none;
+  }
 }
+.tech-btn:active { transform: translateY(0); }
+/* 主按钮三态只在此处定义一次（浅色实心渐变 + 白字；深色实心亮蓝 + 深字），
+   避免此前分散在 4 个区块里互相覆盖、按下时颜色跳变 */
 .tech-btn-primary {
-  background: var(--accent-weak);
-  border-color: color-mix(in srgb, var(--accent) 52%, transparent);
-  color: var(--accent);
+  background: linear-gradient(90deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 88%, var(--hl-title) 12%) 100%);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, .08), 0 6px 16px rgba(47, 122, 209, .16);
 }
-/* 深色主题同样用淡蓝底 + 主蓝字，避免整块高饱和蓝在暗底上过亮 */
-[data-theme="dark"] .tech-btn-primary { color: var(--accent); }
-/* hover 才落到实心主色，同时轻微上浮，鼠标前后差异更明确 */
+[data-theme="dark"] .tech-btn-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: #0f1629;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .25), 0 6px 16px rgba(107, 156, 245, .18);
+}
 @media (hover: hover) and (pointer: fine) {
   .tech-btn-primary:hover {
-    background: var(--accent);
-    border-color: var(--accent);
+    filter: brightness(1.03);
+    border-color: transparent;
     color: #fff;
+    box-shadow: 0 2px 2px rgba(15, 23, 42, .1), 0 10px 22px rgba(47, 122, 209, .22);
     transform: translateY(-1px);
   }
-  [data-theme="dark"] .tech-btn-primary:hover { color: var(--bg); }
+  [data-theme="dark"] .tech-btn-primary:hover {
+    /* 不重设 background：常态已是实心 --accent，重设会把渐变版主按钮
+       （如「查看全部归档」）的背景硬切成纯色，造成 hover 瞬间跳变 */
+    border-color: transparent;
+    color: #0f1629;
+    filter: brightness(1.06);
+    box-shadow: 0 4px 14px -12px color-mix(in srgb, var(--accent) 80%, transparent);
+    transform: translateY(-1px);
+  }
+}
+.tech-btn-primary:active {
+  filter: brightness(.98);
+  transform: translateY(0);
+}
+[data-theme="dark"] .tech-btn-primary:active {
+  background: color-mix(in srgb, var(--accent) 92%, #000 8%);
+  color: #0f1629;
+  box-shadow: none;
+  transform: translateY(0);
 }
 .tech-license { font-size: 13px; color: var(--text-secondary); margin: 0 0 0 auto; }
 
@@ -1125,6 +1259,9 @@ html.page-enter .tech-main {
   bottom: -1px; width: 64px; height: 3px; border-radius: 2px;
   background: linear-gradient(90deg, var(--accent), var(--hl-title));
 }
+/* 多栏布局整页左对齐（报头、文章、侧栏都靠左）：精选区的彩条同步移到左端，
+   避免同一列里同时出现「左对齐报头 + 居中彩条」两套对齐方式 */
+.tech-home-grid .tech-featured::after { left: 0; transform: none; }
 /* 卡片网格 */
 .tech-related-grid {
     /* 4 篇横排铺满；minmax(0,1fr) 令长标题不可撑破轨道（防溢出容器） */
@@ -1159,13 +1296,27 @@ html.page-enter .tech-main {
 /* ── 评论 ── */
 /* hidden 属性必须强制隐藏：.tech-comment-form-row 的 display:flex 会覆盖 UA 的 [hidden] 样式 */
 [hidden] { display: none !important; }
+/* ── 表单控件（友链申请等）──
+   与评论区输入框同一套尺度：桌面 14px / 1.6、内距 9px 12px、圆角 8px。
+   底色取 --bg-subtle（浅色 #f0f3f7 / 深色 #22262e，都比页面底色亮/暗一档），
+   描边取 --border-strong，深色下也能看出输入框边界；
+   占位文字显式用 --text-secondary，避免深色主题落到浏览器默认的暗灰看不清 */
 .tech-input, .tech-textarea {
-  width: 100%; padding: 10px 12px; margin-bottom: 10px;
-  font-size: 16px; color: var(--text);
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; outline: none; font-family: inherit;
+  width: 100%; padding: 9px 12px; margin-bottom: 10px;
+  font-size: 14px; line-height: 1.6; color: var(--text);
+  background: var(--bg-subtle); border: 1px solid var(--border-strong);
+  border-radius: 8px; outline: none; font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
 }
-.tech-input:focus, .tech-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+.tech-input::placeholder, .tech-textarea::placeholder { color: var(--text-secondary); opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-input:hover, .tech-textarea:hover {
+    border-color: color-mix(in srgb, var(--text-secondary) 45%, var(--border-strong));
+  }
+}
+.tech-input:focus, .tech-textarea:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak);
+}
 .tech-textarea { min-height: 100px; resize: vertical; }
 
 /* ── 标签云 ── */
@@ -1241,8 +1392,9 @@ html.page-enter .tech-main {
 }
 .tech-about-social-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 16px; font-size: 13px;
-  border: 1px solid var(--border); border-radius: 999px;
+  padding: 7px 14px; font-size: 13px;
+  /* 长方形小圆角，与站内按钮语言一致；999px 会变成胶囊 */
+  border: 1px solid var(--border); border-radius: 6px;
   color: var(--text-secondary); text-decoration: none;
   transition: color .2s, border-color .2s;
 }
@@ -1339,41 +1491,51 @@ html.page-enter .tech-main {
 }
 .tech-lang-link {
   cursor: pointer; color: var(--text-secondary);
-  padding: 4px 12px; border-radius: 12px;
-  border: 1px solid var(--border); background: transparent;
+  padding: 4px 12px; border-radius: 8px;
+  border: 1px solid var(--border-strong); background: var(--bg);
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
 }
-@media (hover: hover) and (pointer: fine) { .tech-lang-link:hover { color: var(--accent); border-color: var(--accent); } }
+@media (hover: hover) and (pointer: fine) {
+  .tech-lang-link:hover {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    background: var(--hover-bg);
+    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
+    transform: translateY(-1px);
+  }
+}
+.tech-lang-link:active { transform: translateY(0); }
 .tech-lang-link.is-active {
-  color: var(--accent); font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+  background: var(--accent-weak);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
 }
 .tech-project-grid {
   display: grid;
-  gap: 18px;
-  padding-top: 20px;
+  gap: 14px;
+  padding-top: 16px;
   padding-bottom: 20px;
 }
 .tech-project-grid--one { grid-template-columns: 1fr; }
 .tech-project-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tech-project-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-/* 宽屏 ≥1024px：项目网格三列，充分利用 1000px 容器空间，减少纵向滚动 */
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
   .tech-project-grid--three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 700px) {
+@media (max-width: 720px) {
   .tech-project-grid--one,
   .tech-project-grid--two,
   .tech-project-grid--three { grid-template-columns: 1fr; }
 }
 .tech-project-card {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 22px; min-width: 0;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 20px 22px; min-width: 0;
   border: 1px solid var(--border); border-radius: 12px;
   background: transparent;
-  transition: border-color .2s, box-shadow .2s, background-color .2s, transform .2s;
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-@media (hover: hover) and (pointer: fine) { .tech-project-card:hover { border-color: var(--accent); background: var(--hover-bg); box-shadow: var(--shadow); } }
+@media (hover: hover) and (pointer: fine) { .tech-project-card:hover { background: var(--hover-bg); border-color: var(--hover-ring); box-shadow: 0 6px 18px rgba(0, 0, 0, .12); transform: translateY(-2px); } }
 .tech-project-card-head { display: flex; align-items: center; gap: 8px; }
 .tech-project-name {
   font-size: 17px; font-weight: 600; color: var(--text); text-decoration: none;
@@ -1394,13 +1556,23 @@ html.page-enter .tech-main {
   margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border);
 }
 .tech-project-open {
-  align-self: flex-end;
-  margin-top: 2px;
-  color: var(--accent);
-  font-size: 12.5px;
+  align-self: flex-start;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
   text-decoration: none;
+  transition: color .18s ease, transform .18s ease;
 }
-.tech-project-open:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-project-open:hover {
+    color: var(--accent);
+    transform: translateX(2px);
+  }
+}
+.tech-project-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 .tech-project-card-head .tech-project-stars {
   margin-left: auto;
   flex-shrink: 0;
@@ -1412,13 +1584,17 @@ html.page-enter .tech-main {
 }
 .tech-project-lang {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 2px 8px; border-radius: 10px;
-  background: var(--bg-subtle); font-size: 12px;
+  padding: 2px 10px; border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
-.tech-project-lang-pct { opacity: .65; }
+.tech-project-lang-pct { opacity: .7; }
 .tech-project-lang-more {
-  display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px;
-  border: 1px dashed var(--border); color: var(--text-secondary); font-size: 12px;
+  display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 8px;
+  border: 1px solid var(--border-strong); background: var(--bg);
+  color: var(--text-secondary); font-size: 12px;
   cursor: help; position: relative;
 }
 /* hover/点击 浮出隐藏语言列表：
@@ -1453,7 +1629,8 @@ html.page-enter .tech-main {
 /* 只去掉双击缩放的 300ms 延迟；双指缩放保持可用（WCAG 1.4.4） */
 html { touch-action: manipulation; }
 
-.tech-proj { padding: 0 0 8px; }
+/* 项目详情与文章详情统一 920px 阅读宽度 */
+.tech-proj { max-width: 920px; margin: 0 auto; padding: 0 0 8px; }
 /* 项目详情页顶部收紧：无 page-head，GitHub 仓库页 nav 到标题仅约 24px */
 .tech-main:has(.tech-proj) { padding-top: 16px; }
 
@@ -1537,34 +1714,49 @@ html { touch-action: manipulation; }
 .tech-proj-feedback:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tech-proj-feedback-icon { display: inline-block; vertical-align: middle; }
 .tech-proj-readme-body { min-width: 0; }
-.tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 15px; line-height: 1.65; }
-/* README 正文标题：对齐文章页同一套梯度。此前该项目未覆盖，README 里的 # 会回落到
-   markdown-body 默认 font-size:2em(≈32px)+下边框，比上方页面标题还大且多一条横线，
-   「项目名 + README 大标题」双标题非常突兀（用户反馈）。 */
+/* README 正文基准：14px / 1.7。
+   项目文档是「仓库介绍」，信息密度高于长文阅读，字号比文章正文 16px 小一档，
+   与全站控件、卡片正文同档，避免一进项目页就出现整页大字。
+   所有子元素都按这个基准放大/缩小，不再各自写死一套绝对值 */
+.tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 14px; line-height: 1.7; }
+/* README 标题梯度：19 / 17 / 15.5 / 14.5 / 14 / 13.5。
+   标题与正文的比值保持在 1.2–1.35，README 里连续出现 h2/h3 也不会显得突兀；
+   h1 清掉 markdown-body 默认的下边框，只让 h2 带分隔线，层级更清爽 */
 .tech-proj-readme-body h1, .tech-proj-readme-body.markdown-body h1 {
-  font-size: 20px; font-weight: 700; line-height: 1.35; margin: 20px 0 9px;
+  font-size: 19px; font-weight: 700; line-height: 1.35; margin: 18px 0 8px;
   padding-bottom: 0; border-bottom: 0;
 }
 .tech-proj-readme-body h2, .tech-proj-readme-body.markdown-body h2 {
-  font-size: 18px; font-weight: 700; line-height: 1.35; margin: 20px 0 9px;
-  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  font-size: 17px; font-weight: 700; line-height: 1.35; margin: 18px 0 8px;
+  padding-bottom: 7px; border-bottom: 1px solid var(--border);
 }
-.tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 16.5px; font-weight: 700; line-height: 1.35; margin: 18px 0 8px; }
-.tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 15.5px; font-weight: 700; line-height: 1.35; margin: 16px 0 8px; }
-.tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 15px; font-weight: 700; line-height: 1.35; margin: 14px 0 8px; }
-.tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin: 14px 0 8px; }
+.tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 15.5px; font-weight: 700; line-height: 1.35; margin: 16px 0 7px; }
+.tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin: 14px 0 6px; }
+.tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 14px; font-weight: 700; line-height: 1.35; margin: 12px 0 6px; }
+.tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 13.5px; font-weight: 700; line-height: 1.35; margin: 12px 0 6px; }
 /* README 段落与其他块同样按门户密度收紧 */
-.tech-proj-readme-body.markdown-body p { margin: 0 0 13px; }
+.tech-proj-readme-body.markdown-body p { margin: 0 0 12px; }
 .tech-proj-readme-body.markdown-body ul,
-.tech-proj-readme-body.markdown-body ol { margin: 0 0 10px; padding-left: 22px; }
+.tech-proj-readme-body.markdown-body ol { margin: 0 0 9px; padding-left: 22px; }
 .tech-proj-readme-body.markdown-body li { margin-top: 0; margin-bottom: 2px; }
+/* 行内代码与代码块：跟随 14px 基准各降一档。
+   markdown-body 默认行内 code 取正文 85%（约 11.9px）偏小，这里抬到 .9em；
+   代码块固定 12.5px / 1.55，长行更紧凑，与正文的落差也更自然 */
+.tech-proj-readme-body.markdown-body :not(pre) > code,
+.tech-proj-readme-body.markdown-body :not(pre) > kbd { font-size: .9em; }
+.tech-proj-readme-body.markdown-body pre { font-size: 12.5px; line-height: 1.55; padding: 14px; }
+.tech-proj-readme-body.markdown-body pre code { font-size: 100%; }
+/* 表格：README 常见多列对照表，13px 才能让「模块 + 说明」一行放下更多字 */
+.tech-proj-readme-body.markdown-body table { font-size: 13px; }
+.tech-proj-readme-body.markdown-body th,
+.tech-proj-readme-body.markdown-body td { padding: 6px 12px; }
 /* README 首个标题通常就是「# 项目名」，与页面顶部 crumb 重复（「Contribuv/文件收集器」下面又出现
    一个「文件收集器 (File Collector)」大标题）。这里把它降级成一行灰色小字，消除双标题感；
    元素保留不隐藏，目录里指向它的锚点仍可命中（用 display:none 会让 TOC 跳到空处）。 */
 .tech-proj-readme-body.markdown-body > h1:first-child,
 .tech-proj-readme-body > h1:first-child {
-  font-size: 15px; font-weight: 600; color: var(--text-secondary);
-  margin: 0 0 16px; padding: 0; border: 0;
+  font-size: 14px; font-weight: 600; color: var(--text-secondary);
+  margin: 0 0 14px; padding: 0; border: 0;
 }
 /* 点目录跳转时留出 sticky nav（56px）呼吸空间，与文章页正文一致 */
 .tech-proj-readme-body :is(h1, h2, h3, h4, h5, h6) { scroll-margin-top: 72px; }
@@ -1577,24 +1769,26 @@ html { touch-action: manipulation; }
 
 /* README 代码块复制按钮复用全局 .code-copy（见上文），此处不再重复定义皮肤 */
 
-/* 详情页移动端：信息行与 README 卡片间距收紧 + 字号收敛（与文章正文同档） */
+/* 详情页移动端：信息行与 README 卡片间距收紧 + 字号再降半档 */
 @media (max-width: 720px) {
   .tech-proj-readme { padding: 0; }
   .tech-proj-crumb { font-size: 17px; }
   .tech-proj-readme-head { padding-bottom: 12px; margin-bottom: 14px; }
-  /* README 正文：与文章正文同档 14px，避免项目文档比文章正文显得更大 */
-  .tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 14px; line-height: 1.6; }
-  /* README 标题与段落整体收紧，避免手机上一页过散；梯度与文章正文标题一致 */
-  .tech-proj-readme-body h1, .tech-proj-readme-body.markdown-body h1 { font-size: 18px; margin: 16px 0 8px; }
-  .tech-proj-readme-body h2, .tech-proj-readme-body.markdown-body h2 { font-size: 16px; margin: 16px 0 8px; }
-  .tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 15px; }
-  .tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 14px; }
-  .tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 13.5px; }
-  .tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 13px; }
+  /* README 正文：移动端 13.5px，比桌面再小半档；行高保持 1.7 保证可读性 */
+  .tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 13.5px; line-height: 1.7; }
+  /* README 标题与段落整体收紧，避免手机上一页过散 */
+  .tech-proj-readme-body h1, .tech-proj-readme-body.markdown-body h1 { font-size: 17.5px; margin: 16px 0 8px; }
+  .tech-proj-readme-body h2, .tech-proj-readme-body.markdown-body h2 { font-size: 15.5px; margin: 16px 0 8px; }
+  .tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 14.5px; }
+  .tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 13.5px; }
+  .tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 13px; }
+  .tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 12.5px; }
   /* README 首个标题（通常即项目名，已降级为灰色说明行）随正文同档 */
   .tech-proj-readme-body.markdown-body > h1:first-child,
-  .tech-proj-readme-body > h1:first-child { font-size: 14px; margin: 0 0 14px; }
-  .tech-proj-readme-body.markdown-body p { margin: 0 0 12px; }
+  .tech-proj-readme-body > h1:first-child { font-size: 13.5px; margin: 0 0 12px; }
+  .tech-proj-readme-body.markdown-body p { margin: 0 0 11px; }
+  .tech-proj-readme-body.markdown-body pre { font-size: 12px; padding: 12px; }
+  .tech-proj-readme-body.markdown-body table { font-size: 12.5px; }
 }
 
 /* ── 友链页 ── */
@@ -1718,14 +1912,21 @@ html { touch-action: manipulation; }
 }
 
 /* ── 表单（友链申请） ── */
+/* 卡片化：与评论区表单同一套语言（1px 描边 + 12px 圆角，不填底色，底图可透上来），
+   把零散铺开的输入框收成一个整体，和全站卡片的视觉节奏一致 */
+.tech-form {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
 .tech-form-row { display: flex; gap: 10px; }
-.tech-form-row .tech-input { flex: 1; }
+.tech-form-row .tech-input { flex: 1; min-width: 0; }
 .tech-flash { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
 .tech-flash-success { background: var(--accent-weak); color: var(--success); border: 1px solid var(--success); }
 .tech-flash-error { background: rgba(207, 34, 46, .08); color: var(--danger); border: 1px solid var(--danger); }
 
 /* ── 错误页 ── */
-.tech-error { text-align: center; padding: 80px 20px; }
+.tech-error { text-align: center; padding: 80px 0; }
 .tech-error-code { font-size: 72px; font-weight: 700; line-height: 1; margin-bottom: 12px; }
 .tech-error-code span { color: var(--accent); }
 .tech-error-title { font-size: 22px; font-weight: 600; margin: 0 0 8px; }
@@ -1750,7 +1951,8 @@ html { touch-action: manipulation; }
   .tech-logo { font-size: 17px; }
   .tech-drawer-link { font-size: 15px; }
   .tech-main { padding: 18px 0 32px; }
-  .tech-main:has(.tech-page-head--center) { padding-top: 0; }
+  .tech-main:has(.tech-page-head--center),
+  .tech-main:has(.tech-home-head) { padding-top: 0; }
   .tech-main:has(.tech-about-hero) { padding-top: 24px; }
   .tech-main:has(.tech-proj) { padding-top: 16px; }
   /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（scrolled 压缩态同样覆盖） */
@@ -1784,6 +1986,9 @@ html { touch-action: manipulation; }
   .tech-related-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tech-pager-next { text-align: left; }
   .tech-form-row { flex-direction: column; gap: 0; }
+  /* 移动端：卡片内距收紧；输入框抬到 16px —— iOS Safari 对 <16px 的控件会自动放大页面 */
+  .tech-form { padding: 14px 14px 4px; }
+  .tech-input, .tech-textarea { font-size: 16px; }
   .tech-skill-list { grid-template-columns: 1fr; }
   /* 许可文字折行后不再推右，避免单独悬于右侧 */
   .tech-license { margin-left: 0; }
@@ -1917,8 +2122,7 @@ html { touch-action: manipulation; }
               background-color .2s ease, transform .12s ease;
 }
 .tech-btn:active { transform: translateY(1px); }
-.tech-btn-primary:active { filter: brightness(.95); color: #fff; }
-[data-theme="dark"] .tech-btn-primary:active { color: var(--bg); }
+
 /* 项目筛选芯片：可点击语义 + hover/焦点平滑 */
 .tech-lang-link { cursor: pointer; transition: color .15s ease, transform .15s ease, border-color .15s ease; }
 @media (hover: hover) and (pointer: fine) { .tech-lang-link:hover { transform: translateY(-1px); } }
@@ -1935,8 +2139,7 @@ html { touch-action: manipulation; }
 }
 /* 触控热区：小图标/小按钮视觉尺寸不变，用伪元素把可点范围扩大。
    水平方向按相邻 gap 计算（项目按钮 gap 8 → 各扩 4；分页 gap 6 → 各扩 3），避免互相盖住。 */
-.tech-quote-refresh, .tech-proj-btn { position: relative; }
-.tech-quote-refresh::after { content: ''; position: absolute; inset: -6px -8px; }
+.tech-proj-btn { position: relative; }
 .tech-proj-btn::after { content: ''; position: absolute; inset: -8px -4px; }
 
 /* ── 图片画廊：连续纯图由 JS 合并为网格，点击进灯箱 ── */
@@ -2058,11 +2261,12 @@ html { touch-action: manipulation; }
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
+  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
 }
 .circle-stats > div {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   padding: 16px 18px;
   border: 0;
   border-left: 1px solid var(--border);
@@ -2072,14 +2276,18 @@ html { touch-action: manipulation; }
 }
 .circle-stats > div:first-child { border-left: 0; }
 .circle-stats b {
-  font-size: 24px;
-  line-height: 1.15;
+  font-size: 26px;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
   color: var(--text);
+  letter-spacing: -.01em;
 }
 .circle-stats span { font-size: 12px; color: var(--text-secondary); }
 @media (hover: hover) and (pointer: fine) {
   .circle-stats > div:hover { background: var(--hover-bg); }
+}
+[data-theme="dark"] .circle-stats {
+  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 14%, transparent), transparent);
 }
 
 .circle-list {
@@ -2097,7 +2305,8 @@ html { touch-action: manipulation; }
   background: transparent;
   transition: background-color .18s, border-color .18s;
 }
-.circle-item:hover { background: var(--hover-bg); border-color: var(--hover-ring); }
+/* hover 统一由下方「全站卡片 hover」的 @media (hover:hover) 规则提供：
+   这里不再单写一份，否则触摸设备点一下就留下粘住的 hover 底色 */
 .circle-title {
   display: block;
   overflow-wrap: anywhere;
@@ -2120,13 +2329,14 @@ html { touch-action: manipulation; }
   overflow: hidden;
 }
 .circle-meta {
+  /* auto 让底部站点信息贴齐卡片底边：卡片等高时各卡片的 meta 行才对得齐。
+     注意不要再补一条 margin-top:10px——那会把 auto 覆盖掉，整排参差不齐 */
   margin-top: auto;
   padding-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 10px;
   font-size: 12.5px;
   color: var(--text-secondary);
 }
@@ -2178,7 +2388,7 @@ html { touch-action: manipulation; }
   .circle-stats > div:nth-child(2n) { border-left: 1px solid var(--border); }
   .circle-stats > div:nth-child(2n+1) { border-left: 0; }
   .circle-stats > div:nth-child(n+3) { border-top: 1px solid var(--border); }
-  .circle-stats b { font-size: 21px; }
+  .circle-stats b { font-size: 23px; }
   .circle-title { font-size: 15px; }
   .circle-item { min-width: 0; padding: 15px 16px; }
 }
@@ -2471,9 +2681,23 @@ html { touch-action: manipulation; }
 .tech-miles-item:hover .tech-miles-title a { color: var(--accent); }
 .tech-miles-item:hover .tech-miles-arrow { opacity: 1; transform: none; }
 
+/* 窄屏改成与文章列表同款的独立卡片：负 margin 外扩在窄屏会把 hover 高亮块
+   顶到版心外，触摸端看起来就是「背景框溢出」；这里改为描边卡片 + 间距分隔 */
+@media (max-width: 1000px) {
+  .tech-miles-list { display: flex; flex-direction: column; gap: 10px; }
+  .tech-miles-item {
+    margin: 0;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .tech-miles-item:last-child { border-color: var(--border); }
+  .tech-miles-item:hover { box-shadow: none; }
+}
+
 @media (max-width: 640px) {
   .tech-miles-head h2 { font-size: 19px; }
-  .tech-miles-item { gap: 10px; margin: 0; padding: 11px 0; }
+  .tech-miles-item { gap: 10px; padding: 11px 12px; }
   .tech-miles-date { flex-basis: 42px; }
   .tech-miles-title { font-size: 15px; }
 }
@@ -2505,6 +2729,12 @@ html { touch-action: manipulation; }
 /* ── 读者页：留言榜单 ── */
 .tech-reader-stats,
 .tech-interaction-stats { margin-top: 20px; }
+.tech-reader-stats.circle-stats {
+  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+}
+[data-theme="dark"] .tech-reader-stats.circle-stats {
+  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 16%, transparent), transparent);
+}
 .tech-reader-list {
   display: flex;
   flex-direction: column;
@@ -2738,6 +2968,18 @@ a.tech-interaction-name:hover { color: var(--accent); }
 .tech-podium-item--1 { order: 2; margin-top: -8px; padding-top: 26px; }
 .tech-podium-item--2 { order: 1; margin-top: 8px; }
 .tech-podium-item--3 { order: 3; margin-top: 8px; }
+/* 榜单不足 3 人：三列网格会把唯一的冠军自动塞进第一格、右边空两格。
+   单人占满一行、双人各占一半，冠军回到首位，视觉才成立 */
+@media (min-width: 641px) {
+  .tech-podium--one { grid-template-columns: minmax(0, 1fr); }
+  .tech-podium--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tech-podium--one .tech-podium-item--1,
+  .tech-podium--two .tech-podium-item--1 {
+    order: 1;
+    margin-top: 8px;
+    padding-top: 18px;
+  }
+}
 .tech-podium-item {
   display: flex;
   flex-direction: column;
@@ -2889,11 +3131,19 @@ a.tech-podium-name:hover { color: var(--accent); }
   align-items: start;
 }
 .tech-home-main { min-width: 0; }
+/* 滚动时侧栏吸附在导航（56px）下方 16px 处。
+   注意：不要再给侧栏加 max-height + overflow-y:auto —— 那会让侧栏变成独立的
+   滚动容器，滚轮停在侧栏上时页面滚不动（顿挫感），吸附也变成「卡住」。
+   父 .tech-home-grid 是 align-items:start，网格行高由较高的左栏撑开，
+   sticky 才有完整的吸附行程 */
 .tech-sidebar {
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+  position: sticky;
+  top: 72px;
+  align-self: start;
 }
 .tech-side-card {
   min-width: 0;
@@ -2914,22 +3164,12 @@ a.tech-podium-name:hover { color: var(--accent); }
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: -6px;
-  padding: 6px;
-  border-radius: 10px;
-  color: inherit;
-  text-decoration: none;
-  transition: background-color .18s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .tech-side-profile:hover { background: var(--hover-bg); }
-  .tech-side-profile:hover .tech-side-avatar { box-shadow: 0 0 0 2px var(--accent); }
-  .tech-side-profile:hover .tech-side-profile-arrow { opacity: 1; transform: none; }
+  color: var(--text);
 }
 .tech-side-avatar {
   flex: none;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--bg-subtle);
@@ -2942,39 +3182,31 @@ a.tech-podium-name:hover { color: var(--accent); }
   font-weight: 700;
   color: var(--text-secondary);
 }
-.tech-side-profile-main { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tech-side-profile-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .tech-side-profile-kicker {
   align-self: flex-start;
-  padding: 1px 7px;
-  border-radius: 999px;
+  padding: 1px 8px;
+  border-radius: 8px;
   background: var(--accent-weak);
   color: var(--accent);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: .06em;
+  letter-spacing: .08em;
 }
-.tech-side-profile-main strong {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+.tech-side-profile-name {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
+  text-decoration: none;
+  line-height: 1.4;
+  margin: 0;
 }
-.tech-side-profile-main strong {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.tech-side-profile-arrow {
-  flex: none;
-  color: var(--accent);
-  opacity: .45;
-  transform: translateX(-2px);
-  transition: opacity .18s ease, transform .18s ease;
+@media (hover: hover) and (pointer: fine) {
+  .tech-side-profile-name:hover { color: var(--accent); }
 }
 .tech-side-bio {
   margin: 10px 0 0;
@@ -2989,7 +3221,7 @@ a.tech-podium-name:hover { color: var(--accent); }
 .tech-side-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
@@ -2997,52 +3229,106 @@ a.tech-podium-name:hover { color: var(--accent); }
 .tech-side-stats > span {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-subtle);
   font-size: 11px;
   color: var(--text-secondary);
+  text-align: left;
 }
-.tech-side-stats b { font-size: 15px; font-weight: 600; color: var(--text); }
+.tech-side-stats b { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.1; }
 .tech-side-stats em { font-style: normal; }
-.tech-side-social { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tech-side-social { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .tech-side-social a {
-  padding: 2px 9px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--accent);
+  padding: 3px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-secondary);
   font-size: 12px;
   text-decoration: none;
+  background: var(--bg);
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
 }
-.tech-side-social a:hover { border-color: var(--accent); }
+@media (hover: hover) and (pointer: fine) {
+  .tech-side-social a:hover {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    color: var(--text);
+    background: var(--hover-bg);
+    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
+    transform: translateY(-1px);
+  }
+}
+.tech-side-social a:active { transform: translateY(0); }
 .tech-side-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tech-side-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  padding: 3px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
   color: var(--text-secondary);
   font-size: 12px;
   text-decoration: none;
+  background: var(--bg);
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
 }
-.tech-side-tag span { font-size: 10.5px; color: var(--accent); }
-.tech-side-tag:hover { border-color: var(--accent); color: var(--accent); }
-.tech-side-cats { display: flex; flex-direction: column; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.tech-side-tag span { font-size: 11px; color: var(--text-secondary); }
+@media (hover: hover) and (pointer: fine) {
+  .tech-side-tag:hover {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    color: var(--text);
+    background: var(--hover-bg);
+    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
+    transform: translateY(-1px);
+  }
+}
+.tech-side-tag:active { transform: translateY(0); }
+.tech-side-cats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 .tech-side-cats li {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
   font-size: 13px;
-  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-side-cats li:hover {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
+    background: var(--hover-bg);
+  }
+  .tech-side-cats li:hover a { color: var(--text); }
 }
 .tech-side-cats a {
   color: var(--text-secondary);
   text-decoration: none;
-  transition: color .15s ease;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.tech-side-cats a:hover { color: var(--accent); }
-.tech-side-cats b { font-weight: 500; color: var(--text); }
+.tech-side-cats b {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 0 6px;
+}
 .tech-side-comments { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .tech-side-comments li { display: flex; gap: 9px; }
 .tech-side-cmt-avatar {
@@ -3147,7 +3433,11 @@ html[data-theme="dark"] .tech-side-widget-dark { display: block; }
 
 @media (max-width: 1000px) {
   .tech-home-grid { grid-template-columns: 1fr; gap: 24px; }
-  .tech-sidebar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 窄屏侧栏改为正文下方的 2 列堆叠：此时吸附无意义，也取消高度限制 */
+  .tech-sidebar {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: static; max-height: none; overflow: visible;
+  }
   .tech-side-widget { grid-column: 1 / -1; }
 }
 @media (max-width: 640px) {
@@ -3230,79 +3520,128 @@ html.tech-external-open { overflow: hidden; }
 }
 
 /* ── 首页 Hero：单栏 / 双栏 / 多栏共用一套信息层级 ── */
+/* 首页头条与子页 .tech-page-head 用同一套收口：1px 细线 + 64px 彩条。
+   左右留白交给 .tech-shell——原先的 8px 内边距会让 641–920px 的头条
+   比下方卡片左右各多缩进 8px；底部留白对齐卡片栅格的 24px 节奏 */
 .tech-home-head {
   position: relative;
-  padding: 40px 12px 30px;
-  margin-bottom: 28px;
+  /* 报头与下方列表是一组：底部留白收紧到与卡片栅格同一节奏，避免中间空一大块 */
+  padding: 30px 0 14px;
+  margin-bottom: 14px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
 }
 .tech-home-head::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: -1px;              /* 压在 1px 细线上，与 .tech-page-head 一致 */
   transform: translateX(-50%);
   width: 64px;
   height: 3px;
   border-radius: 2px;
   background: linear-gradient(90deg, var(--accent), var(--hl-title));
 }
+.tech-home-head-main { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .tech-home-kicker {
-  margin: 0 0 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  margin: 0;
+  /* 中文小标题不再用大字距拉散；字号抬到 12px，避免移动端「头轻」 */
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: none;
   color: var(--text-secondary);
 }
 .tech-home-title {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.25;
+  letter-spacing: -.01em;
 }
 .tech-home-stats {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin-top: 14px;
+  gap: 6px;
+  margin-top: 4px;
 }
 .tech-home-stats span {
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 8px;
   color: var(--text-secondary);
   font-size: 12px;
+  background: var(--bg);
 }
-.tech-home-stats b { margin-right: 3px; color: var(--text); font-weight: 600; }
-.tech-home-head .tech-quote { margin-top: 18px; justify-content: center; }
+.tech-home-stats b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* 一言作为报头「落款」：字号略低于标题、颜色降一档，形成头重脚轻的反向平衡 */
+.tech-home-head .tech-quote {
+  margin-top: 4px;
+  justify-content: center;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+/* 多栏：报头式两列（左标题 / 右格言），左对齐。
+   底边沿用同一条细线；彩条改到左端，与左对齐的页头语言一致。
+   ≤920px 堆叠回居中版式时再把彩条移回中间（见下方断点） */
 .tech-home-head--multi {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
-  gap: 32px;
-  align-items: end;
-  padding: 36px 0 28px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+  gap: 24px;
+  align-items: center;
+  padding: 24px 0 30px;
   text-align: left;
+  background: none;
+  box-shadow: none;
 }
 .tech-home-head--multi::after { left: 0; transform: none; }
-.tech-home-head--multi .tech-home-stats { justify-content: flex-start; }
-.tech-home-head--multi .tech-home-head-quote { min-width: 0; }
-.tech-home-head--multi .tech-quote { margin-top: 0; justify-content: flex-start; }
-@media (max-width: 860px) {
+.tech-home-head--multi .tech-home-head-main { align-items: flex-start; }
+.tech-home-head--multi .tech-home-stats { justify-content: flex-start; gap: 8px; }
+.tech-home-head--multi .tech-home-stats span {
+  padding: 2px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+.tech-home-head--multi .tech-home-head-quote { min-width: 0; width: 100%; }
+.tech-home-head--multi .tech-quote {
+  margin-top: 0;
+  /* PC 端格言作为报头「落款」靠右收尾：与左侧标题形成左右分栏的平衡；
+     ≤920px 堆叠回居中版式时在下方断点重置为居中 */
+  justify-content: flex-end;
+  text-align: right;
+  flex-wrap: nowrap;
+  padding: 6px 0 0;
+  border-radius: 8px;
+  background: none;
+  border: none;
+}
+@media (max-width: 920px) {
   .tech-home-head--multi {
-    display: block;
-    padding: 32px 0 26px;
+    grid-template-columns: 1fr;
+    gap: 10px;
     text-align: center;
+    padding: 20px 0 10px;
   }
-  .tech-home-head--multi::after { left: 50%; transform: translateX(-50%); }
+  .tech-home-head--multi .tech-home-head-main { align-items: center; }
   .tech-home-head--multi .tech-home-stats,
   .tech-home-head--multi .tech-quote { justify-content: center; }
-  .tech-home-head--multi .tech-quote { margin-top: 16px; }
+  /* 堆叠回居中版式：格言恢复居中，PC 的右对齐只在大屏两列时成立 */
+  .tech-home-head--multi .tech-quote { text-align: center; }
+  /* 堆叠后回到居中版式：彩条也回到中间，与单栏/子页页头一致 */
+  .tech-home-head--multi::after { left: 50%; transform: translateX(-50%); }
 }
 @media (max-width: 640px) {
-  .tech-home-head { padding: 28px 0 24px; }
-  .tech-home-title { font-size: 24px; }
+  .tech-home-head { padding: 20px 0 10px; margin-bottom: 12px; }
+  /* 移动端首页标题不与子页倒挂：子页 .tech-page-title 是 26px，首页同为 26px */
+  .tech-home-title { font-size: 26px; }
   .tech-home-stats { gap: 6px; }
   .tech-home-stats span { font-size: 11.5px; }
 }

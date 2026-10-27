@@ -1,4 +1,6 @@
-﻿/* tech 主题交互：主题切换、移动端抽屉菜单、回到顶部 */
+﻿/* tech 主题交互：主题切换、移动端抽屉菜单、回到顶部
+版权 © 2023-2024 haozi
+联系邮箱：site023@qq.com | 开源项目 商业请联系 */
 (function () {
   'use strict';
 
@@ -123,14 +125,13 @@
   }
 })();
 
-/* ── 首页终端格言：本地句子库（FALLBACK 数组），刷新按钮换下一句 ── */
+/* ── 首页终端格言：本地句子库（FALLBACK 数组），逐字输出 ── */
 (function () {
   'use strict';
   var quoteText = document.getElementById('tech-quote-text');
   if (!quoteText) return; // 该区块仅首页渲染，其它页面直接跳过
 
   var srcEl = document.getElementById('tech-quote-src');
-  var refreshBtn = document.getElementById('tech-quote-refresh');
 
   /* 本地句子库：加载/刷新时先用它，保证弱网与一键旁路下首屏即时出句 */
   var FALLBACK = [
@@ -189,7 +190,7 @@
   }
 
   var timers = [];
-  var MAX_LEN = 120;
+  var MAX_LEN = 300; // 仅防极端长文；展示上最多两行，超出由 CSS 省略
   var lastIndex = -1;
 
   function clearTimers() {
@@ -228,15 +229,57 @@
     typeQuote(item.text, item.src);
   }
 
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', function () {
-      refreshBtn.classList.add('spin');
-      setTimeout(function () { refreshBtn.classList.remove('spin'); }, 300);
-      renderLocal();
-    });
-  }
-
+  /* 首页一言只负责展示：刷新按钮和打字光标已移除，避免破坏居中与重复站标光标 */
   renderLocal();
+})();
+
+/* ── 代码块语法高亮：文章正文与项目 README 共用 ──
+   highlight.min.js 以 defer 加载，模板内联脚本执行时可能还没就绪；
+   这里统一等 DOMContentLoaded 后再高亮。
+   注意：不认识的块一律按纯文本处理，绝不交给自动识别——
+   目录树、ASCII 流程图会被猜成 C#/Bash，反而制造出错误颜色。 */
+var TECH_LANG_ALIAS = { dockerignore: 'dockerfile' };
+
+function techHighlightCode(root) {
+  if (!root) return;
+  var hljs = window.hljs;
+  if (!hljs || typeof hljs.highlightElement !== 'function') return;
+  var blocks = root.querySelectorAll('pre code');
+  for (var i = 0; i < blocks.length; i++) {
+    var block = blocks[i];
+    if (block.dataset && block.dataset.highlighted === 'yes') continue;
+    var match = (block.className || '').match(/\blanguage-([\w+#.-]+)/);
+    var lang = match ? match[1].toLowerCase() : '';
+    if (TECH_LANG_ALIAS[lang]) lang = TECH_LANG_ALIAS[lang];
+    var known = false;
+    if (lang) {
+      try { known = !!hljs.getLanguage(lang); } catch (e) { known = false; }
+    }
+    if (!known) {
+      // 未标注语言 / hljs 不认识（text、txt 也走这里）：统一换成 plaintext
+      if (match) block.classList.remove('language-' + match[1]);
+      block.classList.add('language-plaintext');
+    } else if (lang !== match[1].toLowerCase()) {
+      // 别名替换（dockerignore），让 highlightElement 拿到真正的语言名
+      block.classList.remove('language-' + match[1]);
+      block.classList.add('language-' + lang);
+    }
+    try { hljs.highlightElement(block); } catch (e) {}
+  }
+}
+window.techHighlightCode = techHighlightCode;
+
+/* 页面加载后自动处理文章/项目正文，模板无需重复绑定 */
+(function () {
+  function run() {
+    techHighlightCode(document.querySelector('.tech-post-body'));
+    techHighlightCode(document.querySelector('.tech-proj-readme-body'));
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', run);
+  } else {
+    run();
+  }
 })();
 
 /* ── 全局搜索：导航放大镜按钮展开 / 收起下拉面板 ── */

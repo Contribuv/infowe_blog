@@ -9,11 +9,15 @@
 
 {% if projects %}
 <div class="tech-projects">
-    <!-- 语言统计（一行文本，可点击筛选） -->
+    <!-- 语言统计：链接式筛选（?lang=），由服务端过滤后再分页，
+         翻页/刷新/收藏都不会丢掉当前语言；数字始终按全部项目统计 -->
     <div class="tech-lang-stats">
-        <span class="tech-lang-link is-active" data-lang="__all__" role="button" tabindex="0">全部 ({{ projects|length }})</span>
+        <a class="tech-lang-link{% if not active_lang %} is-active{% endif %}" href="{{ url_for('projects_page') }}"
+           {% if not active_lang %}aria-current="true"{% endif %}>全部 ({{ total_projects }})</a>
         {% for lang, count in languages.items() %}
-        <span class="tech-lang-link" data-lang="{{ lang }}" role="button" tabindex="0">{{ lang }} ({{ count }})</span>
+        <a class="tech-lang-link{% if active_lang == lang %} is-active{% endif %}"
+           href="{{ url_for('projects_page', lang=lang) }}"
+           {% if active_lang == lang %}aria-current="true"{% endif %}>{{ lang }} ({{ count }})</a>
         {% endfor %}
     </div>
 
@@ -56,11 +60,33 @@
                 </span>
                 {% endif %}
             </div>
-            <a class="tech-project-open" href="/projects/{{ project.id }}">查看项目 {{ arrow(14) }}</a>
+            <a class="tech-project-open" href="/projects/{{ project.id }}">查看项目</a>
         </article>
         {% endfor %}
     </div>
 </div>
+
+{% if total_pages > 1 %}
+<nav class="tech-pagination" aria-label="项目分页">
+    {% if page > 1 %}
+    <a href="{{ url_for('projects_page', page=page-1, lang=active_lang or none) }}" class="tech-page-btn">上一页</a>
+    {% endif %}
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            {% if p == page %}
+            <span class="tech-page-btn active" aria-current="page">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('projects_page', page=p, lang=active_lang or none) }}" class="tech-page-btn">{{ p }}</a>
+            {% endif %}
+        {% elif p == page - 3 or p == page + 3 %}
+            <span class="tech-page-ellipsis">…</span>
+        {% endif %}
+    {% endfor %}
+    {% if page < total_pages %}
+    <a href="{{ url_for('projects_page', page=page+1, lang=active_lang or none) }}" class="tech-page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
 {% else %}
 <div class="tech-empty">
     <div class="tech-empty-icon">⌘</div>
@@ -74,34 +100,8 @@
 <script>
 (function () {
     'use strict';
-    var links = document.querySelectorAll('.tech-lang-link');
-    var cards = document.querySelectorAll('.tech-project-card');
-    if (links.length && cards.length) {
-        function applyFilter(lang) {
-            links.forEach(function (b) {
-                b.classList.toggle('is-active', b.getAttribute('data-lang') === lang);
-            });
-            cards.forEach(function (c) {
-                var langs = (c.getAttribute('data-langs') || '').split(',').filter(Boolean);
-                var show = lang === '__all__' || langs.indexOf(lang) !== -1;
-                c.style.display = show ? '' : 'none';
-            });
-        }
-        links.forEach(function (b) {
-            b.addEventListener('click', function () {
-                applyFilter(b.getAttribute('data-lang'));
-            });
-            /* 键盘可达：Enter / 空格触发筛选 */
-            b.addEventListener('keydown', function (ev) {
-                if (ev.key === 'Enter' || ev.key === ' ') {
-                    ev.preventDefault();
-                    applyFilter(b.getAttribute('data-lang'));
-                }
-            });
-        });
-    }
-
-    /* 移动端：「+N 种」点击展开/收起隐藏语言列表。
+    /* 语言筛选由服务端 ?lang= 完成（链接跳转，可翻页/分享），这里只保留
+       移动端「+N 种」的展开收起。
        PC 走 CSS hover/focus，无需 JS 介入；触摸设备 click 切换。点空白关闭。 */
     var moreTips = document.querySelectorAll('.tech-project-lang-more');
     if (!moreTips.length) return;

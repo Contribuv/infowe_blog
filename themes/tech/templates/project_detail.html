@@ -166,9 +166,8 @@
             setTimeout(function () { btn.textContent = '复制'; }, 2000);
         } catch (e) {}
     }
-    if (typeof hljs !== 'undefined') {
-        content.querySelectorAll('pre code').forEach(function (block) { hljs.highlightElement(block); });
-    }
+    /* 语法高亮交给 theme.js 的 techHighlightCode：
+       highlight.min.js 为 defer，资源就绪时机晚于本内联脚本，不能在这里直接调用 */
 })();
 </script>
 {% if comments_enabled %}

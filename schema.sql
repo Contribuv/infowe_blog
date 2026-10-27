@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS comments (
     content TEXT NOT NULL,
     status TEXT DEFAULT 'pending',
     is_private INTEGER DEFAULT 0,
+    notify INTEGER DEFAULT 1,
     qq TEXT DEFAULT '',
     ip_text TEXT DEFAULT '',
     ip_location TEXT DEFAULT '',

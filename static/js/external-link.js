@@ -86,18 +86,19 @@
     });
 
     if (goBtn) {
-        goBtn.addEventListener('click', function (event) {
+        goBtn.addEventListener('click', function () {
             var url = goBtn.getAttribute('href') || '';
             if (!/^https?:\/\//i.test(url)) return;
-            event.preventDefault();
-            var target = goBtn.getAttribute('target') || '_blank';
-            close();
-            if (target === '_self') {
-                location.assign(url);
-            } else {
-                var opened = window.open(url, target, 'noopener');
-                if (!opened) location.assign(url);
-            }
+            /* 只收起面板，导航完全交给 <a target="_blank" rel="noopener"> 的默认行为。
+               不要再用 window.open(url, target, 'noopener')：Chrome 下带 noopener
+               的新窗口会返回 null，旧逻辑据此误判“被拦截”，又补一次 location.assign，
+               结果当前页跳走 + 新窗口同时打开（双开）。 */
+            dialog.hidden = true;
+            document.documentElement.classList.remove('tech-external-open');
+            /* href 必须等默认导航取走后再清空，否则新窗口会打开 "#" */
+            setTimeout(function () {
+                goBtn.setAttribute('href', '#');
+            }, 0);
         });
     }
 

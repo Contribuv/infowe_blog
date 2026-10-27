@@ -41,7 +41,7 @@
         } catch (e) {}
       })();
     </script>
-    <title>{% block title %}{{ blog_name }}{% endblock %} - {{ blog_name }}</title>
+    <title>{% block full_title %}{% set page_title = self.title() | trim %}{% if page_title and page_title != blog_name %}{{ page_title }} - {% endif %}{{ blog_name }}{% endblock %}</title>
     <!-- SEO 描述与 og:description 同源（self 取子模板覆盖后的值），避免两处文案漂移 -->
     <meta name="description" content="{% block meta_description %}{{ self.og_description() }}{% endblock %}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
@@ -65,6 +65,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/comments-tech.css', t=static_ver) }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css', t=static_ver) }}">
     <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t=static_ver) }}" defer></script>
+    <!-- 补一个 common 构建里没有的 Dockerfile 语法；.dockerignore 也复用这套规则 -->
+    <script src="{{ url_for('static', filename='vendor/highlight.js/languages/dockerfile.min.js', t=static_ver) }}" defer></script>
     {% endif %}
     {% if request.path.startswith('/post/') %}
     <!-- 文章分享面板样式（两主题通用） -->
@@ -139,7 +141,7 @@
 
     <!-- 主内容 -->
     <main class="tech-main" id="main-content">
-        <div class="tech-shell">
+        <div class="tech-shell{% block shell_class %}{% endblock %}">
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -190,7 +192,7 @@
 
     <script src="{{ url_for('theme_static', filename=active_theme ~ '/static/theme.js', t=theme_asset_ver) }}" defer></script>
     <script>
-    // 项目页「反馈」按钮：点击平滑滚动到评论区并聚焦输入框
+    // 项目页「反馈」按钮：瞬时定位到评论区，并展开评论框、聚焦输入框
     (function () {
       if (window.__techProjFeedbackBound) return; window.__techProjFeedbackBound = true;
       document.addEventListener('click', function (e) {
@@ -201,8 +203,15 @@
         if (!target) return;
         e.preventDefault();
         var y = target.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || document.documentElement.scrollTop);
-        try { window.scrollTo({ top: y - 72, behavior: 'smooth' }); }
-        catch (err) { window.scrollTo(0, y - 72); }
+        // 不再用 smooth：长页面滑到评论区要等一秒多，中途还会掠过无关内容；
+        // 按钮语义是「我要去反馈」，直接落到目标位置体验更干脆。
+        // 注意 html 上有 scroll-behavior:smooth，behavior:'auto' 仍会走平滑滚动，
+        // 这里临时把根元素改成 auto 再滚，滚完恢复，保证是瞬时定位
+        var root = document.documentElement;
+        var prevBehavior = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
+        window.scrollTo(0, y - 72);
+        root.style.scrollBehavior = prevBehavior;
         var ta = target.querySelector('textarea');
         if (ta) {
           // 如果评论输入框在 <details> 里，先展开再聚焦（否则隐藏 textarea 无法 focus）

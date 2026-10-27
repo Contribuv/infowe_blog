@@ -132,14 +132,19 @@ def register(app) -> None:
     def ai_config_save():
         old = config.get()
         data = dict(old)
-        for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_daily_limit", "link_check_hours", "daily_call_limit"):
+        for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_max_length", "comment_daily_limit", "link_check_hours", "daily_call_limit"):
             if key in request.form:
                 try:
                     data[key] = float(request.form.get(key)) if key == "temperature" else int(request.form.get(key))
                 except (TypeError, ValueError):
                     pass
-        for key in ("comment_moderation", "comment_reply", "link_moderation", "auto_execute"):
+        for key in ("comment_moderation", "comment_reply", "comment_reply_notify", "link_moderation", "auto_execute"):
             data[key] = str(request.form.get(key, "")).lower() in {"1", "on", "true", "yes"}
+        if "comment_reply_time_mode" in request.form:
+            mode = str(request.form.get("comment_reply_time_mode") or "all").strip().lower()
+            if mode not in {"all", "day", "night"}:
+                mode = "all"
+            data["comment_reply_time_mode"] = mode
         if "system_prompt" in request.form:
             data["system_prompt"] = request.form.get("system_prompt", "")
         config.save(data)
