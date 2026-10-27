@@ -3,6 +3,10 @@
 
 {% block admin_head %}
 <link rel="stylesheet" href="{{ url_for('plugin_asset', plugin_key='ai_assistant', filename='ai.css') }}">
+<style>
+  /* 聊天页占满可用高度，隐藏后台页脚，避免多出 52px 的页面滚动 */
+  .admin-footer { display: none; }
+</style>
 {% endblock %}
 
 {% block admin_content %}
@@ -75,13 +79,24 @@ window.AI_URLS = {
     var content = document.querySelector('.admin-content');
     var page = document.getElementById('ai-page');
     if (!content || !page) return;
-    var rect = content.getBoundingClientRect();
-    var h = window.innerHeight - rect.top - 28;
-    page.style.height = Math.max(420, h) + 'px';
+    var cs = getComputedStyle(content);
+    var padTop = parseFloat(cs.paddingTop) || 0;
+    var padBottom = parseFloat(cs.paddingBottom) || 0;
+    var gap = parseFloat(cs.rowGap || cs.gap) || 0;
+    var header = content.querySelector('.page-header');
+    var headerH = header ? header.getBoundingClientRect().height : 0;
+    var footer = document.querySelector('.admin-footer');
+    var footerH = footer ? footer.getBoundingClientRect().height : 0;
+    var top = content.getBoundingClientRect().top;
+    // 可用高度 = 视口 - content 顶部 - 上下内边距 - 页头 - flex gap - 后台页脚
+    var h = window.innerHeight - top - padTop - padBottom - headerH - gap - footerH;
+    page.style.height = Math.max(360, Math.round(h)) + 'px';
   }
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', function () { setTimeout(fit, 120); });
   fit();
+  // 字体/图标加载完再校准一次，避免第一次测量偏大
+  window.addEventListener('load', fit);
 })();
 </script>
 {% endblock %}
