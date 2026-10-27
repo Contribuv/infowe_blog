@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.21-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.21)
+[![version](https://img.shields.io/badge/version-3.2.22-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.22)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,13 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.21**
+- 版本：**v3.2.22**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.22
+
+- 修复：项目详情页 TOC 点击后跳到页面底部——TOC 初始化只认 .tech-post-body，项目页正文是 .tech-proj-readme-body，整个点击拦截被跳过，退回浏览器默认锚点；补上选择器，并在点击后把待加载的 README 图片改成 eager、加载完重新对齐，避免懒加载把目标位置顶走
 
 ### v3.2.21
 

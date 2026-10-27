@@ -275,8 +275,17 @@
 /* ── 文章目录：点击平滑滚动 + 滚动时高亮当前章节 ── */
 (function () {
   var tocBody = document.querySelector('.tech-toc-body');
-  var content = document.querySelector('.tech-post-body');
+  // 文章页正文是 .tech-post-body，项目页是 .tech-proj-readme-body；
+  // 之前只认前者，项目页整个 TOC 逻辑直接 return，点击退回浏览器默认锚点，
+  // 而 README 图片懒加载会让页面高度从 1800 瞬间涨到 1 万，锚点就被顶到页面底部。
+  var content = document.querySelector('.tech-post-body, .tech-proj-readme-body');
   if (!tocBody || !content) return;
+
+  function scrollToTarget(target, smooth) {
+    var headerOffset = 60; // 顶部导航高度预留
+    var top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+  }
 
   // 点击委托：拦截 #id 锚点，改用平滑滚动 + 点完即关（移动端抽屉式 TOC 必关；桌面端连续浏览也建议收起避免遮挡正文）
   tocBody.addEventListener('click', function (e) {
@@ -289,10 +298,32 @@
     // 让外层 <details> 收起：统一行为，桌面/移动都关
     var details = tocBody.closest('details');
     if (details) details.open = false;
-    var headerOffset = 60; // 顶部导航高度预留
-    var top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
-    window.scrollTo({ top: top, behavior: 'smooth' });
+    scrollToTarget(target, true);
     history.replaceState(null, '', '#' + id);
+
+    // README 里的图片是 loading="lazy"，未加载时高度为 0。点击后把待加载的图
+    // 改成 eager，并在它们 load 后重新对齐一次，避免目标被撑开的页面顶走。
+    var lazy = [];
+    Array.prototype.forEach.call(content.querySelectorAll('img'), function (img) {
+      if (!img.complete) {
+        img.loading = 'eager';
+        lazy.push(img);
+      }
+    });
+    if (lazy.length) {
+      var last = 0;
+      var realign = function () {
+        var now = Date.now();
+        if (now - last < 120) return;
+        last = now;
+        scrollToTarget(target, false);
+      };
+      lazy.forEach(function (img) {
+        img.addEventListener('load', realign, { once: true });
+      });
+      setTimeout(realign, 400);
+      setTimeout(realign, 1200);
+    }
   });
 
   // 当前章节高亮：基于 IntersectionObserver 监听 H2/H3
