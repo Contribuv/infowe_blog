@@ -6,7 +6,7 @@ import re
 
 import db
 from models import Category, Post
-from services import avatar, settings
+from services import avatar, foreverblog, settings
 
 
 def _plain(text: str, limit: int = 46) -> str:
@@ -75,6 +75,7 @@ def data() -> dict:
         "side_tags": all_tags[:12],
         "side_categories": cats,
         "side_comments": _comments(5),
+        "side_widget": foreverblog.widget(),
         "side_post_total": post_total,
         "side_tag_total": len(all_tags),
         "side_category_total": len(cats),

@@ -76,14 +76,20 @@
 
     <section class="tech-side-card tech-side-widget">
         <h3>十年之约</h3>
-        <iframe class="tech-side-widget-frame tech-side-widget-light"
-                src="https://www.foreverblog.cn/widget/today.html?theme=light"
-                loading="lazy" title="十年之约 · 今天读什么"
-                sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
-        <iframe class="tech-side-widget-frame tech-side-widget-dark"
-                src="https://www.foreverblog.cn/widget/today.html?theme=dark"
-                loading="lazy" title="十年之约 · 今天读什么"
-                sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
-        <a class="tech-side-widget-link" href="https://www.foreverblog.cn/about.html" target="_blank" rel="noopener">了解十年之约 →</a>
+        {% if sidebar.side_widget and sidebar.side_widget.articles %}
+        <div class="tech-widget">
+            <p class="tech-widget-kicker">今天读什么</p>
+            <ul>
+                {% for a in sidebar.side_widget.articles %}
+                <li>
+                    <a class="tech-widget-article" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+                    <small>{{ a.source }}</small>
+                </li>
+                {% endfor %}
+            </ul>
+            <a class="tech-widget-wormhole" href="{{ sidebar.side_widget.wormhole }}" target="_blank" rel="noopener">随机去一个十年之约的博客 →</a>
+        </div>
+        {% endif %}
+        <a class="tech-side-widget-link" href="{{ sidebar.side_widget.about or 'https://www.foreverblog.cn/about.html' }}" target="_blank" rel="noopener">了解十年之约 →</a>
     </section>
 </aside>

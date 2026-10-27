@@ -713,8 +713,8 @@ html.page-enter .tech-main {
 }
 
 /* ── 文章详情 ── */
-/* 正文排版修复：容器从 1000 收窄到 800（含左右 20 内边距），窄屏正文不再贴边，宽屏也与导航文字对齐；一行约 47 个汉字 */
-.tech-post-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+/* 正文排版修复：容器与项目详情页保持一致（1000 含左右 20 内边距，正文 960），窄屏正文不再贴边 */
+.tech-post-wrap { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
 .tech-post-layout { display: block; }
 
 /* TOC：窄屏内联折叠框，位于标题下方、正文之前；上下 24px（与相邻块 margin 折叠取较大值）；
@@ -724,8 +724,8 @@ html.page-enter .tech-main {
   .tech-toc-sidebar {
     position: fixed;
     top: 80px;
-    /* 正文排版修复：正文容器 800（半宽 400 + 20 内边距），悬浮目录同步从 520 收到 420 */
-    left: min(calc(50% + 420px), calc(100vw - 200px));
+    /* 正文排版修复：正文容器 1000（半宽 500），与项目详情页一致；悬浮目录同步留出 20px 间距 */
+    left: min(calc(50% + 500px), calc(100vw - 200px));
     width: 180px;
     margin: 0;
   }
@@ -3008,14 +3008,56 @@ a.tech-podium-name:hover { color: var(--accent); }
   font-size: 11.5px;
   text-decoration: none;
 }
-.tech-side-widget-frame {
-  display: block;
-  width: 100%;
-  height: 260px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--bg-subtle);
+/* 十年之约「今天读什么」：服务端抓取后用本站样式渲染，不再用跨域 iframe */
+.tech-widget {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
 }
+.tech-widget-kicker {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.tech-widget ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tech-widget-article {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.tech-widget-article:hover { color: var(--accent); }
+.tech-widget small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+.tech-widget-wormhole {
+  display: block;
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+.tech-widget-wormhole:hover { text-decoration: underline; }
 .tech-side-widget-dark { display: none; }
 html[data-theme="dark"] .tech-side-widget-light { display: none; }
 html[data-theme="dark"] .tech-side-widget-dark { display: block; }

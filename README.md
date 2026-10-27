@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.16-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.16)
+[![version](https://img.shields.io/badge/version-3.4.17-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.17)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,15 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.16**
+- 版本：**v3.4.17**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.17
+
+- 文章正文宽度与项目详情页统一为 960（容器 1000 + 左右 20 内边距），悬浮目录同步右移到 500，修复项目页 TOC 与正文重叠
+- 十年之约「今天读什么」不再用跨域 iframe：改为服务端抓取、30 分钟缓存、用本站 CSS 渲染，深浅主题都跟侧栏卡片融合
+- 侧栏挂件抓取失败时自动隐藏文章列表，只保留「了解十年之约」入口
 
 ### v3.4.16
 
