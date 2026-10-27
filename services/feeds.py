@@ -123,31 +123,63 @@ def parse_feed(raw: bytes, base_url: str) -> list[dict]:
     return result
 
 
+def _mark(link_id: int, ok: bool, error: str = "", count: int = 0) -> None:
+    db.execute(
+        "UPDATE links SET feed_state=?, feed_error=?, feed_checked_at=?, feed_count=? WHERE id=?",
+        ("ok" if ok else "error", error[:300], time.time(), int(count), link_id),
+    )
+
+
 def refresh_link(link: dict) -> bool:
     rss = str(link.get("rss") or "").strip()
-    if not rss or not _safe_url(rss):
+    link_id = int(link.get("id") or 0)
+    if not rss:
+        return False
+    if not _safe_url(rss):
+        _mark(link_id, False, "RSS 地址不是公网 http/https")
         return False
     try:
         resp = requests.get(rss, timeout=TIMEOUT, stream=True, headers={"User-Agent": UA})
+        if resp.status_code >= 400:
+            _mark(link_id, False, f"HTTP {resp.status_code}")
+            return False
         raw = resp.raw.read(MAX_BYTES, decode_content=True) or b""
-    except requests.RequestException:
+    except Exception as exc:  # noqa: BLE001
+        _mark(link_id, False, f"请求失败：{exc}")
         return False
     if not raw:
+        _mark(link_id, False, "响应为空")
         return False
     items = parse_feed(raw, str(link.get("url") or rss))
     if not items:
+        _mark(link_id, False, "未解析到文章（可能不是 RSS/Atom）")
         return False
 
     now = time.time()
-    db.execute("DELETE FROM feed_items WHERE link_id=?", (link["id"],))
-    for item in items[:KEEP_PER_SITE]:
+    db.execute("DELETE FROM feed_items WHERE link_id=?", (link_id,))
+    saved = items[:KEEP_PER_SITE]
+    for item in saved:
         db.execute(
             "INSERT OR REPLACE INTO feed_items (link_id, title, url, summary, published, fetched_at) "
             "VALUES (?,?,?,?,?,?)",
-            (link["id"], item["title"], item["url"], item["summary"],
+            (link_id, item["title"], item["url"], item["summary"],
              item["published"] or now, now),
         )
+    _mark(link_id, True, "", len(saved))
     return True
+
+
+def sources() -> list[dict]:
+    rows = db.query(
+        "SELECT id, name, url, rss, status, feed_state, feed_error, feed_checked_at, feed_count "
+        "FROM links WHERE rss != '' ORDER BY id ASC"
+    )
+    return [dict(r) for r in rows]
+
+
+def refresh_source(link_id: int) -> bool:
+    row = db.one("SELECT * FROM links WHERE id=?", (int(link_id),))
+    return refresh_link(dict(row)) if row else False
 
 
 def refresh_all() -> int:

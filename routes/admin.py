@@ -22,6 +22,29 @@ from services import settings, status, theme, upload
 LOGIN = auth.admin_required
 
 
+def _refresh_feed_async(link_id: int) -> None:
+    """保存带 RSS 的友链后，后台立即抓一次，不用等定时任务。"""
+    if not link_id:
+        return
+    link = Link.get(link_id)
+    if not link or not str(link.get("rss") or "").strip():
+        return
+    from flask import current_app
+
+    from services import feeds
+
+    app = current_app._get_current_object()
+
+    def run() -> None:
+        with app.app_context():
+            try:
+                feeds.refresh_source(link_id)
+            except Exception:
+                pass
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 def _ids(name: str) -> list[int]:
     values = request.form.getlist(name) or request.form.getlist(name + "[]")
     return [int(v) for v in values if str(v).isdigit()]
@@ -329,7 +352,8 @@ def admin_link_reject(link_id: int):
 @LOGIN
 def admin_link_new():
     if request.method == "POST":
-        Link.save(request.form)
+        link_id = Link.save(request.form)
+        _refresh_feed_async(link_id)
         flash("链接已添加", "success")
         return redirect(url_for("admin_links"))
     return render_template("admin/link_edit.html", link=None)
@@ -343,6 +367,7 @@ def admin_link_edit(link_id: int):
         return redirect(url_for("admin_links"))
     if request.method == "POST":
         Link.save(request.form, link_id)
+        _refresh_feed_async(link_id)
         flash("链接已更新", "success")
         return redirect(url_for("admin_links"))
     return render_template("admin/link_edit.html", link=link)
@@ -634,6 +659,42 @@ def admin_status_probe():
 @LOGIN
 def admin_status_test_cloud():
     return jsonify({"ok": True, "expiry": status.expiry_info()})
+
+
+# ── 圈子管理 ──────────────────────────────────────────
+@LOGIN
+def admin_circle():
+    from services import feeds
+
+    sources = feeds.sources()
+    from datetime import datetime as _dt
+
+    for item in sources:
+        ts = float(item.get("feed_checked_at") or 0)
+        item["checked_text"] = _dt.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M") if ts else ""
+    total = int(db.scalar("SELECT COUNT(*) FROM feed_items", (), 0) or 0)
+    last_raw = db.scalar("SELECT MAX(fetched_at) FROM feed_items", (), 0) or 0
+    last = ""
+    if last_raw:
+        from datetime import datetime as _dt
+
+        last = _dt.fromtimestamp(float(last_raw)).strftime("%Y-%m-%d %H:%M")
+    return render_template("admin/circle.html", sources=sources, total=total, last=last)
+
+
+@LOGIN
+def admin_circle_refresh():
+    from services import feeds, page_cache
+
+    link_id = request.form.get("id", type=int)
+    if link_id:
+        ok = feeds.refresh_source(link_id)
+        flash("已刷新该源" if ok else "刷新失败，请看错误列", "success" if ok else "error")
+    else:
+        count = feeds.refresh_all()
+        flash(f"已刷新 {count} 个源", "success")
+    page_cache.invalidate_path("/circle")
+    return redirect(url_for("admin_circle"))
 
 
 # ── 插件 ──────────────────────────────────────────────
@@ -1136,6 +1197,8 @@ def register(app) -> None:
         ("/admin/status", "admin_status", admin_status, ["GET", "POST"]),
         ("/admin/status/probe", "admin_status_probe", admin_status_probe, ["POST"]),
         ("/admin/status/test-cloud", "admin_status_test_cloud", admin_status_test_cloud, ["POST"]),
+        ("/admin/circle", "admin_circle", admin_circle, ["GET"]),
+        ("/admin/circle/refresh", "admin_circle_refresh", admin_circle_refresh, ["POST"]),
         ("/admin/plugins", "admin_plugins", admin_plugins, ["GET"]),
         ("/admin/plugins/toggle", "admin_plugin_toggle", admin_plugin_toggle, ["POST"]),
         ("/admin/themes", "admin_themes", admin_themes, ["GET", "POST"]),

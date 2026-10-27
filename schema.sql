@@ -78,6 +78,10 @@ CREATE TABLE IF NOT EXISTS links (
     status TEXT DEFAULT 'approved',
     email TEXT DEFAULT '',
     rss TEXT DEFAULT '',
+    feed_state TEXT DEFAULT '',
+    feed_error TEXT DEFAULT '',
+    feed_checked_at REAL DEFAULT 0,
+    feed_count INTEGER DEFAULT 0,
     ai_state TEXT DEFAULT 'idle',
     ai_meta TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now', 'localtime'))

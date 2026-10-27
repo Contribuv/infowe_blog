@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.0)
+[![version](https://img.shields.io/badge/version-3.4.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.1)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,16 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.0**
+- 版本：**v3.4.1**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.1
+
+- 导航与页面标题「博客圈」改为「圈子」，和其它 2 字导航统一
+- 新增后台「圈子管理」页：列出 RSS 源、抓取状态、文章数、最后抓取时间、失败原因，支持单个/全部立即刷新
+- 友链新增 eed_state/feed_error/feed_checked_at/feed_count 字段，抓取失败会显示具体原因（HTTP 状态、非 RSS、私网地址等）
+- 保存带 RSS 的友链后立即抓取一次，不再等 30 分钟定时任务
 
 ### v3.4.0
 

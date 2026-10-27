@@ -63,6 +63,9 @@
                     <a href="{{ url_for('admin_links') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/links') %}active{% endif %}">
                         {{ icon('link', 20, 'admin-nav-icon') | safe }}<span>友情链接</span>
                     </a>
+                    <a href="{{ url_for('admin_circle') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/circle') %}active{% endif %}">
+                        {{ icon('inbox', 20, 'admin-nav-icon') | safe }}<span>圈子管理</span>
+                    </a>
                     <a href="{{ url_for('admin_timeline') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/timeline') %}active{% endif %}">
                         {{ icon('calendar', 20, 'admin-nav-icon') | safe }}<span>博客历程</span>
                     </a>
