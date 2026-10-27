@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}圈子{% endblock %}
+{% block title %}博客圈{% endblock %}
 {% block content %}
 <div class="tech-page-head">
-    <h1 class="tech-page-title">圈子</h1>
+    <h1 class="tech-page-title">博客圈</h1>
     <p class="tech-page-desc">友链站点的最新更新，发现更多有温度的文字</p>
 </div>
 
@@ -30,17 +30,15 @@
     {% endfor %}
 </div>
 
-{% if total_pages > 1 %}
-<nav class="circle-pager" aria-label="圈子分页">
-    {% if page > 1 %}<a href="?page={{ page - 1 }}">上一页</a>{% endif %}
+<nav class="circle-pager" aria-label="博客圈分页">
+    {% if page > 1 %}<a href="?page={{ page - 1 }}">上一页</a>{% else %}<span class="is-disabled">上一页</span>{% endif %}
     {% for p in pages %}
         {% if p == '...' %}<span class="is-gap">…</span>
         {% elif p == page %}<span class="is-current">{{ p }}</span>
         {% else %}<a href="?page={{ p }}">{{ p }}</a>{% endif %}
     {% endfor %}
-    {% if page < total_pages %}<a href="?page={{ page + 1 }}">下一页</a>{% endif %}
+    {% if page < total_pages %}<a href="?page={{ page + 1 }}">下一页</a>{% else %}<span class="is-disabled">下一页</span>{% endif %}
 </nav>
-{% endif %}
 {% else %}
 <div class="tech-empty">
     <p>还没有可展示的友链动态。</p>

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.5)
+[![version](https://img.shields.io/badge/version-3.4.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,16 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.5**
+- 版本：**v3.4.6**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.6
+
+- 关于页人物卡改为桌面横向布局（头像左、信息右），头像 118→96，整体高度约压掉一半；移动端保持居中
+- 圈子页面标题恢复为「博客圈」（导航仍为 2 字「圈子」）
+- 圈子分页在单页时也显示（上下页禁用 + 页码 1），不再因为只有一页而完全隐藏
+- 每个 RSS 源保留文章数 8 → 15，单源也能撑起更多内容
 
 ### v3.4.5
 

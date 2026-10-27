@@ -2197,3 +2197,34 @@ html { touch-action: manipulation; }
   .tech-about-section { padding: 16px; }
   .tech-skill-list { grid-template-columns: 1fr; gap: 0; }
 }
+
+/* ── 关于页人物卡：桌面横向压缩，移动端保持居中 ── */
+.tech-about-hero {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 24px 28px;
+  text-align: left;
+}
+.tech-about-hero .tech-avatar-wrap { margin-bottom: 0; flex: none; }
+.tech-about-hero .tech-avatar,
+.tech-about-hero .tech-avatar-placeholder { width: 96px; height: 96px; }
+.tech-about-hero-main { flex: 1; min-width: 0; }
+.tech-about-hero .tech-page-title { font-size: 20px; margin: 0 0 6px; }
+.tech-about-hero .tech-about-bio { margin: 0; max-width: none; font-size: 14px; line-height: 1.7; }
+.tech-about-hero .tech-about-social { justify-content: flex-start; margin-top: 12px; }
+.tech-about-hero .tech-about-stats { justify-content: flex-start; margin-top: 14px; padding-top: 12px; }
+
+@media (max-width: 640px) {
+  .tech-about-hero {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 20px 16px;
+    gap: 10px;
+  }
+  .tech-about-hero .tech-about-social,
+  .tech-about-hero .tech-about-stats { justify-content: center; }
+  .tech-about-hero .tech-avatar,
+  .tech-about-hero .tech-avatar-placeholder { width: 84px; height: 84px; }
+}
