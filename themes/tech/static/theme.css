@@ -422,15 +422,6 @@ html.page-enter .tech-main {
 }
 .tech-page-title { font-size: 26px; font-weight: 700; line-height: 1.4; margin: 0 0 8px; }
 .tech-page-desc { font-size: 14px; color: var(--text-secondary); margin: 0; }
-
-/* 页面标题区宽度层级：宽于内容（960），窄于导航（1200）。
-   只在宽屏生效；窄屏仍与内容同宽，避免挤压。 */
-@media (min-width: 1200px) {
-  .tech-page-head:not(.tech-about-hero) {
-    width: 1100px;
-    margin-left: -70px;
-  }
-}
 .tech-page-head--with-action {
   display: flex;
   align-items: center;
