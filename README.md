@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.7)
+[![version](https://img.shields.io/badge/version-3.4.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.8)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,19 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.7**
+- 版本：**v3.4.8**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.8
+
+- 友链页：顶部介绍压缩成两行；「收录说明 / 以下情况暂不收录」改为双栏（移动端单列），规则文案同步精简
+- 博客圈：页头增加「我要申请」按钮，描述改短；每页 30 → 20 条
+- 博客圈移动端修复：卡片恢复左右内边距，标题和摘要长串可断行，分页允许换行，不再横向溢出
+- 博客圈统计卡片增加 hover：底色、描边、上浮和轻阴影，与全站卡片一致
+- 首页与文章列表的标签最多显示 4 个，超出显示「+N」，鼠标悬停可看剩余标签
+- 双栏文章卡片默认透明，鼠标经过才出现底色和描边
+- 全站按钮调整：主按钮默认淡蓝底 + 主色字，hover 变实心并上浮；次按钮 hover 增加底色、主色边框和位移
 
 ### v3.4.7
 

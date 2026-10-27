@@ -23,7 +23,7 @@ from config import CACHE_DIR
 UA = "infowe-circle/1.0 (+blogroll reader)"
 MAX_BYTES = 2 * 1024 * 1024
 TIMEOUT = 8
-PER_PAGE = 30
+PER_PAGE = 20
 KEEP_PER_SITE = 15
 _scheduler_started = False
 _lock = threading.Lock()

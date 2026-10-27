@@ -59,7 +59,8 @@
         <h2 class="tech-post-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h2>
         <p class="tech-post-excerpt">{{ post.excerpt }}</p>
         <div class="tech-post-tags">
-            {% for tag in post.tags %}<a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag">{{ tag }}</a>{% endfor %}
+            {% for tag in post.tags[:4] %}<a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag">{{ tag }}</a>{% endfor %}
+            {% if post.tags|length > 4 %}<span class="tech-tag tech-tag--more" title="{{ post.tags[4:]|join(' / ') }}">+{{ post.tags|length - 4 }}</span>{% endif %}
         </div>
         <span class="tech-post-arrow" aria-hidden="true">→</span>
     </li>
