@@ -15,7 +15,8 @@
 </div>
 
 {% if items %}
-<!-- 前三名单独展示 -->
+<!-- 前三名单独展示（仅第一页） -->
+{% if page == 1 %}
 <div class="tech-podium">
     {% for r in items[:3] %}
     <article class="tech-podium-item tech-podium-item--{{ r.rank }}">
@@ -35,11 +36,13 @@
     </article>
     {% endfor %}
 </div>
+{% endif %}
 
-<!-- 第 4 名起 -->
-{% if items|length > 3 %}
+<!-- 第 4 名起；第二页起全部按列表展示 -->
+{% set rest = items[3:] if page == 1 else items %}
+{% if rest %}
 <ol class="tech-reader-list">
-    {% for r in items[3:] %}
+    {% for r in rest %}
     <li class="tech-reader-item">
         <span class="tech-reader-rank tech-reader-rank--normal">{{ r.rank }}</span>
         <img class="tech-reader-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"

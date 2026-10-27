@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.14-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.14)
+[![version](https://img.shields.io/badge/version-3.4.15-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.15)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,13 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.14**
+- 版本：**v3.4.15**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.15
+
+- 留言榜单第二页起不再把第 16 名当作前三名展示，统一按列表排列
 
 ### v3.4.14
 
