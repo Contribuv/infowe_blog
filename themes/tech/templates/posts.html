@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import arrow %}
 {% block title %}{% if active_category %}{{ active_category.name }}{% elif is_miles %}文章归档{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
 {% block content %}
 <div class="tech-page-head">
@@ -70,7 +71,7 @@
                         {% for tag in post.tags[:3] %}<a class="tech-miles-tag" href="{{ url_for('tag_page', tag=tag) }}">#{{ tag }}</a>{% endfor %}
                     </div>
                 </div>
-                <span class="tech-miles-arrow" aria-hidden="true">→</span>
+                <span class="tech-miles-arrow" aria-hidden="true">{{ arrow(16) }}</span>
             </li>
             {% endfor %}
         </ul>
@@ -92,7 +93,7 @@
             {% for tag in post.tags[:4] %}<a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag">{{ tag }}</a>{% endfor %}
             {% if post.tags|length > 4 %}<span class="tech-tag tech-tag--more" title="{{ post.tags[4:]|join(' / ') }}">+{{ post.tags|length - 4 }}</span>{% endif %}
         </div>
-        <span class="tech-post-arrow" aria-hidden="true">→</span>
+        <span class="tech-post-arrow" aria-hidden="true">{{ arrow(16) }}</span>
     </li>
     {% endfor %}
 </ul>

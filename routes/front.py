@@ -624,7 +624,8 @@ def rss_feed():
 
 
 def readers_page():
-    data = readers_service.rank(1)
+    limit = max(1, min(50, settings.get_int("readers_limit", 10)))
+    data = readers_service.rank(1, per_page=limit)
     return render_template("readers.html", **data)
 
 
@@ -637,7 +638,7 @@ def category_page(category_id: int):
     category = Category.get(category_id)
     if not category:
         abort(404)
-    per_page = settings.get_int("archive_per_page", 20) or 20
+    per_page = settings.get_int("category_per_page", 20) or 20
     page = request.args.get("page", 1, type=int) or 1
     _, total = Post.load("published", None, None, None, 1, per_page, category_id=category_id)
     total_pages = max(1, (total + per_page - 1) // per_page)

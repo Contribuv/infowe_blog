@@ -77,7 +77,7 @@
             <div class="tech-proj-readme-body markdown-body">{{ gh.readme | safe }}</div>
             {% else %}
             <div class="tech-proj-readme-empty">
-                <p>{% if gh.error %}{{ gh.error }}{% else %}项目文档尚未同步，请管理员在后台「项目 → 同步」中拉取 README。{% endif %}</p>
+                <p>{% if gh.error %}{{ gh.error }}{% else %}项目文档尚未同步，请管理员在后台「项目」里的「同步」中拉取 README。{% endif %}</p>
                 {% if project.url %}
                 <p>可前往 <a href="{{ project.url }}" target="_blank" rel="noopener">GitHub 仓库</a> 查看完整说明</p>
                 {% endif %}

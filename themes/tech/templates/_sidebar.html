@@ -1,4 +1,5 @@
 <aside class="tech-sidebar" aria-label="站点侧栏">
+    {% from "_icons.html" import arrow %}
     <section class="tech-side-card tech-side-profile-card">
         <a class="tech-side-profile" href="/about" aria-label="关于 {{ author or blog_name }}">
             {% if avatar %}
@@ -10,16 +11,16 @@
             {% endif %}
             <span class="tech-side-profile-main">
                 <span class="tech-side-profile-kicker">博主</span>
-                <strong>{{ author or blog_name }}<span class="tech-side-profile-arrow" aria-hidden="true">→</span></strong>
+                <strong>{{ author or blog_name }}<span class="tech-side-profile-arrow" aria-hidden="true">{{ arrow(14) }}</span></strong>
             </span>
         </a>
         {% if author_bio %}
         <p class="tech-side-bio">{{ author_bio | e | replace('\n', ' ') | safe }}</p>
         {% endif %}
         <div class="tech-side-stats">
-            <span><b>{{ sidebar.side_post_total }}</b>文章</span>
-            <span><b>{{ sidebar.side_tag_total }}</b>标签</span>
-            <span><b>{{ sidebar.side_category_total }}</b>分类</span>
+            <span><b>{{ sidebar.side_post_total }}</b><em>文章</em></span>
+            <span><b>{{ sidebar.side_tag_total }}</b><em>标签</em></span>
+            <span><b>{{ sidebar.side_category_total }}</b><em>分类</em></span>
         </div>
         {% if social_github or contact_email %}
         <div class="tech-side-social">
@@ -66,31 +67,10 @@
                 </li>
                 {% endfor %}
             </ul>
-            <a class="tech-widget-wormhole" href="{{ sidebar.side_widget.wormhole }}" target="_blank" rel="noopener">随机去一个十年之约的博客 →</a>
+            <a class="tech-widget-wormhole" href="{{ sidebar.side_widget.wormhole }}" target="_blank" rel="noopener">随机去一个十年之约的博客 {{ arrow(13) }}</a>
         </div>
         {% endif %}
-        <a class="tech-side-widget-link" href="{{ sidebar.side_widget.about or 'https://www.foreverblog.cn/about.html' }}" target="_blank" rel="noopener">了解十年之约 →</a>
+        <a class="tech-side-widget-link" href="{{ sidebar.side_widget.about or 'https://www.foreverblog.cn/about.html' }}" target="_blank" rel="noopener">了解十年之约 {{ arrow(13) }}</a>
     </section>
 
-    {% if sidebar.side_comments %}
-    <section class="tech-side-card">
-        <h3>最新评论</h3>
-        <ul class="tech-side-comments">
-            {% for c in sidebar.side_comments %}
-            <li>
-                <img class="tech-side-cmt-avatar" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy"
-                     onerror="this.src='/static/images/default-avatar.svg'">
-                <div class="tech-side-cmt-main">
-                    <div class="tech-side-cmt-head">
-                        <strong>{{ c.author }}</strong>
-                        <time>{{ c.created_at[5:10] }}</time>
-                    </div>
-                    <p>{{ c.text }}</p>
-                    <a class="tech-side-cmt-source" href="{{ c.source_url }}">来自 {{ c.source_title }}</a>
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
-    </section>
-    {% endif %}
 </aside>

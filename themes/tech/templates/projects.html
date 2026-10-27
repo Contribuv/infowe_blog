@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_icons.html" import arrow %}
 {% block title %}开源项目{% endblock %}
 {% block content %}
 <div class="tech-page-head">
@@ -17,13 +18,19 @@
     </div>
 
     <!-- 项目列表（卡片网格） -->
-    <div class="tech-project-grid" id="projectsList">
+    <div class="tech-project-grid tech-project-grid--{{ project_layout }}" id="projectsList">
         {% for project in projects %}
         <article class="tech-project-card{% if project.featured %} tech-project-card-featured{% endif %}" data-langs="{{ project.lang_names }}">
             <div class="tech-project-card-head">
+                <span class="tech-project-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+                </span>
                 <a href="/projects/{{ project.id }}" class="tech-project-name">{{ project.name }}</a>
                 {% if project.featured %}<span class="tech-project-featured">精选</span>{% endif %}
-                <span class="tech-project-stars">★ {{ project.stars }}</span>
+                <span class="tech-project-stars">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="m12 3 2.7 5.47 6.03.88-4.36 4.25 1.03 6.01L12 16.77l-5.4 2.84 1.03-6.01L3.27 9.35l6.03-.88L12 3z"/></svg>
+                    {{ project.stars }}
+                </span>
             </div>
             {% if project.description %}
             <p class="tech-project-desc">{{ project.description }}</p>
@@ -49,7 +56,7 @@
                 </span>
                 {% endif %}
             </div>
-            <a class="tech-project-open" href="/projects/{{ project.id }}">查看项目 <span aria-hidden="true">→</span></a>
+            <a class="tech-project-open" href="/projects/{{ project.id }}">查看项目 {{ arrow(14) }}</a>
         </article>
         {% endfor %}
     </div>

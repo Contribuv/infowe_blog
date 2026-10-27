@@ -277,6 +277,7 @@ def _register_hooks(app: Flask) -> None:
             "post_layout": conf.get("post_layout", "single"),
             "nav_all": nav_all,
             "friend_hosts": friend_hosts,
+            "project_layout": conf.get("project_layout", "three"),
             "version": config.VERSION,
             "static_ver": _static_version(),
             "admin_prefix": app.config.get("ADMIN_PREFIX", "/admin"),

@@ -18,7 +18,7 @@
             <div class="layout-options">
                 <label class="layout-option">
                     <input type="radio" name="post_layout" value="single"
-                           {{ 'checked' if post_layout != 'double' else '' }}>
+                           {{ 'checked' if post_layout != 'double' and post_layout != 'multi' else '' }}>
                     <span class="layout-option-body">
                         <span class="layout-preview layout-preview--single" aria-hidden="true">
                             <i></i><i></i><i></i>
@@ -53,6 +53,25 @@
             <p class="form-hint theme-config-tip">
                 只影响文章列表的排列方式，不改文章正文排版。首页顶部的「精选」区块始终保持单栏。
             </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>项目页列数</h3>
+            <span class="form-hint">独立于文章布局，窄屏自动减少列数</span>
+        </div>
+        <div class="theme-config-body">
+            <div class="theme-choice-row">
+                {% for value, label in [('one', '单栏'), ('two', '双栏'), ('three', '三栏')] %}
+                <label class="theme-choice">
+                    <input type="radio" name="project_layout" value="{{ value }}"
+                           {{ 'checked' if project_layout == value else '' }}>
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="form-hint theme-config-tip">项目卡片会自动等高；窄屏按 2 列 / 1 列递减。</p>
         </div>
     </div>
 

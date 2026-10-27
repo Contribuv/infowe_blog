@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% from "_icons.html" import arrow %}
 {% block title %}{% if current_tag %}{{ current_tag }}{% elif search_query %}搜索: {{ search_query }}{% elif home_title %}{{ home_title }}{% else %}{{ blog_name }}{% endif %}{% endblock %}
 {% block content %}
-<!-- 页面头部：首页为终端窗口 Hero，标签/搜索结果为居中标题 Hero（搜索入口已收纳至导航栏放大镜） -->
+<!-- 首页 Hero：三种布局共用一套信息层级，多栏时改为左文右引 -->
+{% if current_tag or search_query %}
 <div class="tech-page-head tech-page-head--center">
-    {% if current_tag or search_query %}
     <h1 class="tech-page-title">
         {% if current_tag %}标签：{{ current_tag }}
         {% else %}搜索：&ldquo;{{ search_query }}&rdquo;{% endif %}
@@ -12,24 +13,34 @@
         {% if search_query %}找到 {{ total }} 篇相关文章
         {% else %}共 {{ total }} 篇文章 · {{ all_tags|length }} 个标签 · {{ total_categories }} 个分类{% endif %}
     </p>
-    {% else %}
-    <!-- 站点名不再作大标题（导航与页脚已承载），用 sr-only 保留 h1 语义 -->
-    <h1 class="sr-only">{{ home_title or blog_name }}</h1>
-    <p class="tech-page-desc tech-page-desc--mono">共 {{ total }} 篇文章 · {{ all_tags|length }} 个标签 · {{ total_categories }} 个分类</p>
-    {% if home_quotes %}
-    <script type="application/json" id="tech-quotes-data">{{ home_quotes | tojson }}</script>
-    {% endif %}
-    <!-- 首页格言：后台自定义优先，否则使用主题内置句子库；交互逻辑见 theme.js -->
-    <div class="tech-quote">
-        <span class="tech-quote-text" id="tech-quote-text"></span>
-        <span class="tech-quote-cursor" aria-hidden="true"></span>
-        <span class="tech-quote-src" id="tech-quote-src"></span>
-        <button type="button" class="tech-quote-refresh" id="tech-quote-refresh" title="换一句" aria-label="换一句格言">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        </button>
-    </div>
-    {% endif %}
 </div>
+{% else %}
+<div class="tech-home-head tech-home-head--{{ post_layout }}">
+    <div class="tech-home-head-main">
+        <p class="tech-home-kicker">{{ blog_subtitle or 'Python · Code · Life' }}</p>
+        <h1 class="tech-home-title">{{ home_title or blog_name }}</h1>
+        <div class="tech-home-stats">
+            <span><b>{{ total }}</b>篇文章</span>
+            <span><b>{{ all_tags|length }}</b>个标签</span>
+            <span><b>{{ total_categories }}</b>个分类</span>
+        </div>
+    </div>
+    <div class="tech-home-head-quote">
+        {% if home_quotes %}
+        <script type="application/json" id="tech-quotes-data">{{ home_quotes | tojson }}</script>
+        {% endif %}
+        <!-- 首页格言：后台自定义优先，否则使用主题内置句子库；交互逻辑见 theme.js -->
+        <div class="tech-quote">
+            <span class="tech-quote-text" id="tech-quote-text"></span>
+            <span class="tech-quote-cursor" aria-hidden="true"></span>
+            <span class="tech-quote-src" id="tech-quote-src"></span>
+            <button type="button" class="tech-quote-refresh" id="tech-quote-refresh" title="换一句" aria-label="换一句格言">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% set use_sidebar = sidebar and post_layout == 'multi' and not current_tag and not search_query %}
 {% if use_sidebar %}<div class="tech-home-grid"><div class="tech-home-main">{% endif %}
@@ -53,7 +64,7 @@
                 {% for tag in post.tags[:4] %}<a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag">{{ tag }}</a>{% endfor %}
                 {% if post.tags|length > 4 %}<span class="tech-tag tech-tag--more" title="{{ post.tags[4:]|join(' / ') }}">+{{ post.tags|length - 4 }}</span>{% endif %}
             </div>
-            <span class="tech-post-arrow" aria-hidden="true">→</span>
+            <span class="tech-post-arrow" aria-hidden="true">{{ arrow(16) }}</span>
         </li>
         {% endfor %}
     </ul>
@@ -76,7 +87,7 @@
             {% for tag in post.tags[:4] %}<a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag">{{ tag }}</a>{% endfor %}
             {% if post.tags|length > 4 %}<span class="tech-tag tech-tag--more" title="{{ post.tags[4:]|join(' / ') }}">+{{ post.tags|length - 4 }}</span>{% endif %}
         </div>
-        <span class="tech-post-arrow" aria-hidden="true">→</span>
+        <span class="tech-post-arrow" aria-hidden="true">{{ arrow(16) }}</span>
     </li>
     {% endfor %}
 </ul>

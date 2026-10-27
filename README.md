@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.22-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.22)
+[![version](https://img.shields.io/badge/version-3.4.23-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.23)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,18 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.22**
+- 版本：**v3.4.23**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.23
+
+- 后台新增「分类页每页文章数」「留言榜单显示人数」
+- 项目页列数独立设置：主题配置可选单栏 / 双栏 / 三栏，卡片同步重做（文件夹图标、星标胶囊、查看项目入口）
+- 首页 Hero 重做：标题、副标题、统计胶囊、格言一套组件，单/双栏居中，多栏左文右引，移动端自动堆叠
+- 圈子与留言榜单统计改为一条带分割线的数据带，不再用四张独立卡片
+- 侧栏去掉最新评论；博主卡改为「博主」胶囊 + 名字 + 三列统计
+- 页面里的字符箭头统一替换为内联 SVG 图标
 
 ### v3.4.22
 

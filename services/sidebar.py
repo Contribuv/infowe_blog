@@ -74,7 +74,6 @@ def data() -> dict:
     return {
         "side_tags": all_tags[:12],
         "side_categories": cats,
-        "side_comments": _comments(5),
         "side_widget": foreverblog.widget(),
         "side_post_total": post_total,
         "side_tag_total": len(all_tags),

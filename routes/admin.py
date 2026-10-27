@@ -733,6 +733,10 @@ def admin_theme_config():
         if layout not in {"single", "double", "multi"}:
             layout = "single"
         settings.set_value("post_layout", layout)
+        project_layout = (request.form.get("project_layout") or "three").strip()
+        if project_layout not in {"one", "two", "three"}:
+            project_layout = "three"
+        settings.set_value("project_layout", project_layout)
         # 首页和列表页有整页缓存，保存后清掉，返回前台立刻能看到
         from services import page_cache
 
@@ -743,6 +747,7 @@ def admin_theme_config():
     return render_template(
         "admin/theme_config.html",
         post_layout=settings.get_str("post_layout", "single"),
+        project_layout=settings.get_str("project_layout", "three"),
     )
 
 
@@ -820,7 +825,9 @@ def _settings_view() -> dict:
         "posts_per_page": settings.get_str("posts_per_page", "20"),
         "home_posts_count": settings.get_str("home_posts_count", "6"),
         "archive_per_page": settings.get_str("archive_per_page", "20"),
+        "category_per_page": settings.get_str("category_per_page", "20"),
         "circle_per_page": settings.get_str("circle_per_page", "30"),
+        "readers_limit": settings.get_str("readers_limit", "10"),
         "admin_comments_per_page": settings.get_str("admin_comments_per_page", "20"),
         "nav_posts": settings.get_str("nav_posts", "1"),
         "nav_tags": settings.get_str("nav_tags", "1"),
@@ -879,6 +886,20 @@ def _save_settings():
         except ValueError:
             circle_per_page = 30
         settings.set_value("circle_per_page", str(max(1, min(60, circle_per_page))))
+
+    if "category_per_page" in request.form:
+        try:
+            category_per_page = int((request.form.get("category_per_page") or "20").strip())
+        except ValueError:
+            category_per_page = 20
+        settings.set_value("category_per_page", str(max(1, min(100, category_per_page))))
+
+    if "readers_limit" in request.form:
+        try:
+            readers_limit = int((request.form.get("readers_limit") or "10").strip())
+        except ValueError:
+            readers_limit = 10
+        settings.set_value("readers_limit", str(max(1, min(50, readers_limit))))
 
     if full_form or "site_url" in request.form:
         raw_site = (request.form.get("site_url") or "").strip().rstrip("/")

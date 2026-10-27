@@ -202,6 +202,18 @@
                 <span class="form-hint">「博客圈」每页聚合的文章数（默认 30）。</span>
             </div>
             <div class="form-group">
+                <label>分类页每页文章数</label>
+                <input type="number" name="category_per_page" class="input-text"
+                       value="{{ category_per_page if category_per_page is defined else '20' }}" min="1" max="100">
+                <span class="form-hint">分类文章页每页显示数量（默认 20）。</span>
+            </div>
+            <div class="form-group">
+                <label>留言榜单显示人数</label>
+                <input type="number" name="readers_limit" class="input-text"
+                       value="{{ readers_limit if readers_limit is defined else '10' }}" min="1" max="50">
+                <span class="form-hint">留言榜单只展示前 N 位，不翻页（默认 10）。</span>
+            </div>
+            <div class="form-group">
                 <label>评论功能</label>
                 <label class="switch-label">
                     <span class="switch">
