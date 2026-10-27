@@ -281,13 +281,38 @@
   var content = document.querySelector('.tech-post-body, .tech-proj-readme-body');
   if (!tocBody || !content) return;
 
-  function scrollToTarget(target, smooth) {
-    var headerOffset = 60; // 顶部导航高度预留
-    var top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
-    window.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' });
+  function settleScroll(target) {
+    // README 图片是懒加载的，点击后图片开始下载会把页面高度撑大，
+    // 目标位置一直在变。这里连续几帧跟着目标走，直到它稳定（或 1.5 秒）。
+    var root = document.documentElement;
+    var prevBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto';
+    var cancelled = false;
+    var stop = function () { cancelled = true; };
+    window.addEventListener('wheel', stop, { once: true, passive: true });
+    window.addEventListener('touchstart', stop, { once: true, passive: true });
+    var tries = 0, lastTop = null, stable = 0;
+    var tick = function () {
+      if (cancelled) {
+        root.style.scrollBehavior = prevBehavior;
+        return;
+      }
+      var top = Math.max(0, target.getBoundingClientRect().top + window.scrollY - 60);
+      if (lastTop !== null && Math.abs(top - lastTop) < 2) stable++;
+      else stable = 0;
+      lastTop = top;
+      window.scrollTo(0, top);
+      tries++;
+      if (stable < 3 && tries < 90) {
+        requestAnimationFrame(tick);
+      } else {
+        root.style.scrollBehavior = prevBehavior;
+      }
+    };
+    requestAnimationFrame(tick);
   }
 
-  // 点击委托：拦截 #id 锚点，改用平滑滚动 + 点完即关（移动端抽屉式 TOC 必关；桌面端连续浏览也建议收起避免遮挡正文）
+  // 点击委托：拦截 #id 锚点，改用逐帧对齐（点完即关；桌面/移动都收起 TOC）
   tocBody.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a[href^="#"]');
     if (!a) return;
@@ -295,35 +320,14 @@
     var target = id && document.getElementById(id);
     if (!target) return;
     e.preventDefault();
-    // 让外层 <details> 收起：统一行为，桌面/移动都关
     var details = tocBody.closest('details');
     if (details) details.open = false;
-    scrollToTarget(target, true);
-    history.replaceState(null, '', '#' + id);
-
-    // README 里的图片是 loading="lazy"，未加载时高度为 0。点击后把待加载的图
-    // 改成 eager，并在它们 load 后重新对齐一次，避免目标被撑开的页面顶走。
-    var lazy = [];
+    // 先把待加载的图改成 eager，让页面高度尽快稳定
     Array.prototype.forEach.call(content.querySelectorAll('img'), function (img) {
-      if (!img.complete) {
-        img.loading = 'eager';
-        lazy.push(img);
-      }
+      if (!img.complete) img.loading = 'eager';
     });
-    if (lazy.length) {
-      var last = 0;
-      var realign = function () {
-        var now = Date.now();
-        if (now - last < 120) return;
-        last = now;
-        scrollToTarget(target, false);
-      };
-      lazy.forEach(function (img) {
-        img.addEventListener('load', realign, { once: true });
-      });
-      setTimeout(realign, 400);
-      setTimeout(realign, 1200);
-    }
+    settleScroll(target);
+    history.replaceState(null, '', '#' + id);
   });
 
   // 当前章节高亮：基于 IntersectionObserver 监听 H2/H3

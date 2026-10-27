@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.22-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.22)
+[![version](https://img.shields.io/badge/version-3.2.23-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.23)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,13 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.22**
+- 版本：**v3.2.23**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.2.23
+
+- 修复：项目页 TOC 点击后仍可能被懒加载图片顶走——改为点击后把待加载图片切成 eager，并连续几帧跟随目标位置，直到页面高度稳定（最多 1.5 秒）；用户滚动/触摸会立即停止跟随
 
 ### v3.2.22
 
