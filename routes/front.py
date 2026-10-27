@@ -218,6 +218,7 @@ def posts_page():
         posts=posts,
         groups=_group_by_year(posts),
         is_miles=True,
+        year_counts=Post.year_counts(),
         total=total,
         page=page,
         total_pages=total_pages,

@@ -54,7 +54,7 @@
     <section class="tech-miles-group">
         <header class="tech-miles-head">
             <h2>{{ year }}</h2>
-            <span>{{ items|length }} 篇</span>
+            <span>{{ year_counts.get(year, items|length) }} 篇</span>
         </header>
         <ul class="tech-miles-list">
             {% for post in items %}

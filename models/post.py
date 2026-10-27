@@ -76,6 +76,15 @@ def all_years() -> list[str]:
     return [str(r["year"]) for r in rows]
 
 
+def year_counts() -> dict[str, int]:
+    """每年已发布文章数，供里程页年份标题使用。"""
+    rows = db.query(
+        "SELECT SUBSTR(created_at, 1, 4) AS year, COUNT(*) AS n FROM posts "
+        "WHERE status = 'published' GROUP BY year ORDER BY year DESC"
+    )
+    return {str(r["year"]): int(r["n"]) for r in rows}
+
+
 def get(post_id: int) -> dict | None:
     row = db.one("SELECT * FROM posts WHERE id = ?", (post_id,))
     return hydrate(row) if row else None
