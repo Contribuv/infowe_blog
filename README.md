@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.26-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.26)
+[![version](https://img.shields.io/badge/version-3.4.27-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.27)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -913,14 +913,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.26**
+当前版本：**v3.4.27**
+
+### v3.4.27
+
+- 修复 IP 归属地直辖市重复显示（如「重庆市 重庆市」）：直辖市在 ip2region/pconline 里省市同名，xdb 与在线兜底两条路径都做相邻片段去重，前台评论属地与后台 badge 一并恢复正常；历史库中已存的重复值也新增展示兜底 `normalize_display` 并提供一键修复脚本 `tools/fix_ip_location.py`；正常的「省 市」组合不受影响
+
+<details>
+<summary><b>历史版本（v3.4.26 及更早）</b></summary>
 
 ### v3.4.26
 
 - 修复 IP 归属地直辖市重复显示（如「重庆市 重庆市」）：直辖市在 ip2region/pconline 里省市同名，xdb 与在线兜底两条路径都做相邻片段去重，前台评论属地与后台 badge 一并恢复正常；正常的「省 市」组合不受影响
-
-<details>
-<summary><b>历史版本（v3.4.25 及更早）</b></summary>
 
 ### v3.4.25
 
