@@ -625,16 +625,12 @@ def rss_feed():
 
 def readers_page():
     data = readers_service.rank(1)
-    picked = readers_service.picked(1, per_page=100)
-    data["picked_items"] = picked["items"]
-    data["picked_total"] = picked["total"]
-    data["stats"]["picked"] = picked["total"]
     return render_template("readers.html", **data)
 
 
 def interactions_page():
-    # 「互动」已并入留言榜单，旧地址保留跳转
-    return redirect(url_for("readers_page") + "#picked", code=301)
+    # 旧的「互动」地址保留跳转，避免外链 404
+    return redirect(url_for("readers_page"), code=301)
 
 
 def register(app) -> None:

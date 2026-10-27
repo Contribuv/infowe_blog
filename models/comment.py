@@ -228,11 +228,6 @@ def set_status(comment_id: int, status: str) -> None:
         db.execute("UPDATE comments SET status = ? WHERE id = ?", (status, comment_id))
 
 
-def set_picked(comment_id: int, picked: bool) -> None:
-    """走心评论标记：1 进「互动」页，0 移出。"""
-    db.execute("UPDATE comments SET is_picked = ? WHERE id = ?", (1 if picked else 0, comment_id))
-
-
 def admin_list(page: int = 1, per_page: int = 0) -> tuple[list[dict], int]:
     """后台评论列表，返回 (当前页数据, 总数)；per_page > 0 时分页。"""
     total = int(db.scalar("SELECT COUNT(*) FROM comments", (), 0))

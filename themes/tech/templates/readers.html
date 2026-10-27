@@ -11,7 +11,7 @@
     <div><b>{{ stats.comments }}</b><span>读者留言</span></div>
     <div><b>{{ stats.readers }}</b><span>参与读者</span></div>
     <div><b>{{ stats.recent }}</b><span>近 30 天</span></div>
-    <div><b>{{ stats.picked }}</b><span>走心评论</span></div>
+    <div><b>{{ stats.average }}</b><span>人均留言</span></div>
 </div>
 
 {% if items %}
@@ -77,37 +77,4 @@
 </div>
 {% endif %}
 
-{% if picked_items %}
-<!-- 走心评论（原「互动」页并入） -->
-<section class="tech-picked" id="picked">
-    <div class="tech-picked-head">
-        <h2>走心评论</h2>
-        <span>一些留在文字里的温度</span>
-    </div>
-    <div class="tech-interactions">
-        {% for c in picked_items %}
-        <article class="tech-interaction-card">
-            <header class="tech-interaction-head">
-                <img class="tech-interaction-avatar" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy"
-                     onerror="this.src='/static/images/default-avatar.svg'">
-                <div class="tech-interaction-who">
-                    {% if c.website %}
-                    <a class="tech-interaction-name" href="{{ c.website }}" target="_blank" rel="noopener nofollow">{{ c.author }}</a>
-                    {% else %}
-                    <span class="tech-interaction-name">{{ c.author }}</span>
-                    {% endif %}
-                    <time class="tech-interaction-time">{{ c.created_at[:10] }}</time>
-                </div>
-            </header>
-            <p class="tech-interaction-text">{{ c.text }}</p>
-            {% if c.source_title and c.source_url %}
-            <footer class="tech-interaction-foot">
-                来自 <a href="{{ c.source_url }}">{{ c.source_title }}</a>
-            </footer>
-            {% endif %}
-        </article>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
 {% endblock %}

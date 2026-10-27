@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.20-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.20)
+[![version](https://img.shields.io/badge/version-3.4.21-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.21)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,16 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.20**
+- 版本：**v3.4.21**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.21
+
+- 修复站外链接确认浮窗样式丢失导致的错位：恢复浮窗 CSS，PC / 移动端都固定屏幕居中
+- oreverblog.cn 加入外链白名单，十年之约挂件和页脚标识不再弹确认
+- 移除走心评论功能：留言榜单不再显示该区块，后台去掉「设为走心」按钮，/interactions 仍 301 到留言榜单
+- 留言榜单第 4 个统计改为「人均留言」
 
 ### v3.4.20
 

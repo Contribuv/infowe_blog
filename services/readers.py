@@ -10,7 +10,6 @@ from services import avatar, settings
 
 RANK_MONTHS = 6
 RANK_PER_PAGE = 10
-PICKED_PER_PAGE = 100
 
 
 def _blogger() -> str:
@@ -131,6 +130,7 @@ def rank(page: int = 1, per_page: int = RANK_PER_PAGE) -> dict:
         "comments": len(rows),
         "readers": total,
         "recent": sum(1 for row in rows if str(row.get("created_at") or "") >= month_ago),
+        "average": round(len(rows) / total, 1) if total else 0,
     }
     return {
         "items": items,
@@ -148,43 +148,3 @@ def _neg_time(value) -> float:
     except ValueError:
         return 0.0
 
-
-def picked(page: int = 1, per_page: int = PICKED_PER_PAGE) -> dict:
-    """走心评论：只展示后台标记过、且已通过的公开评论。"""
-    where, params = _public_filter(months=None)
-    where += " AND c.is_picked = 1"
-    rows = _rows(where, params)
-    total = len(rows)
-    total_pages = max(1, (total + per_page - 1) // per_page)
-    page = min(max(1, int(page or 1)), total_pages)
-    start = (page - 1) * per_page
-
-    items = []
-    for row in rows[start:start + per_page]:
-        title, url = _source(row)
-        items.append(
-            {
-                "id": row.get("id"),
-                "author": row.get("author") or "匿名读者",
-                "website": _site(str(row.get("website") or "")),
-                "avatar": _avatar(row),
-                "created_at": row.get("created_at") or "",
-                "text": _plain(str(row.get("content") or "")),
-                "source_title": title,
-                "source_url": url,
-            }
-        )
-
-    source_ids = {
-        ("post", row.get("post_id")) if row.get("post_id") else ("project", row.get("project_id"))
-        for row in rows
-    }
-    readers = {_key(row) for row in rows if _key(row)}
-    stats = {"picked": total, "sources": len(source_ids), "readers": len(readers)}
-    return {
-        "items": items,
-        "total": total,
-        "page": page,
-        "total_pages": total_pages,
-        "stats": stats,
-    }

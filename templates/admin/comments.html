@@ -45,7 +45,6 @@
                         {% if c.status == 'pending' %}<span class="badge badge-warning">待审核</span>
                         {% else %}<span class="badge badge-success">已通过</span>{% endif %}
                         {% if c.is_private %}<span class="badge badge-private">私密</span>{% endif %}
-                        {% if c.is_picked %}<span class="badge badge-picked">走心</span>{% endif %}
                     </td>
                     <td class="main-td" data-label="作者">
                         <span class="cmt-admin-author">
@@ -89,9 +88,6 @@
                         {% if c.status == 'pending' %}
                         <button type="submit" form="approveForm{{ c.id }}" class="btn btn-sm btn-success">通过</button>
                         {% endif %}
-                        {% if c.author != author_name %}
-                        <button type="submit" form="pickForm{{ c.id }}" class="btn btn-sm {{ 'btn-success' if c.is_picked else 'btn-outline' }}">{{ '取消走心' if c.is_picked else '设为走心' }}</button>
-                        {% endif %}
                         <button type="submit" form="delForm{{ c.id }}" class="btn btn-sm btn-danger">删除</button>
                     </td>
                 </tr>
@@ -107,7 +103,6 @@
     {% if c.status == 'pending' %}
     <form id="approveForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" class="hidden"><input type="hidden" name="page" value="{{ page }}"></form>
     {% endif %}
-    <form id="pickForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_pick', comment_id=c.id) }}" class="hidden"><input type="hidden" name="page" value="{{ page }}"></form>
     <form id="delForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" class="hidden" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')"><input type="hidden" name="page" value="{{ page }}"></form>
 {% endfor %}
 </div>

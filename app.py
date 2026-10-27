@@ -248,7 +248,7 @@ def _register_hooks(app: Flask) -> None:
             host = urlparse(str(row["url"] or "")).hostname
             if host:
                 friend_hosts.append(host.lower())
-        friend_hosts = sorted(set(friend_hosts))
+        friend_hosts = sorted(set(friend_hosts) | {"foreverblog.cn"})
 
         return {
             "blog_name": conf.get("blog_name", "infowe"),

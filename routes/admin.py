@@ -488,7 +488,6 @@ def admin_comments():
         page=page,
         total_pages=total_pages,
         total=total,
-        author_name=author_name,
     )
 
 
@@ -515,22 +514,6 @@ def admin_comment_approve(comment_id: int):
 def admin_comment_delete(comment_id: int):
     Comment.delete(comment_id)
     flash("评论及其回复已删除", "success")
-    return _comments_back()
-
-
-@LOGIN
-def admin_comment_pick(comment_id: int):
-    """走心评论开关：只影响「互动」页展示。"""
-    row = Comment.get(comment_id)
-    if not row:
-        flash("评论不存在", "error")
-        return _comments_back()
-    picked = not bool(int(row.get("is_picked") or 0))
-    Comment.set_picked(comment_id, picked)
-    from services import page_cache
-
-    page_cache.clear_all()
-    flash("已设为走心评论，前台「留言榜单」会展示" if picked else "已取消走心评论", "success")
     return _comments_back()
 
 
@@ -1244,7 +1227,6 @@ def register(app) -> None:
         ("/admin/comments", "admin_comments", admin_comments, ["GET"]),
         ("/admin/comments/<int:comment_id>/approve", "admin_comment_approve", admin_comment_approve, ["POST"]),
         ("/admin/comments/<int:comment_id>/delete", "admin_comment_delete", admin_comment_delete, ["POST"]),
-        ("/admin/comments/<int:comment_id>/pick", "admin_comment_pick", admin_comment_pick, ["POST"]),
         ("/admin/comments/bulk", "admin_comments_bulk", admin_comments_bulk, ["POST"]),
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),
