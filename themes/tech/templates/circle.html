@@ -31,10 +31,14 @@
 </div>
 
 {% if total_pages > 1 %}
-<nav class="circle-pager" aria-label="博客圈分页">
-    {% if page > 1 %}<a href="?page={{ page - 1 }}">上一页</a>{% else %}<span class="is-disabled">上一页</span>{% endif %}
-    <span class="is-current">{{ page }} / {{ total_pages }}</span>
-    {% if page < total_pages %}<a href="?page={{ page + 1 }}">下一页</a>{% else %}<span class="is-disabled">下一页</span>{% endif %}
+<nav class="circle-pager" aria-label="圈子分页">
+    {% if page > 1 %}<a href="?page={{ page - 1 }}">上一页</a>{% endif %}
+    {% for p in pages %}
+        {% if p == '...' %}<span class="is-gap">…</span>
+        {% elif p == page %}<span class="is-current">{{ p }}</span>
+        {% else %}<a href="?page={{ p }}">{{ p }}</a>{% endif %}
+    {% endfor %}
+    {% if page < total_pages %}<a href="?page={{ page + 1 }}">下一页</a>{% endif %}
 </nav>
 {% endif %}
 {% else %}

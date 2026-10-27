@@ -381,6 +381,22 @@ def circle():
     page = max(1, request.args.get("page", 1, type=int) or 1)
     items, total, stats = feeds.aggregate(page)
     total_pages = max(1, (total + feeds.PER_PAGE - 1) // feeds.PER_PAGE)
+    page = min(page, total_pages)
+
+    if total_pages <= 7:
+        pages = list(range(1, total_pages + 1))
+    else:
+        marks = sorted({1, total_pages, page, page - 1, page + 1, page - 2, page + 2})
+        pages = []
+        prev = 0
+        for num in marks:
+            if not 1 <= num <= total_pages:
+                continue
+            if prev and num - prev > 1:
+                pages.append("...")
+            pages.append(num)
+            prev = num
+
     return render_template(
         "circle.html",
         items=items,
@@ -388,6 +404,7 @@ def circle():
         stats=stats,
         page=page,
         total_pages=total_pages,
+        pages=pages,
     )
 
 

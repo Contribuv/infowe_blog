@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.4)
+[![version](https://img.shields.io/badge/version-3.4.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.5)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,15 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.4**
+- 版本：**v3.4.5**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.5
+
+- 关于页统一卡片：技术栈、网站历程、站点状态都包进同一套边框卡片，历程改成卡片内分割行，状态内层去重边框
+- 到期时间标签改为「博客主机 / 博客域名」，不再显示云厂商前缀
+- 圈子改为两栏卡片流（移动端单列），每页 30 条，分页显示页码（1 2 3 … 末页）
 
 ### v3.4.4
 

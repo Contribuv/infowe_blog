@@ -1218,7 +1218,7 @@ html.page-enter .tech-main {
 .tech-stat span { font-size: 12px; color: var(--text-secondary); }
 
 /* 正文叙事区 */
-.tech-about { max-width: 1000px; margin: 36px auto 0; }
+.tech-about { max-width: 1000px; margin: 20px auto 0; }
 /* 叙事区块：无装饰线，仅靠留白分层 */
 .tech-about-section { margin-bottom: 24px; }
 .tech-about-section > h2 {
@@ -1996,12 +1996,21 @@ html { touch-action: manipulation; }
 }
 .circle-stats span { font-size: 12.5px; color: var(--text-secondary); }
 
-.circle-list { display: flex; flex-direction: column; }
-.circle-item {
-  padding: 18px 0;
-  border-bottom: 1px solid var(--border);
+.circle-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
-.circle-item:first-child { border-top: 1px solid var(--border); }
+.circle-item {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  transition: background-color .18s, border-color .18s;
+}
+.circle-item:hover { background: var(--hover-bg); border-color: var(--hover-ring); }
 .circle-title {
   display: block;
   font-size: 16px;
@@ -2022,6 +2031,8 @@ html { touch-action: manipulation; }
   overflow: hidden;
 }
 .circle-meta {
+  margin-top: auto;
+  padding-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2066,6 +2077,10 @@ html { touch-action: manipulation; }
 .circle-pager a:hover { border-color: var(--accent); color: var(--accent); }
 .circle-pager .is-current { border-color: transparent; background: var(--bg-subtle); color: var(--text); }
 .circle-pager .is-disabled { opacity: .4; }
+.circle-pager .is-gap { border: 0; background: none; color: var(--text-secondary); }
+@media (max-width: 860px) {
+  .circle-list { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 640px) {
   .circle-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -2142,4 +2157,43 @@ html { touch-action: manipulation; }
   #status .status-hint { position: static; margin: 6px 0 0; }
   .tech-timeline-item { flex-direction: column; align-items: flex-start; gap: 6px; }
   .tech-timeline-date { flex: none; }
+}
+
+/* ── 关于页：统一卡片外壳，技术栈 / 历程 / 状态同一套语言 ── */
+.tech-about-section {
+  margin-bottom: 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: transparent;
+}
+.tech-about-section > h2 { margin-bottom: 14px; }
+
+.tech-timeline { gap: 0; }
+.tech-timeline-item {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 0;
+}
+.tech-timeline-item:first-child { border-top: 0; padding-top: 2px; }
+.tech-timeline-item:last-child { padding-bottom: 0; }
+.tech-timeline-item:first-child { border-color: var(--border); }
+
+.tech-about-section .tech-status-section {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin-bottom: 0;
+}
+.tech-about-section .tech-status-section + .tech-status-section {
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+  padding-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .tech-about-section { padding: 16px; }
+  .tech-skill-list { grid-template-columns: 1fr; gap: 0; }
 }
