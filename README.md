@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.5)
+[![version](https://img.shields.io/badge/version-3.3.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,16 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.5**
+- 版本：**v3.3.6**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.6
+
+- AI 评论头像：内置 8 个头像（plugins/ai_assistant/static/avatars），按模型 ID + 模型名稳定映射；AI 回复评论时写入 i_meta，前台按头像渲染
+- 全自动：新增「写操作自动执行」开关（默认开），AI 直接建/改文章、通过/回复评论，不再逐条确认；最多连续 3 个写操作，仍全部写审计
+- 敏感词硬拦截：内置领导人/官员/政府敏感词表（plugins/ai_assistant/sensitive.txt），命中直接拒绝，不调用模型；用过滤前原文判断，避免被 * 替换后漏检；AI 回复也做同样过滤
+- 历史对话支持删除（hover 显示 ×），删除会话与消息
 
 ### v3.3.5
 

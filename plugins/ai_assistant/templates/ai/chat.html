@@ -31,10 +31,13 @@
         <aside class="ai-side">
             <button type="button" class="btn btn-primary ai-new" id="ai-new">新对话</button>
             {% for c in conversations %}
-            <a class="ai-conv {% if c.id == conversation_id %}active{% endif %}" href="{{ url_for('admin_plugin_ai_chat') }}?c={{ c.id }}">
-                <span class="ai-conv-title">{{ c.title }}</span>
-                <small>{{ c.updated_at[5:16] }}</small>
-            </a>
+            <div class="ai-conv-wrap">
+                <a class="ai-conv {% if c.id == conversation_id %}active{% endif %}" href="{{ url_for('admin_plugin_ai_chat') }}?c={{ c.id }}">
+                    <span class="ai-conv-title">{{ c.title }}</span>
+                    <small>{{ c.updated_at[5:16] }}</small>
+                </a>
+                <button type="button" class="ai-conv-del" data-id="{{ c.id }}" title="删除对话" aria-label="删除对话">&times;</button>
+            </div>
             {% else %}
             <p class="ai-empty-side">还没有对话</p>
             {% endfor %}
@@ -98,6 +101,7 @@ window.AI_URLS = {
   confirm: {{ url_for('admin_plugin_ai_api_confirm') | tojson }},
   newChat: {{ url_for('admin_plugin_ai_api_new') | tojson }},
   provider: {{ url_for('admin_plugin_ai_api_provider') | tojson }},
+  deleteConv: {{ url_for('admin_plugin_ai_api_conversation_delete') | tojson }},
   page: {{ url_for('admin_plugin_ai_chat') | tojson }}
 };
 (function () {

@@ -89,6 +89,10 @@
         <div class="ai-section-body">
             <div class="ai-grid">
                 <label class="ai-switch">
+                    <input type="checkbox" name="auto_execute" {% if cfg.auto_execute %}checked{% endif %}>
+                    <span><strong>写操作自动执行</strong><small>开启后 AI 直接建文章、改文章、回复评论，不再逐条确认</small></span>
+                </label>
+                <label class="ai-switch">
                     <input type="checkbox" name="comment_moderation" {% if cfg.comment_moderation %}checked{% endif %}>
                     <span><strong>新评论自动审核</strong><small>判断广告、辱骂、灌水；低置信度转人工</small></span>
                 </label>

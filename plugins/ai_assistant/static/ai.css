@@ -105,6 +105,18 @@
   overflow-y: auto; min-height: 0;
 }
 .ai-new { width: 100%; margin-bottom: 6px; }
+.ai-conv-wrap { position: relative; display: flex; }
+.ai-conv-wrap .ai-conv { flex: 1; min-width: 0; }
+.ai-conv-del {
+  position: absolute; top: 6px; right: 6px;
+  width: 20px; height: 20px; padding: 0;
+  display: none; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%;
+  background: var(--bg-surface-2); color: var(--text-secondary);
+  font-size: 15px; line-height: 1; cursor: pointer;
+}
+.ai-conv-wrap:hover .ai-conv-del { display: flex; }
+.ai-conv-del:hover { color: var(--danger, #f87171); }
 .ai-conv {
   display: flex; flex-direction: column; gap: 2px;
   padding: 8px 10px; border-radius: var(--r);

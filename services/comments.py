@@ -186,6 +186,8 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     if not content or len(content) > 2000:
         return {"url": back, "error": "评论内容不能为空且不能超过2000字"}
 
+    # 保留过滤前的原文：AI 托管要用它做敏感词硬拦截（过滤后原词已被替换成 *）
+    raw_content = content
     content = sensitive.filter_text(content)
     content = merge_images(content, form.get("images", ""))
 
@@ -274,7 +276,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     # 插件钩子：AI 审核 / 回复等在后台线程处理，不阻塞评论提交
     try:
         from services import hooks
-        hooks.emit("comment.created", {"id": comment_id, "is_admin": is_admin})
+        hooks.emit("comment.created", {"id": comment_id, "is_admin": is_admin, "raw_content": raw_content})
     except Exception:
         pass
 

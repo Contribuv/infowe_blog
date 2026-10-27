@@ -251,5 +251,26 @@
     });
   }
 
+  Array.prototype.forEach.call(document.querySelectorAll('.ai-conv-del'), function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!confirm('删除这个对话？')) return;
+      fetch(urls.deleteConv, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: btn.getAttribute('data-id') })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+          var wrap = btn.closest('.ai-conv-wrap');
+          var wasActive = wrap && wrap.querySelector('.ai-conv.active');
+          if (wrap) wrap.remove();
+          if (wasActive) location.href = urls.page;
+        })
+        .catch(function (err) { add('assistant', '删除失败：' + err); });
+    });
+  });
+
   scroll();
 })();

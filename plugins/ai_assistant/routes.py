@@ -138,7 +138,7 @@ def register(app) -> None:
                     data[key] = float(request.form.get(key)) if key == "temperature" else int(request.form.get(key))
                 except (TypeError, ValueError):
                     pass
-        for key in ("comment_moderation", "comment_reply", "link_moderation"):
+        for key in ("comment_moderation", "comment_reply", "link_moderation", "auto_execute"):
             data[key] = str(request.form.get(key, "")).lower() in {"1", "on", "true", "yes"}
         if "system_prompt" in request.form:
             data["system_prompt"] = request.form.get("system_prompt", "")
@@ -197,6 +197,7 @@ def register(app) -> None:
             messages.append({"role": "user", "content": message})
 
         meta: dict = {}
+        write_count = 0
         for _ in range(4):
             ok, text, meta = ai_client.chat(messages)
             if not ok:
@@ -213,6 +214,13 @@ def register(app) -> None:
                     messages.append({"role": "user", "content": "工具结果：" + json.dumps(result, ensure_ascii=False)[:6000]})
                     continue
                 if name in tools.WRITE_TOOLS:
+                    if cfg.get("auto_execute") and write_count < 3:
+                        write_count += 1
+                        result = tools.execute(name, args)
+                        _add_message(conv_id, "tool", json.dumps(result, ensure_ascii=False), {"tool": name, **meta})
+                        messages.append({"role": "assistant", "content": text})
+                        messages.append({"role": "user", "content": "工具结果：" + json.dumps(result, ensure_ascii=False)[:6000]})
+                        continue
                     action_meta = {"tool": name, "args": args, **meta}
                     mid = _add_message(conv_id, "pending", text, action_meta)
                     return jsonify({
@@ -254,6 +262,15 @@ def register(app) -> None:
         return jsonify({"conversation_id": conv_id})
 
     @auth.admin_required
+    def ai_api_conversation_delete():
+        data = request.get_json(silent=True) or {}
+        cid = int(data.get("id") or 0)
+        if cid:
+            db.execute("DELETE FROM ai_messages WHERE conversation_id=?", (cid,))
+            db.execute("DELETE FROM ai_conversations WHERE id=?", (cid,))
+        return jsonify({"ok": True})
+
+    @auth.admin_required
     def ai_api_provider():
         data = request.get_json(silent=True) or {}
         pid = str(data.get("id") or "").strip()
@@ -273,3 +290,4 @@ def register(app) -> None:
     app.add_url_rule(prefix + "/plugins/ai/api/confirm", "admin_plugin_ai_api_confirm", ai_api_confirm, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/new", "admin_plugin_ai_api_new", ai_api_new, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/provider", "admin_plugin_ai_api_provider", ai_api_provider, methods=["POST"])
+    app.add_url_rule(prefix + "/plugins/ai/api/conversation/delete", "admin_plugin_ai_api_conversation_delete", ai_api_conversation_delete, methods=["POST"])

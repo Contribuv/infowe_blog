@@ -61,6 +61,8 @@ DEFAULTS: dict = {
     "link_moderation": True,
     "link_check_hours": 72,
     "daily_call_limit": 300,
+    "auto_execute": True,
+    "extra_blocked_words": "",
 }
 
 
@@ -167,6 +169,15 @@ def set_active(pid: str) -> bool:
     cfg["active"] = pid
     save(cfg)
     return True
+
+
+def provider_avatar(profile: dict | None) -> str:
+    """按模型标识稳定映射到头像库（8 个内置头像）。"""
+    if not profile:
+        return "/plugin-assets/ai_assistant/avatars/ai-1.svg"
+    key = f"{profile.get('id')}:{profile.get('model')}"
+    index = sum(key.encode("utf-8")) % 8 + 1
+    return f"/plugin-assets/ai_assistant/avatars/ai-{index}.svg"
 
 
 def save(data: dict) -> None:

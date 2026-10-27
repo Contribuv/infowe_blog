@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import db
@@ -76,6 +77,14 @@ def load(
             c["avatar"], c["avatar_fallback"] = avatar.urls(
                 str(c.get("email_hash") or ""), str(c.get("qq") or "")
             )
+        if c["is_ai"]:
+            try:
+                ai_meta = json.loads(c.get("ai_meta") or "{}")
+                ai_avatar = str(ai_meta.get("avatar") or "")
+            except (TypeError, ValueError):
+                ai_avatar = ""
+            if ai_avatar:
+                c["avatar"], c["avatar_fallback"] = ai_avatar, ""
         if not c["avatar"]:
             c["avatar"], c["avatar_fallback"] = avatar_default, ""
         c["avatar_default"] = avatar_default

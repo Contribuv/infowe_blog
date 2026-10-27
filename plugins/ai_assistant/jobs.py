@@ -26,6 +26,47 @@ _lock = threading.Lock()
 _thread_started = False
 
 
+_WORD_CACHE: dict = {"mtime": 0.0, "words": []}
+
+
+def _sensitive_words() -> list[str]:
+    """内置黑名单 + 后台 sensitive_words + 插件配置追加词。"""
+    path = Path(__file__).with_name("sensitive.txt")
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    if _WORD_CACHE["mtime"] != mtime:
+        try:
+            words = [w.strip() for w in path.read_text(encoding="utf-8").splitlines() if w.strip()]
+        except OSError:
+            words = []
+        _WORD_CACHE.update(mtime=mtime, words=words)
+    words = list(_WORD_CACHE["words"])
+    extra = str(config.get().get("extra_blocked_words") or "")
+    for raw in extra.replace("，", ",").replace("\n", ",").split(","):
+        word = raw.strip()
+        if word:
+            words.append(word)
+    try:
+        from services import settings
+        for word in str(settings.get_str("sensitive_words", "") or "").replace("\n", ",").split(","):
+            word = word.strip()
+            if word:
+                words.append(word)
+    except Exception:
+        pass
+    return list(dict.fromkeys(words))
+
+
+def _blocked_word(text: str) -> str:
+    content = str(text or "").lower()
+    for word in _sensitive_words():
+        if word and word.lower() in content:
+            return word
+    return ""
+
+
 def _enabled() -> bool:
     return plugins.enabled(KEY)
 
@@ -42,11 +83,12 @@ def on_comment(payload: dict) -> None:
     cid = int(payload.get("id") or 0)
     if not cid:
         return
+    raw = str(payload.get("raw_content") or "")
     app = current_app._get_current_object()
-    threading.Thread(target=_process_comment, args=(app, cid), daemon=True).start()
+    threading.Thread(target=_process_comment, args=(app, cid, raw), daemon=True).start()
 
 
-def _process_comment(app, cid: int) -> None:
+def _process_comment(app, cid: int, raw_content: str = "") -> None:
     with app.app_context():
         try:
             cfg = config.get()
@@ -63,6 +105,12 @@ def _process_comment(app, cid: int) -> None:
             if len(content) < int(cfg.get("comment_min_length") or 10):
                 db.execute("UPDATE comments SET ai_state='skipped' WHERE id=?", (cid,))
                 return
+            # 本地硬规则先拦：领导人、官员、政府敏感词直接拒绝，不交给模型判断
+            blocked = _blocked_word(raw_content or content)
+            if blocked:
+                meta = json.dumps({"decision": "reject", "reason": f"命中敏感词：{blocked}"}, ensure_ascii=False)
+                db.execute("UPDATE comments SET status='rejected', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
+                return
             post = Post.get(int(comment.get("post_id") or 0)) if comment.get("post_id") else None
             title = str((post or {}).get("title") or "项目")
             excerpt = str((post or {}).get("excerpt") or "")[:500]
@@ -70,6 +118,7 @@ def _process_comment(app, cid: int) -> None:
             prompt = (
                 "你是博客评论审核助手，只能用简体中文。判断下面评论是否属于："
                 "垃圾广告、辱骂攻击、无意义灌水、违法敏感内容。\n"
+                "涉及中国国家领导人、国家官员、政府敏感话题、分裂国家、政治事件的内容，一律 reject。\n"
                 "只返回 JSON：{\"decision\":\"approve|reject|review\",\"reason\":\"简短理由\","
                 "\"reply\":\"给这条评论的回复，50-150字中文，可结合文章内容，不要营销\"}\n"
                 f"文章标题：{title}\n文章摘要：{excerpt}\n"
@@ -98,14 +147,22 @@ def _process_comment(app, cid: int) -> None:
                 return
 
             db.execute("UPDATE comments SET status='approved', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
-            if cfg.get("comment_reply") and reply:
+            if cfg.get("comment_reply") and reply and not _blocked_word(reply):
+                profile = config.active_profile()
+                avatar = config.provider_avatar(profile)
                 new_id = Comment.save(
                     comment.get("post_id"), "AI 助手", "", "", "", reply,
                     cid, 0, "", "", "approved", comment.get("project_id"), "",
                     is_ai=1,
                 )
+                reply_meta = {
+                    "avatar": avatar,
+                    "provider": (profile or {}).get("id"),
+                    "model": (profile or {}).get("model"),
+                }
+                db.execute("UPDATE comments SET ai_meta=? WHERE id=?", (json.dumps(reply_meta, ensure_ascii=False), new_id))
                 db.execute("UPDATE comments SET ai_meta=? WHERE id=?", (
-                    json.dumps({"ai_reply": new_id}, ensure_ascii=False), cid,
+                    json.dumps({"decision": "approve", "reason": reason, "ai_reply": new_id}, ensure_ascii=False), cid,
                 ))
         except Exception:
             try:
