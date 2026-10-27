@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.10-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.10)
+[![version](https://img.shields.io/badge/version-3.4.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.11)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,13 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.10**
+- 版本：**v3.4.11**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.11
+
+- 文章时间线页面名称由「里程」改为「归档」，导航和首页按钮同步
 
 ### v3.4.10
 

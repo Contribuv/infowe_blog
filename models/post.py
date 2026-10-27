@@ -77,7 +77,7 @@ def all_years() -> list[str]:
 
 
 def year_counts() -> dict[str, int]:
-    """每年已发布文章数，供里程页年份标题使用。"""
+    """每年已发布文章数，供归档页年份标题使用。"""
     rows = db.query(
         "SELECT SUBSTR(created_at, 1, 4) AS year, COUNT(*) AS n FROM posts "
         "WHERE status = 'published' GROUP BY year ORDER BY year DESC"

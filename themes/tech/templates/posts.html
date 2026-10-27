@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}{% if is_miles %}里程{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
+{% block title %}{% if is_miles %}归档{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
 {% block content %}
 <div class="tech-page-head">
-    <h1 class="tech-page-title">{% if is_miles %}里程{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
+    <h1 class="tech-page-title">{% if is_miles %}归档{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
     <p class="tech-page-desc">{% if is_miles %}共 {{ total }} 篇文章 · 按时间排成一条线{% else %}共 {{ total }} 篇文章{% endif %}</p>
 </div>
 

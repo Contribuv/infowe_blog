@@ -2355,7 +2355,7 @@ html { touch-action: manipulation; }
   .tech-page-head--with-action { align-items: flex-start; }
 }
 
-/* ── 里程页：按年份分组的时间线 ── */
+/* ── 归档页：按年份分组的时间线 ── */
 .tech-miles { display: flex; flex-direction: column; gap: 26px; }
 .tech-miles-head {
   display: flex;
