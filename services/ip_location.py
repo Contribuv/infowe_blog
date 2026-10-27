@@ -100,3 +100,17 @@ def of(ip: str | None) -> str:
         return " ".join(_dedupe(parts)) or _online(ip)
     except Exception:
         return _online(ip)
+
+
+def normalize_display(location: str | None) -> str:
+    """用于模板/后台直接展示库中存储的 ip_location 时做兜底去重"""
+    if not location:
+        return ""
+    text = str(location)
+    parts = [p.strip() for p in text.replace("\t", " ").split() if p.strip()]
+    parts = _dedupe(parts)
+    if len(parts) == 2 and parts[0] == parts[1]:
+        parts = [parts[0]]
+    if len(parts) >= 2 and parts[0] == parts[1] and (parts[0] in {"北京", "上海", "天津", "重庆", "香港", "澳门"} or parts[0].endswith("市")):
+        parts = parts[1:]
+    return " ".join(parts)
