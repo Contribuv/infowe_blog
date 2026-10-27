@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}主题配置{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>主题配置 · Tech</h2>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_themes') }}" class="btn btn-outline">返回主题管理</a>
+    </div>
+</div>
+
+<form method="POST" class="theme-config-form">
+    <div class="card">
+        <div class="card-header">
+            <h3>文章列表布局</h3>
+            <span class="form-hint">作用于首页文章列表和「全部文章」页；移动端窄屏自动单列</span>
+        </div>
+        <div class="theme-config-body">
+            <div class="layout-options">
+                <label class="layout-option">
+                    <input type="radio" name="post_layout" value="single"
+                           {{ 'checked' if post_layout != 'double' else '' }}>
+                    <span class="layout-option-body">
+                        <span class="layout-preview layout-preview--single" aria-hidden="true">
+                            <i></i><i></i><i></i>
+                        </span>
+                        <span class="layout-option-name">单栏</span>
+                        <span class="layout-option-desc">一行一条，标题和摘要横向铺满，适合长文阅读，信息密度低但更沉静。</span>
+                    </span>
+                </label>
+                <label class="layout-option">
+                    <input type="radio" name="post_layout" value="double"
+                           {{ 'checked' if post_layout == 'double' else '' }}>
+                    <span class="layout-option-body">
+                        <span class="layout-preview layout-preview--double" aria-hidden="true">
+                            <i></i><i></i><i></i><i></i>
+                        </span>
+                        <span class="layout-option-name">双栏</span>
+                        <span class="layout-option-desc">两列卡片，一屏能看到更多文章，适合文章较多的博客；摘要统一截断两行。</span>
+                    </span>
+                </label>
+            </div>
+            <p class="form-hint theme-config-tip">
+                只影响文章列表的排列方式，不改文章正文排版。首页顶部的「精选」区块始终保持单栏。
+            </p>
+        </div>
+    </div>
+
+    <div class="theme-config-actions">
+        <button type="submit" class="btn btn-primary">保存配置</button>
+    </div>
+</form>
+{% endblock %}

@@ -3,7 +3,7 @@
 {% block content %}
 <div class="tech-page-head">
     <h1 class="tech-page-title">友情链接</h1>
-    <p class="tech-page-desc">朋友们的地盘，目前共 {{ links|length }} 位 · <a href="/links/apply">申请友链</a></p>
+    <p class="tech-page-desc">朋友们的地盘，目前共 {{ links|length }} 位 · <a href="/links/apply">申请友链</a> · <a href="/circle">看看圈子动态</a></p>
 </div>
 
 {% if links %}
@@ -18,7 +18,7 @@
             <span class="tech-link-avatar">{{ link.name[0] | upper }}</span>
             {% endif %}
             <span class="tech-link-info">
-                <span class="tech-link-name">{{ link.name }}</span>
+                <span class="tech-link-name">{{ link.name }}{% if link.rss %}<span class="tech-link-rss" title="已订阅 RSS">RSS</span>{% endif %}</span>
                 {% if link.description %}<span class="tech-link-desc">{{ link.description }}</span>{% endif %}
             </span>
         </a>
@@ -47,6 +47,7 @@
             <li>正常运营的个人小站即可，程序框架不限，年更也收</li>
             <li>没有违法、侵权内容，也不是纯采集 / 镜像站</li>
             <li>申请时顺手填上头像和一句话介绍，卡片排出来会好看很多</li>
+            <li>填了 RSS 的友链，最新文章会聚合到 <a href="/circle">圈子</a>，不用来回跑</li>
         </ul>
     </div>
 

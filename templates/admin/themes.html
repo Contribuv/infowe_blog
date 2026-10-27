@@ -29,6 +29,9 @@
                 {% if t.author %}<span class="theme-author">作者：{{ t.author }}</span>{% endif %}
                 {% if t.version %}<span class="theme-author">版本：v{{ t.version }}</span>{% endif %}
                 {% if t.description %}<span class="theme-desc">{{ t.description }}</span>{% endif %}
+                {% if t.key == 'tech' %}
+                <a class="theme-config-link" href="{{ url_for('admin_theme_config') }}">主题配置 →</a>
+                {% endif %}
             </span>
         </label>
         {% else %}

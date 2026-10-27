@@ -2228,3 +2228,73 @@ html { touch-action: manipulation; }
   .tech-about-hero .tech-avatar,
   .tech-about-hero .tech-avatar-placeholder { width: 84px; height: 84px; }
 }
+
+.tech-link-rss {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  border-radius: 4px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  vertical-align: 1px;
+}
+
+/* 人物卡：头像与右侧信息垂直居中，社交和统计并成一行 */
+.tech-about-hero { align-items: center; }
+.tech-about-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin-top: 12px;
+}
+.tech-about-hero .tech-about-social { margin-top: 0; }
+.tech-about-hero .tech-about-stats {
+  width: auto;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+/* 状态区块内部两段之间收紧 */
+.tech-about-section .tech-status { gap: 0; }
+.tech-about-section .tech-status-section + .tech-status-section {
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .tech-about-hero-meta { justify-content: center; }
+  .tech-about-hero .tech-about-stats { justify-content: center; }
+}
+
+/* ── 首页 / 文章页：可选双栏布局（后台「主题配置」切换） ── */
+.tech-post-list--double {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.tech-post-list--double .tech-post-item {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-subtle);
+}
+.tech-post-list--double .tech-post-item:last-child {
+  border-bottom: 1px solid var(--border);
+}
+.tech-post-list--double .tech-post-title { font-size: 16px; }
+.tech-post-list--double .tech-post-tags { margin-top: auto; padding-top: 10px; }
+/* 双栏卡片右上角是 meta 文本，箭头会压字，交给标题 hover 反馈 */
+.tech-post-list--double .tech-post-arrow { display: none; }
+@media (max-width: 860px) {
+  .tech-post-list--double { grid-template-columns: 1fr; }
+}

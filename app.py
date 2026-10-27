@@ -261,6 +261,7 @@ def _register_hooks(app: Flask) -> None:
             "all_tags": _LazyCount(Post.all_tags),
             "nav_on": nav_on,
             "nav_pages": nav_pages,
+            "post_layout": conf.get("post_layout", "single"),
             "nav_all": nav_all,
             "version": config.VERSION,
             "static_ver": _static_version(),

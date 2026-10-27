@@ -725,6 +725,27 @@ def admin_themes():
     return render_template("admin/themes.html")
 
 
+@LOGIN
+def admin_theme_config():
+    """tech 主题配置：文章列表单栏 / 双栏。"""
+    if request.method == "POST":
+        layout = (request.form.get("post_layout") or "single").strip()
+        if layout not in {"single", "double"}:
+            layout = "single"
+        settings.set_value("post_layout", layout)
+        # 首页和列表页有整页缓存，保存后清掉，返回前台立刻能看到
+        from services import page_cache
+
+        page_cache.clear_all()
+        flash("主题配置已保存", "success")
+        return redirect(url_for("admin_theme_config"))
+
+    return render_template(
+        "admin/theme_config.html",
+        post_layout=settings.get_str("post_layout", "single"),
+    )
+
+
 def _activate_theme():
     new_theme = request.form.get("active_theme", "").strip()
     valid = {item["key"] for item in theme.list_themes()}
@@ -1202,6 +1223,7 @@ def register(app) -> None:
         ("/admin/plugins", "admin_plugins", admin_plugins, ["GET"]),
         ("/admin/plugins/toggle", "admin_plugin_toggle", admin_plugin_toggle, ["POST"]),
         ("/admin/themes", "admin_themes", admin_themes, ["GET", "POST"]),
+        ("/admin/themes/config", "admin_theme_config", admin_theme_config, ["GET", "POST"]),
         ("/admin/settings", "admin_settings", admin_settings, ["GET", "POST"]),
         ("/admin/settings/save", "admin_settings_save", admin_settings_save, ["POST"]),
         ("/admin/settings/wm-refresh", "admin_settings_wm_refresh", admin_settings_wm_refresh, ["GET"]),

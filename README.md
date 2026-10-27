@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.6)
+[![version](https://img.shields.io/badge/version-3.4.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.7)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,16 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.6**
+- 版本：**v3.4.7**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.7
+
+- 后台「主题管理」新增 tech「主题配置」入口：文章列表可选单栏 / 双栏；双栏作用于首页和「全部文章」页，860px 以下自动单列，首页「精选」保持单栏；保存后自动清页面缓存
+- 关于页人物卡：头像与右侧信息垂直居中，社交链接与文章/标签/分类统计并成一行，减少空白
+- 关于页「站点状态」两段间距收紧，域名到期与服务状态之间不再断开
+- 友情链接：已填 RSS 的友链在名字旁显示 RSS 标记；页头增加「看看圈子动态」，收录说明补充 RSS 会聚合到圈子
 
 ### v3.4.6
 

@@ -58,7 +58,7 @@
 
 <!-- 文章列表（精选区已独立展示，此处不跳号，全部列出） -->
 <h2 class="sr-only">全部文章</h2>
-<ul class="tech-post-list" aria-label="全部文章">
+<ul class="tech-post-list{% if post_layout == 'double' %} tech-post-list--double{% endif %}" aria-label="全部文章">
     {% for post in posts %}
     <li class="tech-post-item">
         <div class="tech-post-meta">

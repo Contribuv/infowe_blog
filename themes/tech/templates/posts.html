@@ -48,7 +48,7 @@
 {% endif %}
 
 <!-- 文章列表 -->
-<ul class="tech-post-list" id="postsList">
+<ul class="tech-post-list{% if post_layout == 'double' %} tech-post-list--double{% endif %}" id="postsList">
     {% for post in posts %}
     <li class="tech-post-item" data-date="{{ post.created_at [:10] }}" data-read="{{ post.read_time }}">
         <div class="tech-post-meta">

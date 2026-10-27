@@ -24,6 +24,7 @@
     <p class="tech-about-bio">{{ author_bio | e | replace('\n', '<br>' | safe) | safe }}</p>
     {% endif %}
 
+    <div class="tech-about-hero-meta">
     {% if social_github or contact_email %}
     <div class="tech-about-social" aria-label="联系方式">
         {% if social_github %}
@@ -45,6 +46,7 @@
         <div class="tech-stat"><b>{{ post_total }}</b><span>篇文章</span></div>
         <div class="tech-stat"><b>{{ all_tags | length }}</b><span>个标签</span></div>
         <div class="tech-stat"><b>{{ category_total }}</b><span>个分类</span></div>
+    </div>
     </div>
     </div>
 </div>
