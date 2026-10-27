@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.23-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.23)
+[![version](https://img.shields.io/badge/version-3.4.24-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.24)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,13 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.23**
+- 版本：**v3.4.24**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.24
+
+- 留言榜单说明里的「前 10 位」改为跟随后台设置的数量
 
 ### v3.4.23
 
