@@ -3,7 +3,7 @@
 {% block content %}
 <div class="tech-page-head">
     <h1 class="tech-page-title">{% if is_miles %}归档{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
-    <p class="tech-page-desc">{% if is_miles %}共 {{ total }} 篇文章 · 按时间排成一条线{% else %}共 {{ total }} 篇文章{% endif %}</p>
+    <p class="tech-page-desc">{% if is_miles %}共 {{ total }} 篇文章 · 按时间排成一条线 · <a href="/tags">按标签浏览</a>{% else %}共 {{ total }} 篇文章{% endif %}</p>
 </div>
 
 <!-- 筛选栏：自定义下拉（替代原生 select，弹层跟随暗色主题，iOS/微信亦一致） -->

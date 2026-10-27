@@ -227,6 +227,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         parent_id, is_private, qq, ip, status,
         target_id if is_project else None,
         ip_location.of(ip),
+        is_owner=is_admin,
     )
     _touch_cooldown("comment", ip)
 

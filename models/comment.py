@@ -193,13 +193,15 @@ def save(
     project_id: int | None = None,
     ip_location: str = "",
     is_ai: int = 0,
+    is_owner: bool = False,
 ) -> int:
     return db.insert(
         "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, "
-        "website, content, status, is_private, qq, ip_text, ip_location, is_ai, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "website, content, status, is_private, qq, ip_text, ip_location, is_ai, is_owner, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (post_id, project_id, parent_id, author, email, email_hash, website, content,
-         status, 1 if is_private else 0, qq, ip_text, ip_location, 1 if is_ai else 0, db.now()),
+         status, 1 if is_private else 0, qq, ip_text, ip_location, 1 if is_ai else 0,
+         1 if is_owner else 0, db.now()),
     )
 
 
@@ -224,6 +226,11 @@ def delete(comment_id: int) -> None:
 def set_status(comment_id: int, status: str) -> None:
     if status in {"pending", "approved", "rejected"}:
         db.execute("UPDATE comments SET status = ? WHERE id = ?", (status, comment_id))
+
+
+def set_picked(comment_id: int, picked: bool) -> None:
+    """走心评论标记：1 进「互动」页，0 移出。"""
+    db.execute("UPDATE comments SET is_picked = ? WHERE id = ?", (1 if picked else 0, comment_id))
 
 
 def admin_list(page: int = 1, per_page: int = 0) -> tuple[list[dict], int]:

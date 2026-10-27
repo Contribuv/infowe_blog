@@ -47,6 +47,8 @@ def _ttl(path: str) -> int:
         return 600
     if path.startswith("/links"):
         return 600
+    if path.startswith("/readers") or path.startswith("/interactions"):
+        return 60
     if path.startswith("/feed.xml"):
         return 600
     if path.startswith("/status"):

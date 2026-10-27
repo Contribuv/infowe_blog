@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS comments (
     is_ai INTEGER DEFAULT 0,
     ai_state TEXT DEFAULT 'idle',
     ai_meta TEXT DEFAULT '',
+    is_owner INTEGER DEFAULT 0,
+    is_picked INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments (post_id);

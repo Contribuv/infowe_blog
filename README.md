@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.11)
+[![version](https://img.shields.io/badge/version-3.4.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.12)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,19 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.11**
+- 版本：**v3.4.12**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.12
+
+- 新增「读者」页：近 6 个月留言排行，按邮箱哈希/昵称聚合，排除博主和 AI 评论；前三名金银铜徽章，带头像、留言数、最新留言与来源，支持分页
+- 新增「互动」页：走心评论墙，后台评论管理每条评论可「设为走心 / 取消走心」，前台只展示已通过、非博主、非 AI 的精选评论
+- 导航调整：新增「读者」「互动」，移除「标签」；标签入口保留在归档页页头和页脚，/tags 地址不变
+- 友链申请页表单下方增加「申请须知」：AI 初审、防重复提交、RSS 聚合到圈子、处理时间
+- 评论表新增 is_owner（博主评论）和 is_picked（走心）字段，启动时自动升级旧库
+- 修复后台导航开关只保存部分栏目（圈子、读者、互动等新栏目现在也能正常开关）
+- 读者/互动页移动端适配，390px 实测无横向溢出
 
 ### v3.4.11
 

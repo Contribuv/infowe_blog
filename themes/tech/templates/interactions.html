@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}互动{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">互动</h1>
+    <p class="tech-page-desc">一些留在文字里的温度。</p>
+</div>
+
+<div class="circle-stats tech-interaction-stats">
+    <div><b>{{ stats.picked }}</b><span>走心评论</span></div>
+    <div><b>{{ stats.sources }}</b><span>文章 / 项目</span></div>
+    <div><b>{{ stats.readers }}</b><span>参与读者</span></div>
+</div>
+
+{% if items %}
+<div class="tech-interactions">
+    {% for c in items %}
+    <article class="tech-interaction-card">
+        <header class="tech-interaction-head">
+            <img class="tech-interaction-avatar" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy"
+                 onerror="this.src='/static/images/default-avatar.svg'">
+            <div class="tech-interaction-who">
+                {% if c.website %}
+                <a class="tech-interaction-name" href="{{ c.website }}" target="_blank" rel="noopener nofollow">{{ c.author }}</a>
+                {% else %}
+                <span class="tech-interaction-name">{{ c.author }}</span>
+                {% endif %}
+                <time class="tech-interaction-time">{{ c.created_at[:10] }}</time>
+            </div>
+        </header>
+        <p class="tech-interaction-text">{{ c.text }}</p>
+        {% if c.source_title and c.source_url %}
+        <footer class="tech-interaction-foot">
+            来自 <a href="{{ c.source_url }}">{{ c.source_title }}</a>
+        </footer>
+        {% endif %}
+    </article>
+    {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<nav class="tech-pagination" aria-label="互动分页">
+    {% if page > 1 %}<a href="{{ url_for('interactions_page', page=page-1) }}" class="tech-page-btn">上一页</a>{% endif %}
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            {% if p == page %}<span class="tech-page-btn active" aria-current="page">{{ p }}</span>
+            {% else %}<a href="{{ url_for('interactions_page', page=p) }}" class="tech-page-btn">{{ p }}</a>{% endif %}
+        {% elif p == page - 3 or p == page + 3 %}
+            <span class="tech-page-ellipsis">…</span>
+        {% endif %}
+    {% endfor %}
+    {% if page < total_pages %}<a href="{{ url_for('interactions_page', page=page+1) }}" class="tech-page-btn">下一页</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="tech-empty">
+    <div class="tech-empty-icon">❞</div>
+    <h3>还没有走心评论</h3>
+    <p>后台把真诚的留言标记为「走心」后，会出现在这里。</p>
+</div>
+{% endif %}
+{% endblock %}

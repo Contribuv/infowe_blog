@@ -17,6 +17,7 @@ import db
 from models import Category, Comment, Link, Post, Project, Timeline
 from services import auth, avatar, comments as comments_service, ip_location
 from services import lang, markdown, project_sync, settings, site_url, status, theme, upload
+from services import readers as readers_service
 
 
 def _decorate_categories(posts: list[dict]) -> list[dict]:
@@ -345,8 +346,6 @@ def comment_upload():
 
 
 def tags():
-    if not settings.bool_of("nav_tags", True):
-        abort(404)
     posts, total = Post.load("published", None, None, None, 1, 99999)
     names = Category.name_map()
     buckets: dict[str, list[dict]] = {}
@@ -612,6 +611,16 @@ def rss_feed():
     return Response(xml, mimetype="application/rss+xml")
 
 
+def readers_page():
+    data = readers_service.rank(request.args.get("page", 1, type=int) or 1)
+    return render_template("readers.html", **data)
+
+
+def interactions_page():
+    data = readers_service.picked(request.args.get("page", 1, type=int) or 1)
+    return render_template("interactions.html", **data)
+
+
 def register(app) -> None:
     rules = [
         ("/", "index", index, ["GET"]),
@@ -627,6 +636,8 @@ def register(app) -> None:
         ("/search", "search", search, ["GET"]),
         ("/about", "about", about, ["GET"]),
         ("/circle", "circle", circle, ["GET"]),
+        ("/readers", "readers_page", readers_page, ["GET"]),
+        ("/interactions", "interactions_page", interactions_page, ["GET"]),
         ("/links", "links_page", links_page, ["GET"]),
         ("/links/apply", "links_apply", links_apply, ["GET", "POST"]),
         ("/links/apply/success", "links_apply_success", links_apply_success, ["GET"]),

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}读者{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <h1 class="tech-page-title">读者</h1>
+    <p class="tech-page-desc">每一条真诚的留言，都是温暖的相遇。</p>
+</div>
+
+<div class="circle-stats tech-reader-stats">
+    <div><b>{{ stats.comments }}</b><span>读者留言</span></div>
+    <div><b>{{ stats.readers }}</b><span>参与读者</span></div>
+    <div><b>{{ stats.recent }}</b><span>近 30 天</span></div>
+</div>
+
+{% if items %}
+<ol class="tech-reader-list">
+    {% for r in items %}
+    <li class="tech-reader-item">
+        <span class="tech-reader-rank tech-reader-rank--{{ r.rank if r.rank <= 3 else 'normal' }}">{{ r.rank }}</span>
+        <img class="tech-reader-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"
+             onerror="this.src='/static/images/default-avatar.svg'">
+        <div class="tech-reader-main">
+            <div class="tech-reader-head">
+                {% if r.website %}
+                <a class="tech-reader-name" href="{{ r.website }}" target="_blank" rel="noopener nofollow">{{ r.author }}</a>
+                {% else %}
+                <span class="tech-reader-name">{{ r.author }}</span>
+                {% endif %}
+                <span class="tech-reader-count">{{ r.count }} 条留言</span>
+            </div>
+            {% if r.last_text %}<p class="tech-reader-quote">{{ r.last_text }}</p>{% endif %}
+            <div class="tech-reader-foot">
+                <time>{{ r.last_at[:10] }}</time>
+                {% if r.source_title and r.source_url %}
+                <span class="tech-reader-source">来自 <a href="{{ r.source_url }}">{{ r.source_title }}</a></span>
+                {% endif %}
+            </div>
+        </div>
+    </li>
+    {% endfor %}
+</ol>
+
+{% if total_pages > 1 %}
+<nav class="tech-pagination" aria-label="读者分页">
+    {% if page > 1 %}<a href="{{ url_for('readers_page', page=page-1) }}" class="tech-page-btn">上一页</a>{% endif %}
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            {% if p == page %}<span class="tech-page-btn active" aria-current="page">{{ p }}</span>
+            {% else %}<a href="{{ url_for('readers_page', page=p) }}" class="tech-page-btn">{{ p }}</a>{% endif %}
+        {% elif p == page - 3 or p == page + 3 %}
+            <span class="tech-page-ellipsis">…</span>
+        {% endif %}
+    {% endfor %}
+    {% if page < total_pages %}<a href="{{ url_for('readers_page', page=page+1) }}" class="tech-page-btn">下一页</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="tech-empty">
+    <div class="tech-empty-icon">✍</div>
+    <h3>还没有读者留言</h3>
+    <p>等第一条留言出现后，这里会变成读者榜单。</p>
+</div>
+{% endif %}
+{% endblock %}

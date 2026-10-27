@@ -1970,3 +1970,14 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
   .layout-options { grid-template-columns: 1fr; }
   .layout-preview { height: 64px; }
 }
+
+/* 评论「走心」标记 */
+.badge-picked {
+  background: rgba(244, 114, 182, .15);
+  border-color: transparent;
+  color: #f472b6;
+}
+html[data-theme=light] .badge-picked {
+  background: #fdf2f8;
+  color: #be185d;
+}
