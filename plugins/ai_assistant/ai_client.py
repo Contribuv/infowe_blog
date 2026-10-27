@@ -22,6 +22,8 @@ def chat(messages: list[dict], temperature: float | None = None, max_tokens: int
     """返回 (ok, content, meta)。meta 含 usage / model / elapsed_ms。"""
     cfg = config.get()
     profile = config.active_profile()
+    if not profile:
+        return False, "还没有添加模型，请先到「模型管理」添加接口和 API Key", {}
     base_url = str(profile.get("base_url") or "").strip()
     api_key = str(profile.get("api_key") or "").strip()
     model = str(profile.get("model") or "").strip()
@@ -62,13 +64,17 @@ def chat(messages: list[dict], temperature: float | None = None, max_tokens: int
         return False, f"接口返回 HTTP {resp.status_code}：{detail}", meta
     try:
         data = resp.json()
-        content = data["choices"][0]["message"]["content"]
+        message = data["choices"][0]["message"]
+        content = message.get("content")
     except (ValueError, KeyError, IndexError, TypeError):
         return False, "接口返回格式不正确", meta
 
     usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
     meta["usage"] = usage
     meta["model"] = str(data.get("model") or model)
+    reasoning = message.get("reasoning_content") or message.get("reasoning")
+    if reasoning:
+        meta["reasoning"] = str(reasoning)[:6000]
     return True, str(content or ""), meta
 
 

@@ -1,0 +1,86 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}AI 模型管理{% endblock %}
+
+{% block admin_head %}
+<link rel="stylesheet" href="{{ url_for('plugin_asset', plugin_key='ai_assistant', filename='ai.css') }}">
+{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('zap', 20) | safe }} AI 模型管理</h2>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_plugin_ai_config') }}" class="btn btn-secondary">助手配置</a>
+        <a href="{{ url_for('admin_plugin_ai_chat') }}" class="btn btn-primary">打开对话</a>
+    </div>
+</div>
+
+<div class="ai-models">
+    <div class="ai-models-list">
+        {% for p in providers %}
+        <div class="ai-model-card {% if p.id == active %}is-active{% endif %}">
+            <div class="ai-model-head">
+                <strong>{{ p.name }}</strong>
+                {% if p.id == active %}<span class="badge badge-available">当前使用</span>{% endif %}
+            </div>
+            <p class="ai-model-url" title="{{ p.base_url }}">{{ p.base_url }}</p>
+            <p class="ai-model-meta">模型：{{ p.model }} · Key：{{ '已填' if p.api_key else '未填' }}</p>
+            <div class="ai-model-actions">
+                {% if p.id != active %}
+                <form method="POST" action="{{ url_for('admin_plugin_ai_models_active') }}">
+                    <input type="hidden" name="id" value="{{ p.id }}">
+                    <button type="submit" class="btn btn-secondary btn-sm">设为当前</button>
+                </form>
+                {% endif %}
+                <a href="{{ url_for('admin_plugin_ai_models') }}?edit={{ p.id }}" class="btn btn-secondary btn-sm">编辑</a>
+                <form method="POST" action="{{ url_for('admin_plugin_ai_models_delete') }}"
+                      onsubmit="return confirm('删除这个模型？');">
+                    <input type="hidden" name="id" value="{{ p.id }}">
+                    <button type="submit" class="btn btn-secondary btn-sm">删除</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <p class="ai-empty-side">还没有模型，先在右侧添加一个。</p>
+        {% endfor %}
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_plugin_ai_models_save') }}" class="ai-section ai-model-form">
+        <input type="hidden" name="id" value="{{ edit.id if edit else new_id }}">
+        <div class="ai-section-head">
+            <div>
+                <h3>{{ '编辑模型' if edit else '新增模型' }}</h3>
+                <p>任意 OpenAI 兼容接口：DeepSeek、智谱、通义、中转站都行</p>
+            </div>
+        </div>
+        <div class="ai-section-body">
+            <div class="ai-grid">
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" name="name" class="input-text" value="{{ edit.name if edit else '' }}"
+                           placeholder="例如 DeepSeek" required>
+                </div>
+                <div class="form-group">
+                    <label>模型</label>
+                    <input type="text" name="model" class="input-text" value="{{ edit.model if edit else '' }}"
+                           placeholder="deepseek-chat" required>
+                </div>
+                <div class="form-group span-2">
+                    <label>接口地址</label>
+                    <input type="url" name="base_url" class="input-text" value="{{ edit.base_url if edit else '' }}"
+                           placeholder="https://api.deepseek.com/v1" required>
+                </div>
+                <div class="form-group span-2">
+                    <label>API Key</label>
+                    <input type="password" name="api_key" class="input-text"
+                           value="{{ masked.get(edit.id, '') if edit else '' }}"
+                           placeholder="留空或保持 **** 表示不修改" autocomplete="new-password">
+                </div>
+            </div>
+        </div>
+        <div class="ai-actions">
+            {% if edit %}<a href="{{ url_for('admin_plugin_ai_models') }}" class="btn btn-secondary">取消</a>{% endif %}
+            <button type="submit" class="btn btn-primary">保存模型</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

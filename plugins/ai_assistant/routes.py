@@ -1,11 +1,11 @@
-"""AI 助手后台路由：配置页、聊天页、聊天 API。"""
+"""AI 助手后台路由：模型管理、配置页、聊天页、聊天 API。"""
 
 from __future__ import annotations
 
 import json
 
 import db
-from flask import jsonify, redirect, render_template, request, url_for
+from flask import flash, jsonify, redirect, render_template, request, url_for
 
 from services import auth
 from services import plugins as plugins_service
@@ -62,16 +62,68 @@ def _daily_calls() -> int:
 def register(app) -> None:
     prefix = app.config.get("ADMIN_PREFIX", "/admin")
 
+    # ── 模型管理 ──────────────────────────────────────────
+    @auth.admin_required
+    def ai_models():
+        cfg = config.get()
+        edit_id = (request.args.get("edit") or "").strip()
+        edit = None
+        for provider in cfg.get("providers") or []:
+            if provider["id"] == edit_id:
+                edit = provider
+                break
+        return render_template(
+            "ai/models.html",
+            providers=cfg.get("providers") or [],
+            active=cfg.get("active") or "",
+            edit=edit,
+            masked={p["id"]: _mask(p.get("api_key")) for p in cfg.get("providers") or []},
+            new_id=config.new_id(),
+        )
+
+    @auth.admin_required
+    def ai_models_save():
+        pid = (request.form.get("id") or "").strip() or config.new_id()
+        old = next((p for p in config.get().get("providers") or [] if p["id"] == pid), {})
+        new_key = (request.form.get("api_key") or "").strip()
+        item = {
+            "id": pid,
+            "name": (request.form.get("name") or "").strip(),
+            "base_url": (request.form.get("base_url") or "").strip(),
+            "model": (request.form.get("model") or "").strip(),
+            "api_key": new_key if new_key and not new_key.startswith("****") else old.get("api_key", ""),
+        }
+        if not item["name"] or not item["base_url"] or not item["model"]:
+            flash("名称、接口地址、模型都要填", "error")
+            return redirect(url_for("admin_plugin_ai_models"))
+        config.save_provider(item)
+        flash("模型已保存", "success")
+        return redirect(url_for("admin_plugin_ai_models"))
+
+    @auth.admin_required
+    def ai_models_delete():
+        pid = (request.form.get("id") or "").strip()
+        if pid:
+            config.delete_provider(pid)
+            flash("模型已删除", "success")
+        return redirect(url_for("admin_plugin_ai_models"))
+
+    @auth.admin_required
+    def ai_models_active():
+        pid = (request.form.get("id") or "").strip()
+        if pid and config.set_active(pid):
+            flash("已切换当前模型", "success")
+        return redirect(url_for("admin_plugin_ai_models"))
+
+    # ── 配置 ──────────────────────────────────────────────
     @auth.admin_required
     def ai_config():
         cfg = config.get()
-        masked = {p["id"]: _mask(p.get("api_key")) for p in cfg.get("providers") or []}
+        profile = config.active_profile()
         return render_template(
             "ai/config.html",
             cfg=cfg,
-            providers=cfg.get("providers") or [],
-            active=cfg.get("active") or "deepseek",
-            masked=masked,
+            profile=profile,
             plugin=plugins_service.get(KEY),
             daily_calls=_daily_calls(),
         )
@@ -80,28 +132,6 @@ def register(app) -> None:
     def ai_config_save():
         old = config.get()
         data = dict(old)
-        providers = []
-        for pid in request.form.getlist("provider_id"):
-            pid = str(pid or "").strip()
-            if not pid:
-                continue
-            base = next((p for p in old.get("providers") or [] if p["id"] == pid), None)
-            if not base:
-                base = {"id": pid, "name": pid, "models": [], "api_key": ""}
-            item = dict(base)
-            if request.form.get(f"name_{pid}") is not None:
-                item["name"] = (request.form.get(f"name_{pid}") or "").strip() or base.get("name") or pid
-            item["base_url"] = (request.form.get(f"base_url_{pid}") or "").strip()
-            item["model"] = (request.form.get(f"model_{pid}") or "").strip()
-            new_key = (request.form.get(f"api_key_{pid}") or "").strip()
-            if new_key and not new_key.startswith("****"):
-                item["api_key"] = new_key
-            providers.append(item)
-        if providers:
-            data["providers"] = providers
-        active = (request.form.get("active") or "").strip()
-        if active and active in {p["id"] for p in providers}:
-            data["active"] = active
         for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_daily_limit", "link_check_hours", "daily_call_limit"):
             if key in request.form:
                 try:
@@ -113,8 +143,10 @@ def register(app) -> None:
         if "system_prompt" in request.form:
             data["system_prompt"] = request.form.get("system_prompt", "")
         config.save(data)
+        flash("配置已保存", "success")
         return redirect(url_for("admin_plugin_ai_config"))
 
+    # ── 聊天 ──────────────────────────────────────────────
     @auth.admin_required
     def ai_chat():
         convs = [dict(r) for r in db.query(
@@ -141,7 +173,7 @@ def register(app) -> None:
             messages=messages,
             cfg=cfg,
             providers=config.available_providers(),
-            active=cfg.get("active") or "deepseek",
+            active=cfg.get("active") or "",
             daily_calls=_daily_calls(),
         )
 
@@ -164,6 +196,7 @@ def register(app) -> None:
         if history and history[-1]["role"] != "user":
             messages.append({"role": "user", "content": message})
 
+        meta: dict = {}
         for _ in range(4):
             ok, text, meta = ai_client.chat(messages)
             if not ok:
@@ -224,16 +257,17 @@ def register(app) -> None:
     def ai_api_provider():
         data = request.get_json(silent=True) or {}
         pid = str(data.get("id") or "").strip()
-        cfg = config.get()
-        if pid not in {p["id"] for p in cfg.get("providers") or []}:
-            return jsonify({"error": "未知接口"}), 400
-        cfg["active"] = pid
-        config.save(cfg)
-        profile = config.active_profile()
+        if not config.set_active(pid):
+            return jsonify({"error": "模型不存在"}), 400
+        profile = config.active_profile() or {}
         return jsonify({"ok": True, "active": pid, "model": profile.get("model")})
 
     app.add_url_rule(prefix + "/plugins/ai", "admin_plugin_ai_config", ai_config, methods=["GET"])
     app.add_url_rule(prefix + "/plugins/ai/save", "admin_plugin_ai_save", ai_config_save, methods=["POST"])
+    app.add_url_rule(prefix + "/plugins/ai/models", "admin_plugin_ai_models", ai_models, methods=["GET"])
+    app.add_url_rule(prefix + "/plugins/ai/models/save", "admin_plugin_ai_models_save", ai_models_save, methods=["POST"])
+    app.add_url_rule(prefix + "/plugins/ai/models/delete", "admin_plugin_ai_models_delete", ai_models_delete, methods=["POST"])
+    app.add_url_rule(prefix + "/plugins/ai/models/active", "admin_plugin_ai_models_active", ai_models_active, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/chat", "admin_plugin_ai_chat", ai_chat, methods=["GET"])
     app.add_url_rule(prefix + "/plugins/ai/api/chat", "admin_plugin_ai_api_chat", ai_api_chat, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/confirm", "admin_plugin_ai_api_confirm", ai_api_confirm, methods=["POST"])

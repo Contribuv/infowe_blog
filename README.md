@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.3)
+[![version](https://img.shields.io/badge/version-3.3.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,17 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.3**
+- 版本：**v3.3.4**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.4
+
+- AI 模型改为独立管理页：去除内置 DeepSeek / GLM 固定卡片，改为用户自己新增、编辑、删除任意多个 OpenAI 兼容模型；每项独立填名称、地址、API Key、模型，可设当前使用
+- 助手配置页只保留生成参数、系统提示词和托管开关，顶部显示当前模型
+- 聊天消息重做：用户/助手气泡按内容自适应宽度，模型、耗时、token 用量移到气泡下方独立一行
+- 发送后立即显示「正在思考」占位和已等待秒数，回复逐字输出；模型返回 
+easoning_content 时提供「推理过程」折叠块
 
 ### v3.3.3
 

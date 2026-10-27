@@ -27,6 +27,7 @@
             </div>
             <div class="plugin-actions">
                 {% if p.key == 'ai_assistant' and p.enabled and p.installed %}
+                <a href="{{ admin_prefix }}/plugins/ai/models" class="btn btn-secondary btn-sm">模型</a>
                 <a href="{{ admin_prefix }}/plugins/ai" class="btn btn-secondary btn-sm">配置</a>
                 <a href="{{ admin_prefix }}/plugins/ai/chat" class="btn btn-primary btn-sm">打开对话</a>
                 {% endif %}

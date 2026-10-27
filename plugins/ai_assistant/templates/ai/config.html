@@ -8,67 +8,30 @@
 {% block admin_content %}
 <div class="page-header">
     <h2>{{ icon('zap', 20) | safe }} AI 助手配置</h2>
-    <a href="{{ url_for('admin_plugin_ai_chat') }}" class="btn btn-primary">打开对话</a>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_plugin_ai_models') }}" class="btn btn-secondary">模型管理</a>
+        <a href="{{ url_for('admin_plugin_ai_chat') }}" class="btn btn-primary">打开对话</a>
+    </div>
 </div>
+
+{% if not profile %}
+<div class="ai-status" style="border-color:var(--warning);">
+    还没有可用的模型，先去 <a href="{{ url_for('admin_plugin_ai_models') }}">模型管理</a> 添加一个接口。
+</div>
+{% endif %}
 
 <form method="POST" action="{{ url_for('admin_plugin_ai_save') }}" class="ai-config">
     <div class="ai-status">
-        <span>当前接口：<b>{{ (providers | selectattr('id', 'equalto', active) | first).name if providers else '未设置' }}</b></span>
-        <span>当前模型：<b>{{ (providers | selectattr('id', 'equalto', active) | first).model if providers else '未设置' }}</b></span>
+        <span>当前模型：<b>{{ profile.name ~ ' · ' ~ profile.model if profile else '未配置' }}</b></span>
+        <span>接口：<b>{{ profile.base_url if profile else '未配置' }}</b></span>
         <span>今日调用：<b>{{ daily_calls }}</b> / {{ cfg.daily_call_limit }} 次</span>
     </div>
-
-    {% for p in providers %}
-    <section class="ai-section">
-        <div class="ai-section-head">
-            <div>
-                <h3>{{ p.name }}{% if p.id != 'custom' %} · 官方接口{% endif %}</h3>
-                <p>{{ p.base_url or '填写任意 OpenAI 兼容地址' }}</p>
-            </div>
-            <label class="ai-switch ai-switch-inline">
-                <input type="radio" name="active" value="{{ p.id }}" {% if p.id == active %}checked{% endif %}>
-                <span><strong>当前使用</strong></span>
-            </label>
-        </div>
-        <div class="ai-section-body">
-            <input type="hidden" name="provider_id" value="{{ p.id }}">
-            <div class="ai-grid">
-                {% if p.id == 'custom' %}
-                <div class="form-group">
-                    <label>名称</label>
-                    <input type="text" name="name_{{ p.id }}" class="input-text" value="{{ p.name }}" placeholder="例如 通义千问">
-                </div>
-                {% endif %}
-                <div class="form-group {% if p.id != 'custom' %}span-2{% endif %}">
-                    <label>接口地址</label>
-                    <input type="url" name="base_url_{{ p.id }}" class="input-text"
-                           value="{{ p.base_url }}" placeholder="https://api.example.com/v1">
-                </div>
-                <div class="form-group">
-                    <label>API Key</label>
-                    <input type="password" name="api_key_{{ p.id }}" class="input-text"
-                           value="{{ masked.get(p.id, '') }}"
-                           placeholder="留空或保持 **** 表示不修改" autocomplete="new-password">
-                </div>
-                <div class="form-group">
-                    <label>模型</label>
-                    <input type="text" name="model_{{ p.id }}" class="input-text"
-                           value="{{ p.model }}" list="models_{{ p.id }}"
-                           placeholder="{{ 'deepseek-chat' if p.id == 'deepseek' else ('glm-4.5' if p.id == 'glm' else '模型名') }}">
-                    <datalist id="models_{{ p.id }}">
-                        {% for m in p.models %}<option value="{{ m }}">{% endfor %}
-                    </datalist>
-                </div>
-            </div>
-        </div>
-    </section>
-    {% endfor %}
 
     <section class="ai-section">
         <div class="ai-section-head">
             <div>
                 <h3>生成与限额</h3>
-                <p>控制回复风格和调用成本，所有接口共用</p>
+                <p>所有模型共用，控制回复风格和调用成本</p>
             </div>
         </div>
         <div class="ai-section-body">
@@ -91,7 +54,8 @@
                 </div>
                 <div class="form-group span-2">
                     <label>系统提示词</label>
-                    <textarea name="system_prompt" class="input-text" rows="6">{{ cfg.system_prompt }}</textarea>
+                    <textarea name="system_prompt" class="input-text" rows="7">{{ cfg.system_prompt }}</textarea>
+                    <span class="form-hint">保持中文；模型按这里的约定返回 JSON 工具调用</span>
                 </div>
             </div>
         </div>

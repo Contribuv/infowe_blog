@@ -8,6 +8,7 @@
 
   var conv = parseInt(box.getAttribute('data-conv') || '0', 10) || 0;
   var busy = false;
+  var waitTimer = null;
 
   function metaText(meta) {
     if (!meta || !meta.model) return '';
@@ -18,31 +19,117 @@
     return parts.join(' · ');
   }
 
+  function scroll() { box.scrollTop = box.scrollHeight; }
+
+  function makeRow(role) {
+    var row = document.createElement('div');
+    row.className = 'ai-row ai-row-' + role;
+    return row;
+  }
+
+  function addReasoning(row, text) {
+    if (!text) return;
+    var details = document.createElement('details');
+    details.className = 'ai-reasoning';
+    var summary = document.createElement('summary');
+    summary.textContent = '推理过程';
+    var body = document.createElement('div');
+    body.textContent = text;
+    details.appendChild(summary);
+    details.appendChild(body);
+    row.appendChild(details);
+  }
+
   function add(role, text, meta) {
-    var div = document.createElement('div');
-    div.className = 'ai-msg ai-' + role;
-    div.appendChild(document.createTextNode(text || ''));
+    if (role === 'tool') {
+      var line = document.createElement('div');
+      line.className = 'ai-tool-row';
+      line.textContent = text || '';
+      box.appendChild(line);
+      scroll();
+      return line;
+    }
+    var row = makeRow(role);
+    if (role === 'assistant') addReasoning(row, meta && meta.reasoning);
+    var bubble = document.createElement('div');
+    bubble.className = 'ai-bubble ai-bubble-' + role;
+    bubble.textContent = text || '';
+    row.appendChild(bubble);
     var line = metaText(meta);
     if (line) {
-      var span = document.createElement('span');
-      span.className = 'ai-meta';
-      span.textContent = line;
-      div.appendChild(span);
+      var metaRow = document.createElement('div');
+      metaRow.className = 'ai-meta-row';
+      metaRow.textContent = line;
+      row.appendChild(metaRow);
     }
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-    return div;
+    box.appendChild(row);
+    scroll();
+    return row;
+  }
+
+  function typeAssistant(text, meta) {
+    var row = makeRow('assistant');
+    addReasoning(row, meta && meta.reasoning);
+    var bubble = document.createElement('div');
+    bubble.className = 'ai-bubble ai-bubble-assistant';
+    row.appendChild(bubble);
+    box.appendChild(row);
+
+    var full = String(text || '');
+    var i = 0;
+    var step = Math.max(1, Math.ceil(full.length / 120));
+    var timer = setInterval(function () {
+      i += step;
+      bubble.textContent = full.slice(0, i);
+      scroll();
+      if (i >= full.length) {
+        clearInterval(timer);
+        bubble.textContent = full;
+        var line = metaText(meta);
+        if (line) {
+          var metaRow = document.createElement('div');
+          metaRow.className = 'ai-meta-row';
+          metaRow.textContent = line;
+          row.appendChild(metaRow);
+        }
+        scroll();
+      }
+    }, 16);
+    return row;
+  }
+
+  function startThinking() {
+    var row = makeRow('assistant');
+    row.className += ' ai-thinking';
+    var bubble = document.createElement('div');
+    bubble.className = 'ai-bubble ai-bubble-assistant';
+    bubble.innerHTML = '<span class="ai-dots"><i></i><i></i><i></i></span><span>正在思考</span><span class="ai-wait">0.0s</span>';
+    row.appendChild(bubble);
+    box.appendChild(row);
+    scroll();
+    var started = Date.now();
+    var wait = bubble.querySelector('.ai-wait');
+    waitTimer = setInterval(function () {
+      wait.textContent = ((Date.now() - started) / 1000).toFixed(1) + 's';
+    }, 100);
+    return row;
+  }
+
+  function stopThinking(row) {
+    if (waitTimer) { clearInterval(waitTimer); waitTimer = null; }
+    if (row && row.parentNode) row.parentNode.removeChild(row);
   }
 
   function addPending(p) {
-    var div = document.createElement('div');
-    div.className = 'ai-msg ai-pending';
-    div.setAttribute('data-id', p.id);
-
+    var row = makeRow('assistant');
+    row.className += ' ai-pending';
+    row.setAttribute('data-id', p.id);
+    var bubble = document.createElement('div');
+    bubble.className = 'ai-bubble ai-bubble-assistant';
     var text = document.createElement('div');
     text.className = 'ai-pending-text';
     text.textContent = p.text || ('准备执行：' + p.tool);
-    div.appendChild(text);
+    bubble.appendChild(text);
 
     var actions = document.createElement('div');
     actions.className = 'ai-pending-actions';
@@ -56,7 +143,8 @@
     no.textContent = '取消';
     actions.appendChild(ok);
     actions.appendChild(no);
-    div.appendChild(actions);
+    bubble.appendChild(actions);
+    row.appendChild(bubble);
 
     ok.addEventListener('click', function () {
       actions.innerHTML = '<span class="ai-usage">执行中…</span>';
@@ -76,13 +164,12 @@
           add('assistant', '执行失败：' + err);
         });
     });
-
     no.addEventListener('click', function () {
       actions.innerHTML = '<span class="ai-usage">已取消</span>';
     });
 
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
+    box.appendChild(row);
+    scroll();
   }
 
   function setBusy(value) {
@@ -99,6 +186,7 @@
     input.value = '';
     add('user', text);
     setBusy(true);
+    var thinking = startThinking();
 
     fetch(urls.chat, {
       method: 'POST',
@@ -107,16 +195,18 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (d) {
+        stopThinking(thinking);
         if (d.conversation_id) conv = d.conversation_id;
         if (d.pending) {
           addPending(d.pending);
         } else if (d.reply) {
-          add('assistant', d.reply, d.meta);
+          typeAssistant(d.reply, d.meta);
         } else if (d.error) {
           add('assistant', d.error, d.meta);
         }
       })
       .catch(function (err) {
+        stopThinking(thinking);
         add('assistant', '请求失败：' + err);
       })
       .then(function () {
@@ -153,10 +243,7 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (d.error) {
-            add('assistant', d.error);
-            return;
-          }
+          if (d.error) { add('assistant', d.error); return; }
           var opt = provider.options[provider.selectedIndex];
           add('tool', '已切换到 ' + (opt ? opt.textContent : provider.value));
         })
@@ -164,5 +251,5 @@
     });
   }
 
-  box.scrollTop = box.scrollHeight;
+  scroll();
 })();
