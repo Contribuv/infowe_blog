@@ -13,46 +13,62 @@
 
 <form method="POST" action="{{ url_for('admin_plugin_ai_save') }}" class="ai-config">
     <div class="ai-status">
-        <span>当前模型：<b>{{ cfg.model or '未设置' }}</b></span>
-        <span>接口：<b>{{ cfg.base_url or '未设置' }}</b></span>
+        <span>当前接口：<b>{{ (providers | selectattr('id', 'equalto', active) | first).name if providers else '未设置' }}</b></span>
+        <span>当前模型：<b>{{ (providers | selectattr('id', 'equalto', active) | first).model if providers else '未设置' }}</b></span>
         <span>今日调用：<b>{{ daily_calls }}</b> / {{ cfg.daily_call_limit }} 次</span>
-        <span>API Key：<b>{{ '已配置' if cfg.api_key else '未配置' }}</b></span>
     </div>
 
+    {% for p in providers %}
     <section class="ai-section">
         <div class="ai-section-head">
             <div>
-                <h3>接口与模型</h3>
-                <p>兼容 OpenAI 的 /chat/completions，DeepSeek、OpenAI、通义、智谱都可直接用</p>
+                <h3>{{ p.name }}{% if p.id != 'custom' %} · 官方接口{% endif %}</h3>
+                <p>{{ p.base_url or '填写任意 OpenAI 兼容地址' }}</p>
             </div>
+            <label class="ai-switch ai-switch-inline">
+                <input type="radio" name="active" value="{{ p.id }}" {% if p.id == active %}checked{% endif %}>
+                <span><strong>当前使用</strong></span>
+            </label>
         </div>
         <div class="ai-section-body">
+            <input type="hidden" name="provider_id" value="{{ p.id }}">
             <div class="ai-grid">
-                <div class="form-group span-2">
+                {% if p.id == 'custom' %}
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" name="name_{{ p.id }}" class="input-text" value="{{ p.name }}" placeholder="例如 通义千问">
+                </div>
+                {% endif %}
+                <div class="form-group {% if p.id != 'custom' %}span-2{% endif %}">
                     <label>接口地址</label>
-                    <input type="url" name="base_url" class="input-text" value="{{ cfg.base_url }}"
-                           placeholder="https://api.deepseek.com/v1" required>
-                    <span class="form-hint">只填到版本号，例如 /v1，不要带 /chat/completions</span>
+                    <input type="url" name="base_url_{{ p.id }}" class="input-text"
+                           value="{{ p.base_url }}" placeholder="https://api.example.com/v1">
                 </div>
                 <div class="form-group">
                     <label>API Key</label>
-                    <input type="password" name="api_key" class="input-text" value="{{ masked_key }}"
+                    <input type="password" name="api_key_{{ p.id }}" class="input-text"
+                           value="{{ masked.get(p.id, '') }}"
                            placeholder="留空或保持 **** 表示不修改" autocomplete="new-password">
                 </div>
                 <div class="form-group">
                     <label>模型</label>
-                    <input type="text" name="model" class="input-text" value="{{ cfg.model }}"
-                           placeholder="deepseek-chat" required>
+                    <input type="text" name="model_{{ p.id }}" class="input-text"
+                           value="{{ p.model }}" list="models_{{ p.id }}"
+                           placeholder="{{ 'deepseek-chat' if p.id == 'deepseek' else ('glm-4.5' if p.id == 'glm' else '模型名') }}">
+                    <datalist id="models_{{ p.id }}">
+                        {% for m in p.models %}<option value="{{ m }}">{% endfor %}
+                    </datalist>
                 </div>
             </div>
         </div>
     </section>
+    {% endfor %}
 
     <section class="ai-section">
         <div class="ai-section-head">
             <div>
                 <h3>生成与限额</h3>
-                <p>控制回复风格和调用成本</p>
+                <p>控制回复风格和调用成本，所有接口共用</p>
             </div>
         </div>
         <div class="ai-section-body">
@@ -76,7 +92,6 @@
                 <div class="form-group span-2">
                     <label>系统提示词</label>
                     <textarea name="system_prompt" class="input-text" rows="6">{{ cfg.system_prompt }}</textarea>
-                    <span class="form-hint">保持中文；模型按这里的约定返回 JSON 工具调用</span>
                 </div>
             </div>
         </div>
@@ -93,29 +108,19 @@
             <div class="ai-grid">
                 <label class="ai-switch">
                     <input type="checkbox" name="comment_moderation" {% if cfg.comment_moderation %}checked{% endif %}>
-                    <span>
-                        <strong>新评论自动审核</strong>
-                        <small>判断广告、辱骂、灌水；低置信度会转人工</small>
-                    </span>
+                    <span><strong>新评论自动审核</strong><small>判断广告、辱骂、灌水；低置信度转人工</small></span>
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="comment_reply" {% if cfg.comment_reply %}checked{% endif %}>
-                    <span>
-                        <strong>通过后 AI 回复</strong>
-                        <small>结合文章内容生成中文回复，带「AI 助手」标识</small>
-                    </span>
+                    <span><strong>通过后 AI 回复</strong><small>结合文章内容生成中文回复，带「AI 助手」标识</small></span>
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="link_moderation" {% if cfg.link_moderation %}checked{% endif %}>
-                    <span>
-                        <strong>友链回链自动审核</strong>
-                        <small>对方页面出现本站链接后自动通过并发信通知</small>
-                    </span>
+                    <span><strong>友链回链自动审核</strong><small>对方页面出现本站链接后自动通过并发信通知</small></span>
                 </label>
                 <div class="form-group">
                     <label>评论最短长度</label>
                     <input type="number" name="comment_min_length" class="input-text" value="{{ cfg.comment_min_length }}" min="0" max="200">
-                    <span class="form-hint">低于这个长度不调用 AI，避免浪费</span>
                 </div>
                 <div class="form-group">
                     <label>友链复查时长（小时）</label>

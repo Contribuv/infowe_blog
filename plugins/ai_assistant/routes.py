@@ -15,6 +15,13 @@ from . import ai_client, config, tools
 KEY = "ai_assistant"
 
 
+def _mask(value: str) -> str:
+    value = str(value or "")
+    if not value:
+        return ""
+    return "****" + value[-4:] if len(value) > 4 else "****"
+
+
 def _conv_title(text: str) -> str:
     text = (text or "").strip().replace("\n", " ")
     return (text[:28] + "…") if len(text) > 28 else (text or "新对话")
@@ -58,12 +65,13 @@ def register(app) -> None:
     @auth.admin_required
     def ai_config():
         cfg = config.get()
-        key = str(cfg.get("api_key") or "")
-        masked = ("****" + key[-4:]) if len(key) > 4 else ("****" if key else "")
+        masked = {p["id"]: _mask(p.get("api_key")) for p in cfg.get("providers") or []}
         return render_template(
             "ai/config.html",
             cfg=cfg,
-            masked_key=masked,
+            providers=cfg.get("providers") or [],
+            active=cfg.get("active") or "deepseek",
+            masked=masked,
             plugin=plugins_service.get(KEY),
             daily_calls=_daily_calls(),
         )
@@ -72,9 +80,28 @@ def register(app) -> None:
     def ai_config_save():
         old = config.get()
         data = dict(old)
-        for key in ("base_url", "model", "system_prompt"):
-            if key in request.form:
-                data[key] = request.form.get(key, "").strip()
+        providers = []
+        for pid in request.form.getlist("provider_id"):
+            pid = str(pid or "").strip()
+            if not pid:
+                continue
+            base = next((p for p in old.get("providers") or [] if p["id"] == pid), None)
+            if not base:
+                base = {"id": pid, "name": pid, "models": [], "api_key": ""}
+            item = dict(base)
+            if request.form.get(f"name_{pid}") is not None:
+                item["name"] = (request.form.get(f"name_{pid}") or "").strip() or base.get("name") or pid
+            item["base_url"] = (request.form.get(f"base_url_{pid}") or "").strip()
+            item["model"] = (request.form.get(f"model_{pid}") or "").strip()
+            new_key = (request.form.get(f"api_key_{pid}") or "").strip()
+            if new_key and not new_key.startswith("****"):
+                item["api_key"] = new_key
+            providers.append(item)
+        if providers:
+            data["providers"] = providers
+        active = (request.form.get("active") or "").strip()
+        if active and active in {p["id"] for p in providers}:
+            data["active"] = active
         for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_daily_limit", "link_check_hours", "daily_call_limit"):
             if key in request.form:
                 try:
@@ -83,9 +110,8 @@ def register(app) -> None:
                     pass
         for key in ("comment_moderation", "comment_reply", "link_moderation"):
             data[key] = str(request.form.get(key, "")).lower() in {"1", "on", "true", "yes"}
-        new_key = (request.form.get("api_key") or "").strip()
-        if new_key and not new_key.startswith("****"):
-            data["api_key"] = new_key
+        if "system_prompt" in request.form:
+            data["system_prompt"] = request.form.get("system_prompt", "")
         config.save(data)
         return redirect(url_for("admin_plugin_ai_config"))
 
@@ -97,16 +123,25 @@ def register(app) -> None:
         conv_id = request.args.get("c", type=int) or 0
         messages = []
         if conv_id:
-            messages = [dict(r) for r in db.query(
+            for row in db.query(
                 "SELECT id, role, content, meta, created_at FROM ai_messages WHERE conversation_id=? ORDER BY id ASC",
                 (conv_id,),
-            )]
+            ):
+                item = dict(row)
+                try:
+                    item["meta"] = json.loads(item.get("meta") or "{}")
+                except (TypeError, ValueError):
+                    item["meta"] = {}
+                messages.append(item)
+        cfg = config.get()
         return render_template(
             "ai/chat.html",
             conversations=convs,
             conversation_id=conv_id,
             messages=messages,
-            cfg=config.get(),
+            cfg=cfg,
+            providers=config.available_providers(),
+            active=cfg.get("active") or "deepseek",
             daily_calls=_daily_calls(),
         )
 
@@ -130,35 +165,35 @@ def register(app) -> None:
             messages.append({"role": "user", "content": message})
 
         for _ in range(4):
-            ok, text, usage = ai_client.chat(messages)
+            ok, text, meta = ai_client.chat(messages)
             if not ok:
-                _add_message(conv_id, "assistant", text)
-                return jsonify({"conversation_id": conv_id, "reply": text, "error": True})
+                _add_message(conv_id, "assistant", text, meta)
+                return jsonify({"conversation_id": conv_id, "reply": text, "error": True, "meta": meta})
             action = ai_client.parse_action(text)
             if action and action.get("type") == "tool":
                 name = str(action.get("tool") or "")
                 args = action.get("args") if isinstance(action.get("args"), dict) else {}
                 if name in tools.READ_TOOLS:
                     result = tools.execute(name, args)
-                    _add_message(conv_id, "tool", json.dumps(result, ensure_ascii=False), {"tool": name})
+                    _add_message(conv_id, "tool", json.dumps(result, ensure_ascii=False), {"tool": name, **meta})
                     messages.append({"role": "assistant", "content": text})
                     messages.append({"role": "user", "content": "工具结果：" + json.dumps(result, ensure_ascii=False)[:6000]})
                     continue
                 if name in tools.WRITE_TOOLS:
-                    meta = {"tool": name, "args": args}
-                    mid = _add_message(conv_id, "pending", text, meta)
+                    action_meta = {"tool": name, "args": args, **meta}
+                    mid = _add_message(conv_id, "pending", text, action_meta)
                     return jsonify({
                         "conversation_id": conv_id,
-                        "pending": {"id": mid, "tool": name, "args": args, "text": text},
+                        "pending": {"id": mid, "tool": name, "args": args, "text": text, "meta": meta},
                     })
             content = action.get("content") if action and action.get("type") == "reply" else text
             content = str(content or "").strip() or "（模型没有返回内容）"
-            _add_message(conv_id, "assistant", content)
-            return jsonify({"conversation_id": conv_id, "reply": content})
+            _add_message(conv_id, "assistant", content, meta)
+            return jsonify({"conversation_id": conv_id, "reply": content, "meta": meta})
 
         fallback = "这一步没有完成，请换一种说法再试。"
-        _add_message(conv_id, "assistant", fallback)
-        return jsonify({"conversation_id": conv_id, "reply": fallback})
+        _add_message(conv_id, "assistant", fallback, meta)
+        return jsonify({"conversation_id": conv_id, "reply": fallback, "meta": meta})
 
     @auth.admin_required
     def ai_api_confirm():
@@ -185,9 +220,22 @@ def register(app) -> None:
         conv_id = _new_conversation("新对话")
         return jsonify({"conversation_id": conv_id})
 
+    @auth.admin_required
+    def ai_api_provider():
+        data = request.get_json(silent=True) or {}
+        pid = str(data.get("id") or "").strip()
+        cfg = config.get()
+        if pid not in {p["id"] for p in cfg.get("providers") or []}:
+            return jsonify({"error": "未知接口"}), 400
+        cfg["active"] = pid
+        config.save(cfg)
+        profile = config.active_profile()
+        return jsonify({"ok": True, "active": pid, "model": profile.get("model")})
+
     app.add_url_rule(prefix + "/plugins/ai", "admin_plugin_ai_config", ai_config, methods=["GET"])
     app.add_url_rule(prefix + "/plugins/ai/save", "admin_plugin_ai_save", ai_config_save, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/chat", "admin_plugin_ai_chat", ai_chat, methods=["GET"])
     app.add_url_rule(prefix + "/plugins/ai/api/chat", "admin_plugin_ai_api_chat", ai_api_chat, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/confirm", "admin_plugin_ai_api_confirm", ai_api_confirm, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/new", "admin_plugin_ai_api_new", ai_api_new, methods=["POST"])
+    app.add_url_rule(prefix + "/plugins/ai/api/provider", "admin_plugin_ai_api_provider", ai_api_provider, methods=["POST"])

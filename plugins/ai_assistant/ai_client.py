@@ -1,12 +1,9 @@
-"""OpenAI 兼容的 chat/completions 客户端。
-
-不引入新依赖，直接用 requests；DeepSeek / OpenAI / 通义 / 智谱等
-只要兼容 `/chat/completions` 就能用同一套配置。
-"""
+"""OpenAI 兼容的 chat/completions 客户端（多服务商）。"""
 
 from __future__ import annotations
 
 import json
+import time
 
 import requests
 
@@ -22,13 +19,17 @@ def _endpoint(base_url: str) -> str:
 
 def chat(messages: list[dict], temperature: float | None = None, max_tokens: int | None = None,
          timeout: int | None = None) -> tuple[bool, str, dict]:
-    """返回 (ok, content, usage)。任何失败都返回 ok=False 和错误文本。"""
+    """返回 (ok, content, meta)。meta 含 usage / model / elapsed_ms。"""
     cfg = config.get()
-    base_url = str(cfg.get("base_url") or "").strip()
-    api_key = str(cfg.get("api_key") or "").strip()
-    model = str(cfg.get("model") or "").strip()
+    profile = config.active_profile()
+    base_url = str(profile.get("base_url") or "").strip()
+    api_key = str(profile.get("api_key") or "").strip()
+    model = str(profile.get("model") or "").strip()
     if not base_url or not api_key or not model:
-        return False, "AI 助手尚未配置接口地址 / API Key / 模型", {}
+        return False, f"{profile.get('name') or '当前接口'} 尚未配置接口地址 / API Key / 模型", {
+            "provider": profile.get("id"),
+            "model": model,
+        }
 
     payload = {
         "model": model,
@@ -36,6 +37,7 @@ def chat(messages: list[dict], temperature: float | None = None, max_tokens: int
         "temperature": float(cfg.get("temperature") if temperature is None else temperature),
         "max_tokens": int(cfg.get("max_tokens") if max_tokens is None else max_tokens),
     }
+    started = time.time()
     try:
         resp = requests.post(
             _endpoint(base_url),
@@ -47,18 +49,27 @@ def chat(messages: list[dict], temperature: float | None = None, max_tokens: int
             timeout=int(cfg.get("timeout") or (timeout or 60)),
         )
     except requests.RequestException as exc:
-        return False, f"请求失败：{exc}", {}
+        return False, f"请求失败：{exc}", {
+            "provider": profile.get("id"),
+            "model": model,
+            "elapsed_ms": int((time.time() - started) * 1000),
+        }
 
+    elapsed = int((time.time() - started) * 1000)
+    meta = {"provider": profile.get("id"), "model": model, "elapsed_ms": elapsed}
     if resp.status_code >= 400:
         detail = resp.text[:300]
-        return False, f"接口返回 HTTP {resp.status_code}：{detail}", {}
+        return False, f"接口返回 HTTP {resp.status_code}：{detail}", meta
     try:
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
     except (ValueError, KeyError, IndexError, TypeError):
-        return False, "接口返回格式不正确", {}
+        return False, "接口返回格式不正确", meta
+
     usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
-    return True, str(content or ""), usage
+    meta["usage"] = usage
+    meta["model"] = str(data.get("model") or model)
+    return True, str(content or ""), meta
 
 
 def parse_action(text: str) -> dict | None:

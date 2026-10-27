@@ -13,6 +13,11 @@
 <div class="page-header">
     <h2>{{ icon('zap', 20) | safe }} AI 助手</h2>
     <div class="page-actions">
+        <select id="ai-provider" class="input-text ai-provider-select" aria-label="选择模型接口">
+            {% for p in providers %}
+            <option value="{{ p.id }}" {% if p.id == active %}selected{% endif %}>{{ p.name }} · {{ p.model or '未设置模型' }}</option>
+            {% endfor %}
+        </select>
         <span class="ai-usage">今日 {{ daily_calls }} / {{ cfg.daily_call_limit }} 次</span>
         <a href="{{ url_for('admin_plugin_ai_config') }}" class="btn btn-secondary">配置</a>
     </div>
@@ -54,7 +59,12 @@
                     {% elif m.role == 'tool' %}
                     <div class="ai-msg ai-tool">{{ m.content }}</div>
                     {% else %}
-                    <div class="ai-msg ai-{{ m.role }}">{{ m.content }}</div>
+                    <div class="ai-msg ai-{{ m.role }}">
+                        {{ m.content }}
+                        {% if m.meta and m.meta.model %}
+                        <span class="ai-meta">{{ m.meta.model }} · {{ m.meta.elapsed_ms }} ms · {{ m.meta.usage.total_tokens if m.meta.usage and m.meta.usage.total_tokens else '—' }} tokens</span>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 {% endfor %}
             </div>
@@ -72,6 +82,7 @@ window.AI_URLS = {
   chat: {{ url_for('admin_plugin_ai_api_chat') | tojson }},
   confirm: {{ url_for('admin_plugin_ai_api_confirm') | tojson }},
   newChat: {{ url_for('admin_plugin_ai_api_new') | tojson }},
+  provider: {{ url_for('admin_plugin_ai_api_provider') | tojson }},
   page: {{ url_for('admin_plugin_ai_chat') | tojson }}
 };
 (function () {
@@ -88,14 +99,12 @@ window.AI_URLS = {
     var footer = document.querySelector('.admin-footer');
     var footerH = footer ? footer.getBoundingClientRect().height : 0;
     var top = content.getBoundingClientRect().top;
-    // 可用高度 = 视口 - content 顶部 - 上下内边距 - 页头 - flex gap - 后台页脚
     var h = window.innerHeight - top - padTop - padBottom - headerH - gap - footerH;
     page.style.height = Math.max(360, Math.round(h)) + 'px';
   }
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', function () { setTimeout(fit, 120); });
   fit();
-  // 字体/图标加载完再校准一次，避免第一次测量偏大
   window.addEventListener('load', fit);
 })();
 </script>

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.2)
+[![version](https://img.shields.io/badge/version-3.3.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.3)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,15 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.2**
+- 版本：**v3.3.3**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.3
+
+- AI 助手支持多接口：内置 DeepSeek、智谱 GLM 官方接口，另加一个自定义 OpenAI 兼容接口；每档独立填 API Key 和模型，聊天页顶部下拉切换当前使用
+- 对话消息显示模型名、响应耗时、token 用量，历史消息一并展示
+- 配置页改为每个接口一张卡片，可直接切换「当前使用」
 
 ### v3.3.2
 

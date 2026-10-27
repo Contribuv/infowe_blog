@@ -9,10 +9,26 @@
   var conv = parseInt(box.getAttribute('data-conv') || '0', 10) || 0;
   var busy = false;
 
-  function add(role, text) {
+  function metaText(meta) {
+    if (!meta || !meta.model) return '';
+    var parts = [meta.model];
+    if (meta.elapsed_ms !== undefined && meta.elapsed_ms !== null) parts.push(meta.elapsed_ms + ' ms');
+    var total = meta.usage && meta.usage.total_tokens;
+    if (total) parts.push(total + ' tokens');
+    return parts.join(' · ');
+  }
+
+  function add(role, text, meta) {
     var div = document.createElement('div');
     div.className = 'ai-msg ai-' + role;
-    div.textContent = text;
+    div.appendChild(document.createTextNode(text || ''));
+    var line = metaText(meta);
+    if (line) {
+      var span = document.createElement('span');
+      span.className = 'ai-meta';
+      span.textContent = line;
+      div.appendChild(span);
+    }
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
     return div;
@@ -30,7 +46,6 @@
 
     var actions = document.createElement('div');
     actions.className = 'ai-pending-actions';
-
     var ok = document.createElement('button');
     ok.type = 'button';
     ok.className = 'btn btn-primary btn-sm';
@@ -96,9 +111,9 @@
         if (d.pending) {
           addPending(d.pending);
         } else if (d.reply) {
-          add('assistant', d.reply);
+          add('assistant', d.reply, d.meta);
         } else if (d.error) {
-          add('assistant', d.error);
+          add('assistant', d.error, d.meta);
         }
       })
       .catch(function (err) {
@@ -125,6 +140,27 @@
         .then(function (d) {
           if (d.conversation_id) location.href = urls.page + '?c=' + d.conversation_id;
         });
+    });
+  }
+
+  var provider = document.getElementById('ai-provider');
+  if (provider) {
+    provider.addEventListener('change', function () {
+      fetch(urls.provider, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: provider.value })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error) {
+            add('assistant', d.error);
+            return;
+          }
+          var opt = provider.options[provider.selectedIndex];
+          add('tool', '已切换到 ' + (opt ? opt.textContent : provider.value));
+        })
+        .catch(function (err) { add('assistant', '切换失败：' + err); });
     });
   }
 
