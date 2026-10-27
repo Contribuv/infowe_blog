@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.8)
+[![version](https://img.shields.io/badge/version-3.3.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.9)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,14 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.8**
+- 版本：**v3.3.9**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.9
+
+- IP 归属地改为内置 xdb 解析：把 ip2region 的 Python binding 精简进 services/_ip2region，不再依赖 pip 安装；支持 IPv4（11MB）与 IPv6（37MB）两套 xdb
+- 查询顺序：本地 xdb → 在线 pconline 兜底；xdb 放在 ar/ip2region_v4.xdb / ar/ip2region_v6.xdb（不入 git，部署时单独上传）
 
 ### v3.3.8
 

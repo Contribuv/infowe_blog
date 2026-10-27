@@ -15,10 +15,12 @@ import requests
 
 from config import DATA_DIR
 
-try:  # 可选依赖：安装后支持离线 xdb 查询
-    import ip2region.util as _ip2region_util  # type: ignore
+try:  # 内置 xdb 解析（services/_ip2region），不依赖 pip 包
+    from services._ip2region import util as _ip2region_util  # type: ignore
+    from services._ip2region.searcher import new_with_file_only  # type: ignore
 except Exception:  # pragma: no cover
     _ip2region_util = None
+    new_with_file_only = None
 
 _lock = threading.Lock()
 _searchers: dict[str, object] = {}
@@ -26,7 +28,7 @@ _online_cache: dict[str, str] = {}
 
 
 def _searcher(version: str):
-    if _ip2region_util is None:
+    if _ip2region_util is None or new_with_file_only is None:
         return None
     path = Path(DATA_DIR) / f"ip2region_v{version}.xdb"
     if not path.is_file() or path.stat().st_size < 1024:
@@ -34,9 +36,8 @@ def _searcher(version: str):
     with _lock:
         if version not in _searchers:
             try:
-                _searchers[version] = _ip2region_util.new_with_file_only(
-                    "ipv4" if version == "4" else "ipv6", str(path)
-                )
+                ver = _ip2region_util.IPv4 if version == "4" else _ip2region_util.IPv6
+                _searchers[version] = new_with_file_only(ver, str(path))
             except Exception:
                 _searchers[version] = None
     return _searchers[version]
