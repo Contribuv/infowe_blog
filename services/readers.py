@@ -9,8 +9,8 @@ import db
 from services import avatar, settings
 
 RANK_MONTHS = 6
-RANK_PER_PAGE = 15
-PICKED_PER_PAGE = 6
+RANK_PER_PAGE = 10
+PICKED_PER_PAGE = 100
 
 
 def _blogger() -> str:

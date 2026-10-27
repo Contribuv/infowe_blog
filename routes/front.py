@@ -176,7 +176,7 @@ def search_page(q: str):
 
 
 def archive_page(year: int):
-    per_page = settings.get_int("posts_per_page", 20) or 20
+    per_page = settings.get_int("archive_per_page", 20) or 20
     page = request.args.get("page", 1, type=int) or 1
     posts, total = Post.load("published", None, None, str(year), page, per_page)
     total_pages = max(1, (total + per_page - 1) // per_page)
@@ -215,7 +215,7 @@ def posts_page():
                 code=301,
             )
         year = None
-    per_page = settings.get_int("posts_per_page", 20) or 20
+    per_page = settings.get_int("archive_per_page", 20) or 20
     page = max(1, page)
 
     _, total = Post.load("published", tag, None, year, 1, per_page)
@@ -623,8 +623,8 @@ def rss_feed():
 
 
 def readers_page():
-    data = readers_service.rank(request.args.get("page", 1, type=int) or 1)
-    picked = readers_service.picked(1, per_page=6)
+    data = readers_service.rank(1)
+    picked = readers_service.picked(1, per_page=100)
     data["picked_items"] = picked["items"]
     data["picked_total"] = picked["total"]
     data["stats"]["picked"] = picked["total"]

@@ -16,6 +16,7 @@ DEFAULTS: dict[str, str] = {
     "home_quotes": "",
     "home_posts_count": "6",
     "posts_per_page": "20",
+    "archive_per_page": "20",
     # 文章列表布局：single 单栏 / double 双栏（tech 主题配置页可切换）
     "post_layout": "single",
     "author": "Linus",

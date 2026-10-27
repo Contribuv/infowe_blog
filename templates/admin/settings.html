@@ -184,10 +184,16 @@
                 <span class="form-hint">精选文章排在前面，其余按最新文章补足，总数不超过该值。</span>
             </div>
             <div class="form-group">
-                <label>文章列表每页条数</label>
+                <label>标签 / 搜索页每页条数</label>
                 <input type="number" name="posts_per_page" class="input-text"
                        value="{{ posts_per_page if posts_per_page is defined else '20' }}" min="1" max="100">
-                <span class="form-hint">前台「文章」列表页每页显示的文章数量，超过则分页（默认 20）。</span>
+                <span class="form-hint">标签页和搜索结果每页显示的文章数量（默认 20），不影响归档页。</span>
+            </div>
+            <div class="form-group">
+                <label>归档页每页文章数</label>
+                <input type="number" name="archive_per_page" class="input-text"
+                       value="{{ archive_per_page if archive_per_page is defined else '20' }}" min="1" max="100">
+                <span class="form-hint">只影响「文章归档」和年份归档，不影响首页与标签页（默认 20）。</span>
             </div>
             <div class="form-group">
                 <label>评论功能</label>

@@ -192,7 +192,7 @@ img { max-width: 100%; }
 
 /* ── 全站唯一容器 ── */
 .tech-shell {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -669,6 +669,23 @@ html.page-enter .tech-main {
 
 /* ── 分页 ── */
 .tech-more-wrap { display: flex; justify-content: center; margin-top: 32px; }
+/* 归档页底部按钮：轻量描边胶囊，和全站按钮同一套视觉 */
+.tech-more-wrap .tech-btn-primary {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-more-wrap .tech-btn-primary:hover {
+    background: var(--hover-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}
 .tech-pagination { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 32px; }
 .tech-page-btn {
   min-width: 40px; height: 40px; padding: 0 12px;
@@ -2562,18 +2579,20 @@ a.tech-reader-name:hover { color: var(--accent); }
 
 /* ── 互动页：走心评论 ── */
 .tech-interactions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  column-count: 2;
+  column-gap: 12px;
 }
 .tech-interaction-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  margin: 0 0 12px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: transparent;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 .tech-interaction-head {
   display: flex;
@@ -2664,7 +2683,7 @@ a.tech-interaction-name:hover { color: var(--accent); }
 .tech-apply-notes a:hover { text-decoration: underline; }
 
 @media (max-width: 860px) {
-  .tech-interactions { grid-template-columns: 1fr; }
+  .tech-interactions { column-count: 1; }
 }
 @media (max-width: 640px) {
   .tech-reader-stats,
@@ -2693,60 +2712,49 @@ a.tech-interaction-name:hover { color: var(--accent); }
   margin: 4px 0 18px;
 }
 .tech-podium-item {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: 0;
-  padding: 26px 14px 16px;
+  padding: 18px 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
   text-align: center;
+  transition: background-color .18s ease, border-color .18s ease,
+              box-shadow .18s ease, transform .18s ease;
 }
-.tech-podium-item--1 { order: 2; border-color: rgba(232, 182, 63, .45); }
-.tech-podium-item--2 { order: 1; }
-.tech-podium-item--3 { order: 3; }
-.tech-podium-item::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  border-radius: 14px 14px 0 0;
-  background: var(--border);
+.tech-podium-item--1 {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  background: var(--accent-weak);
 }
-.tech-podium-item--1::before { background: linear-gradient(90deg, #f8df8a, #e8b63f); }
-.tech-podium-item--2::before { background: linear-gradient(90deg, #e6ebf1, #bcc7d3); }
-.tech-podium-item--3::before { background: linear-gradient(90deg, #edc19b, #cd9260); }
 .tech-podium-rank {
-  position: absolute;
-  top: 12px;
-  left: 13px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
+  min-width: 22px;
   height: 22px;
-  border-radius: 50%;
+  padding: 0 6px;
+  border-radius: 999px;
   background: var(--bg-subtle);
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.tech-podium-item--1 .tech-podium-rank { color: #4a3400; background: linear-gradient(135deg, #f8df8a, #e8b63f); }
-.tech-podium-item--2 .tech-podium-rank { color: #3a4149; background: linear-gradient(135deg, #e6ebf1, #bcc7d3); }
-.tech-podium-item--3 .tech-podium-rank { color: #4a2c14; background: linear-gradient(135deg, #edc19b, #cd9260); }
+.tech-podium-item--1 .tech-podium-rank { background: var(--accent); color: #fff; }
+[data-theme="dark"] .tech-podium-item--1 .tech-podium-rank { color: var(--bg); }
 .tech-podium-avatar {
-  width: 58px;
-  height: 58px;
+  width: 52px;
+  height: 52px;
+  margin-top: 10px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--bg-subtle);
 }
-.tech-podium-item--1 .tech-podium-avatar { width: 68px; height: 68px; }
+.tech-podium-item--1 .tech-podium-avatar { width: 58px; height: 58px; }
 .tech-podium-name {
-  margin-top: 9px;
+  margin-top: 8px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2757,7 +2765,8 @@ a.tech-interaction-name:hover { color: var(--accent); }
   text-decoration: none;
 }
 a.tech-podium-name:hover { color: var(--accent); }
-.tech-podium-count { margin-top: 2px; font-size: 12px; color: var(--accent); }
+.tech-podium-count { margin-top: 2px; font-size: 12px; color: var(--text-secondary); }
+.tech-podium-item--1 .tech-podium-count { color: var(--accent); }
 .tech-podium-quote {
   margin: 8px 0 0;
   font-size: 12.5px;
@@ -2776,6 +2785,15 @@ a.tech-podium-name:hover { color: var(--accent); }
 }
 .tech-podium-source a { color: var(--accent); text-decoration: none; }
 .tech-podium-source a:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-podium-item:hover {
+    background: var(--hover-bg);
+    border-color: var(--hover-ring);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+    transform: translateY(-2px);
+  }
+  .tech-podium-item--1:hover { background: var(--accent-weak); }
+}
 
 /* 走心评论区块 */
 .tech-picked { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
@@ -2790,12 +2808,20 @@ a.tech-podium-name:hover { color: var(--accent); }
 .tech-picked-head span { font-size: 12.5px; color: var(--text-secondary); }
 
 @media (max-width: 640px) {
-  .tech-podium { grid-template-columns: 1fr; gap: 10px; }
-  .tech-podium-item { order: 0; flex-direction: row; flex-wrap: wrap; text-align: left; padding: 14px 14px 14px 44px; }
-  .tech-podium-item--1 { order: 0; }
-  .tech-podium-rank { top: 16px; left: 12px; }
+  .tech-podium { grid-template-columns: 1fr; gap: 8px; }
+  .tech-podium-item {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px;
+    text-align: left;
+  }
   .tech-podium-avatar,
-  .tech-podium-item--1 .tech-podium-avatar { width: 42px; height: 42px; }
+  .tech-podium-item--1 .tech-podium-avatar {
+    width: 40px;
+    height: 40px;
+    margin-top: 0;
+  }
   .tech-podium-name { margin-top: 0; }
   .tech-podium-count { margin-left: auto; }
   .tech-podium-quote,
@@ -2823,9 +2849,31 @@ a.tech-podium-name:hover { color: var(--accent); }
   border: 1px solid var(--border);
   border-radius: 12px;
   background: transparent;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-side-card:hover {
+    background: var(--hover-bg);
+    border-color: var(--hover-ring);
+  }
 }
 .tech-side-card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
-.tech-side-profile { display: flex; align-items: center; gap: 12px; }
+.tech-side-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -6px;
+  padding: 6px;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color .18s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-side-profile:hover { background: var(--hover-bg); }
+  .tech-side-profile:hover .tech-side-avatar { box-shadow: 0 0 0 2px var(--accent); }
+  .tech-side-profile:hover .tech-side-profile-arrow { opacity: 1; transform: none; }
+}
 .tech-side-avatar {
   flex: none;
   width: 48px;
@@ -2842,20 +2890,38 @@ a.tech-podium-name:hover { color: var(--accent); }
   font-weight: 700;
   color: var(--text-secondary);
 }
-.tech-side-profile-main { min-width: 0; display: flex; flex-direction: column; }
-.tech-side-profile-main strong { font-size: 15px; }
-.tech-side-profile-main span {
+.tech-side-profile-main { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tech-side-profile-kicker {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--text-secondary);
+}
+.tech-side-profile-main strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12.5px;
-  color: var(--text-secondary);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+.tech-side-profile-arrow {
+  flex: none;
+  margin-left: auto;
+  color: var(--accent);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity .18s ease, transform .18s ease;
 }
 .tech-side-bio {
   margin: 10px 0 0;
   font-size: 12.5px;
   line-height: 1.7;
   color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .tech-side-stats {
   display: flex;

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.15-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.15)
+[![version](https://img.shields.io/badge/version-3.4.16-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.16)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,20 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.15**
+- 版本：**v3.4.16**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.16
+
+- 导航、页脚宽度从 1000 提到 1200，正文中间区域保持 1000/800，形成更清楚的宽窄层级
+- 留言榜单只展示前 10 位，不再分页；前三名改为克制的描边卡片，去掉金银铜渐变和顶部色条，修正顶部直角
+- 走心评论改为 CSS 瀑布流两栏，移动端单列，不再分页
+- 侧栏博主卡改为「博主 / 昵称」两行结构，删除重复副标题，整块点击进入关于页，并补 hover 反馈
+- 侧栏卡片增加 hover；归档页底部按钮收成轻量描边胶囊
+- 后台新增「归档页每页文章数」，独立于首页数量和标签/搜索页数量
+- 文章正文 800px 容器、16px/1.8 排版、h2 19px、段距 1.1em，宽屏目录同步收窄（正文排版修复）
+- 归档页标题改为「文章归档」
 
 ### v3.4.15
 

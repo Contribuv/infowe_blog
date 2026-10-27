@@ -834,6 +834,9 @@ def _settings_view() -> dict:
         "otp_mail_ok": bool(settings.get_str("smtp_host", "")),
         "comments_enabled": settings.get_str("comments_enabled", "1"),
         "comments_per_page": settings.get_str("comments_per_page", "10"),
+        "posts_per_page": settings.get_str("posts_per_page", "20"),
+        "home_posts_count": settings.get_str("home_posts_count", "6"),
+        "archive_per_page": settings.get_str("archive_per_page", "20"),
         "admin_comments_per_page": settings.get_str("admin_comments_per_page", "20"),
         "nav_posts": settings.get_str("nav_posts", "1"),
         "nav_tags": settings.get_str("nav_tags", "1"),
@@ -878,6 +881,13 @@ def _save_settings():
         except ValueError:
             admin_per_page = 20
         settings.set_value("admin_comments_per_page", str(max(1, min(100, admin_per_page))))
+
+    if "archive_per_page" in request.form:
+        try:
+            archive_per_page = int((request.form.get("archive_per_page") or "20").strip())
+        except ValueError:
+            archive_per_page = 20
+        settings.set_value("archive_per_page", str(max(1, min(100, archive_per_page))))
 
     if full_form or "site_url" in request.form:
         raw_site = (request.form.get("site_url") or "").strip().rstrip("/")
