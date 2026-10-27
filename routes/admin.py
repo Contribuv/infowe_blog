@@ -837,6 +837,7 @@ def _settings_view() -> dict:
         "posts_per_page": settings.get_str("posts_per_page", "20"),
         "home_posts_count": settings.get_str("home_posts_count", "6"),
         "archive_per_page": settings.get_str("archive_per_page", "20"),
+        "circle_per_page": settings.get_str("circle_per_page", "30"),
         "admin_comments_per_page": settings.get_str("admin_comments_per_page", "20"),
         "nav_posts": settings.get_str("nav_posts", "1"),
         "nav_tags": settings.get_str("nav_tags", "1"),
@@ -888,6 +889,13 @@ def _save_settings():
         except ValueError:
             archive_per_page = 20
         settings.set_value("archive_per_page", str(max(1, min(100, archive_per_page))))
+
+    if "circle_per_page" in request.form:
+        try:
+            circle_per_page = int((request.form.get("circle_per_page") or "30").strip())
+        except ValueError:
+            circle_per_page = 30
+        settings.set_value("circle_per_page", str(max(1, min(60, circle_per_page))))
 
     if full_form or "site_url" in request.form:
         raw_site = (request.form.get("site_url") or "").strip().rstrip("/")

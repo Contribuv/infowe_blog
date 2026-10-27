@@ -2629,12 +2629,12 @@ a.tech-interaction-name:hover { color: var(--accent); }
 .tech-interaction-text {
   margin: 10px 0 0;
   font-size: 13.5px;
-  line-height: 1.75;
+  line-height: 1.7;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2645,8 +2645,8 @@ a.tech-interaction-name:hover { color: var(--accent); }
   font-size: 12px;
   color: var(--text-secondary);
 }
-.tech-interaction-foot a { color: var(--text-secondary); text-decoration: none; }
-.tech-interaction-foot a:hover { color: var(--accent); }
+.tech-interaction-foot a { color: var(--accent); text-decoration: none; }
+.tech-interaction-foot a:hover { text-decoration: underline; }
 
 /* 榜单和互动卡片沿用全站 hover */
 .tech-reader-item,
@@ -2725,26 +2725,35 @@ a.tech-interaction-name:hover { color: var(--accent); }
   transition: background-color .18s ease, border-color .18s ease,
               box-shadow .18s ease, transform .18s ease;
 }
-.tech-podium-item--1 {
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
-  background: var(--accent-weak);
+.tech-podium-item {
+  --medal: var(--text-secondary);
+  --medal-bg: var(--bg-subtle);
+  border-color: color-mix(in srgb, var(--medal) 30%, var(--border));
 }
+.tech-podium-item--1 {
+  --medal: #8a6516;
+  --medal-bg: rgba(212, 166, 58, .16);
+  background: color-mix(in srgb, #d4a63a 7%, transparent);
+}
+.tech-podium-item--2 { --medal: #6b7280; --medal-bg: rgba(156, 163, 175, .16); }
+.tech-podium-item--3 { --medal: #9a5f34; --medal-bg: rgba(176, 123, 79, .16); }
+html[data-theme="dark"] .tech-podium-item--1 { --medal: #e0b94f; }
+html[data-theme="dark"] .tech-podium-item--2 { --medal: #b7c0ca; }
+html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
 .tech-podium-rank {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
+  min-width: 44px;
   height: 22px;
-  padding: 0 6px;
+  padding: 0 9px;
   border-radius: 999px;
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
+  background: var(--medal-bg);
+  color: var(--medal);
   font-size: 11px;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
 }
-.tech-podium-item--1 .tech-podium-rank { background: var(--accent); color: #fff; }
-[data-theme="dark"] .tech-podium-item--1 .tech-podium-rank { color: var(--bg); }
 .tech-podium-avatar {
   width: 52px;
   height: 52px;
@@ -2767,7 +2776,7 @@ a.tech-interaction-name:hover { color: var(--accent); }
 }
 a.tech-podium-name:hover { color: var(--accent); }
 .tech-podium-count { margin-top: 2px; font-size: 12px; color: var(--text-secondary); }
-.tech-podium-item--1 .tech-podium-count { color: var(--accent); }
+.tech-podium-item--1 .tech-podium-count { color: var(--medal); }
 .tech-podium-quote {
   margin: 8px 0 0;
   font-size: 12.5px;
@@ -2789,11 +2798,10 @@ a.tech-podium-name:hover { color: var(--accent); }
 @media (hover: hover) and (pointer: fine) {
   .tech-podium-item:hover {
     background: var(--hover-bg);
-    border-color: var(--hover-ring);
+    border-color: var(--medal);
     box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
     transform: translateY(-2px);
   }
-  .tech-podium-item--1:hover { background: var(--accent-weak); }
 }
 
 /* 走心评论区块 */

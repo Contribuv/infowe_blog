@@ -403,8 +403,9 @@ def circle():
     from services import feeds
 
     page = max(1, request.args.get("page", 1, type=int) or 1)
-    items, total, stats = feeds.aggregate(page)
-    total_pages = max(1, (total + feeds.PER_PAGE - 1) // feeds.PER_PAGE)
+    per_page = max(1, min(60, settings.get_int("circle_per_page", feeds.PER_PAGE)))
+    items, total, stats = feeds.aggregate(page, per_page)
+    total_pages = max(1, (total + per_page - 1) // per_page)
     page = min(page, total_pages)
 
     if total_pages <= 7:

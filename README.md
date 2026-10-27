@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.19-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.19)
+[![version](https://img.shields.io/badge/version-3.4.20-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.20)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,15 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.19**
+- 版本：**v3.4.20**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.20
+
+- 后台新增「圈子每页条数」，博客圈分页数量不再写死
+- 留言榜单前三名加「冠军 / 亚军 / 季军」标签，并用金 / 银 / 铜三色区分卡片描边和徽章
+- 走心评论正文最多 3 行，「来自 文章」链接改为主色，明确可点击
 
 ### v3.4.19
 

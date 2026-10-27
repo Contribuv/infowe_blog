@@ -20,7 +20,7 @@
 <div class="tech-podium">
     {% for r in items[:3] %}
     <article class="tech-podium-item tech-podium-item--{{ r.rank }}">
-        <span class="tech-podium-rank">{{ r.rank }}</span>
+        <span class="tech-podium-rank tech-podium-rank--{{ r.rank }}">{% if r.rank == 1 %}冠军{% elif r.rank == 2 %}亚军{% else %}季军{% endif %}</span>
         <img class="tech-podium-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"
              onerror="this.src='/static/images/default-avatar.svg'">
         {% if r.website %}

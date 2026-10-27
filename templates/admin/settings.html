@@ -196,6 +196,12 @@
                 <span class="form-hint">只影响「文章归档」和年份归档，不影响首页与标签页（默认 20）。</span>
             </div>
             <div class="form-group">
+                <label>圈子每页条数</label>
+                <input type="number" name="circle_per_page" class="input-text"
+                       value="{{ circle_per_page if circle_per_page is defined else '30' }}" min="1" max="60">
+                <span class="form-hint">「博客圈」每页聚合的文章数（默认 30）。</span>
+            </div>
+            <div class="form-group">
                 <label>评论功能</label>
                 <label class="switch-label">
                     <span class="switch">
