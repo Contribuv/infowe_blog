@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 
 import db
-from models import Category, Comment, Link, Post
+from models import Category, Comment, Link, Post, Project
 
 READ_TOOLS = {
     "list_posts": "列出文章。参数：limit（默认 10，最大 50）、status（published/draft/hidden/all）、order（latest/oldest）",
@@ -18,22 +18,38 @@ READ_TOOLS = {
     "list_comments": "列出评论。参数：limit（默认 10）、status（pending/approved/rejected/all）、email、author、post_id",
     "list_links": "列出友链。参数：limit（默认 10）、status、q（名称或地址关键词）",
     "list_categories": "列出文章分类（id/name/slug）",
+    "list_projects": "列出项目。参数：limit（默认 10）、q（名称或仓库关键词）",
+    "get_project": "读取项目详情。参数：id",
     "get_stats": "读取站点统计（文章/评论/友链数量）",
 }
 
 WRITE_TOOLS = {
     "create_post": "创建文章。参数：title、content（Markdown）、tags（数组或逗号分隔）、status（published/draft）、category（分类名称）",
     "update_post": "修改文章。参数：id、title、content、status、category（分类名称）",
+    "delete_post": "删除文章（连带清理未被引用的上传图）。参数：id",
     "create_category": "新建文章分类。参数：name、slug（可选）",
     "update_category": "修改文章分类。参数：id、name、slug（可选）",
+    "delete_category": "删除文章分类（该分类下的文章会变成未分类）。参数：id",
     "approve_comment": "通过一条评论。参数：id",
+    "reject_comment": "拒绝一条评论。参数：id",
+    "delete_comment": "删除一条评论及其子回复。参数：id",
     "reply_comment": "以 AI 助手身份回复评论。参数：id（被回复评论）、content",
     "add_link": "新增友链。参数：name、url、description、avatar",
     "approve_link": "通过一条友链。参数：id",
+    "reject_link": "拒绝一条友链。参数：id",
+    "delete_link": "删除一条友链。参数：id",
+    "create_project": "新建项目。参数：name、description、url、github_repo、topics（数组）",
+    "update_project": "修改项目。参数：id、name、description、url、github_repo、topics",
+    "delete_project": "删除项目。参数：id",
+    "sync_project": "同步 GitHub 项目信息（星标/语言/README）。参数：id（0 表示全部）",
 }
 
-# 这四类即使开启「写操作自动执行」也必须人工确认
-FORCE_CONFIRM = {"create_post", "update_post", "create_category", "update_category"}
+# 这些操作即使开启「写操作自动执行」也必须人工确认
+FORCE_CONFIRM = {
+    "create_post", "update_post", "create_category", "update_category",
+    "delete_post", "delete_category", "delete_comment", "delete_link",
+    "delete_project",
+}
 
 ALL_TOOLS = {**READ_TOOLS, **WRITE_TOOLS}
 
@@ -207,6 +223,35 @@ def _dispatch(name: str, args: dict) -> dict:
         rows = db.query("SELECT id, name, slug FROM categories ORDER BY sort_order ASC, id ASC")
         return {"ok": True, "categories": [dict(r) for r in rows]}
 
+    if name == "list_projects":
+        q = str(args.get("q") or "").strip().lower()
+        limit = _limit(args.get("limit"), 10)
+        projects = Project.load()
+        if q:
+            projects = [
+                p for p in projects
+                if q in str(p.get("name") or "").lower()
+                or q in str(p.get("github_repo") or "").lower()
+                or q in str(p.get("description") or "").lower()
+            ]
+        return {"ok": True, "projects": [
+            {"id": p["id"], "name": p["name"], "github_repo": p.get("github_repo"),
+             "stars": p.get("stars"), "language": p.get("language"), "featured": p.get("featured")}
+            for p in projects[:limit]
+        ]}
+
+    if name == "get_project":
+        project = Project.get(int(args.get("id") or 0))
+        if not project:
+            return {"ok": False, "error": "项目不存在"}
+        return {"ok": True, "project": {
+            "id": project["id"], "name": project["name"],
+            "description": project.get("description"), "url": project.get("url"),
+            "github_repo": project.get("github_repo"), "topics": project.get("topics"),
+            "stars": project.get("stars"), "language": project.get("language"),
+            "featured": project.get("featured"),
+        }}
+
     if name == "get_stats":
         return {"ok": True, "stats": {
             "posts": int(db.scalar("SELECT COUNT(*) FROM posts", (), 0)),
@@ -280,6 +325,99 @@ def _dispatch(name: str, args: dict) -> dict:
             "sort_order": cat.get("sort_order") or 0,
         }, cid)
         return {"ok": True, "id": cid, "message": f"已更新分类：{new_name}"}
+
+    if name == "delete_post":
+        pid = int(args.get("id") or 0)
+        if not Post.get(pid):
+            return {"ok": False, "error": "文章不存在"}
+        removed = Post.delete_with_uploads(pid)
+        suffix = f"，清理 {removed} 个附件" if removed else ""
+        return {"ok": True, "message": f"已删除文章 #{pid}{suffix}"}
+
+    if name == "delete_category":
+        cid = int(args.get("id") or 0)
+        if not Category.get(cid):
+            return {"ok": False, "error": "分类不存在"}
+        Category.delete(cid)
+        return {"ok": True, "message": f"已删除分类 #{cid}，该分类下的文章已转为未分类"}
+
+    if name == "reject_comment":
+        cid = int(args.get("id") or 0)
+        if not Comment.get(cid):
+            return {"ok": False, "error": "评论不存在"}
+        Comment.set_status(cid, "rejected")
+        return {"ok": True, "message": f"评论 #{cid} 已拒绝"}
+
+    if name == "delete_comment":
+        cid = int(args.get("id") or 0)
+        if not Comment.get(cid):
+            return {"ok": False, "error": "评论不存在"}
+        Comment.delete(cid)
+        return {"ok": True, "message": f"评论 #{cid} 及其回复已删除"}
+
+    if name == "reject_link":
+        lid = int(args.get("id") or 0)
+        if not Link.get(lid):
+            return {"ok": False, "error": "友链不存在"}
+        Link.set_status(lid, "rejected")
+        return {"ok": True, "message": f"友链 #{lid} 已拒绝"}
+
+    if name == "delete_link":
+        lid = int(args.get("id") or 0)
+        if not Link.get(lid):
+            return {"ok": False, "error": "友链不存在"}
+        Link.delete(lid)
+        return {"ok": True, "message": f"友链 #{lid} 已删除"}
+
+    if name == "create_project":
+        pname = str(args.get("name") or "").strip()
+        if not pname:
+            return {"ok": False, "error": "项目名称不能为空"}
+        pid = Project.save({
+            "name": pname,
+            "description": str(args.get("description") or ""),
+            "url": str(args.get("url") or ""),
+            "github_repo": str(args.get("github_repo") or ""),
+            "topics": args.get("topics") or [],
+        })
+        return {"ok": True, "id": pid, "message": f"已创建项目：{pname}"}
+
+    if name == "update_project":
+        pid = int(args.get("id") or 0)
+        project = Project.get(pid)
+        if not project:
+            return {"ok": False, "error": "项目不存在"}
+        Project.save({
+            "name": str(args.get("name") or project["name"]),
+            "description": str(args.get("description") or project.get("description") or ""),
+            "url": str(args.get("url") or project.get("url") or ""),
+            "github_repo": str(args.get("github_repo") or project.get("github_repo") or ""),
+            "topics": args.get("topics") or project.get("topics") or [],
+            "language": project.get("language") or "",
+            "stars": project.get("stars") or 0,
+            "sort_order": project.get("sort_order") or 0,
+            "featured": project.get("featured") or 0,
+        }, pid)
+        return {"ok": True, "id": pid, "message": f"已更新项目：{args.get('name') or project['name']}"}
+
+    if name == "delete_project":
+        pid = int(args.get("id") or 0)
+        if not Project.get(pid):
+            return {"ok": False, "error": "项目不存在"}
+        Project.delete(pid)
+        return {"ok": True, "message": f"已删除项目 #{pid}"}
+
+    if name == "sync_project":
+        from services import project_sync
+
+        pid = int(args.get("id") or 0)
+        if pid:
+            if not Project.get(pid):
+                return {"ok": False, "error": "项目不存在"}
+            project_sync.sync_one_background(pid)
+            return {"ok": True, "message": f"已开始同步项目 #{pid}，完成后到项目管理查看"}
+        project_sync.sync_all_background()
+        return {"ok": True, "message": "已开始同步全部项目，完成后到项目管理查看"}
 
     if name == "approve_comment":
         cid = int(args.get("id") or 0)

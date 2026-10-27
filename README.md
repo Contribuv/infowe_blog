@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.11)
+[![version](https://img.shields.io/badge/version-3.3.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.12)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,15 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.11**
+- 版本：**v3.3.12**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.12
+
+- AI 助手补齐后台操作：项目管理（列表/详情/新建/修改/删除/同步 GitHub）、文章删除、分类删除、评论拒绝/删除、友链拒绝/删除
+- 确认规则：新建/修改/删除文章与分类、删除评论/友链/项目强制人工确认；评论审核/回复、友链通过/拒绝、项目同步自动执行
+- 项目同步走后台线程，AI 只负责触发，不阻塞对话
 
 ### v3.3.11
 
