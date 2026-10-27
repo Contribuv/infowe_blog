@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.25-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.25)
+[![version](https://img.shields.io/badge/version-3.4.26-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.26)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -913,7 +913,14 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.25**
+当前版本：**v3.4.26**
+
+### v3.4.26
+
+- 修复 IP 归属地直辖市重复显示（如「重庆市 重庆市」）：直辖市在 ip2region/pconline 里省市同名，xdb 与在线兜底两条路径都做相邻片段去重，前台评论属地与后台 badge 一并恢复正常；正常的「省 市」组合不受影响
+
+<details>
+<summary><b>历史版本（v3.4.25 及更早）</b></summary>
 
 ### v3.4.25
 
@@ -935,9 +942,6 @@ chown -R www:www var
 - 主题配置页新增「首页标题区」与项目每页条数设置；主题列表的「主题配置」链接改为按钮样式，布局选项 chip 改圆角矩形
 - 修复外链提示页「继续访问」在 Chrome 下新窗口与当前页双开：交给 a 标签默认导航，不再用 window.open + noopener 误判拦截
 - 页面标题去重（页面名与站名相同时不再重复拼接）；项目页「反馈」按钮改瞬时定位并自动展开评论框；关于页技能条补 ARIA 无障碍属性；友链申请表单卡片化、输入框与评论区同套样式
-
-<details>
-<summary><b>历史版本（v3.4.24 及更早）</b></summary>
 
 ### v3.4.24
 

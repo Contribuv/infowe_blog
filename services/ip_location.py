@@ -27,6 +27,16 @@ _searchers: dict[str, object] = {}
 _online_cache: dict[str, str] = {}
 
 
+def _dedupe(parts) -> list[str]:
+    """相邻去重：直辖市在 ip2region/pconline 里省市同名（重庆市|重庆市），
+    不处理会显示成「重庆市 重庆市」；只去相邻重复，不误伤正常省+市组合。"""
+    out: list[str] = []
+    for p in parts:
+        if not out or out[-1] != p:
+            out.append(p)
+    return out
+
+
 def _searcher(version: str):
     if _ip2region_util is None or new_with_file_only is None:
         return None
@@ -57,7 +67,7 @@ def _online(ip: str) -> str:
         text = resp.content.decode("gbk", "ignore").strip()
         data = json.loads(text)
         parts = [str(data.get("pro") or "").strip(), str(data.get("city") or "").strip()]
-        location = " ".join(p for p in parts if p and p not in {"0", "中国"})
+        location = " ".join(_dedupe(p for p in parts if p and p not in {"0", "中国"}))
     except Exception:
         location = ""
     if location:
@@ -87,6 +97,6 @@ def of(ip: str | None) -> str:
             return _online(ip)
         text = result if isinstance(result, str) else getattr(result, "region", "")
         parts = [p for p in str(text).split("|") if p and p != "0"]
-        return " ".join(parts) or _online(ip)
+        return " ".join(_dedupe(parts)) or _online(ip)
     except Exception:
         return _online(ip)
