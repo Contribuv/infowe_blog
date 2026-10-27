@@ -41,9 +41,9 @@
   --text: #161b24;
   --text-secondary: #5a6575;
   /* 墨蓝：白字 7.9:1、浅底文字约 6.9:1，14px 以下也稳过 AA */
-  --accent: #1c5b8f;
-  --accent-soft: #4a7fae;
-  --accent-weak: #e7eff7;
+  --accent: #2f7ad1;
+  --accent-soft: #5b9ad6;
+  --accent-weak: #e6f0fb;
   --quote-bg: #f2f5f9;
   --success: #2b6e52;
   --warning: #8a6314;
@@ -59,11 +59,11 @@
   --hl-builtin: #7d5a1a;
   --hl-variable: #35566f;
   --hl-tag: #9c3f56;
-  --hl-attr: #1c5b8f;
+  --hl-attr: #2f7ad1;
   --hl-symbol: #6a4fa3;
   --hl-meta: #45566b;
   /* 头像光环配色（亮色：墨蓝→靛紫渐变） */
-  --ring-a: rgba(28, 91, 143, .26);
+  --ring-a: rgba(47, 122, 209, .26);
   --ring-b: rgba(106, 79, 163, .26);
   /* 毛玻璃层（浅色）：只给 TOC / 搜索面板这类浮层用，不参与卡片悬停 */
   --glass-bg: rgba(251, 252, 253, .86);
@@ -79,34 +79,34 @@
   /* 夜间配色：与后台设计系统对齐——近黑的冷灰蓝底 + 中性柔白文字。
      层级不再靠蓝调变化区分，而是照后台用 #161a24 / #12151f 两档表面，
      边框改成低透明度白线，整体更接近后台那种「干净的深色面板」 */
-  --bg: #0f1117;
+  --bg: #1a1d23;
   /* 暗色导航毛玻璃：与底色同源同透明度 */
-  --nav-bg: rgba(15, 17, 23, .78);
-  --bg-subtle: #161a24;
-  --bg-code: #12151f;
-  --border: rgba(255, 255, 255, .07);
-  --border-strong: rgba(255, 255, 255, .14);
-  --text: #e8eaf0;
-  --text-secondary: #a0a6b5;
+  --nav-bg: rgba(26, 29, 35, .84);
+  --bg-subtle: #22262e;
+  --bg-code: #1e2229;
+  --border: rgba(255, 255, 255, .09);
+  --border-strong: rgba(255, 255, 255, .15);
+  --text: #e7e9ef;
+  --text-secondary: #a4aab7;
   /* 主蓝取后台的 #5b8def，深底上约 5.6:1，链接与按钮均过 AA */
-  --accent: #5b8def;
-  --accent-soft: #7aa5f5;
-  --accent-weak: rgba(91, 141, 239, .14);
+  --accent: #6b9cf5;
+  --accent-soft: #8ab2f7;
+  --accent-weak: rgba(107, 156, 245, .15);
   /* 头像光环配色（暗色：后台主蓝→淡紫渐变，深底上不刺眼） */
   --ring-a: #5b8def;
   --ring-b: #a78bfa;
   /* 毛玻璃层（深色）：玻璃底取后台面板色 #161a24 而非页面底色，
      半透明叠在 #0f1117 上仍比页面亮一档，代码块/TOC 才有「浮起来」的面板感 */
-  --glass-bg: rgba(22, 26, 36, .80);
-  --glass-bg-form: rgba(22, 26, 36, .80);
-  --glass-bg-mobile: rgba(22, 26, 36, .88);
-  --quote-bg: #161a24;
+  --glass-bg: rgba(34, 38, 46, .84);
+  --glass-bg-form: rgba(34, 38, 46, .84);
+  --glass-bg-mobile: rgba(34, 38, 46, .92);
+  --quote-bg: #22262e;
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
   --shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 4px 16px rgba(0, 0, 0, .18);
   --overlay: rgba(4, 6, 12, .62);
-  --code-bg: #12151f;
+  --code-bg: #1e2229;
   /* 语法高亮：以主蓝为中心，紫/绿/橙只作区分色；
      全部避开高饱和荧光色，长文阅读不累眼 */
   --hl-keyword: #a78bfa;
@@ -122,7 +122,7 @@
   --hl-meta: #d9c07a;
   /* 卡片悬停：直接用比页面亮一档的面板色，再配一条淡描边；
      不要再叠白色玻璃高光（那会让卡片在深底上突然发白） */
-  --hover-bg: #171b25;
+  --hover-bg: #23272f;
   --hover-ring: rgba(255, 255, 255, .13);
 }
 
@@ -131,7 +131,7 @@
 html[data-theme="light"] {
   --mb-fg: #161b24;
   --mb-fg-muted: #5a6575;
-  --mb-link: #1c5b8f;
+  --mb-link: #2f7ad1;
   --mb-border: #e1e6ed;
   --mb-border-muted: #eceff4;
   --mb-code-bg: #f2f5f9;
@@ -146,11 +146,11 @@ html[data-theme="dark"] {
   --mb-link: #5b8def;
   --mb-border: rgba(255, 255, 255, .07);
   --mb-border-muted: rgba(255, 255, 255, .045);
-  --mb-code-bg: #12151f;
+  --mb-code-bg: #1e2229;
   --mb-inline-code: rgba(91, 141, 239, .14);
   --mb-hr: rgba(255, 255, 255, .06);
   --mb-mark: rgba(251, 191, 36, .22);
-  --mb-th-bg: #161a24;
+  --mb-th-bg: #22262e;
 }
 
 /* ── 基础 ── */
@@ -517,7 +517,7 @@ html.page-enter .tech-main {
   background: var(--accent); border: none; border-radius: 8px; cursor: pointer;
 }
 /* 深色 accent 实底：白字仅 2.52:1，改深字后 7.05:1（与 .tech-btn-primary 同款） */
-[data-theme="dark"] .tech-search-btn { color: #0f1117; }
+[data-theme="dark"] .tech-search-btn { color: var(--bg); }
 @media (hover: hover) and (pointer: fine) { .tech-search-btn:hover { filter: brightness(1.1); } }
 /* 深色下 hover 提亮会让深字与底色更接近，改为压暗 */
 @media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-search-btn:hover { filter: brightness(.92); } }
@@ -664,7 +664,7 @@ html.page-enter .tech-main {
 }
 @media (hover: hover) and (pointer: fine) { .tech-page-btn:hover { border-color: var(--accent); color: var(--accent); } }
 .tech-page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-[data-theme="dark"] .tech-page-btn.active { color: #0f1117; }
+[data-theme="dark"] .tech-page-btn.active { color: var(--bg); }
 .tech-page-ellipsis { display: flex; align-items: center; color: var(--text-secondary); padding: 0 4px; }
 
 /* ── 空状态 ── */
@@ -1050,11 +1050,11 @@ html.page-enter .tech-main {
 @media (hover: hover) and (pointer: fine) { .tech-btn:hover { border-color: var(--accent); color: var(--accent); } }
 .tech-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 /* 深色主题：accent 是后台主蓝（#5b8def），配白字对比不足，改用深色字（约 5.6:1） */
-[data-theme="dark"] .tech-btn-primary { color: #0f1117; }
+[data-theme="dark"] .tech-btn-primary { color: var(--bg); }
 /* primary hover：浅色加深 / 深色提亮——两端都朝「对比度变好」的方向反馈，不再无脑提亮 */
 @media (hover: hover) and (pointer: fine) {
   .tech-btn-primary:hover { filter: brightness(.92); color: #fff; }
-  [data-theme="dark"] .tech-btn-primary:hover { filter: brightness(1.12); color: #0f1117; }
+  [data-theme="dark"] .tech-btn-primary:hover { filter: brightness(1.12); color: var(--bg); }
 }
 /* 许可文字与按钮组同排，靠右对齐；窄屏折行时恢复左对齐 */
 .tech-license { font-size: 13px; color: var(--text-secondary); margin: 0 0 0 auto; }
@@ -1421,9 +1421,9 @@ html { touch-action: manipulation; }
 .tech-proj-btn-icon { display: inline-block; vertical-align: middle; }
 .tech-proj-btn--gh { color: #fff; background: var(--accent); border-color: var(--accent); }
 /* 深色 accent 实底改深字（白字 2.52:1 不达标） */
-[data-theme="dark"] .tech-proj-btn--gh { color: #0f1117; }
+[data-theme="dark"] .tech-proj-btn--gh { color: var(--bg); }
 @media (hover: hover) and (pointer: fine) { .tech-proj-btn--gh:hover { color: #fff; filter: brightness(1.1); background: var(--accent); } }
-@media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-proj-btn--gh:hover { color: #0f1117; filter: brightness(.92); background: var(--accent); } }
+@media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-proj-btn--gh:hover { color: var(--bg); filter: brightness(.92); background: var(--accent); } }
 
 /* 项目信息行：简介 + topics + 语言（单栏，标题行下方紧凑排版） */
 .tech-proj-info {
@@ -1841,7 +1841,7 @@ html { touch-action: manipulation; }
 }
 .tech-btn:active { transform: translateY(1px); }
 .tech-btn-primary:active { filter: brightness(.95); color: #fff; }
-[data-theme="dark"] .tech-btn-primary:active { color: #0f1117; }
+[data-theme="dark"] .tech-btn-primary:active { color: var(--bg); }
 /* 项目筛选芯片：可点击语义 + hover/焦点平滑 */
 .tech-lang-link { cursor: pointer; transition: color .15s ease, transform .15s ease, border-color .15s ease; }
 @media (hover: hover) and (pointer: fine) { .tech-lang-link:hover { transform: translateY(-1px); } }

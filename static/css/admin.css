@@ -9,31 +9,31 @@
 /* ─────────── 1. 设计令牌 ─────────── */
 :root {
   color-scheme: dark;
-  --bg:            #0f1117;
-  --bg-surface:    #161a24;
-  --bg-surface-2:  #1e2230;
+  --bg:            #1a1d23;
+  --bg-surface:    #22262e;
+  --bg-surface-2:  #2a2f38;
   /* 登录页字段标签 / 错误提示用到的 lucide 图标路径
      （作为 mask-image 引用，色随 currentColor） */
   --icon-user:           url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/></svg>");
   --icon-lock:           url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='11' width='18' height='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
   --icon-shield:         url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>");
   --icon-alert-triangle: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>");
-  --bg-hover:      #262b3a;
-  --bg-input:      #12151f;
-  --text:          #e8eaf0;
-  --text-secondary:#a0a6b5;
-  --text-tertiary: #6b7280;
-  --accent:        #5b8def;
-  --accent-hover:  #6f9bf2;
-  --accent-soft:   rgba(91,141,239,.14);
+  --bg-hover:      #30353f;
+  --bg-input:      #1e2229;
+  --text:          #e6e8ee;
+  --text-secondary:#a3a9b7;
+  --text-tertiary: #737b8c;
+  --accent:        #6b9cf5;
+  --accent-hover:  #82aef8;
+  --accent-soft:   rgba(107,156,245,.15);
   --success:       #34d399;
   --success-soft:  rgba(52,211,153,.14);
   --warning:       #fbbf24;
   --warning-soft:  rgba(251,191,36,.16);
   --danger:        #f87171;
   --danger-soft:   rgba(248,113,113,.14);
-  --border:        rgba(255,255,255,.07);
-  --border-strong: rgba(255,255,255,.14);
+  --border:        rgba(255,255,255,.09);
+  --border-strong: rgba(255,255,255,.17);
   --overlay:       rgba(4,6,12,.62);
 
   --sidebar-w: 248px;
@@ -56,8 +56,8 @@ html[data-theme="light"] {
   --text:          #1a2233;
   --text-secondary:#5a6478;
   --text-tertiary: #98a1b3;
-  --accent:        #3b6fe0;
-  --accent-hover:  #2f5fd0;
+  --accent:        #2563eb;
+  --accent-hover:  #1d4ed8;
   --accent-soft:   rgba(59,111,224,.10);
   --success:       #16a34a;
   --success-soft:  rgba(22,163,74,.12);

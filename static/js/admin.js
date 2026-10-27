@@ -9,7 +9,7 @@
   /* ─── 主题（三模式：auto / dark / light） ─── */
   var THEME_KEY = 'infowe-theme';
   var THEME_ORDER = ['auto', 'light', 'dark'];   // 与前台 main.js 循环顺序一致
-  var THEME_LABEL = { auto: '跟随系统', light: '浅色', dark: '深色' };
+  var THEME_LABEL = { auto: '跟随系统', light: '浅色主题', dark: '深色主题' };
 
   function savedMode() {
     var t;
@@ -26,7 +26,7 @@
     html.setAttribute('data-theme', dark ? 'dark' : 'light');
     html.style.colorScheme = dark ? 'dark' : 'light';
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#0f1117' : '#f5f6fa');
+    if (meta) meta.setAttribute('content', dark ? '#1a1d23' : '#f5f6fa');
     /* 同步按钮提示（顶栏图标按钮 + 侧栏文字） */
     var label = '当前：' + THEME_LABEL[mode] + '，点击切换主题';
     ['admin-theme-toggle', 'sidebar-theme-toggle'].forEach(function (id) {

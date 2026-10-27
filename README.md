@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.10-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.10)
+[![version](https://img.shields.io/badge/version-3.3.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.11)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,15 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.10**
+- 版本：**v3.3.11**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.11
+
+- 深色主题从 #0f1117 提亮到 #1a1d23，表面、边框、玻璃层同步调整，整体偏炭灰不再发黑
+- 浅色主题强调色 #1c5b8f → #2f7ad1，链接、标签、按钮更亮；后台浅色强调色同步提亮到 #2563eb
+- 后台主题按钮文案改为「浅色主题 / 深色主题 / 跟随系统」
 
 ### v3.3.10
 
