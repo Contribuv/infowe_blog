@@ -2083,3 +2083,63 @@ html { touch-action: manipulation; }
 }
 .tech-about-section .tech-status-section { margin-bottom: 0; }
 .tech-about-section .tech-status-section + .tech-status-section { margin-top: 16px; }
+
+/* ── 关于页：状态更新浮动提示 / 网站历程卡片化 ── */
+.tech-about-section#status { position: relative; }
+#status .status-hint {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--accent);
+  background: var(--accent-weak);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+#status .status-hint.is-visible {
+  display: inline-block;
+  animation: status-hint-in .2s ease;
+}
+@keyframes status-hint-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tech-timeline { display: flex; flex-direction: column; gap: 8px; }
+.tech-timeline-item {
+  position: static;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+.tech-timeline-item::before { display: none; }
+.tech-timeline-item:last-child { border-left-color: var(--border); padding-bottom: 12px; }
+.tech-timeline-item:first-child { border-color: var(--accent-soft); }
+.tech-timeline-date {
+  flex: 0 0 104px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  border-radius: 6px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tech-timeline-content { margin: 0; font-size: 13.5px; line-height: 1.65; }
+
+@media (max-width: 640px) {
+  #status .status-hint { position: static; margin: 6px 0 0; }
+  .tech-timeline-item { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .tech-timeline-date { flex: none; }
+}

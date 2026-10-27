@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.3)
+[![version](https://img.shields.io/badge/version-3.4.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,14 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.3**
+- 版本：**v3.4.4**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.4
+
+- 关于页「站点状态」去掉常驻说明文字：只有后台探测到新数据、generated_at 变化时才在右上角浮出「状态已更新 · 刚刚」，2.6 秒后淡出；首次访问和缓存未过期不显示
+- 「网站历程」重做：从裸竖线列表改成卡片行，日期做成 pill，和状态/技术栈区块统一；首条用主色描边，移动端上下堆叠
 
 ### v3.4.3
 

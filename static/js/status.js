@@ -83,10 +83,19 @@
       });
     }
 
-    // ── 更新提示 ──
+    // 只有数据真的更新时才短暂提示；首次访问 / 缓存未过期不显示
     var hint = document.getElementById('status-hint');
-    if (hint && generatedAt) {
-      hint.textContent = '数据每 5 分钟自动探测 · 最近更新 ' + fmtTime(generatedAt) + ' · 页面每 60 秒自动刷新';
+    if (hint) {
+      var prev = parseFloat(hint.getAttribute('data-generated') || '0') || 0;
+      hint.setAttribute('data-generated', String(generatedAt || 0));
+      if (prev && generatedAt && generatedAt > prev) {
+        hint.textContent = '状态已更新 · ' + fmtTime(generatedAt);
+        hint.classList.add('is-visible');
+        clearTimeout(hint._hideTimer);
+        hint._hideTimer = setTimeout(function () {
+          hint.classList.remove('is-visible');
+        }, 2600);
+      }
     }
   }
 
