@@ -174,9 +174,26 @@ def readme_image():
     return response
 
 
+
+def plugin_asset(plugin_key: str, filename: str):
+    """插件静态资源：/plugin-assets/<key>/<path>。"""
+    from config import PLUGINS_DIR
+
+    base = (Path(PLUGINS_DIR) / plugin_key / "static").resolve()
+    target = (base / filename).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError:
+        abort(404)
+    if not target.is_file():
+        abort(404)
+    return send_file(target, conditional=True, max_age=604800)
+
+
 def register(app) -> None:
     app.add_url_rule("/uploads/<path:filename>", "uploaded_file", uploaded_file)
     app.add_url_rule("/themes/<path:filename>", "theme_static", theme_static)
     app.add_url_rule("/share-thumb/<path:filename>", "share_thumb", share_thumb)
     app.add_url_rule("/avatar/<key>/<int:size>.png", "avatar_proxy", avatar_proxy)
     app.add_url_rule("/readme-img", "readme_img", readme_image)
+    app.add_url_rule("/plugin-assets/<plugin_key>/<path:filename>", "plugin_asset", plugin_asset)

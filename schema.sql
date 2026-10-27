@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS comments (
     qq TEXT DEFAULT '',
     ip_text TEXT DEFAULT '',
     ip_location TEXT DEFAULT '',
+    is_ai INTEGER DEFAULT 0,
+    ai_state TEXT DEFAULT 'idle',
+    ai_meta TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments (post_id);
@@ -73,6 +76,9 @@ CREATE TABLE IF NOT EXISTS links (
     avatar TEXT DEFAULT '',
     sort_order INTEGER DEFAULT 0,
     status TEXT DEFAULT 'approved',
+    email TEXT DEFAULT '',
+    ai_state TEXT DEFAULT 'idle',
+    ai_meta TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 
@@ -104,6 +110,15 @@ CREATE TABLE IF NOT EXISTS service_checks (
     detail TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_service_checks ON service_checks (service_id, checked_at);
+
+CREATE TABLE IF NOT EXISTS plugins (
+    key TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    version TEXT DEFAULT '',
+    enabled INTEGER DEFAULT 0,
+    config TEXT DEFAULT '{}',
+    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,

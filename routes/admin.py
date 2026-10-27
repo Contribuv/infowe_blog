@@ -636,6 +636,26 @@ def admin_status_test_cloud():
     return jsonify({"ok": True, "expiry": status.expiry_info()})
 
 
+# ── 插件 ──────────────────────────────────────────────
+@LOGIN
+def admin_plugins():
+    from services import plugins as plugins_service
+
+    return render_template("admin/plugins.html", plugins=plugins_service.all_rows())
+
+
+@LOGIN
+def admin_plugin_toggle():
+    from services import plugins as plugins_service
+
+    key = (request.form.get("key") or "").strip()
+    item = plugins_service.get(key)
+    if item:
+        plugins_service.set_enabled(key, not item["enabled"])
+        flash("插件已启用，重启服务后生效" if not item["enabled"] else "插件已停用，重启服务后生效", "success")
+    return redirect(url_for("admin_plugins"))
+
+
 # ── 主题 ──────────────────────────────────────────────
 @LOGIN
 def admin_themes():
@@ -1116,6 +1136,8 @@ def register(app) -> None:
         ("/admin/status", "admin_status", admin_status, ["GET", "POST"]),
         ("/admin/status/probe", "admin_status_probe", admin_status_probe, ["POST"]),
         ("/admin/status/test-cloud", "admin_status_test_cloud", admin_status_test_cloud, ["POST"]),
+        ("/admin/plugins", "admin_plugins", admin_plugins, ["GET"]),
+        ("/admin/plugins/toggle", "admin_plugin_toggle", admin_plugin_toggle, ["POST"]),
         ("/admin/themes", "admin_themes", admin_themes, ["GET", "POST"]),
         ("/admin/settings", "admin_settings", admin_settings, ["GET", "POST"]),
         ("/admin/settings/save", "admin_settings_save", admin_settings_save, ["POST"]),

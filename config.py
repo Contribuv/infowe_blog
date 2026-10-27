@@ -27,6 +27,7 @@ SHARED_TEMPLATE_DIR = TEMPLATE_DIR / "shared"
 
 STATIC_DIR = BASE_DIR / "static"
 THEMES_DIR = BASE_DIR / "themes"
+PLUGINS_DIR = BASE_DIR / "plugins"
 FONTS_DIR = BASE_DIR / "fonts"
 
 
@@ -64,7 +65,7 @@ LEGACY_STORAGE_DIR = BASE_DIR / "storage"
 LEGACY_INSTANCE_DIR = BASE_DIR / "instance"   # v3.2.13 及更早版本的数据库位置
 
 # 版本线：Python 重构版独立版本号
-VERSION = "3.2.23"
+VERSION = "3.3.0"
 
 # 上传限制
 MAX_CONTENT_LENGTH = 64 * 1024 * 1024  # 单请求 64MB

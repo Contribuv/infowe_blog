@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.2.23-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.2.23)
+[![version](https://img.shields.io/badge/version-3.3.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,21 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.2.23**
+- 版本：**v3.3.0**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.0
+
+插件系统与 AI 助手。
+
+- 插件系统：新增 plugins/ 目录与后台「系统 → 插件管理」，只加载仓库自带插件，支持启停与配置；配置存 plugins 表，升级插件代码不覆盖配置
+- AI 助手插件：
+  - 配置页：OpenAI 兼容接口（ase_url / pi_key / model / 温度 / 输出上限 / 超时 / 每日调用上限 / 中文系统提示词）
+  - 聊天页：后台对话，可读文章、评论、友链、分类、统计；写操作（建文章、改文章、通过评论、回复评论、加友链、通过友链）需二次确认，全部写审计
+  - 评论托管：新评论自动审核，通过后结合文章内容生成中文回复，回复带「AI 助手」标识
+  - 友链托管：提交后发信要求先挂本站友链，定时检查回链，命中自动通过并发信通知
+- 数据结构：plugins 表、comments.is_ai/ai_state/ai_meta、links.email/ai_state/ai_meta，插件专属 i_conversations/ai_messages/ai_audit
 
 ### v3.2.23
 

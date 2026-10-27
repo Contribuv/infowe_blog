@@ -231,3 +231,6 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-suggest-item{padding:4px 0;cursor:pointer}
 .cmt-suggest-item+.cmt-suggest-item{border-top:1px solid var(--c-border)}
 @media (hover:hover) and (pointer:fine){ .cmt-suggest-item:hover{color:var(--c-accent)} }
+
+/* AI 助手回复标识 */
+.cmt-badge--ai{background:var(--c-accent-weak,#e7eff7);color:var(--c-accent,#1c5b8f);border:1px solid color-mix(in srgb,var(--c-accent,#1c5b8f) 25%,transparent)}

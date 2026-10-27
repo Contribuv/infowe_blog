@@ -120,6 +120,22 @@ def create_app(test_config: dict | None = None) -> Flask:
     init_db_app(app)
     init_db(app)
 
+    # 插件：同步注册表，并把插件模板目录追加到 Jinja loader
+    from services import plugins as plugins_service
+
+    with app.app_context():
+        plugins_service.sync_registry()
+    plugin_loaders = [
+        theme_loader,
+        FileSystemLoader(str(config.SHARED_TEMPLATE_DIR)),
+        FileSystemLoader(str(config.TEMPLATE_DIR)),
+    ]
+    for manifest in plugins_service.discover():
+        plugin_templates = Path(manifest["_dir"]) / "templates"
+        if plugin_templates.is_dir():
+            plugin_loaders.append(FileSystemLoader(str(plugin_templates)))
+    app.jinja_loader = ChoiceLoader(plugin_loaders)
+
     # 后台入口前缀（可在后台设置；修改后需重启服务）
     with app.app_context():
         from services.install import seed_initial_data
@@ -147,6 +163,8 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     _register_hooks(app)
     _register_cli(app)
+    with app.app_context():
+        plugins_service.load_enabled(app)
     if not app.config.get("TESTING"):
         _start_status_scheduler(app)
     return app

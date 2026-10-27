@@ -271,6 +271,13 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     else:
         message = "评论已提交，审核通过后显示"
 
+    # 插件钩子：AI 审核 / 回复等在后台线程处理，不阻塞评论提交
+    try:
+        from services import hooks
+        hooks.emit("comment.created", {"id": comment_id, "is_admin": is_admin})
+    except Exception:
+        pass
+
     url = f"{back}#comment-{comment_id}"
     per_page = settings.get_int("comments_per_page", 10)
     if per_page > 0:

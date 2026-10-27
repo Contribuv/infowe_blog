@@ -65,6 +65,7 @@ def load(
         c["parent_id"] = int(c["parent_id"]) if c.get("parent_id") is not None else None
         c["is_private"] = int(c.get("is_private") or 0)
         c["children"] = []
+        c["is_ai"] = int(c.get("is_ai") or 0)
         c["is_author"] = bool(author_name) and c.get("author") == author_name
         if c["is_author"]:
             if cfg_avatar and cfg_ok:
@@ -182,13 +183,14 @@ def save(
     status: str = "pending",
     project_id: int | None = None,
     ip_location: str = "",
+    is_ai: int = 0,
 ) -> int:
     return db.insert(
         "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, "
-        "website, content, status, is_private, qq, ip_text, ip_location, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "website, content, status, is_private, qq, ip_text, ip_location, is_ai, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (post_id, project_id, parent_id, author, email, email_hash, website, content,
-         status, 1 if is_private else 0, qq, ip_text, ip_location, db.now()),
+         status, 1 if is_private else 0, qq, ip_text, ip_location, 1 if is_ai else 0, db.now()),
     )
 
 

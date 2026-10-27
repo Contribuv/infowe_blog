@@ -1,0 +1,8 @@
+{
+  "key": "ai_assistant",
+  "name": "AI 助手",
+  "version": "1.0.0",
+  "description": "后台聊天操作博客、评论 AI 审核与回复、友链自动审核",
+  "entry": "plugins.ai_assistant:register",
+  "admin_menu": { "group": "system", "label": "插件管理", "url": "admin_plugins" }
+}

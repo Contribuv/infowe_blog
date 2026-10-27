@@ -399,11 +399,19 @@ def links_apply():
             return render_template("links_apply.html", form=request.form)
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
-        Link.save(
+        email = (request.form.get("email") or "").strip()
+        link_id = Link.save(
             {"name": name, "url": url, "description": description, "avatar": avatar_url, "sort_order": 0},
             None,
             "pending",
         )
+        if email:
+            db.execute("UPDATE links SET email=? WHERE id=?", (email, link_id))
+        try:
+            from services import hooks
+            hooks.emit("link.applied", {"id": link_id, "name": name, "url": url, "email": email})
+        except Exception:
+            pass
         return redirect(url_for("links_apply_success"))
     return render_template("links_apply.html", form=None)
 

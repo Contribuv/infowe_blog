@@ -272,3 +272,6 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (max-width:767px){
   .cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* AI 助手回复标识 */
+.cmt-badge--ai{background:var(--c-accent-weak,#e7eff7);color:var(--c-accent,#1c5b8f);border:1px solid color-mix(in srgb,var(--c-accent,#1c5b8f) 25%,transparent)}
