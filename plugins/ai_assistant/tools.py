@@ -12,17 +12,18 @@ import db
 from models import Comment, Link, Post
 
 READ_TOOLS = {
-    "search_posts": "搜索文章。参数：q（关键词，可空）、limit（默认 5）",
-    "get_post": "读取一篇文章。参数：id",
-    "list_comments": "列出评论。参数：status（pending/approved/rejected/all）、limit（默认 10）",
-    "list_links": "列出友链。参数：status（pending/approved/rejected/all）、limit（默认 10）",
+    "list_posts": "列出文章。参数：limit（默认 10，最大 50）、status（published/draft/hidden/all）、order（latest/oldest）",
+    "search_posts": "按关键词搜索文章。参数：q、limit（默认 5）",
+    "get_post": "读取一篇文章全文。参数：id",
+    "list_comments": "列出评论。参数：limit（默认 10）、status（pending/approved/rejected/all）、email、author、post_id",
+    "list_links": "列出友链。参数：limit（默认 10）、status、q（名称或地址关键词）",
     "list_categories": "列出文章分类",
     "get_stats": "读取站点统计（文章/评论/友链数量）",
 }
 
 WRITE_TOOLS = {
     "create_post": "创建文章。参数：title、content（Markdown）、tags（数组或逗号分隔）、status（published/draft）",
-    "update_post": "修改文章。参数：id、title/title 可空、content、status",
+    "update_post": "修改文章。参数：id、title、content、status",
     "approve_comment": "通过一条评论。参数：id",
     "reply_comment": "以 AI 助手身份回复评论。参数：id（被回复评论）、content",
     "add_link": "新增友链。参数：name、url、description、avatar",
@@ -30,6 +31,8 @@ WRITE_TOOLS = {
 }
 
 ALL_TOOLS = {**READ_TOOLS, **WRITE_TOOLS}
+
+_POST_STATUSES = {"published", "draft", "hidden"}
 
 
 def _audit(action: str, args: dict, result: dict, ok: bool) -> None:
@@ -42,11 +45,32 @@ def _audit(action: str, args: dict, result: dict, ok: bool) -> None:
         pass
 
 
-def _limit(value, default=5, maximum=20) -> int:
+def _limit(value, default=10, maximum=50) -> int:
     try:
         return max(1, min(int(value), maximum))
     except (TypeError, ValueError):
         return default
+
+
+def _mask_email(email: str) -> str:
+    email = str(email or "").strip()
+    if "@" not in email:
+        return email
+    name, domain = email.split("@", 1)
+    if not name:
+        return "***@" + domain
+    return name[0] + "***@" + domain
+
+
+def _brief_post(row) -> dict:
+    item = dict(row)
+    return {
+        "id": int(item["id"]),
+        "title": item.get("title", ""),
+        "status": item.get("status", ""),
+        "tags": json.loads(item.get("tags") or "[]") if isinstance(item.get("tags"), str) else item.get("tags"),
+        "created_at": item.get("created_at", ""),
+    }
 
 
 def execute(name: str, args: dict | None = None, *, audit: bool = True) -> dict:
@@ -63,8 +87,26 @@ def execute(name: str, args: dict | None = None, *, audit: bool = True) -> dict:
 
 
 def _dispatch(name: str, args: dict) -> dict:
+    if name == "list_posts":
+        status = str(args.get("status") or "published")
+        order = "ASC" if str(args.get("order") or "") == "oldest" else "DESC"
+        limit = _limit(args.get("limit"), 10)
+        params: list = []
+        if status in _POST_STATUSES:
+            where = "WHERE status = ?"
+            params.append(status)
+        else:
+            where = ""
+        rows = db.query(
+            f"SELECT id, title, status, tags, created_at FROM posts {where} "
+            f"ORDER BY created_at {order}, id {order} LIMIT ?",
+            (*params, limit),
+        )
+        return {"ok": True, "posts": [_brief_post(r) for r in rows]}
+
     if name == "search_posts":
-        posts, total = Post.load("published", None, str(args.get("q") or "").strip() or None, None, 1, _limit(args.get("limit"), 5))
+        q = str(args.get("q") or "").strip()
+        posts, total = Post.load("published", None, q or None, None, 1, _limit(args.get("limit"), 5))
         return {"ok": True, "total": total, "posts": [
             {"id": p["id"], "title": p["title"], "tags": p.get("tags"), "created_at": p["created_at"]}
             for p in posts
@@ -84,19 +126,58 @@ def _dispatch(name: str, args: dict) -> dict:
     if name == "list_comments":
         status = str(args.get("status") or "pending")
         limit = _limit(args.get("limit"), 10)
-        if status == "all":
-            rows = db.query("SELECT id, post_id, project_id, author, content, status, is_ai, created_at FROM comments ORDER BY id DESC LIMIT ?", (limit,))
-        else:
-            rows = db.query("SELECT id, post_id, project_id, author, content, status, is_ai, created_at FROM comments WHERE status=? ORDER BY id DESC LIMIT ?", (status, limit))
-        return {"ok": True, "comments": [dict(r) for r in rows]}
+        where: list[str] = []
+        params: list = []
+        if status in {"pending", "approved", "rejected"}:
+            where.append("status = ?")
+            params.append(status)
+        email = str(args.get("email") or "").strip()
+        if email:
+            where.append("email = ?")
+            params.append(email)
+        author = str(args.get("author") or "").strip()
+        if author:
+            where.append("author LIKE ?")
+            params.append(f"%{author}%")
+        try:
+            post_id = int(args.get("post_id") or 0)
+        except (TypeError, ValueError):
+            post_id = 0
+        if post_id:
+            where.append("post_id = ?")
+            params.append(post_id)
+        sql = "SELECT id, post_id, project_id, author, email, content, status, is_ai, created_at FROM comments"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY id DESC LIMIT ?"
+        params.append(limit)
+        rows = db.query(sql, tuple(params))
+        comments = []
+        for row in rows:
+            item = dict(row)
+            item["email"] = _mask_email(item.get("email"))
+            item["content"] = str(item.get("content") or "")[:600]
+            comments.append(item)
+        return {"ok": True, "count": len(comments), "comments": comments}
 
     if name == "list_links":
         status = str(args.get("status") or "pending")
         limit = _limit(args.get("limit"), 10)
-        if status == "all":
-            rows = db.query("SELECT id, name, url, description, status, ai_state, created_at FROM links ORDER BY id DESC LIMIT ?", (limit,))
-        else:
-            rows = db.query("SELECT id, name, url, description, status, ai_state, created_at FROM links WHERE status=? ORDER BY id DESC LIMIT ?", (status, limit))
+        where: list[str] = []
+        params: list = []
+        if status in {"pending", "approved", "rejected"}:
+            where.append("status = ?")
+            params.append(status)
+        q = str(args.get("q") or "").strip()
+        if q:
+            where.append("(name LIKE ? OR url LIKE ? OR description LIKE ?)")
+            params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
+        sql = "SELECT id, name, url, description, status, ai_state, created_at FROM links"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY id DESC LIMIT ?"
+        params.append(limit)
+        rows = db.query(sql, tuple(params))
         return {"ok": True, "links": [dict(r) for r in rows]}
 
     if name == "list_categories":
@@ -106,6 +187,8 @@ def _dispatch(name: str, args: dict) -> dict:
     if name == "get_stats":
         return {"ok": True, "stats": {
             "posts": int(db.scalar("SELECT COUNT(*) FROM posts", (), 0)),
+            "published": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='published'", (), 0)),
+            "drafts": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='draft'", (), 0)),
             "comments": int(db.scalar("SELECT COUNT(*) FROM comments", (), 0)),
             "pending_comments": int(db.scalar("SELECT COUNT(*) FROM comments WHERE status='pending'", (), 0)),
             "links": int(db.scalar("SELECT COUNT(*) FROM links", (), 0)),
