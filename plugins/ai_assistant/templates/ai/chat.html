@@ -47,10 +47,15 @@
             <div class="ai-messages" id="ai-messages" data-conv="{{ conversation_id or 0 }}">
                 {% if not messages %}
                 <div class="ai-hint">
-                    直接说你要做什么，例如：<br>
-                    「把最近那篇 Mac 直播文章开头改得更直接」<br>
-                    「帮我写一篇关于 Flask 缓存的草稿」<br>
-                    「把待审核的友链都看一遍」
+                    <p class="ai-hint-title">可以这样用</p>
+                    <ul class="ai-hint-list">
+                        <li>「最新 10 篇文章」/「第 75 篇写了什么」</li>
+                        <li>「看看待审核评论」/「通过评论 123 并回复」</li>
+                        <li>「帮我写一篇关于 Flask 缓存的草稿」</li>
+                        <li>「列出 xxx@qq.com 的所有评论」</li>
+                        <li>「给本站加一个友链：名称 + 地址」</li>
+                    </ul>
+                    <p class="ai-hint-note">AI 只能通过白名单工具操作；写操作默认自动执行、全部记审计；删除请到对应后台页面。</p>
                 </div>
                 {% endif %}
                 {% for m in messages %}

@@ -140,6 +140,9 @@
   overflow-y: auto; overscroll-behavior: contain;
 }
 .ai-hint { color: var(--text-secondary); font-size: 13px; line-height: 1.9; padding: 8px 2px; }
+.ai-hint-title { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; color: var(--text); }
+.ai-hint-list { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.ai-hint-note { margin: 0; font-size: 12px; opacity: .85; }
 
 /* 消息：气泡与统计分开 */
 .ai-row { display: flex; flex-direction: column; max-width: 100%; }

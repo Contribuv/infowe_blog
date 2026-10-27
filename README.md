@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.6)
+[![version](https://img.shields.io/badge/version-3.3.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.7)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,14 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.6**
+- 版本：**v3.3.7**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.7
+
+- 历史 AI 评论头像补齐：旧版本没写 i_meta.avatar 的 AI 回复，启动时按当前模型补上；头像按模型动态映射，换模型会变
+- 新对话提示重写：列出常用指令示例和权限说明
 
 ### v3.3.6
 
