@@ -357,9 +357,12 @@ def about():
         abort(404)
     skills = settings.json_list("skills", [])
     _, post_total = Post.load("published", None, None, None, 1, 1)
+    expiry, services, _ = status.snapshot()
     return render_template(
         "about.html",
         skills=skills,
+        expiry=expiry,
+        services=services,
         about_intro=settings.get_str("about_intro", ""),
         author=settings.get_str("author", ""),
         avatar=avatar.admin_url(200),
@@ -443,8 +446,8 @@ def links_apply_success():
 
 
 def status_page():
-    expiry, services, _ = status.snapshot()
-    return render_template("status.html", expiry=expiry, services=services)
+    # 状态内容已并入关于页，保留旧地址做 301，避免外部链接 404
+    return redirect(url_for("about") + "#status", code=301)
 
 
 def projects_page():

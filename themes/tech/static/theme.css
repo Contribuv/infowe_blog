@@ -2073,3 +2073,13 @@ html { touch-action: manipulation; }
   .circle-title { font-size: 15px; }
   .circle-item { padding: 15px 0; }
 }
+
+/* 关于页里的站点状态区块 */
+.tech-status-lead {
+  margin: 0 0 12px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.tech-about-section .tech-status-section { margin-bottom: 0; }
+.tech-about-section .tech-status-section + .tech-status-section { margin-top: 16px; }

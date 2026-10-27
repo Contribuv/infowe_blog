@@ -65,7 +65,7 @@ LEGACY_STORAGE_DIR = BASE_DIR / "storage"
 LEGACY_INSTANCE_DIR = BASE_DIR / "instance"   # v3.2.13 及更早版本的数据库位置
 
 # 版本线：Python 重构版独立版本号
-VERSION = "3.4.2"
+VERSION = "3.4.3"
 
 # 上传限制
 MAX_CONTENT_LENGTH = 64 * 1024 * 1024  # 单请求 64MB
@@ -95,7 +95,6 @@ NAV_PAGES = [
     ("links", "友链", "/links"),
     ("circle", "圈子", "/circle"),
     ("about", "关于", "/about"),
-    ("status", "状态", "/status"),
 ]
 
 # 自定义后台入口时禁止占用的前台/系统路径

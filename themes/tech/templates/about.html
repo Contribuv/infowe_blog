@@ -87,6 +87,64 @@
         {% endif %}
     </section>
 
+    <!-- 站点状态：域名/服务器到期与在线可用性，数据由 /api/status 每分钟更新 -->
+    <section class="tech-about-section" id="status">
+        <h2>站点状态</h2>
+        <p class="tech-status-lead">本站使用的域名、服务器到期时间与在线可用性。</p>
+        {% if services %}
+        <p class="status-hint" id="status-hint"></p>
+        {% endif %}
+        <div class="tech-status">
+            <section class="tech-status-section">
+                <h2>到期时间 <span class="svc-count">云资源</span></h2>
+                <div class="svc-list" id="expiry-list">
+                    {% for key, info in expiry.items() %}
+                    <div class="svc-row st-{{ info.status }}" data-expiry-key="{{ key }}">
+                        <span class="svc-dot st-{{ info.status }}"></span>
+                        <div class="svc-main"><span class="svc-name expiry-label">{{ info.label }}</span></div>
+                        <div class="svc-metrics">
+                            <span class="svc-metric" data-field="expiry" data-expiry-field="date">{{ info.expiry or '—' }}</span>
+                            <span class="svc-metric" data-field="status" data-expiry-field="badge">
+                                {% if info.status == 'ok' %}正常{% elif info.status == 'warn' %}即将到期{% elif info.status == 'expired' %}已到期{% else %}未配置{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="svc-empty">
+                        <div>暂无云资源到期配置</div>
+                        <div class="svc-empty-sub">在后台「服务时效」中配置后，将在此展示到期时间</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            <section class="tech-status-section">
+                <h2>服务状态
+                    {% if services %}
+                    <span class="svc-count" id="svc-count">{{ services | selectattr('ok', 'equalto', true) | list | length }}/{{ services | length }} 在线</span>
+                    {% endif %}
+                </h2>
+                <div class="svc-list" id="svc-list">
+                    {% for s in services %}
+                    <div class="svc-row" data-svc-name="{{ s.name }}">
+                        <span class="svc-dot {{ 'st-ok' if s.ok else ('st-none' if s.ok is none else 'st-down') }}"></span>
+                        <div class="svc-main"><span class="svc-name">{{ s.name }}</span></div>
+                        <div class="svc-metrics">
+                            <span class="svc-metric" data-field="latency" title="响应延迟">{{ s.latency_ms ~ ' ms' if s.latency_ms is not none else '—' }}</span>
+                            <span class="svc-metric" data-field="cert" title="SSL 证书剩余天数">{{ s.cert_days ~ ' 天' if s.cert_days is not none and s.cert_days >= 0 else '—' }}</span>
+                            <span class="svc-metric" data-field="uptime" title="近 24 小时可用率">{{ s.uptime ~ '%' if s.uptime is not none else '—' }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="svc-empty">
+                        <div>暂未配置在线服务监控</div>
+                        <div class="svc-empty-sub">在后台「服务时效」中添加 HTTP(S) 服务后，将在此展示其实时可用性</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </section>
+
     <!-- 十年之约：页面收尾的轻量区块——一句话 + 彩色虫洞动图，居中、无框、无标题。
          不再放黑白成员标识：它与虫洞并排是两枚 logo，互相打架；
          「了解十年之约」的出口交给正文文字链接，页脚在含此区块的页面会自动隐藏标识（:has） -->
@@ -107,6 +165,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/status.js', t=static_ver) }}" defer></script>
 <script>
 (function () {
     var fills = document.querySelectorAll('.tech-skill-fill');
