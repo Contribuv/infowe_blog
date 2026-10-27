@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 
 import db
-from models import Comment, Link, Post
+from models import Category, Comment, Link, Post
 
 READ_TOOLS = {
     "list_posts": "列出文章。参数：limit（默认 10，最大 50）、status（published/draft/hidden/all）、order（latest/oldest）",
@@ -17,18 +17,23 @@ READ_TOOLS = {
     "get_post": "读取一篇文章全文。参数：id",
     "list_comments": "列出评论。参数：limit（默认 10）、status（pending/approved/rejected/all）、email、author、post_id",
     "list_links": "列出友链。参数：limit（默认 10）、status、q（名称或地址关键词）",
-    "list_categories": "列出文章分类",
+    "list_categories": "列出文章分类（id/name/slug）",
     "get_stats": "读取站点统计（文章/评论/友链数量）",
 }
 
 WRITE_TOOLS = {
-    "create_post": "创建文章。参数：title、content（Markdown）、tags（数组或逗号分隔）、status（published/draft）",
-    "update_post": "修改文章。参数：id、title、content、status",
+    "create_post": "创建文章。参数：title、content（Markdown）、tags（数组或逗号分隔）、status（published/draft）、category（分类名称）",
+    "update_post": "修改文章。参数：id、title、content、status、category（分类名称）",
+    "create_category": "新建文章分类。参数：name、slug（可选）",
+    "update_category": "修改文章分类。参数：id、name、slug（可选）",
     "approve_comment": "通过一条评论。参数：id",
     "reply_comment": "以 AI 助手身份回复评论。参数：id（被回复评论）、content",
     "add_link": "新增友链。参数：name、url、description、avatar",
     "approve_link": "通过一条友链。参数：id",
 }
+
+# 这四类即使开启「写操作自动执行」也必须人工确认
+FORCE_CONFIRM = {"create_post", "update_post", "create_category", "update_category"}
 
 ALL_TOOLS = {**READ_TOOLS, **WRITE_TOOLS}
 
@@ -60,6 +65,24 @@ def _mask_email(email: str) -> str:
     if not name:
         return "***@" + domain
     return name[0] + "***@" + domain
+
+
+def _resolve_category(args: dict) -> tuple[int | None, str]:
+    raw_id = args.get("category_id")
+    if raw_id:
+        try:
+            return int(raw_id), ""
+        except (TypeError, ValueError):
+            pass
+    name = str(args.get("category") or "").strip()
+    if not name:
+        return None, ""
+    categories = Category.load()
+    for cat in categories:
+        if str(cat.get("name")) == name:
+            return int(cat["id"]), ""
+    names = "、".join(str(c.get("name")) for c in categories)
+    return None, f"分类「{name}」不存在，现有分类：{names}"
 
 
 def _brief_post(row) -> dict:
@@ -181,7 +204,7 @@ def _dispatch(name: str, args: dict) -> dict:
         return {"ok": True, "links": [dict(r) for r in rows]}
 
     if name == "list_categories":
-        rows = db.query("SELECT id, name FROM categories ORDER BY sort_order ASC, id ASC")
+        rows = db.query("SELECT id, name, slug FROM categories ORDER BY sort_order ASC, id ASC")
         return {"ok": True, "categories": [dict(r) for r in rows]}
 
     if name == "get_stats":
@@ -200,11 +223,20 @@ def _dispatch(name: str, args: dict) -> dict:
         content = str(args.get("content") or "").strip()
         if not title or not content:
             return {"ok": False, "error": "标题和正文不能为空"}
+        category_id, cat_error = _resolve_category(args)
+        if cat_error:
+            return {"ok": False, "error": cat_error}
         tags = args.get("tags") or ""
         if isinstance(tags, list):
             tags = ",".join(str(t) for t in tags)
         status = "draft" if str(args.get("status") or "") == "draft" else "published"
-        pid = Post.save({"title": title, "content": content, "tags": tags, "status": status})
+        pid = Post.save({
+            "title": title,
+            "content": content,
+            "tags": tags,
+            "status": status,
+            "category_id": str(category_id) if category_id else "",
+        })
         return {"ok": True, "id": pid, "message": f"已创建文章《{title}》（{status}）"}
 
     if name == "update_post":
@@ -212,16 +244,42 @@ def _dispatch(name: str, args: dict) -> dict:
         post = Post.get(pid)
         if not post:
             return {"ok": False, "error": "文章不存在"}
+        category_id = post.get("category_id")
+        if args.get("category") or args.get("category_id"):
+            category_id, cat_error = _resolve_category(args)
+            if cat_error:
+                return {"ok": False, "error": cat_error}
         form = {
             "title": str(args.get("title") or post["title"]),
             "content": str(args.get("content") or post.get("content") or ""),
             "tags": ",".join(post.get("tags") or []),
             "status": str(args.get("status") or post["status"]),
+            "category_id": str(category_id) if category_id else "",
             "excerpt": post.get("excerpt") or "",
             "excerpt_manual": "0",
         }
         Post.save(form, pid)
         return {"ok": True, "id": pid, "message": f"已更新文章《{form['title']}》"}
+
+    if name == "create_category":
+        name = str(args.get("name") or "").strip()
+        if not name:
+            return {"ok": False, "error": "分类名称不能为空"}
+        cid = Category.save({"name": name, "slug": str(args.get("slug") or "").strip(), "sort_order": 0})
+        return {"ok": True, "id": cid, "message": f"已创建分类：{name}"}
+
+    if name == "update_category":
+        cid = int(args.get("id") or 0)
+        cat = Category.get(cid)
+        if not cat:
+            return {"ok": False, "error": "分类不存在"}
+        new_name = str(args.get("name") or cat.get("name") or "").strip()
+        Category.save({
+            "name": new_name,
+            "slug": str(args.get("slug") or cat.get("slug") or "").strip(),
+            "sort_order": cat.get("sort_order") or 0,
+        }, cid)
+        return {"ok": True, "id": cid, "message": f"已更新分类：{new_name}"}
 
     if name == "approve_comment":
         cid = int(args.get("id") or 0)

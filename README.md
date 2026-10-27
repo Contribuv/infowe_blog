@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.9)
+[![version](https://img.shields.io/badge/version-3.3.10-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.10)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,18 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.9**
+- 版本：**v3.3.10**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.10
+
+- AI 工具：新增 create_category / update_category，create_post / update_post 支持指定分类（按名称精确匹配）
+- 确认规则：新建/修改文章、新建/修改分类这四类强制人工确认，即使开启写操作自动执行
+- 修复：部分中转模型把内容全塞进 
+easoning_content，content 为空时误报「模型没有返回内容」；改为 reasoning 兜底，并从 reasoning 中解析工具 JSON
+- max_tokens 默认从 1200 提到 4096，避免长文章被截断
+- 写作风格提示词：第一人称、具体细节、去 AI 腔；用户说「发布」时 status 用 published
 
 ### v3.3.9
 

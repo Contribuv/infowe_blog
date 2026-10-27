@@ -214,7 +214,8 @@ def register(app) -> None:
                     messages.append({"role": "user", "content": "工具结果：" + json.dumps(result, ensure_ascii=False)[:6000]})
                     continue
                 if name in tools.WRITE_TOOLS:
-                    if cfg.get("auto_execute") and write_count < 3:
+                    force = name in tools.FORCE_CONFIRM
+                    if cfg.get("auto_execute") and not force and write_count < 3:
                         write_count += 1
                         result = tools.execute(name, args)
                         _add_message(conv_id, "tool", json.dumps(result, ensure_ascii=False), {"tool": name, **meta})
@@ -225,7 +226,7 @@ def register(app) -> None:
                     mid = _add_message(conv_id, "pending", text, action_meta)
                     return jsonify({
                         "conversation_id": conv_id,
-                        "pending": {"id": mid, "tool": name, "args": args, "text": text, "meta": meta},
+                        "pending": {"id": mid, "tool": name, "args": args, "text": text, "meta": meta, "force": force},
                     })
             content = action.get("content") if action and action.get("type") == "reply" else text
             content = str(content or "").strip() or "（模型没有返回内容）"

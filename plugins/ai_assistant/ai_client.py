@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 
 import requests
@@ -75,11 +76,17 @@ def chat(messages: list[dict], temperature: float | None = None, max_tokens: int
     reasoning = message.get("reasoning_content") or message.get("reasoning")
     if reasoning:
         meta["reasoning"] = str(reasoning)[:6000]
-    return True, str(content or ""), meta
+    content = str(content or "").strip()
+    if not content and reasoning:
+        # 部分中转模型把全部输出塞进 reasoning_content，content 为空；
+        # 这时用 reasoning 兜底，parse_action 会从里面找 JSON。
+        content = str(reasoning)
+        meta["from_reasoning"] = True
+    return True, content, meta
 
 
 def parse_action(text: str) -> dict | None:
-    """从模型输出里取出 JSON 动作；兼容 ```json 包裹和前后废话。"""
+    """从模型输出里取出 JSON 动作；兼容 ```json、前后废话和 reasoning 草稿。"""
     raw = (text or "").strip()
     if not raw:
         return None
@@ -87,12 +94,21 @@ def parse_action(text: str) -> dict | None:
         raw = raw.strip("`")
         if raw.lower().startswith("json"):
             raw = raw[4:]
-    start = raw.find("{")
-    end = raw.rfind("}")
-    if start < 0 or end <= start:
-        return None
+
     try:
-        data = json.loads(raw[start:end + 1])
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return data
     except ValueError:
-        return None
-    return data if isinstance(data, dict) else None
+        pass
+
+    # 逐候选解析：只认 {"type": ...} 开头的 JSON，raw_decode 能处理嵌套
+    decoder = json.JSONDecoder()
+    for match in re.finditer(r'\{\s*"type"', raw):
+        try:
+            data, _ = decoder.raw_decode(raw[match.start():])
+        except ValueError:
+            continue
+        if isinstance(data, dict) and data.get("type"):
+            return data
+    return None
