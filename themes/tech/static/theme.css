@@ -1173,7 +1173,6 @@ html.page-enter .tech-main {
   margin: 0 0 24px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: transparent;
 }
 /* 卡片化后不再需要页头底部渐变彩条 */
 .tech-about-hero::after { display: none; }
@@ -2339,7 +2338,6 @@ html { touch-action: manipulation; }
   padding: 18px 18px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: transparent;
 }
 .tech-post-list--double .tech-post-item:last-child {
   border-bottom: 1px solid var(--border);
@@ -2355,4 +2353,109 @@ html { touch-action: manipulation; }
 @media (max-width: 640px) {
   .tech-links-rules { grid-template-columns: 1fr; gap: 0; }
   .tech-page-head--with-action { align-items: flex-start; }
+}
+
+/* ── 里程页：按年份分组的时间线 ── */
+.tech-miles { display: flex; flex-direction: column; gap: 26px; }
+.tech-miles-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.tech-miles-head h2 {
+  position: relative;
+  margin: 0;
+  padding-left: 12px;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.tech-miles-head h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 17px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent), var(--hl-title));
+}
+.tech-miles-head span { font-size: 12px; color: var(--text-secondary); }
+.tech-miles-list { list-style: none; margin: 0; padding: 0; }
+.tech-miles-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0 -10px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-bottom-color: var(--border);
+  border-radius: 8px;
+}
+.tech-miles-item:last-child { border-bottom-color: transparent; }
+.tech-miles-date {
+  flex: 0 0 46px;
+  padding-top: 1px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.tech-miles-body { flex: 1; min-width: 0; }
+.tech-miles-title { margin: 0; font-size: 15.5px; font-weight: 600; line-height: 1.55; }
+.tech-miles-title a { color: var(--text); text-decoration: none; transition: color .15s; }
+.tech-miles-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.tech-miles-tag { color: var(--text-secondary); text-decoration: none; }
+.tech-miles-tag:hover { color: var(--accent); }
+.tech-miles-arrow {
+  flex: none;
+  padding-top: 2px;
+  color: var(--accent);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.tech-miles-item:hover .tech-miles-title a { color: var(--accent); }
+.tech-miles-item:hover .tech-miles-arrow { opacity: 1; transform: none; }
+
+@media (max-width: 640px) {
+  .tech-miles-head h2 { font-size: 19px; }
+  .tech-miles-item { gap: 10px; margin: 0; padding: 11px 0; }
+  .tech-miles-date { flex-basis: 42px; }
+  .tech-miles-title { font-size: 15px; }
+}
+
+/* ── 全站卡片 hover：统一底色、描边、上浮和轻阴影 ── */
+.tech-post-item,
+.tech-link-card,
+.circle-item,
+.circle-stats > div,
+.tech-project-card,
+.tech-miles-item {
+  transition: background-color .18s ease, border-color .18s ease,
+              box-shadow .18s ease, transform .18s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-post-item:hover,
+  .tech-link-card:hover,
+  .circle-item:hover,
+  .circle-stats > div:hover,
+  .tech-project-card:hover,
+  .tech-miles-item:hover {
+    background: var(--hover-bg);
+    border-color: var(--hover-ring);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+    transform: translateY(-2px);
+  }
 }

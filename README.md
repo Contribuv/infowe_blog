@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.8)
+[![version](https://img.shields.io/badge/version-3.4.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.9)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,16 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.8**
+- 版本：**v3.4.9**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.9
+
+- 「文章」页面改为「里程」：按年份分组的时间线，导航、页面标题和首页按钮同步改名；/archive/<年份> 仍保留原有列表视图
+- 全站卡片 hover 统一：文章卡、友链卡、圈子卡、统计卡、项目卡、里程条目都是「底色 + 描边 + 上浮 2px + 轻阴影」
+- 修复双栏文章卡片鼠标经过没有反馈的问题（基础样式覆盖了 hover 背景）
+- 里程页移动端实测 390px 无横向溢出
 
 ### v3.4.8
 

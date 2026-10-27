@@ -27,6 +27,17 @@ def _decorate_categories(posts: list[dict]) -> list[dict]:
     return posts
 
 
+def _group_by_year(posts: list[dict]) -> list[tuple[str, list[dict]]]:
+    """按年份分组；posts 已按时间倒序，遇到新年份就开新组。"""
+    groups: list[tuple[str, list[dict]]] = []
+    for post in posts:
+        year = str(post.get("created_at") or "")[:4] or "未标注"
+        if not groups or groups[-1][0] != year:
+            groups.append((year, []))
+        groups[-1][1].append(post)
+    return groups
+
+
 def _comment_pager(pager: dict) -> dict:
     """把模型层分页信息转成模板可直接渲染的链接结构。"""
     total_pages = int(pager.get("total_pages") or 1)
@@ -166,6 +177,7 @@ def archive_page(year: int):
         "posts.html",
         posts=posts,
         groups=None,
+        is_miles=False,
         total=total,
         page=page,
         total_pages=total_pages,
@@ -204,7 +216,8 @@ def posts_page():
     return render_template(
         "posts.html",
         posts=posts,
-        groups=None,
+        groups=_group_by_year(posts),
+        is_miles=True,
         total=total,
         page=page,
         total_pages=total_pages,

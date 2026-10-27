@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}{% if active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
+{% block title %}{% if is_miles %}里程{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
 {% block content %}
 <div class="tech-page-head">
-    <h1 class="tech-page-title">全部文章</h1>
-    <p class="tech-page-desc">共 {{ total }} 篇文章</p>
+    <h1 class="tech-page-title">{% if is_miles %}里程{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
+    <p class="tech-page-desc">{% if is_miles %}共 {{ total }} 篇文章 · 按时间排成一条线{% else %}共 {{ total }} 篇文章{% endif %}</p>
 </div>
 
 <!-- 筛选栏：自定义下拉（替代原生 select，弹层跟随暗色主题，iOS/微信亦一致） -->
-{% if all_tags or all_years %}
+{% if not is_miles and (all_tags or all_years) %}
 <div class="tech-filter-bar">
     <div class="tech-cs" data-cs data-cs-role="tag">
         <button type="button" class="tech-cs-trigger" data-cs-trigger aria-haspopup="listbox" aria-expanded="false">
@@ -48,6 +48,34 @@
 {% endif %}
 
 <!-- 文章列表 -->
+{% if is_miles %}
+<div class="tech-miles">
+    {% for year, items in groups %}
+    <section class="tech-miles-group">
+        <header class="tech-miles-head">
+            <h2>{{ year }}</h2>
+            <span>{{ items|length }} 篇</span>
+        </header>
+        <ul class="tech-miles-list">
+            {% for post in items %}
+            <li class="tech-miles-item">
+                <time class="tech-miles-date" datetime="{{ post.created_at[0:10] }}">{{ post.created_at[5:10] }}</time>
+                <div class="tech-miles-body">
+                    <h3 class="tech-miles-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
+                    <div class="tech-miles-meta">
+                        {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
+                        <span>{{ post.read_time }} 分钟</span>
+                        {% for tag in post.tags[:3] %}<a class="tech-miles-tag" href="{{ url_for('tag_page', tag=tag) }}">#{{ tag }}</a>{% endfor %}
+                    </div>
+                </div>
+                <span class="tech-miles-arrow" aria-hidden="true">→</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endfor %}
+</div>
+{% else %}
 <ul class="tech-post-list{% if post_layout == 'double' %} tech-post-list--double{% endif %}" id="postsList">
     {% for post in posts %}
     <li class="tech-post-item" data-date="{{ post.created_at [:10] }}" data-read="{{ post.read_time }}">
@@ -66,6 +94,7 @@
     </li>
     {% endfor %}
 </ul>
+{% endif %}
 
 {% if not posts %}
 <div class="tech-empty">
