@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.7)
+[![version](https://img.shields.io/badge/version-3.3.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.8)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,13 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.7**
+- 版本：**v3.3.8**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.8
+
+- 修复：评论区 IP 归属地不显示——服务器未安装 ip2region、也没有 xdb 文件，离线查询直接返回空；改为 xdb 不可用时走 pconline 公开接口兜底（2.5 秒超时 + 进程内缓存），部署后补全历史评论归属地
 
 ### v3.3.7
 
