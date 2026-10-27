@@ -14,51 +14,53 @@
     </div>
 </div>
 
-<div class="ai-wrap">
-    <aside class="ai-side">
-        <button type="button" class="btn btn-primary ai-new" id="ai-new">新对话</button>
-        {% for c in conversations %}
-        <a class="ai-conv {% if c.id == conversation_id %}active{% endif %}" href="{{ url_for('admin_plugin_ai_chat') }}?c={{ c.id }}">
-            <span class="ai-conv-title">{{ c.title }}</span>
-            <small>{{ c.updated_at[5:16] }}</small>
-        </a>
-        {% else %}
-        <p class="ai-empty-side">还没有对话</p>
-        {% endfor %}
-    </aside>
-
-    <section class="ai-main">
-        <div class="ai-messages" id="ai-messages" data-conv="{{ conversation_id or 0 }}">
-            {% if not messages %}
-            <div class="ai-hint">
-                直接说你要做什么，例如：<br>
-                「把最近那篇 Mac 直播文章开头改得更直接」<br>
-                「帮我写一篇关于 Flask 缓存的草稿」<br>
-                「把待审核的友链都看一遍」
-            </div>
-            {% endif %}
-            {% for m in messages %}
-                {% if m.role == 'pending' %}
-                <div class="ai-msg ai-pending" data-id="{{ m.id }}">
-                    <div class="ai-pending-text">{{ m.content }}</div>
-                    <div class="ai-pending-actions">
-                        <button type="button" class="btn btn-primary btn-sm ai-do">执行</button>
-                        <button type="button" class="btn btn-secondary btn-sm ai-skip">取消</button>
-                    </div>
-                </div>
-                {% elif m.role == 'tool' %}
-                <div class="ai-msg ai-tool">{{ m.content }}</div>
-                {% else %}
-                <div class="ai-msg ai-{{ m.role }}">{{ m.content }}</div>
-                {% endif %}
+<div class="ai-page" id="ai-page">
+    <div class="ai-wrap">
+        <aside class="ai-side">
+            <button type="button" class="btn btn-primary ai-new" id="ai-new">新对话</button>
+            {% for c in conversations %}
+            <a class="ai-conv {% if c.id == conversation_id %}active{% endif %}" href="{{ url_for('admin_plugin_ai_chat') }}?c={{ c.id }}">
+                <span class="ai-conv-title">{{ c.title }}</span>
+                <small>{{ c.updated_at[5:16] }}</small>
+            </a>
+            {% else %}
+            <p class="ai-empty-side">还没有对话</p>
             {% endfor %}
-        </div>
+        </aside>
 
-        <form class="ai-form" id="ai-form">
-            <textarea id="ai-input" rows="2" placeholder="让 AI 写文章、改文章、加友链…（Enter 发送，Shift+Enter 换行）"></textarea>
-            <button type="submit" class="btn btn-primary" id="ai-send">发送</button>
-        </form>
-    </section>
+        <section class="ai-main">
+            <div class="ai-messages" id="ai-messages" data-conv="{{ conversation_id or 0 }}">
+                {% if not messages %}
+                <div class="ai-hint">
+                    直接说你要做什么，例如：<br>
+                    「把最近那篇 Mac 直播文章开头改得更直接」<br>
+                    「帮我写一篇关于 Flask 缓存的草稿」<br>
+                    「把待审核的友链都看一遍」
+                </div>
+                {% endif %}
+                {% for m in messages %}
+                    {% if m.role == 'pending' %}
+                    <div class="ai-msg ai-pending" data-id="{{ m.id }}">
+                        <div class="ai-pending-text">{{ m.content }}</div>
+                        <div class="ai-pending-actions">
+                            <button type="button" class="btn btn-primary btn-sm ai-do">执行</button>
+                            <button type="button" class="btn btn-secondary btn-sm ai-skip">取消</button>
+                        </div>
+                    </div>
+                    {% elif m.role == 'tool' %}
+                    <div class="ai-msg ai-tool">{{ m.content }}</div>
+                    {% else %}
+                    <div class="ai-msg ai-{{ m.role }}">{{ m.content }}</div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <form class="ai-form" id="ai-form">
+                <textarea id="ai-input" rows="2" placeholder="让 AI 写文章、改文章、加友链…（Enter 发送，Shift+Enter 换行）"></textarea>
+                <button type="submit" class="btn btn-primary" id="ai-send">发送</button>
+            </form>
+        </section>
+    </div>
 </div>
 
 <script>
@@ -68,6 +70,19 @@ window.AI_URLS = {
   newChat: {{ url_for('admin_plugin_ai_api_new') | tojson }},
   page: {{ url_for('admin_plugin_ai_chat') | tojson }}
 };
+(function () {
+  function fit() {
+    var content = document.querySelector('.admin-content');
+    var page = document.getElementById('ai-page');
+    if (!content || !page) return;
+    var rect = content.getBoundingClientRect();
+    var h = window.innerHeight - rect.top - 28;
+    page.style.height = Math.max(420, h) + 'px';
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 120); });
+  fit();
+})();
 </script>
 {% endblock %}
 

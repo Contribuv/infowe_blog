@@ -187,7 +187,7 @@ def plugin_asset(plugin_key: str, filename: str):
         abort(404)
     if not target.is_file():
         abort(404)
-    return send_file(target, conditional=True, max_age=604800)
+    return send_file(target, conditional=True, max_age=60)
 
 
 def register(app) -> None:

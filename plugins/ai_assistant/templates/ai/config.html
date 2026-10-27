@@ -1,73 +1,132 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}AI 助手配置{% endblock %}
 
+{% block admin_head %}
+<link rel="stylesheet" href="{{ url_for('plugin_asset', plugin_key='ai_assistant', filename='ai.css') }}">
+{% endblock %}
+
 {% block admin_content %}
 <div class="page-header">
     <h2>{{ icon('zap', 20) | safe }} AI 助手配置</h2>
-    <a href="{{ url_for('admin_plugin_ai_chat') }}" class="btn btn-secondary">打开对话</a>
+    <a href="{{ url_for('admin_plugin_ai_chat') }}" class="btn btn-primary">打开对话</a>
 </div>
 
-<div class="card">
-    <div class="card-header"><h3>接口</h3></div>
-    <form method="POST" action="{{ url_for('admin_plugin_ai_save') }}">
-        <div class="form-grid">
-            <div class="form-group">
-                <label>接口地址</label>
-                <input type="url" name="base_url" class="input-text" value="{{ cfg.base_url }}"
-                       placeholder="https://api.deepseek.com/v1" required>
-                <span class="form-hint">OpenAI 兼容的 /chat/completions 前缀</span>
-            </div>
-            <div class="form-group">
-                <label>API Key</label>
-                <input type="password" name="api_key" class="input-text" value="{{ masked_key }}"
-                       placeholder="留空或保持 **** 表示不修改" autocomplete="new-password">
-            </div>
-            <div class="form-group">
-                <label>模型</label>
-                <input type="text" name="model" class="input-text" value="{{ cfg.model }}" required>
-            </div>
-            <div class="form-group">
-                <label>温度</label>
-                <input type="number" name="temperature" class="input-text" value="{{ cfg.temperature }}" min="0" max="2" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>最大输出 tokens</label>
-                <input type="number" name="max_tokens" class="input-text" value="{{ cfg.max_tokens }}" min="100" max="8000">
-            </div>
-            <div class="form-group">
-                <label>超时（秒）</label>
-                <input type="number" name="timeout" class="input-text" value="{{ cfg.timeout }}" min="10" max="300">
-            </div>
-            <div class="form-group">
-                <label>每日调用上限</label>
-                <input type="number" name="daily_call_limit" class="input-text" value="{{ cfg.daily_call_limit }}" min="10" max="5000">
-                <span class="form-hint">今日已调用 {{ daily_calls }} 次</span>
-            </div>
-        </div>
+<form method="POST" action="{{ url_for('admin_plugin_ai_save') }}" class="ai-config">
+    <div class="ai-status">
+        <span>当前模型：<b>{{ cfg.model or '未设置' }}</b></span>
+        <span>接口：<b>{{ cfg.base_url or '未设置' }}</b></span>
+        <span>今日调用：<b>{{ daily_calls }}</b> / {{ cfg.daily_call_limit }} 次</span>
+        <span>API Key：<b>{{ '已配置' if cfg.api_key else '未配置' }}</b></span>
+    </div>
 
-        <div class="form-group">
-            <label>系统提示词</label>
-            <textarea name="system_prompt" class="input-text" rows="7">{{ cfg.system_prompt }}</textarea>
-        </div>
-
-        <div class="card-header" style="margin-top:8px"><h3>AI 托管</h3></div>
-        <div class="form-grid">
-            <label class="check-row"><input type="checkbox" name="comment_moderation" {% if cfg.comment_moderation %}checked{% endif %}> 新评论自动审核</label>
-            <label class="check-row"><input type="checkbox" name="comment_reply" {% if cfg.comment_reply %}checked{% endif %}> 审核通过后 AI 回复</label>
-            <label class="check-row"><input type="checkbox" name="link_moderation" {% if cfg.link_moderation %}checked{% endif %}> 友链回链自动审核</label>
-            <div class="form-group">
-                <label>评论最短长度</label>
-                <input type="number" name="comment_min_length" class="input-text" value="{{ cfg.comment_min_length }}" min="0" max="200">
-            </div>
-            <div class="form-group">
-                <label>友链复查时长（小时）</label>
-                <input type="number" name="link_check_hours" class="input-text" value="{{ cfg.link_check_hours }}" min="1" max="720">
+    <section class="ai-section">
+        <div class="ai-section-head">
+            <div>
+                <h3>接口与模型</h3>
+                <p>兼容 OpenAI 的 /chat/completions，DeepSeek、OpenAI、通义、智谱都可直接用</p>
             </div>
         </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">保存配置</button>
+        <div class="ai-section-body">
+            <div class="ai-grid">
+                <div class="form-group span-2">
+                    <label>接口地址</label>
+                    <input type="url" name="base_url" class="input-text" value="{{ cfg.base_url }}"
+                           placeholder="https://api.deepseek.com/v1" required>
+                    <span class="form-hint">只填到版本号，例如 /v1，不要带 /chat/completions</span>
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" name="api_key" class="input-text" value="{{ masked_key }}"
+                           placeholder="留空或保持 **** 表示不修改" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>模型</label>
+                    <input type="text" name="model" class="input-text" value="{{ cfg.model }}"
+                           placeholder="deepseek-chat" required>
+                </div>
+            </div>
         </div>
-    </form>
-</div>
+    </section>
+
+    <section class="ai-section">
+        <div class="ai-section-head">
+            <div>
+                <h3>生成与限额</h3>
+                <p>控制回复风格和调用成本</p>
+            </div>
+        </div>
+        <div class="ai-section-body">
+            <div class="ai-grid">
+                <div class="form-group">
+                    <label>温度</label>
+                    <input type="number" name="temperature" class="input-text" value="{{ cfg.temperature }}" min="0" max="2" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>最大输出 tokens</label>
+                    <input type="number" name="max_tokens" class="input-text" value="{{ cfg.max_tokens }}" min="100" max="8000">
+                </div>
+                <div class="form-group">
+                    <label>超时（秒）</label>
+                    <input type="number" name="timeout" class="input-text" value="{{ cfg.timeout }}" min="10" max="300">
+                </div>
+                <div class="form-group">
+                    <label>每日调用上限</label>
+                    <input type="number" name="daily_call_limit" class="input-text" value="{{ cfg.daily_call_limit }}" min="10" max="5000">
+                </div>
+                <div class="form-group span-2">
+                    <label>系统提示词</label>
+                    <textarea name="system_prompt" class="input-text" rows="6">{{ cfg.system_prompt }}</textarea>
+                    <span class="form-hint">保持中文；模型按这里的约定返回 JSON 工具调用</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ai-section">
+        <div class="ai-section-head">
+            <div>
+                <h3>AI 托管</h3>
+                <p>评论审核、自动回复、友链回链检测</p>
+            </div>
+        </div>
+        <div class="ai-section-body">
+            <div class="ai-grid">
+                <label class="ai-switch">
+                    <input type="checkbox" name="comment_moderation" {% if cfg.comment_moderation %}checked{% endif %}>
+                    <span>
+                        <strong>新评论自动审核</strong>
+                        <small>判断广告、辱骂、灌水；低置信度会转人工</small>
+                    </span>
+                </label>
+                <label class="ai-switch">
+                    <input type="checkbox" name="comment_reply" {% if cfg.comment_reply %}checked{% endif %}>
+                    <span>
+                        <strong>通过后 AI 回复</strong>
+                        <small>结合文章内容生成中文回复，带「AI 助手」标识</small>
+                    </span>
+                </label>
+                <label class="ai-switch">
+                    <input type="checkbox" name="link_moderation" {% if cfg.link_moderation %}checked{% endif %}>
+                    <span>
+                        <strong>友链回链自动审核</strong>
+                        <small>对方页面出现本站链接后自动通过并发信通知</small>
+                    </span>
+                </label>
+                <div class="form-group">
+                    <label>评论最短长度</label>
+                    <input type="number" name="comment_min_length" class="input-text" value="{{ cfg.comment_min_length }}" min="0" max="200">
+                    <span class="form-hint">低于这个长度不调用 AI，避免浪费</span>
+                </div>
+                <div class="form-group">
+                    <label>友链复查时长（小时）</label>
+                    <input type="number" name="link_check_hours" class="input-text" value="{{ cfg.link_check_hours }}" min="1" max="720">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ai-actions">
+        <button type="submit" class="btn btn-primary">保存配置</button>
+    </div>
+</form>
 {% endblock %}

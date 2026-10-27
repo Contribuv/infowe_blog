@@ -12,30 +12,35 @@
 
 <div class="card">
     <div class="card-header"><h3>已安装插件</h3></div>
-    {% for p in plugins %}
-    <div class="plugin-row">
-        <div class="plugin-main">
-            <div class="plugin-title">
-                <strong>{{ p.name }}</strong>
-                <span class="plugin-ver">v{{ p.version }}</span>
-                {% if p.enabled %}<span class="badge badge-available">已启用</span>{% else %}<span class="badge">未启用</span>{% endif %}
-                {% if not p.installed %}<span class="badge badge-pending">文件缺失</span>{% endif %}
+    <div class="plugin-list">
+        {% for p in plugins %}
+        <div class="plugin-row">
+            <div class="plugin-icon">{{ icon('zap', 20) | safe }}</div>
+            <div class="plugin-main">
+                <div class="plugin-title">
+                    <strong>{{ p.name }}</strong>
+                    <span class="plugin-ver">v{{ p.version }}</span>
+                    {% if p.enabled %}<span class="badge badge-available">已启用</span>{% else %}<span class="badge">未启用</span>{% endif %}
+                    {% if not p.installed %}<span class="badge badge-pending">文件缺失</span>{% endif %}
+                </div>
+                <p class="plugin-desc">{{ p.manifest.get('description', '') }}</p>
             </div>
-            <p class="plugin-desc">{{ p.manifest.get('description', '') }}</p>
+            <div class="plugin-actions">
+                {% if p.key == 'ai_assistant' and p.enabled and p.installed %}
+                <a href="{{ admin_prefix }}/plugins/ai" class="btn btn-secondary btn-sm">配置</a>
+                <a href="{{ admin_prefix }}/plugins/ai/chat" class="btn btn-primary btn-sm">打开对话</a>
+                {% endif %}
+                <form method="POST" action="{{ url_for('admin_plugin_toggle') }}">
+                    <input type="hidden" name="key" value="{{ p.key }}">
+                    <button type="submit" class="btn btn-secondary btn-sm">{{ '停用' if p.enabled else '启用' }}</button>
+                </form>
+            </div>
         </div>
-        <div class="plugin-actions">
-            {% if p.key == 'ai_assistant' and p.enabled and p.installed %}
-            <a href="{{ admin_prefix }}/plugins/ai" class="btn btn-secondary btn-sm">配置</a>
-            <a href="{{ admin_prefix }}/plugins/ai/chat" class="btn btn-primary btn-sm">打开对话</a>
-            {% endif %}
-            <form method="POST" action="{{ url_for('admin_plugin_toggle') }}">
-                <input type="hidden" name="key" value="{{ p.key }}">
-                <button type="submit" class="btn btn-secondary btn-sm">{{ '停用' if p.enabled else '启用' }}</button>
-            </form>
+        {% else %}
+        <div class="plugin-row">
+            <p class="form-hint">plugins 目录下没有发现插件。</p>
         </div>
+        {% endfor %}
     </div>
-    {% else %}
-    <p class="form-hint">plugins 目录下没有发现插件。</p>
-    {% endfor %}
 </div>
 {% endblock %}

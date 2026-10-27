@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.3.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.0)
+[![version](https://img.shields.io/badge/version-3.3.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.3.1)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,16 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.3.0**
+- 版本：**v3.3.1**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.3.1
+
+- 插件管理页：插件行加图标块，卡片内边距与后台其它页面统一
+- AI 配置页：拆成「接口与模型 / 生成与限额 / AI 托管」三张卡片，字段两列网格、开关卡片化、保存按钮置底
+- AI 聊天页：整页高度自适应（按 .admin-content 可用高度计算，窗口缩放/横竖屏自动重算）；消息区独立滚动、输入框固定底部；移动端会话列表横向滚动、单列布局
+- 插件静态资源缓存从 7 天改为 60 秒，改样式后不用等浏览器缓存过期
 
 ### v3.3.0
 
