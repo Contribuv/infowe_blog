@@ -696,8 +696,8 @@ html.page-enter .tech-main {
 }
 
 /* ── 文章详情 ── */
-/* 容器与 nav 同宽 1000px，正文占满容器宽度 */
-.tech-post-wrap { max-width: 1000px; margin: 0 auto; }
+/* 正文排版修复：容器从 1000 收窄到 800（含左右 20 内边距），窄屏正文不再贴边，宽屏也与导航文字对齐；一行约 47 个汉字 */
+.tech-post-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px; }
 .tech-post-layout { display: block; }
 
 /* TOC：窄屏内联折叠框，位于标题下方、正文之前；上下 24px（与相邻块 margin 折叠取较大值）；
@@ -707,9 +707,8 @@ html.page-enter .tech-main {
   .tech-toc-sidebar {
     position: fixed;
     top: 80px;
-    /* 1400px 视口下原 calc(50% + 520px) 会把右缘顶到 0 边距（1440px 才 20px），
-       这里用 min() 保证任何宽度都留出 20px 右边距 */
-    left: min(calc(50% + 520px), calc(100vw - 200px));
+    /* 正文排版修复：正文容器 800（半宽 400 + 20 内边距），悬浮目录同步从 520 收到 420 */
+    left: min(calc(50% + 420px), calc(100vw - 200px));
     width: 180px;
     margin: 0;
   }
@@ -786,10 +785,10 @@ html.page-enter .tech-main {
   border-left: 2px solid var(--accent); padding-left: 8px; margin-left: -10px;
 }
 
-/* 正文：16px / 1.75 行高；中文不加字间距（等宽字符加间距反显松散，用户反馈） */
+/* 正文排版修复：16px / 1.8 行高；中文不加字间距（等宽字符加间距反显松散，用户反馈） */
 .tech-post-body,
 .tech-post-body.markdown-body {
-  font-size: 15px; line-height: 1.65; word-wrap: break-word;
+  font-size: 16px; line-height: 1.8; word-wrap: break-word;
 }
 .tech-post-body h1, .tech-post-body h2, .tech-post-body h3,
 .tech-post-body h4, .tech-post-body h5, .tech-post-body h6,
@@ -805,15 +804,17 @@ html.page-enter .tech-main {
 .tech-post-body h1, .tech-post-body.markdown-body h1 {
   font-size: 20px; padding-bottom: 0; border-bottom: 0;
 }
+/* 正文排版修复：h2 19px，上下留白用 em 跟随字号，段落层级更清楚 */
 .tech-post-body h2, .tech-post-body.markdown-body h2 {
-  font-size: 18px; padding-bottom: 8px;
+  font-size: 19px; padding-bottom: 8px; margin: 2em 0 .75em;
   border-bottom: 1px solid var(--border);
 }
 .tech-post-body h3, .tech-post-body.markdown-body h3 { font-size: 16.5px; }
 .tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 15.5px; }
 .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 15px; }
 .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 14.5px; }
-.tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 13px; }
+/* 正文排版修复：段距改用 1.1em，跟随 16px 字号 */
+.tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 1.1em; }
 .tech-post-body strong, .tech-post-body.markdown-body strong { font-weight: 600; }
 .tech-post-body em { font-style: italic; }
 .tech-post-body s, .tech-post-body del { color: var(--text-secondary); }
