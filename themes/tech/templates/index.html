@@ -31,6 +31,9 @@
     {% endif %}
 </div>
 
+{% set use_sidebar = sidebar and post_layout == 'multi' and not current_tag and not search_query %}
+{% if use_sidebar %}<div class="tech-home-grid"><div class="tech-home-main">{% endif %}
+
 <!-- 精选文章 -->
 {% if featured and not current_tag and not search_query %}
 <section class="tech-featured">
@@ -122,4 +125,5 @@
     {% endif %}
 </nav>
 {% endif %}
+{% if use_sidebar %}</div>{% include "_sidebar.html" %}</div>{% endif %}
 {% endblock %}

@@ -237,6 +237,19 @@ def _register_hooks(app: Flask) -> None:
 
         conf = settings_service.all()
         active = theme_service.active_key()
+
+        # 外部链接确认弹窗的白名单：已通过审核的友链站点不再拦截
+        from urllib.parse import urlparse
+
+        import db
+
+        friend_hosts: list[str] = []
+        for row in db.query("SELECT url FROM links WHERE status = 'approved'"):
+            host = urlparse(str(row["url"] or "")).hostname
+            if host:
+                friend_hosts.append(host.lower())
+        friend_hosts = sorted(set(friend_hosts))
+
         return {
             "blog_name": conf.get("blog_name", "infowe"),
             "blog_subtitle": conf.get("blog_subtitle", ""),
@@ -263,6 +276,7 @@ def _register_hooks(app: Flask) -> None:
             "nav_pages": nav_pages,
             "post_layout": conf.get("post_layout", "single"),
             "nav_all": nav_all,
+            "friend_hosts": friend_hosts,
             "version": config.VERSION,
             "static_ver": _static_version(),
             "admin_prefix": app.config.get("ADMIN_PREFIX", "/admin"),

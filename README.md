@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.13-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.13)
+[![version](https://img.shields.io/badge/version-3.4.14-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.14)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,19 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.13**
+- 版本：**v3.4.14**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.14
+
+- 「互动」并入「读者」：留言榜单页新增走心评论区块，/interactions 301 到 /readers#picked，导航去掉「互动」
+- 留言榜单改版：文案参考老张博客，统计卡增至 4 个，前三名做金银铜领奖台，第 4 名起列表展示，每页 15 位，来源链接改为主色
+- 归档页标题改为「文章归档」，描述改为「记录每一次折腾与思考」
+- 新增站外链接确认浮窗：本站和已收录友链直接放行，其他外链先确认再跳转；PC 居中、移动端底部抽屉
+- 主题配置新增「多栏」布局：首页/归档左侧文章，右侧博主信息、热门标签、分类、最新评论和十年之约「今天读什么」挂件，挂件按深浅主题自动切换
+- 多栏在 1000px 以下自动上下堆叠，390px 实测无横向溢出
+- 侧栏头像、评论头像、归档分页等细节适配
 
 ### v3.4.13
 

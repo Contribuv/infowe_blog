@@ -1,0 +1,88 @@
+<aside class="tech-sidebar" aria-label="站点侧栏">
+    <section class="tech-side-card tech-side-profile-card">
+        <div class="tech-side-profile">
+            {% if avatar %}
+            <img class="tech-side-avatar" src="{{ avatar }}" alt="{{ author or blog_name }}" loading="lazy"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            <span class="tech-side-avatar tech-side-avatar--text" style="display:none">{{ (author or blog_name or '?')[0] | upper }}</span>
+            {% else %}
+            <span class="tech-side-avatar tech-side-avatar--text">{{ (author or blog_name or '?')[0] | upper }}</span>
+            {% endif %}
+            <div class="tech-side-profile-main">
+                <strong>{{ author or blog_name }}</strong>
+                <span>{{ blog_subtitle }}</span>
+            </div>
+        </div>
+        {% if author_bio %}
+        <p class="tech-side-bio">{{ author_bio | e | replace('\n', ' ') | safe }}</p>
+        {% endif %}
+        <div class="tech-side-stats">
+            <span><b>{{ sidebar.side_post_total }}</b>文章</span>
+            <span><b>{{ sidebar.side_tag_total }}</b>标签</span>
+            <span><b>{{ sidebar.side_category_total }}</b>分类</span>
+        </div>
+        {% if social_github or contact_email %}
+        <div class="tech-side-social">
+            {% if social_github %}<a href="{{ social_github }}" target="_blank" rel="noopener nofollow">GitHub</a>{% endif %}
+            {% if contact_email %}<a href="mailto:{{ contact_email }}">Email</a>{% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    {% if sidebar.side_tags %}
+    <section class="tech-side-card">
+        <h3>热门标签</h3>
+        <div class="tech-side-tags">
+            {% for tag, count in sidebar.side_tags %}
+            <a class="tech-side-tag" href="{{ url_for('tag_page', tag=tag) }}">#{{ tag }}<span>{{ count }}</span></a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if sidebar.side_categories %}
+    <section class="tech-side-card">
+        <h3>文章分类</h3>
+        <ul class="tech-side-cats">
+            {% for c in sidebar.side_categories %}
+            <li><span>{{ c.name }}</span><b>{{ c.post_count }}</b></li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {% if sidebar.side_comments %}
+    <section class="tech-side-card">
+        <h3>最新评论</h3>
+        <ul class="tech-side-comments">
+            {% for c in sidebar.side_comments %}
+            <li>
+                <img class="tech-side-cmt-avatar" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy"
+                     onerror="this.src='/static/images/default-avatar.svg'">
+                <div class="tech-side-cmt-main">
+                    <div class="tech-side-cmt-head">
+                        <strong>{{ c.author }}</strong>
+                        <time>{{ c.created_at[5:10] }}</time>
+                    </div>
+                    <p>{{ c.text }}</p>
+                    <a class="tech-side-cmt-source" href="{{ c.source_url }}">来自 {{ c.source_title }}</a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    <section class="tech-side-card tech-side-widget">
+        <h3>十年之约</h3>
+        <iframe class="tech-side-widget-frame tech-side-widget-light"
+                src="https://www.foreverblog.cn/widget/today.html?theme=light"
+                loading="lazy" title="十年之约 · 今天读什么"
+                sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+        <iframe class="tech-side-widget-frame tech-side-widget-dark"
+                src="https://www.foreverblog.cn/widget/today.html?theme=dark"
+                loading="lazy" title="十年之约 · 今天读什么"
+                sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+        <a class="tech-side-widget-link" href="https://www.foreverblog.cn/about.html" target="_blank" rel="noopener">了解十年之约 →</a>
+    </section>
+</aside>

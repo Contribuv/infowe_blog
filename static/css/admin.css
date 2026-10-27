@@ -1920,7 +1920,7 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
 .theme-config-body { padding: 0 var(--sp-5) var(--sp-5); }
 .layout-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--sp-4);
 }
 .layout-option { position: relative; display: block; cursor: pointer; }
@@ -1964,6 +1964,13 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
 .layout-preview--single i:nth-child(3) { width: 60%; }
 .layout-preview--double { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
 .layout-preview--double i { height: 100%; }
+.layout-preview--multi {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 6px;
+}
+.layout-preview--multi i:first-child { grid-row: span 3; }
 .theme-config-tip { margin: var(--sp-4) 0 0; }
 .theme-config-actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-4); }
 @media (max-width: 768px) {

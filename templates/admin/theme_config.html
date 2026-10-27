@@ -12,7 +12,7 @@
     <div class="card">
         <div class="card-header">
             <h3>文章列表布局</h3>
-            <span class="form-hint">作用于首页文章列表和「全部文章」页；移动端窄屏自动单列</span>
+            <span class="form-hint">作用于首页和归档页；窄屏自动切换为单列</span>
         </div>
         <div class="theme-config-body">
             <div class="layout-options">
@@ -36,6 +36,17 @@
                         </span>
                         <span class="layout-option-name">双栏</span>
                         <span class="layout-option-desc">两列卡片，一屏能看到更多文章，适合文章较多的博客；摘要统一截断两行。</span>
+                    </span>
+                </label>
+                <label class="layout-option">
+                    <input type="radio" name="post_layout" value="multi"
+                           {{ 'checked' if post_layout == 'multi' else '' }}>
+                    <span class="layout-option-body">
+                        <span class="layout-preview layout-preview--multi" aria-hidden="true">
+                            <i></i><i></i><i></i>
+                        </span>
+                        <span class="layout-option-name">多栏</span>
+                        <span class="layout-option-desc">左边文章列表，右边博主信息、热门标签、分类、最新评论和十年之约挂件；窄屏自动上下堆叠。</span>
                     </span>
                 </label>
             </div>

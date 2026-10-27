@@ -85,6 +85,19 @@ def year_counts() -> dict[str, int]:
     return {str(r["year"]): int(r["n"]) for r in rows}
 
 
+def tag_counts(limit: int = 12) -> list[tuple[str, int]]:
+    """热门标签，供首页/归档页侧栏使用。"""
+    rows = db.query("SELECT tags FROM posts WHERE status = 'published'")
+    counts: dict[str, int] = {}
+    for row in rows:
+        for tag in json_list(row["tags"]):
+            name = str(tag).strip()
+            if name:
+                counts[name] = counts.get(name, 0) + 1
+    ordered = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    return ordered[: max(1, int(limit))]
+
+
 def get(post_id: int) -> dict | None:
     row = db.one("SELECT * FROM posts WHERE id = ?", (post_id,))
     return hydrate(row) if row else None

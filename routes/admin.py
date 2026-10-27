@@ -530,7 +530,7 @@ def admin_comment_pick(comment_id: int):
     from services import page_cache
 
     page_cache.clear_all()
-    flash("已设为走心评论，前台「互动」页会展示" if picked else "已取消走心评论", "success")
+    flash("已设为走心评论，前台「留言榜单」会展示" if picked else "已取消走心评论", "success")
     return _comments_back()
 
 
@@ -747,7 +747,7 @@ def admin_theme_config():
     """tech 主题配置：文章列表单栏 / 双栏。"""
     if request.method == "POST":
         layout = (request.form.get("post_layout") or "single").strip()
-        if layout not in {"single", "double"}:
+        if layout not in {"single", "double", "multi"}:
             layout = "single"
         settings.set_value("post_layout", layout)
         # 首页和列表页有整页缓存，保存后清掉，返回前台立刻能看到

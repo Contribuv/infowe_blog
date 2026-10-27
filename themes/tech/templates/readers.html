@@ -1,22 +1,47 @@
 {% extends "base.html" %}
-{% block title %}读者{% endblock %}
+{% block title %}留言榜单{% endblock %}
 {% block content %}
 <div class="tech-page-head">
-    <h1 class="tech-page-title">读者</h1>
-    <p class="tech-page-desc">每一条真诚的留言，都是温暖的相遇。</p>
+    <h1 class="tech-page-title">留言榜单</h1>
+    <p class="tech-page-desc">每一条真诚的留言，都是温暖的相遇</p>
+    <p class="tech-reader-lead">展示留言排行榜（近 6 个月），向每一份真诚的分享与鼓励致谢。真诚地邀请您留下您的印记，您的声音对我来说都弥足珍贵。</p>
 </div>
 
 <div class="circle-stats tech-reader-stats">
     <div><b>{{ stats.comments }}</b><span>读者留言</span></div>
     <div><b>{{ stats.readers }}</b><span>参与读者</span></div>
     <div><b>{{ stats.recent }}</b><span>近 30 天</span></div>
+    <div><b>{{ stats.picked }}</b><span>走心评论</span></div>
 </div>
 
 {% if items %}
+<!-- 前三名单独展示 -->
+<div class="tech-podium">
+    {% for r in items[:3] %}
+    <article class="tech-podium-item tech-podium-item--{{ r.rank }}">
+        <span class="tech-podium-rank">{{ r.rank }}</span>
+        <img class="tech-podium-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"
+             onerror="this.src='/static/images/default-avatar.svg'">
+        {% if r.website %}
+        <a class="tech-podium-name" href="{{ r.website }}" target="_blank" rel="noopener nofollow">{{ r.author }}</a>
+        {% else %}
+        <span class="tech-podium-name">{{ r.author }}</span>
+        {% endif %}
+        <span class="tech-podium-count">{{ r.count }} 条留言</span>
+        {% if r.last_text %}<p class="tech-podium-quote">{{ r.last_text }}</p>{% endif %}
+        {% if r.source_title and r.source_url %}
+        <span class="tech-podium-source">来自 <a href="{{ r.source_url }}">{{ r.source_title }}</a></span>
+        {% endif %}
+    </article>
+    {% endfor %}
+</div>
+
+<!-- 第 4 名起 -->
+{% if items|length > 3 %}
 <ol class="tech-reader-list">
-    {% for r in items %}
+    {% for r in items[3:] %}
     <li class="tech-reader-item">
-        <span class="tech-reader-rank tech-reader-rank--{{ r.rank if r.rank <= 3 else 'normal' }}">{{ r.rank }}</span>
+        <span class="tech-reader-rank tech-reader-rank--normal">{{ r.rank }}</span>
         <img class="tech-reader-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"
              onerror="this.src='/static/images/default-avatar.svg'">
         <div class="tech-reader-main">
@@ -39,9 +64,10 @@
     </li>
     {% endfor %}
 </ol>
+{% endif %}
 
 {% if total_pages > 1 %}
-<nav class="tech-pagination" aria-label="读者分页">
+<nav class="tech-pagination" aria-label="留言榜单分页">
     {% if page > 1 %}<a href="{{ url_for('readers_page', page=page-1) }}" class="tech-page-btn">上一页</a>{% endif %}
     {% for p in range(1, total_pages + 1) %}
         {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
@@ -58,7 +84,41 @@
 <div class="tech-empty">
     <div class="tech-empty-icon">✍</div>
     <h3>还没有读者留言</h3>
-    <p>等第一条留言出现后，这里会变成读者榜单。</p>
+    <p>等第一条留言出现后，这里会变成留言榜单。</p>
 </div>
+{% endif %}
+
+{% if picked_items %}
+<!-- 走心评论（原「互动」页并入） -->
+<section class="tech-picked" id="picked">
+    <div class="tech-picked-head">
+        <h2>走心评论</h2>
+        <span>一些留在文字里的温度</span>
+    </div>
+    <div class="tech-interactions">
+        {% for c in picked_items %}
+        <article class="tech-interaction-card">
+            <header class="tech-interaction-head">
+                <img class="tech-interaction-avatar" src="{{ c.avatar }}" alt="{{ c.author }}" loading="lazy"
+                     onerror="this.src='/static/images/default-avatar.svg'">
+                <div class="tech-interaction-who">
+                    {% if c.website %}
+                    <a class="tech-interaction-name" href="{{ c.website }}" target="_blank" rel="noopener nofollow">{{ c.author }}</a>
+                    {% else %}
+                    <span class="tech-interaction-name">{{ c.author }}</span>
+                    {% endif %}
+                    <time class="tech-interaction-time">{{ c.created_at[:10] }}</time>
+                </div>
+            </header>
+            <p class="tech-interaction-text">{{ c.text }}</p>
+            {% if c.source_title and c.source_url %}
+            <footer class="tech-interaction-foot">
+                来自 <a href="{{ c.source_url }}">{{ c.source_title }}</a>
+            </footer>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+</section>
 {% endif %}
 {% endblock %}

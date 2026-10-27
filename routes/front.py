@@ -18,6 +18,7 @@ from models import Category, Comment, Link, Post, Project, Timeline
 from services import auth, avatar, comments as comments_service, ip_location
 from services import lang, markdown, project_sync, settings, site_url, status, theme, upload
 from services import readers as readers_service
+from services import sidebar as sidebar_service
 
 
 def _decorate_categories(posts: list[dict]) -> list[dict]:
@@ -37,6 +38,13 @@ def _group_by_year(posts: list[dict]) -> list[tuple[str, list[dict]]]:
             groups.append((year, []))
         groups[-1][1].append(post)
     return groups
+
+
+def _sidebar_data() -> dict | None:
+    """只有多栏布局才查询侧栏，单栏/双栏不增加额外查询。"""
+    if settings.get_str("post_layout", "single") != "multi":
+        return None
+    return sidebar_service.data()
 
 
 def _comment_pager(pager: dict) -> dict:
@@ -111,6 +119,7 @@ def index():
         total_pages=1,
         total=total,
         total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+        sidebar=_sidebar_data(),
     )
 
 
@@ -187,6 +196,7 @@ def archive_page(year: int):
         all_years=Post.all_years(),
         active_tag="",
         active_year=str(year),
+        sidebar=_sidebar_data(),
     )
 
 
@@ -228,6 +238,7 @@ def posts_page():
         all_years=Post.all_years(),
         active_tag=tag or "",
         active_year=year or "",
+        sidebar=_sidebar_data(),
     )
 
 
@@ -613,12 +624,16 @@ def rss_feed():
 
 def readers_page():
     data = readers_service.rank(request.args.get("page", 1, type=int) or 1)
+    picked = readers_service.picked(1, per_page=6)
+    data["picked_items"] = picked["items"]
+    data["picked_total"] = picked["total"]
+    data["stats"]["picked"] = picked["total"]
     return render_template("readers.html", **data)
 
 
 def interactions_page():
-    data = readers_service.picked(request.args.get("page", 1, type=int) or 1)
-    return render_template("interactions.html", **data)
+    # 「互动」已并入留言榜单，旧地址保留跳转
+    return redirect(url_for("readers_page") + "#picked", code=301)
 
 
 def register(app) -> None:

@@ -214,6 +214,22 @@
     })();
     </script>
     {% block scripts %}{% endblock %}
+
+    <!-- 站外链接确认：友链白名单由后端注入，已收录站点直接放行 -->
+    <div class="tech-external" id="techExternal" hidden>
+        <div class="tech-external-mask" data-external-close></div>
+        <div class="tech-external-panel" role="dialog" aria-modal="true" aria-labelledby="techExternalTitle">
+            <span class="tech-external-kicker">外部链接</span>
+            <h2 id="techExternalTitle">即将离开本站</h2>
+            <p>你将前往 <strong id="techExternalHost"></strong>，那里的内容由对方站点负责。</p>
+            <div class="tech-external-actions">
+                <button type="button" class="tech-btn" data-external-close>留在这里</button>
+                <a class="tech-btn tech-btn-primary" id="techExternalGo" href="#" target="_blank" rel="noopener nofollow" data-external-allow>继续访问</a>
+            </div>
+        </div>
+    </div>
+    <script type="application/json" id="techSafeHosts">{{ friend_hosts | tojson }}</script>
+    <script src="{{ url_for('static', filename='js/external-link.js', t=static_ver) }}"></script>
     {# 统计代码：后台「统计代码」原样注入，仅管理员可填。
        放进 template，等 load 后空闲时再执行，避免第三方统计阻塞首屏和 load 事件。 #}
     {% if stats_code %}
