@@ -86,8 +86,18 @@
     });
 
     if (goBtn) {
-        goBtn.addEventListener('click', function () {
+        goBtn.addEventListener('click', function (event) {
+            var url = goBtn.getAttribute('href') || '';
+            if (!/^https?:\/\//i.test(url)) return;
+            event.preventDefault();
+            var target = goBtn.getAttribute('target') || '_blank';
             close();
+            if (target === '_self') {
+                location.assign(url);
+            } else {
+                var opened = window.open(url, target, 'noopener');
+                if (!opened) location.assign(url);
+            }
         });
     }
 

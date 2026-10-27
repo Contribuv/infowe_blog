@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.21-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.21)
+[![version](https://img.shields.io/badge/version-3.4.22-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.22)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,19 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.21**
+- 版本：**v3.4.22**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.22
+
+- 修复外链浮窗「继续访问」：先保存目标地址再关闭浮窗，避免 href 被清空；弹窗被拦截时回退当前页跳转
+- 留言榜前三名改为 2-1-3 领奖台，冠军居中并戴皇冠
+- 侧栏顺序调整：最新评论移到最后
+- 侧栏文章分类可点击，新增 /category/<id> 分类文章页
+- 侧栏博主卡箭头移到名字后面，排版收紧
+- 项目卡片统一圆角、星标胶囊和「查看项目」入口
+- 圈子统计卡加细主色顶线和主色数字，克制提亮
 
 ### v3.4.21
 

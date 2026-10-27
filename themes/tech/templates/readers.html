@@ -21,8 +21,13 @@
     {% for r in items[:3] %}
     <article class="tech-podium-item tech-podium-item--{{ r.rank }}">
         <span class="tech-podium-rank tech-podium-rank--{{ r.rank }}">{% if r.rank == 1 %}冠军{% elif r.rank == 2 %}亚军{% else %}季军{% endif %}</span>
-        <img class="tech-podium-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"
-             onerror="this.src='/static/images/default-avatar.svg'">
+        <span class="tech-podium-avatar-wrap">
+            {% if r.rank == 1 %}
+            <svg class="tech-podium-crown" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 8.2l4.3 3.1L12 4.8l4.7 6.5L21 8.2 19 19H5L3 8.2z"/></svg>
+            {% endif %}
+            <img class="tech-podium-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"
+                 onerror="this.src='/static/images/default-avatar.svg'">
+        </span>
         {% if r.website %}
         <a class="tech-podium-name" href="{{ r.website }}" target="_blank" rel="noopener nofollow">{{ r.author }}</a>
         {% else %}

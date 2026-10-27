@@ -35,6 +35,7 @@ def load(
     year: str | None = None,
     page: int = 1,
     per_page: int = PAGE_SIZE,
+    category_id: int | None = None,
 ) -> tuple[list[dict], int]:
     conditions: list[str] = []
     params: list[Any] = []
@@ -55,6 +56,9 @@ def load(
     if year:
         conditions.append("SUBSTR(created_at, 1, 4) = ?")
         params.append(year)
+    if category_id is not None:
+        conditions.append("category_id = ?")
+        params.append(int(category_id))
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     total = int(db.scalar(f"SELECT COUNT(*) FROM posts {where}", params, 0) or 0)

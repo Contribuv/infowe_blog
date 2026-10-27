@@ -633,10 +633,42 @@ def interactions_page():
     return redirect(url_for("readers_page"), code=301)
 
 
+def category_page(category_id: int):
+    category = Category.get(category_id)
+    if not category:
+        abort(404)
+    per_page = settings.get_int("archive_per_page", 20) or 20
+    page = request.args.get("page", 1, type=int) or 1
+    _, total = Post.load("published", None, None, None, 1, per_page, category_id=category_id)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(1, page), total_pages)
+    posts, total = Post.load(
+        "published", None, None, None, page, per_page, category_id=category_id
+    )
+    posts = _decorate_categories(posts)
+    return render_template(
+        "posts.html",
+        posts=posts,
+        groups=None,
+        is_miles=False,
+        sidebar=None,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        filtered=True,
+        all_tags=Post.all_tags(),
+        all_years=Post.all_years(),
+        active_tag="",
+        active_year="",
+        active_category=category,
+    )
+
+
 def register(app) -> None:
     rules = [
         ("/", "index", index, ["GET"]),
         ("/tag/<tag>", "tag_page", tag_page, ["GET"]),
+        ("/category/<int:category_id>", "category_page", category_page, ["GET"]),
         ("/search/<path:q>", "search_page", search_page, ["GET"]),
         ("/archive/<int:year>", "archive_page", archive_page, ["GET"]),
         ("/posts", "posts_page", posts_page, ["GET"]),

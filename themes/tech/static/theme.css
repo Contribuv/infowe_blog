@@ -1360,10 +1360,10 @@ html.page-enter .tech-main {
 }
 .tech-project-card {
   display: flex; flex-direction: column; gap: 8px;
-  padding: 24px; min-width: 0;
-  border: 1px solid var(--border); border-radius: 10px;
-  background: var(--bg);
-  transition: border-color .2s, box-shadow .2s;
+  padding: 22px; min-width: 0;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: transparent;
+  transition: border-color .2s, box-shadow .2s, background-color .2s, transform .2s;
 }
 @media (hover: hover) and (pointer: fine) { .tech-project-card:hover { border-color: var(--accent); background: var(--hover-bg); box-shadow: var(--shadow); } }
 .tech-project-card-head { display: flex; align-items: center; gap: 8px; }
@@ -1385,8 +1385,23 @@ html.page-enter .tech-main {
   display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--text-secondary);
   margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border);
 }
-.tech-project-card-head .tech-project-stars { margin-left: auto; flex-shrink: 0; }
-.tech-project-stars { color: var(--warning); }
+.tech-project-open {
+  align-self: flex-end;
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+.tech-project-open:hover { text-decoration: underline; }
+.tech-project-card-head .tech-project-stars {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
 .tech-project-lang {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 2px 8px; border-radius: 10px;
@@ -2039,6 +2054,7 @@ html { touch-action: manipulation; }
   gap: 2px;
   padding: 14px 16px;
   border: 1px solid var(--border);
+  border-top: 2px solid color-mix(in srgb, var(--accent) 42%, var(--border));
   border-radius: 10px;
   background: var(--bg-subtle);
 }
@@ -2046,7 +2062,7 @@ html { touch-action: manipulation; }
   font-size: 22px;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  color: var(--text);
+  color: var(--accent);
 }
 .circle-stats span { font-size: 12.5px; color: var(--text-secondary); }
 
@@ -2712,6 +2728,9 @@ a.tech-interaction-name:hover { color: var(--accent); }
   gap: 12px;
   margin: 4px 0 18px;
 }
+.tech-podium-item--1 { order: 2; margin-top: -8px; padding-top: 26px; }
+.tech-podium-item--2 { order: 1; margin-top: 8px; }
+.tech-podium-item--3 { order: 3; margin-top: 8px; }
 .tech-podium-item {
   display: flex;
   flex-direction: column;
@@ -2754,15 +2773,27 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   font-weight: 600;
   letter-spacing: .02em;
 }
+.tech-podium-avatar-wrap {
+  position: relative;
+  display: flex;
+  margin-top: 10px;
+}
 .tech-podium-avatar {
   width: 52px;
   height: 52px;
-  margin-top: 10px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--bg-subtle);
 }
 .tech-podium-item--1 .tech-podium-avatar { width: 58px; height: 58px; }
+.tech-podium-crown {
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--medal);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .22));
+}
 .tech-podium-name {
   margin-top: 8px;
   max-width: 100%;
@@ -2818,7 +2849,12 @@ a.tech-podium-name:hover { color: var(--accent); }
 
 @media (max-width: 640px) {
   .tech-podium { grid-template-columns: 1fr; gap: 8px; }
-  .tech-podium-item {
+  .tech-podium-item,
+  .tech-podium-item--1,
+  .tech-podium-item--2,
+  .tech-podium-item--3 {
+    order: 0;
+    margin-top: 0;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
@@ -2914,12 +2950,16 @@ a.tech-podium-name:hover { color: var(--accent); }
   font-weight: 600;
   color: var(--text);
 }
+.tech-side-profile-main strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 .tech-side-profile-arrow {
   flex: none;
-  margin-left: auto;
   color: var(--accent);
-  opacity: 0;
-  transform: translateX(-3px);
+  opacity: .45;
+  transform: translateX(-2px);
   transition: opacity .18s ease, transform .18s ease;
 }
 .tech-side-bio {
@@ -2975,6 +3015,12 @@ a.tech-podium-name:hover { color: var(--accent); }
   font-size: 13px;
   color: var(--text-secondary);
 }
+.tech-side-cats a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color .15s ease;
+}
+.tech-side-cats a:hover { color: var(--accent); }
 .tech-side-cats b { font-weight: 500; color: var(--text); }
 .tech-side-comments { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .tech-side-comments li { display: flex; gap: 9px; }

@@ -10,9 +10,8 @@
             {% endif %}
             <span class="tech-side-profile-main">
                 <span class="tech-side-profile-kicker">博主</span>
-                <strong>{{ author or blog_name }}</strong>
+                <strong>{{ author or blog_name }}<span class="tech-side-profile-arrow" aria-hidden="true">→</span></strong>
             </span>
-            <span class="tech-side-profile-arrow" aria-hidden="true">→</span>
         </a>
         {% if author_bio %}
         <p class="tech-side-bio">{{ author_bio | e | replace('\n', ' ') | safe }}</p>
@@ -46,11 +45,32 @@
         <h3>文章分类</h3>
         <ul class="tech-side-cats">
             {% for c in sidebar.side_categories %}
-            <li><span>{{ c.name }}</span><b>{{ c.post_count }}</b></li>
+            <li><a href="{{ url_for('category_page', category_id=c.id) }}">{{ c.name }}</a><b>{{ c.post_count }}</b></li>
             {% endfor %}
         </ul>
     </section>
     {% endif %}
+
+
+
+    <section class="tech-side-card tech-side-widget">
+        <h3>十年之约</h3>
+        {% if sidebar.side_widget and sidebar.side_widget.articles %}
+        <div class="tech-widget">
+            <p class="tech-widget-kicker">今天读什么</p>
+            <ul>
+                {% for a in sidebar.side_widget.articles %}
+                <li>
+                    <a class="tech-widget-article" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+                    <small>{{ a.source }}</small>
+                </li>
+                {% endfor %}
+            </ul>
+            <a class="tech-widget-wormhole" href="{{ sidebar.side_widget.wormhole }}" target="_blank" rel="noopener">随机去一个十年之约的博客 →</a>
+        </div>
+        {% endif %}
+        <a class="tech-side-widget-link" href="{{ sidebar.side_widget.about or 'https://www.foreverblog.cn/about.html' }}" target="_blank" rel="noopener">了解十年之约 →</a>
+    </section>
 
     {% if sidebar.side_comments %}
     <section class="tech-side-card">
@@ -73,23 +93,4 @@
         </ul>
     </section>
     {% endif %}
-
-    <section class="tech-side-card tech-side-widget">
-        <h3>十年之约</h3>
-        {% if sidebar.side_widget and sidebar.side_widget.articles %}
-        <div class="tech-widget">
-            <p class="tech-widget-kicker">今天读什么</p>
-            <ul>
-                {% for a in sidebar.side_widget.articles %}
-                <li>
-                    <a class="tech-widget-article" href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
-                    <small>{{ a.source }}</small>
-                </li>
-                {% endfor %}
-            </ul>
-            <a class="tech-widget-wormhole" href="{{ sidebar.side_widget.wormhole }}" target="_blank" rel="noopener">随机去一个十年之约的博客 →</a>
-        </div>
-        {% endif %}
-        <a class="tech-side-widget-link" href="{{ sidebar.side_widget.about or 'https://www.foreverblog.cn/about.html' }}" target="_blank" rel="noopener">了解十年之约 →</a>
-    </section>
 </aside>

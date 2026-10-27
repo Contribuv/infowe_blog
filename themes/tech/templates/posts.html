@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}{% if is_miles %}文章归档{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
+{% block title %}{% if active_category %}{{ active_category.name }}{% elif is_miles %}文章归档{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
 {% block content %}
 <div class="tech-page-head">
-    <h1 class="tech-page-title">{% if is_miles %}文章归档{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
-    <p class="tech-page-desc">{% if is_miles %}共 {{ total }} 篇文章，记录每一次折腾与思考 · <a href="/tags">按标签浏览</a>{% else %}共 {{ total }} 篇文章{% endif %}</p>
+    <h1 class="tech-page-title">{% if active_category %}{{ active_category.name }}{% elif is_miles %}文章归档{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
+    <p class="tech-page-desc">{% if active_category %}共 {{ total }} 篇文章 · 分类{% elif is_miles %}共 {{ total }} 篇文章，记录每一次折腾与思考 · <a href="/tags">按标签浏览</a>{% else %}共 {{ total }} 篇文章{% endif %}</p>
 </div>
 
 {% if post_layout == 'multi' and sidebar %}<div class="tech-home-grid"><div class="tech-home-main">{% endif %}
@@ -108,7 +108,9 @@
 
 <!-- 分页 -->
 {% if total_pages > 1 %}
-{% if active_year %}
+{% if active_category %}
+    {% set page_endpoint = 'category_page' %}{% set page_params = {'category_id': active_category.id} %}
+{% elif active_year %}
     {% set page_endpoint = 'archive_page' %}{% set page_params = {'year': active_year} %}
 {% elif active_tag %}
     {% set page_endpoint = 'tag_page' %}{% set page_params = {'tag': active_tag} %}
