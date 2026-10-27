@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.17-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.17)
+[![version](https://img.shields.io/badge/version-3.4.18-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.18)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -922,9 +922,14 @@ chown -R www:www var
 
 ## 更新日志
 
-- 版本：**v3.4.17**
+- 版本：**v3.4.18**
 - GitHub Releases：<https://github.com/Contribuv/infowe_blog/releases>
 - Gitee Releases：<https://gitee.com/infowe/infowe_blog/releases>
+
+### v3.4.18
+
+- 关于页顶部边距与其它页面统一为 24px
+- 页面标题区宽度改为 1100px（宽于内容 960、窄于导航 1200），关于页人物卡等正文仍保持原宽度
 
 ### v3.4.17
 
