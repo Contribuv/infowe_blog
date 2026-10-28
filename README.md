@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.29-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.29)
+[![version](https://img.shields.io/badge/version-3.4.30-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.30)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -913,14 +913,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.29**
+当前版本：**v3.4.30**
+
+### v3.4.30
+
+- 修复升级页「升级源」选择行贴卡片左边缘的问题：样式收进 admin.css，与上下内容同样左右留白，间距统一走 spacing 变量
+
+<details>
+<summary><b>历史版本（v3.4.29 及更早）</b></summary>
 
 ### v3.4.29
 
 - 在线升级支持选择升级源：检测仍同时查询 GitHub 与 Gitee 取更高版本，实际拉取前可单选 GitHub 或 Gitee（默认 GitHub）；首次从 Gitee 升级自动补配远程地址
-
-<details>
-<summary><b>历史版本（v3.4.28 及更早）</b></summary>
 
 ### v3.4.28
 

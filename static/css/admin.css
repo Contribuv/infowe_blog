@@ -1130,6 +1130,17 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
 .upgrade-body ul { padding-left: 18px; list-style: disc; }
 .upgrade-body li { margin-bottom: 4px; }
 .upgrade-body code { font-size: 11px; }
+/* 升级源单选行：与 notes / actions 同样左右留白（此前缺 padding 贴卡边），间距全部走 spacing 变量 */
+.upgrade-source-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-4) var(--sp-5) 0;
+  font-size: var(--fz-sm);
+}
+.upgrade-source-row-title { color: var(--text-tertiary); }
+.upgrade-source-row label {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text-secondary); cursor: pointer;
+}
 .upgrade-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5) var(--sp-5); }
 
 /* ─────────── 23. 卡片裸内容补偿（form-group / p / 按钮直接放 card 内） ─────────── */
