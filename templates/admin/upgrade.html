@@ -33,7 +33,7 @@
         <li><strong>数据安全：</strong>升级前自动备份数据库（<code>blog.sql</code>）与上传文件到 <code>var/backups/upgrade_时间_版本/</code>。文章、分类、评论、设置等数据保留不变。</li>
         <li><strong>不覆盖内容：</strong><code>data/</code>、<code>uploads/</code>、<code>storage/</code>、<code>backups/</code>、<code>config/config.php</code> 不会被新代码覆盖。</li>
         <li><strong>生效方式：</strong>PHP 不需要重启服务，代码替换后下一次请求即生效；若服务器开启了 opcache，可等缓存到期，或重启一次 PHP-FPM 立即生效。</li>
-        <li><strong>更新源：</strong>GitHub 与 Gitee 两个平台同时检测、取版本更高者；两平台版本相同时轮流下载（公平竞争），不再固定只走其中一个。连不上 / 超时 / 限流时自动切换另一个，某个平台连续失败会临时「熔断」几分钟，不会反复干等超时。</li>
+        <li><strong>更新源：</strong>版本检测同时查询 GitHub 与 Gitee、取更高版本；实际升级时可单选从 GitHub 或 Gitee 拉取代码（默认 GitHub）。首次从 Gitee 升级会自动补配 gitee 远程地址，无需手动操作。</li>
         <li><strong>回滚：</strong>如升级后异常，可用备份目录中的 <code>blog.sql</code> 与 <code>uploads/</code> 恢复，或重新部署上一版本源码。</li>
     </ul>
 </div>
@@ -129,6 +129,11 @@
                 ' <span class="badge badge-available" style="background:rgba(46,155,112,.12);color:var(--success);">可升级</span></h3></div>' +
                 sourceBar(d.sources) +
                 notes +
+                '<div class="upgrade-source-row" style="margin:0 0 12px;font-size:var(--fz-sm)">' +
+                    '<span class="text-muted">升级源：</span>' +
+                    '<label style="margin-right:16px;cursor:pointer"><input type="radio" name="upgrade-source" value="github" checked> GitHub</label>' +
+                    '<label style="cursor:pointer"><input type="radio" name="upgrade-source" value="gitee"> Gitee</label>' +
+                '</div>' +
                 '<div class="upgrade-actions">' +
                     '<button type="button" class="btn btn-primary" data-action="upgrade" data-version="' + esc(d.latest_version) + '">' + svgIcon('download', 16, 'icon-sm') + ' 备份数据并一键升级</button>' +
                 '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 在 ' + esc(srcName) + ' 查看</a>' +
@@ -267,15 +272,21 @@
             setTimeout(function () { location.reload(); }, 3000);
         }
 
-        // 结果卡片里的「一键升级」按钮由 render() 动态插入，升级期间统一禁用，避免重复提交
+        // 结果卡片里的「一键升级」按钮与源单选由 render() 动态插入，升级期间统一禁用，避免重复提交
         function setUpgradeButtons(enabled) {
             var btns = resultBox.querySelectorAll('[data-action="upgrade"]');
             for (var i = 0; i < btns.length; i++) { btns[i].disabled = !enabled; }
+            var radios = resultBox.querySelectorAll('input[name="upgrade-source"]');
+            for (var j = 0; j < radios.length; j++) { radios[j].disabled = !enabled; }
         }
 
         function startUpgrade(ver) {
             if (upgrading) return;
-            if (!confirm('升级将自动备份数据（数据库与上传文件），然后用 v' + ver + ' 覆盖程序代码（文章、上传、备份目录不受影响）。确定升级吗？')) return;
+            // 读取用户选择的升级源（radio 由 render() 动态插入，默认 GitHub）
+            var srcRadio = resultBox.querySelector('input[name="upgrade-source"]:checked');
+            var source = srcRadio ? srcRadio.value : 'github';
+            var sourceName = source === 'gitee' ? 'Gitee' : 'GitHub';
+            if (!confirm('升级将自动备份数据（数据库与上传文件），然后从 ' + sourceName + ' 拉取 v' + ver + ' 覆盖程序代码（文章、上传、备份目录不受影响）。确定升级吗？')) return;
             upgrading = true;
             finished = false;
             interrupted = false;
@@ -295,7 +306,12 @@
             cancelBtn.textContent = '取消升级';
             pollTimer = setInterval(poll, 800);
             // 后台执行：POST 秒回 JSON，真正的进度交给 poll 轮询；仅当无法开始（ok=false）才收回浮窗
-            fetch(UPGRADE_URLS.upgrade, { method: 'POST', credentials: 'same-origin' })
+            fetch(UPGRADE_URLS.upgrade, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: source })
+            })
                 .then(function (r) { return r.json(); })
                 .then(function (j) {
                     if (finished) return;

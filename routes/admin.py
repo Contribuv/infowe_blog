@@ -1181,7 +1181,8 @@ def admin_upgrade():
     from services import upgrade as upgrade_service
 
     if request.method == "POST":
-        ok, message = upgrade_service.start()
+        payload = request.get_json(silent=True) or {}
+        ok, message = upgrade_service.start(payload.get("source"))
         return jsonify({"ok": ok, "message": message})
     return render_template(
         "admin/upgrade.html",

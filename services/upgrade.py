@@ -27,6 +27,14 @@ _thread: threading.Thread | None = None
 GITHUB_REPO = "Contribuv/infowe_blog"
 GITEE_REPO = "infowe/infowe_blog"
 
+# 升级源 → 本地 git 远程名。origin 由 clone 时决定（一般指向 GitHub）；
+# gitee 远程不存在时由 _ensure_remote 自动补上
+SOURCES = {
+    "github": {"remote": "origin", "label": "GitHub"},
+    "gitee": {"remote": "gitee", "label": "Gitee"},
+}
+DEFAULT_SOURCE = "github"
+
 
 def _version_key(value: str) -> tuple[int, ...]:
     parts = [int(x) for x in re.findall(r"\d+", value or "")[:3]]
@@ -231,26 +239,67 @@ def status() -> dict:
     return state
 
 
-def start() -> tuple[bool, str]:
+def _normalize_source(source) -> dict:
+    """把请求里的源标识收敛到 SOURCES 白名单，非法/缺省回落到默认源。"""
+    if isinstance(source, str):
+        for key, meta in SOURCES.items():
+            if source.strip().lower() == key:
+                return {"key": key, **meta}
+    return {"key": DEFAULT_SOURCE, **SOURCES[DEFAULT_SOURCE]}
+
+
+def _ensure_remote(base: Path, name: str) -> subprocess.CompletedProcess | None:
+    """gitee 远程名不存在时自动补上（从 GitHub clone 的部署默认没有它）。"""
+    probe = subprocess.run(
+        ["git", "remote", "get-url", name],
+        cwd=str(base), capture_output=True, text=True, timeout=30,
+    )
+    if probe.returncode == 0:
+        return None
+    url = f"https://gitee.com/{GITEE_REPO}.git" if name == "gitee" else f"https://github.com/{GITHUB_REPO}.git"
+    return subprocess.run(
+        ["git", "remote", "add", name, url],
+        cwd=str(base), capture_output=True, text=True, timeout=30,
+    )
+
+
+def start(source=None) -> tuple[bool, str]:
     global _thread
+    meta = _normalize_source(source)
     with _lock:
         if _read_state().get("state") == "running":
             return False, "已有升级任务正在执行"
         if not (Path(config.BASE_DIR) / ".git").exists():
             return False, "当前目录不是 Git 仓库，无法在线升级；请手动拉取/上传新版本，并保留 data、uploads、backups"
         # 先在锁内写入 running，避免并发请求同时启动两个升级线程
-        _write_state({"state": "running", "percent": 1, "label": "准备升级", "started": time.time()})
-        _thread = threading.Thread(target=_run, daemon=True)
+        _write_state({
+            "state": "running", "percent": 1, "label": "准备升级",
+            "started": time.time(), "source": meta["key"], "source_label": meta["label"],
+        })
+        _thread = threading.Thread(target=_run, args=(meta,), daemon=True)
         _thread.start()
     return True, "升级任务已启动"
 
 
-def _run() -> None:
+def _run(meta: dict) -> None:
     base = Path(config.BASE_DIR)
-    _write_state({"state": "running", "percent": 5, "label": "拉取最新代码", "started": time.time()})
+    remote = meta["remote"]
+    _write_state({
+        "state": "running", "percent": 5,
+        "label": f"拉取最新代码（{meta['label']}）", "started": time.time(),
+        "source": meta["key"], "source_label": meta["label"],
+    })
     try:
+        ensure = _ensure_remote(base, remote)
+        if ensure is not None and ensure.returncode != 0:
+            _write_state({
+                "state": "failed", "percent": 100, "label": f"配置 {meta['label']} 远程失败",
+                "summary": (ensure.stderr or ensure.stdout or "").strip()[:500],
+                "finished": time.time(),
+            })
+            return
         proc = subprocess.run(
-            ["git", "pull", "--ff-only"],
+            ["git", "pull", "--ff-only", remote],
             cwd=str(base), capture_output=True, text=True, timeout=180,
         )
         if proc.returncode != 0:
