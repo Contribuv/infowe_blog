@@ -189,32 +189,43 @@
     } catch (e) {}
   }
 
-  var timers = [];
+  var rafId = 0;
+  var tailTimer = 0;
   var MAX_LEN = 300; // 仅防极端长文；展示上最多两行，超出由 CSS 省略
   var lastIndex = -1;
 
   function clearTimers() {
-    timers.forEach(function (t) { clearTimeout(t); });
-    timers = [];
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    if (tailTimer) { clearTimeout(tailTimer); tailTimer = 0; }
   }
 
-  /* 逐字打字输出，完成后延时淡出出处 */
+  /* 逐字打字输出：rAF + 时间轴驱动，而非 setInterval 定时器。
+     setInterval 精度差且会漂移（后台标签页被节流、嵌套定时器有最小延迟
+     钳制），字符出现忽快忽慢，观感就是"帧数低/卡顿"。rAF 随屏幕刷新率
+     （60/120Hz）回调，按已过时间换算应显示字数，出字节奏精确平滑。 */
   function typeQuote(text, src) {
     clearTimers();
     srcEl.textContent = '';
     quoteText.textContent = '';
     var chars = Array.from(String(text || '').slice(0, MAX_LEN));
     if (!chars.length) return;
-    var i = 0;
-    var step = chars.length > 60 ? 34 : 60; // 长句适当提速，避免等待过久
-    timers.push(setInterval(function () {
-      i += 1;
-      quoteText.textContent = chars.slice(0, i).join('');
-      if (i >= chars.length) {
-        clearTimers();
-        if (src) timers.push(setTimeout(function () { srcEl.textContent = src; }, 260));
+    var cps = chars.length > 60 ? 29 : 17; // 字符/秒（对应原 34ms、60ms 每字）
+    var startedAt = 0;
+    var shown = 0;
+    function tick(now) {
+      if (!startedAt) startedAt = now;
+      var target = Math.min(chars.length, Math.floor((now - startedAt) / 1000 * cps));
+      if (target > shown) {
+        shown = target;
+        quoteText.textContent = chars.slice(0, shown).join('');
       }
-    }, step));
+      if (shown >= chars.length) {
+        if (src) tailTimer = setTimeout(function () { srcEl.textContent = src; }, 260);
+        return;
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
   }
 
   function renderLocal() {
@@ -326,7 +337,7 @@ window.techHighlightCode = techHighlightCode;
 
   function settleScroll(target) {
     // README 图片是懒加载的，点击后图片开始下载会把页面高度撑大，
-    // 目标位置一直在变。这里连续几帧跟着目标走，直到它稳定（或 1.5 秒）。
+    // 目标位置一直在变。这里连续几帧跟着目标走，直到它稳定（或 3 秒）。
     var root = document.documentElement;
     var prevBehavior = root.style.scrollBehavior;
     root.style.scrollBehavior = 'auto';
@@ -341,12 +352,16 @@ window.techHighlightCode = techHighlightCode;
         return;
       }
       var top = Math.max(0, target.getBoundingClientRect().top + window.scrollY - 60);
-      if (lastTop !== null && Math.abs(top - lastTop) < 2) stable++;
+      window.scrollTo(0, top);
+      // scrollTo 会被页面最大滚动距离截断（懒加载图片撑高前，目标 docTop
+      // 几乎总在 maxScroll 之后）。未真正到达目标时不能计入"稳定"，
+      // 否则前几帧就停在旧页面底部，图片加载完也不再追，表现为"点目录到底部"。
+      var reached = Math.abs(window.scrollY - top) < 2;
+      if (reached && lastTop !== null && Math.abs(top - lastTop) < 2) stable++;
       else stable = 0;
       lastTop = top;
-      window.scrollTo(0, top);
       tries++;
-      if (stable < 3 && tries < 90) {
+      if (stable < 3 && tries < 180) {
         requestAnimationFrame(tick);
       } else {
         root.style.scrollBehavior = prevBehavior;
@@ -355,15 +370,35 @@ window.techHighlightCode = techHighlightCode;
     requestAnimationFrame(tick);
   }
 
-  // 点击委托：拦截 #id 锚点，改用逐帧对齐（点完即关；桌面/移动都收起 TOC）
-  tocBody.addEventListener('click', function (e) {
+  // 手写目录（文章 Markdown 里的「## 目录」）链接与渲染器生成的标题 id
+  // 常常对不上：如「#14-★-实战逆向…」vs 实际 id「14-实战逆向-…」（★ 被
+  // 去掉、分词连字符不同）。直接 id 找不到时，把两边归一化（去掉符号、
+  // 小写）后在正文标题里兜底匹配，避免锚点悬空导致原生跳转乱滑。
+  function findTarget(id) {
+    var el = document.getElementById(id);
+    if (el) return el;
+    var norm = id.toLowerCase().replace(/[^0-9a-z\u4e00-\u9fff]+/g, '');
+    if (!norm) return null;
+    var hs = content.querySelectorAll('h1, h2, h3, h4');
+    for (var i = 0; i < hs.length; i++) {
+      var hid = hs[i].id || '';
+      if (hid.toLowerCase().replace(/[^0-9a-z\u4e00-\u9fff]+/g, '') === norm) return hs[i];
+    }
+    return null;
+  }
+
+  // 点击委托：拦截 #id 锚点，改用逐帧对齐（点完即关；桌面/移动都收起 TOC）。
+  // 除侧边栏 TOC 外，正文里 Markdown 目录（「## 目录」渲染的 <ol>）的锚点
+  // 也要拦截：原生锚点跳转只在点击瞬间对齐一次，随后懒加载图片把页面
+  // 撑高，目标被顶下去，最终停在页面底部。
+  function onAnchorClick(e) {
     var a = e.target.closest && e.target.closest('a[href^="#"]');
     if (!a) return;
     var id = a.getAttribute('href').slice(1);
-    var target = id && document.getElementById(id);
+    var target = id && findTarget(id);
     if (!target) return;
     e.preventDefault();
-    var details = tocBody.closest('details');
+    var details = a.closest('details');
     if (details) details.open = false;
     // 先把待加载的图改成 eager，让页面高度尽快稳定
     Array.prototype.forEach.call(content.querySelectorAll('img'), function (img) {
@@ -371,7 +406,10 @@ window.techHighlightCode = techHighlightCode;
     });
     settleScroll(target);
     history.replaceState(null, '', '#' + id);
-  });
+  }
+  tocBody.addEventListener('click', onAnchorClick);
+  // 正文容器：目录通常在正文头部，一个委托即可覆盖所有文内锚点
+  content.addEventListener('click', onAnchorClick);
 
   // 当前章节高亮：基于 IntersectionObserver 监听 H2/H3
   var links = Array.prototype.slice.call(tocBody.querySelectorAll('a[href^="#"]'));

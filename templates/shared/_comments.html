@@ -130,17 +130,16 @@
                    完整说明移到 title，鼠标悬停仍可看到 #}
                 <input type="text" name="author" placeholder="昵称（必填）" maxlength="30" required
                        title="昵称会显示在评论中" value="{{ commenter.author or '' }}">
-                {# 邮箱：输入纯数字 QQ 号时下拉补全 @qq.com 并预览 QQ 头像（comments.js 驱动）；type=text 避免原生 email 校验拦截，格式仍由后端校验
-                   占位/说明按「邮箱通知」勾选状态切换（初始文案由 Jinja 给出，JS 随后同步） #}
+                {# 邮箱（必填，实名合规要求）：输入纯数字 QQ 号时下拉补全 @qq.com 并预览 QQ 头像（comments.js 驱动）；
+                   type=text 避免原生 email 校验拦截，格式仍由后端校验 #}
                 <div class="cmt-field">
                     <input type="text" name="email" id="comment-email" inputmode="email" autocomplete="off"
-                           placeholder="{% if notify_ui %}QQ 号或邮箱（必填）{% else %}QQ 号或邮箱（选填）{% endif %}"
-                           maxlength="100"
-                           title="{% if notify_ui %}已勾选邮箱通知：邮箱必填，用于接收回复提醒{% else %}选填，用于显示头像{% endif %}"
+                           placeholder="QQ 号或邮箱（必填）" maxlength="100"
+                           title="评论需填写邮箱：用于接收回复通知与显示头像"
                            data-ph-on="QQ 号或邮箱（必填）"
-                           data-ph-off="QQ 号或邮箱（选填）"
-                           data-title-on="已勾选邮箱通知：邮箱必填，用于接收回复提醒"
-                           data-title-off="选填，用于显示头像"
+                           data-ph-off="QQ 号或邮箱（必填）"
+                           data-title-on="评论需填写邮箱：用于接收回复通知与显示头像"
+                           data-title-off="评论需填写邮箱：用于接收回复通知与显示头像"
                            value="{{ commenter.email or '' }}">
                     <img class="cmt-qq-av" id="cmt-qq-av" alt="" hidden>
                     <div class="cmt-suggest" id="cmt-email-suggest" hidden></div>
@@ -176,9 +175,9 @@
                 {# 两个勾选项与工具按钮同行：只保留短标题（完整说明移到 title 悬停提示），
                    窄屏放不下时由 flex-wrap 整体换行；管理员不显示邮箱通知（博主不会收到自己被回复的邮件） #}
                 {% if notify_ui and not is_admin %}
-                <label class="chk" title="勾选后邮箱必填，回复时邮件提醒你">
-                    <input type="checkbox" name="notify" value="1" id="comment-notify"{% if commenter.get('notify', '1') not in ('0', 0, False) %} checked{% endif %}>
-                    <span>邮箱通知</span>
+                <label class="chk" title="勾选后接收回复邮件提醒">
+                    <input type="checkbox" name="notify" value="1" id="comment-notify"{% if commenter.get('notify') != '0' and commenter.get('notify') != 0 %} checked{% endif %}>
+                    <span>邮件通知</span>
                 </label>
                 {% endif %}
                 <label class="chk" title="勾选后仅博主可见">

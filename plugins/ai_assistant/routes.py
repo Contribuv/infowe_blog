@@ -147,6 +147,13 @@ def register(app) -> None:
             data["comment_reply_time_mode"] = mode
         if "system_prompt" in request.form:
             data["system_prompt"] = request.form.get("system_prompt", "")
+        # 防呆：最长长度 ≤ 最短长度时，任何评论都会被跳过（AI 静默不工作），
+        # 这类配置没有任何意义，直接按「不限」保存并明确提示，避免再次踩坑
+        min_len = int(data.get("comment_min_length") or 0)
+        max_len = int(data.get("comment_max_length") or 0)
+        if max_len > 0 and max_len <= min_len:
+            data["comment_max_length"] = 0
+            flash("评论最长长度需大于最短长度，已按「不限」保存", "error")
         config.save(data)
         flash("配置已保存", "success")
         return redirect(url_for("admin_plugin_ai_config"))

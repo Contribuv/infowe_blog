@@ -21,7 +21,6 @@
 <div class="tech-podium{% if items|length == 1 %} tech-podium--one{% elif items|length == 2 %} tech-podium--two{% endif %}">
     {% for r in items[:3] %}
     <article class="tech-podium-item tech-podium-item--{{ r.rank }}">
-        <span class="tech-podium-rank tech-podium-rank--{{ r.rank }}">{% if r.rank == 1 %}冠军{% elif r.rank == 2 %}亚军{% else %}季军{% endif %}</span>
         <span class="tech-podium-avatar-wrap">
             {% if r.rank == 1 %}
             <svg class="tech-podium-crown" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 8.2l4.3 3.1L12 4.8l4.7 6.5L21 8.2 19 19H5L3 8.2z"/></svg>
@@ -29,16 +28,22 @@
             <img class="tech-podium-avatar" src="{{ r.avatar }}" alt="{{ r.author }}" loading="lazy"
                  onerror="this.src='/static/images/default-avatar.svg'">
         </span>
-        {% if r.website %}
-        <a class="tech-podium-name" href="{{ r.website }}" target="_blank" rel="noopener nofollow">{{ r.author }}</a>
-        {% else %}
-        <span class="tech-podium-name">{{ r.author }}</span>
-        {% endif %}
-        <span class="tech-podium-count">{{ r.count }} 条留言</span>
-        {% if r.last_text %}<p class="tech-podium-quote">{{ r.last_text }}</p>{% endif %}
-        {% if r.source_title and r.source_url %}
-        <span class="tech-podium-source">来自 <a href="{{ r.source_url }}">{{ r.source_title }}</a></span>
-        {% endif %}
+        {# 横排紧凑卡：头像在左，名次/昵称/条数在一行，引言与来源在右侧换行 #}
+        <div class="tech-podium-body">
+            <div class="tech-podium-head">
+                <span class="tech-podium-rank tech-podium-rank--{{ r.rank }}">{% if r.rank == 1 %}冠军{% elif r.rank == 2 %}亚军{% else %}季军{% endif %}</span>
+                {% if r.website %}
+                <a class="tech-podium-name" href="{{ r.website }}" target="_blank" rel="noopener nofollow">{{ r.author }}</a>
+                {% else %}
+                <span class="tech-podium-name">{{ r.author }}</span>
+                {% endif %}
+                <span class="tech-podium-count">{{ r.count }} 条留言</span>
+            </div>
+            {% if r.last_text %}<p class="tech-podium-quote">{{ r.last_text }}</p>{% endif %}
+            {% if r.source_title and r.source_url %}
+            <span class="tech-podium-source">来自 <a href="{{ r.source_url }}">{{ r.source_title }}</a></span>
+            {% endif %}
+        </div>
     </article>
     {% endfor %}
 </div>

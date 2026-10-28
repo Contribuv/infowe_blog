@@ -118,9 +118,17 @@ def index():
         page=1,
         total_pages=1,
         total=total,
-        total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+        total_categories=_used_category_total(),
         sidebar=_sidebar_data(),
     )
+
+
+def _used_category_total() -> int:
+    """「已使用」分类数：只统计名下有已发布文章的分类。
+
+    与侧栏卡片同口径；裸 COUNT(*) 会把空分类也算进去，首页出现 4 而侧栏显示 3。
+    """
+    return sum(1 for c in Category.stats() if int(c.get("post_count") or 0) > 0)
 
 
 def _list_page(page: int, per_page: int):
@@ -149,7 +157,7 @@ def tag_page(tag: str):
         page=page,
         total_pages=total_pages,
         total=total,
-        total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+        total_categories=_used_category_total(),
     )
 
 
@@ -171,7 +179,7 @@ def search_page(q: str):
         page=page,
         total_pages=total_pages,
         total=total,
-        total_categories=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
+        total_categories=_used_category_total(),
     )
 
 

@@ -204,6 +204,22 @@ def slug_exists(slug: str, exclude_id: int | None = None) -> bool:
     return db.one("SELECT 1 FROM posts WHERE slug = ?", (slug,)) is not None
 
 
+def _auto_excerpt(content: str, limit: int = 200) -> str:
+    """自动生成纯文本摘要：剔除代码块/行内代码/图片与 HTML 标签后再截断。
+
+    直接 strip_markdown 会把代码块内容当正文（列表页漏出 `json {"type":...}`），
+    `**加粗**` 残留也来自旧逻辑；先删结构块，只留人写的文字。
+    """
+    text = content or ""
+    text = re.sub(r"```.*?```", " ", text, flags=re.S)  # 围栏代码块整体剔除
+    text = re.sub(r"`[^`\n]*`", " ", text)  # 行内代码
+    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", text)  # 图片：连 URL 一起剔除
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # 链接只留文字
+    text = strip_markdown(text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit]
+
+
 def save(form: dict, post_id: int | None = None) -> int:
     title = (form.get("title") or "").strip()
     tags = [t.strip() for t in (form.get("tags") or "").split(",") if t.strip()]
@@ -236,7 +252,7 @@ def save(form: dict, post_id: int | None = None) -> int:
     # 默认每次保存都按最新正文重新生成摘要；只有用户手动编辑摘要时才保留
     excerpt_manual = str(form.get("excerpt_manual") or "0") == "1"
     if (not excerpt or not excerpt_manual) and content:
-        excerpt = strip_markdown(content)[:200]
+        excerpt = _auto_excerpt(content)
 
     created_at = (form.get("created_at") or "").strip().replace("T", " ")
     if len(created_at) == 16:

@@ -1,9 +1,4 @@
-"""评论通知邮件模板（HTML + 纯文本）。
-
-版式参考常见博客通知邮件：顶部栏目小字、大标题、强调色短条、文章链接、
-评论卡片、操作链接与页脚。强调色默认读取当前主题 theme.css 的 --accent，
-主题切换或改色后自动跟随；读取失败时回退到 #0969da。
-"""
+"""评论通知邮件模板（HTML + 纯文本）。"""
 
 from __future__ import annotations
 
@@ -13,10 +8,10 @@ import re
 
 from config import THEMES_DIR
 
-DEFAULT_ACCENT = "#0969da"
+DEFAULT_ACCENT = "#2563eb"
 _FONT = (
-    "-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',"
-    "'Microsoft YaHei',Arial,sans-serif"
+    "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',"
+    "'PingFang SC','Hiragino Sans GB','Microsoft YaHei',Arial,sans-serif"
 )
 
 _IMAGE_RE = re.compile(r"!\[[^\]]*\]\((/uploads/[^)\s]+)\)")
@@ -24,7 +19,6 @@ _IMAGE_RE = re.compile(r"!\[[^\]]*\]\((/uploads/[^)\s]+)\)")
 
 @functools.lru_cache(maxsize=8)
 def _accent_from_css(path: str, mtime: float) -> str:
-    """按文件 mtime 缓存，改了主题色不用重启也能生效。"""
     try:
         text = open(path, encoding="utf-8").read()
     except OSError:
@@ -45,10 +39,15 @@ def accent_color() -> str:
 
 
 def display_name(blog_name: str) -> str:
-    """页脚站点名：首页标题优先，留空回退站点名。"""
     from services import settings
 
     return settings.get_str("home_title", "").strip() or blog_name
+
+
+def blogger_name() -> str:
+    from services import settings
+
+    return settings.get_str("author", "").strip() or display_name(settings.get_str("blog_name", "博客"))
 
 
 def _esc(value: object) -> str:
@@ -56,191 +55,159 @@ def _esc(value: object) -> str:
 
 
 def _content_html(text: str, site: str) -> str:
-    """评论正文：转义后仅放行站内图片，换行转 <br>。"""
     safe = _esc(text)
 
     def repl(match: re.Match) -> str:
         src = match.group(1)
         return (
             f'<img src="{site}{src}" alt="" '
-            'style="display:block;max-width:100%;height:auto;border-radius:8px;margin:8px 0">'
+            'style="display:block;max-width:100%;height:auto;border-radius:10px;margin:10px 0 6px;">'
         )
 
-    return _IMAGE_RE.sub(repl, safe).replace("\r\n", "\n").replace("\n", "<br>")
+    html_text = _IMAGE_RE.sub(repl, safe).replace("\r\n", "\n").replace("\n", "<br>")
+    return html_text
 
 
-def _card(inner: str) -> str:
+def _initials(name: str) -> str:
+    name = (name or "").strip()
+    if not name:
+        return "U"
+    return name[0].upper()
+
+
+def _avatar(name: str, accent: str, avatar_url: str = "") -> str:
+    init = _initials(name)
+    if avatar_url:
+        return (
+            '<td style="width:36px;vertical-align:top;">'
+            '<img src="%s" width="36" height="36" style="width:36px;height:36px;border-radius:50%%;display:block;object-fit:cover;" alt="">'
+            '</td>'
+        ) % _esc(avatar_url)
+    # 用 table 单元格居中：flex 在 Outlook 等客户端里不生效，文字会贴左上角
     return (
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" '
-        'style="border-collapse:separate;border:1px solid #e6e6ea;border-radius:12px;'
-        'background:#fcfcfd;margin:0 0 22px;">'
-        '<tr><td style="padding:16px 18px;color:#3f4247;font-size:15px;line-height:1.75;'
-        f'word-break:break-word;">{inner}</td></tr></table>'
-    )
+        '<td style="width:36px;vertical-align:top;">'
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
+        'style="width:36px;height:36px;background:%s;border-radius:18px;">'
+        '<tr><td align="center" valign="middle" '
+        'style="width:36px;height:36px;color:#ffffff;font-size:14px;font-weight:600;text-align:center;line-height:36px;">%s</td></tr>'
+        '</table>'
+        '</td>'
+    ) % (accent, init)
 
 
-def _meta(author: str, when: str, accent: str, extra: str = "") -> str:
-    extra_html = (
-        f'<span style="color:#b0b0ba;"> · </span>{_esc(extra)}' if extra else ""
-    )
-    return (
-        '<div style="color:#8a8a95;font-size:13px;line-height:20px;margin-bottom:10px;">'
-        f'<strong style="color:#4a4a55;">{_esc(author)}</strong>'
-        f'<span style="color:#c4c4cc;"> · </span>{_esc(when)}{extra_html}</div>'
-    )
+def _page(*, headline: str, body: str, blog_name: str = "") -> str:
+    """统一邮件外壳：品牌条 + 站点名页头 + 正文卡片 + 页脚。
 
-
-def _page(
-    *,
-    kicker: str,
-    headline: str,
-    body: str,
-    blog_name: str,
-    site: str,
-    accent: str,
-) -> str:
-    footer_name = display_name(blog_name)
-    return f"""<!DOCTYPE html>
+    早前只有一个白卡，正文短时整封邮件在客户端里很矮、像半截通知；
+    补上页头/页脚并加大留白后视觉完整，也更像「一封信」。
+    页头小字保持站点名（blog_name），和邮件主题/页脚的统一品牌一致。
+    """
+    site_name = _esc(blog_name or headline)
+    return """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light">
-<title>{_esc(headline)}</title>
+<meta name="color-scheme" content="light only">
+<title>%(headline)s</title>
 </head>
-<body style="margin:0;padding:0;background:#f4f5f7;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="background:#f4f5f7;padding:28px 12px;">
-<tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
-       style="width:100%;max-width:600px;background:#ffffff;border-radius:16px;border:1px solid #ebebef;">
-<tr><td style="padding:40px 40px 32px;font-family:{_FONT};color:#333333;font-size:15px;line-height:28px;">
-
-<div style="color:#a8a8b3;font-size:12px;letter-spacing:1px;margin-bottom:18px;">{_esc(kicker)}</div>
-
-<div style="font-size:24px;line-height:36px;margin-bottom:10px;color:#1f2328;">{_esc(headline)}</div>
-
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 26px;">
-<tr><td width="96" height="8" bgcolor="{accent}"
-        style="border-radius:6px;font-size:0;line-height:0;">&nbsp;</td></tr>
-</table>
-
-{body}
-
-<div style="height:1px;background:#ebebeb;margin:32px 0 18px;"></div>
-<div style="color:#9a9aa5;font-size:12px;line-height:20px;">
-{_esc(footer_name)}<br>
-<a href="{_esc(site)}" style="color:#9a9aa5;text-decoration:none;">{_esc(site)}</a>
-</div>
-
-</td></tr>
-</table>
-</td></tr>
+<body style="margin:0;padding:0;background:#f6f7f9;">
+<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#f6f7f9;">
+  <tr><td align="center" style="padding:32px 12px 36px;">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:100%%;max-width:560px;">
+      <tr><td>
+        <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:12px;border:1px solid #e7e9ee;">
+          <tr><td style="height:4px;background:%(accent)s;font-size:0;line-height:4px;">&nbsp;</td></tr>
+          <tr><td style="padding:30px 30px 26px;font-family:%(font)s;color:#1f2328;font-size:15px;line-height:1.9;">
+            <div style="font-size:12px;letter-spacing:1px;color:#98a0ab;margin-bottom:8px;">%(blog)s</div>
+            <div style="font-size:18px;font-weight:600;line-height:1.6;margin-bottom:20px;">%(headline)s</div>
+            %(body)s
+          </td></tr>
+          <tr><td style="padding:14px 30px;background:#fafbfc;border-top:1px solid #eff1f4;font-family:%(font)s;font-size:12px;line-height:1.7;color:#9aa0a6;">
+            此邮件由 %(blog)s 自动发送，请勿直接回复。
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </td></tr>
 </table>
 </body>
-</html>"""
+</html>""" % {
+        "headline": _esc(headline),
+        "font": _FONT,
+        "accent": accent_color(),
+        "blog": site_name,
+        "body": body,
+    }
 
 
-def _article(label: str, title: str, url: str, accent: str) -> str:
+def _context_line(label: str, title: str, url: str, accent: str) -> str:
     return (
-        '<div style="color:#666666;margin-bottom:18px;">'
-        f'{_esc(label)}：'
-        f'<a href="{_esc(url)}" style="color:{accent};text-decoration:none;">'
-        f'《{_esc(title)}》</a></div>'
-    )
+        '<div style="font-size:13px;color:#6b6f76;margin-bottom:18px;">%s：'
+        '<a href="%s" style="color:%s;text-decoration:none;">《%s》</a></div>'
+    ) % (_esc(label), _esc(url), accent, _esc(title))
 
 
-def _action(url: str, accent: str, text: str = "查看完整对话 →") -> str:
+def _bubble(author: str, when: str, content_html: str, accent: str, is_reply: bool = False, avatar_url: str = "") -> str:
+    bg = "#f8f9fb" if not is_reply else "#f7f9ff"
+    border = "#e7e9ee" if not is_reply else "rgba(37,99,235,0.25)"
     return (
-        '<div style="margin-bottom:8px;">'
-        f'<a href="{_esc(url)}" style="color:{accent};text-decoration:none;font-weight:600;">'
-        f"{_esc(text)}</a></div>"
-    )
+        '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 12px;"><tr>'
+        '%s'
+        '<td style="padding-left:10px;vertical-align:top;">'
+        '<div style="margin-bottom:4px;"><span style="font-size:14px;font-weight:600;color:#1f2328;">%s</span>'
+        '<span style="font-size:12px;color:#9aa0a6;margin-left:8px;">%s</span></div>'
+        '<div style="border:1px solid %s;background:%s;border-radius:10px;padding:10px 14px;">'
+        '<div style="color:#2f343c;font-size:14px;line-height:1.9;word-break:break-word;">%s</div>'
+        '</div>'
+        '</td>'
+        '</tr></table>'
+    ) % (_avatar(author, accent, avatar_url), _esc(author), _esc(when), border, bg, content_html)
 
 
-def comment_notice(
-    *,
-    blog_name: str,
-    site: str,
-    label: str,
-    title: str,
-    url: str,
-    author: str,
-    content: str,
-    when: str,
-    status: str,
-    parent_author: str = "",
-) -> tuple[str, str]:
-    """博主视角：收到新评论 / 新回复。返回 (纯文本, HTML)。"""
+def _action(url: str, accent: str, text: str = "查看对话") -> str:
+    return (
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 2px;"><tr>'
+        '<td style="border-radius:6px;background:%s;">'
+        '<a href="%s" style="display:inline-block;padding:7px 16px;color:#ffffff;text-decoration:none;font-size:13px;">%s</a>'
+        '</td></tr></table>'
+    ) % (accent, _esc(url), _esc(text))
+
+
+def comment_notice(*, blog_name: str, site: str, label: str, title: str, url: str, author: str, content: str, when: str, status: str, parent_author: str = "", parent_content: str = "", author_avatar: str = "") -> tuple[str, str]:
     accent = accent_color()
     pending = status != "approved"
-    headline = "你的评论收到了新回复" if parent_author else f"你的{label}收到了新评论"
-    kicker = f"{blog_name} · {'新回复' if parent_author else '新评论'}"
-    reply_meta = f"回复 @{parent_author}" if parent_author else ""
-
-    body = "".join(
-        [
-            _article(label, title, url, accent),
-            _meta(author, when, accent, reply_meta),
-            _card(_content_html(content, site)),
-            _action(url, accent),
-        ]
-    )
-
-    state = "待审核（通过后才会公开）" if pending else "已通过审核"
+    headline = f"{label}收到了新回复" if parent_author else f"{label}收到了新评论"
+    state = "（待审核）" if pending else ""
+    body_parts = [_context_line(label, title, url, accent)]
+    if parent_author:
+        # 之前这里传的是字面「原评论」占位，访客看到的是一张写着「原评论」的气泡；
+        # 有父评论正文时才渲染，没有就省略，避免假内容
+        if parent_content:
+            body_parts.append(_bubble(parent_author, "", _content_html(parent_content, site), accent, is_reply=False))
+        body_parts.append(_bubble(author, when, _content_html(content, site), accent, is_reply=True, avatar_url=author_avatar))
+    else:
+        body_parts.append(_bubble(author, when, _content_html(content, site), accent, is_reply=False, avatar_url=author_avatar))
+    body_parts.append(_action(url, accent, "前往查看" + state))
+    body = "".join(body_parts)
     text = (
-        f"{blog_name} · {'新回复' if parent_author else '新评论'}\n\n"
-        f"{headline}\n\n"
-        f"{label}：《{title}》\n"
-        f"作者：{author}\n"
-        f"时间：{when}\n"
-        f"状态：{state}\n"
-        f"{'回复对象：' + parent_author + chr(10) if parent_author else ''}"
-        f"\n{content}\n\n"
-        f"查看完整对话：{url}\n\n"
-        f"— {display_name(blog_name)}\n{site}\n"
+        f"{headline}\n\n{label}：《{title}》\n"
+        f"{author} · {when}\n\n{content}\n\n查看对话：{url}\n"
     )
-    page = _page(
-        kicker=kicker, headline=headline, body=body, blog_name=blog_name, site=site, accent=accent
-    )
+    page = _page(headline=headline, body=body, blog_name=blog_name)
     return text, page
 
 
-def reply_notice(
-    *,
-    blog_name: str,
-    site: str,
-    label: str,
-    title: str,
-    url: str,
-    author: str,
-    content: str,
-    when: str,
-    parent_author: str = "",
-) -> tuple[str, str]:
-    """访客视角：你的评论收到了回复。返回 (纯文本, HTML)。"""
+def reply_notice(*, blog_name: str, site: str, label: str, title: str, url: str, author: str, content: str, when: str, parent_author: str = "", author_avatar: str = "") -> tuple[str, str]:
     accent = accent_color()
-    headline = "你收到了新的回复"
-    kicker = f"{blog_name} · 新回复"
-    reply_meta = f"回复 @{parent_author}" if parent_author else ""
-
-    body = "".join(
-        [
-            _article(label, title, url, accent),
-            _meta(author, when, accent, reply_meta),
-            _card(_content_html(content, site)),
-            _action(url, accent),
-        ]
-    )
+    headline = "收到新回复"
+    body_parts = [_context_line(label, title, url, accent)]
+    body_parts.append(_bubble(author, when, _content_html(content, site), accent, is_reply=True, avatar_url=author_avatar))
+    body_parts.append(_action(url, accent, "前往查看"))
+    body = "".join(body_parts)
     text = (
-        f"{blog_name} · 新回复\n\n"
-        f"你在{label}《{title}》的评论收到了回复\n\n"
-        f"{author} · {when}\n"
-        f"\n{content}\n\n"
-        f"查看完整对话：{url}\n\n"
-        f"— {display_name(blog_name)}\n{site}\n"
+        f"{headline}\n\n你在{label}《{title}》的评论收到了回复\n\n"
+        f"{author} · {when}\n\n{content}\n\n查看对话：{url}\n"
     )
-    page = _page(
-        kicker=kicker, headline=headline, body=body, blog_name=blog_name, site=site, accent=accent
-    )
+    page = _page(headline=headline, body=body, blog_name=blog_name)
     return text, page

@@ -68,6 +68,7 @@ class _LazyCount:
     """模板里只用到 `all_tags|length`，没必要每个请求都全表扫 posts。
 
     懒到模板真正取长度时才查一次；不迭代、不取元素，避免误用。
+    口径与侧栏一致：只统计已发布文章用到的标签（含草稿/隐藏会让首页与侧栏数字打架）。
     """
 
     __slots__ = ("_factory", "_value")
@@ -272,7 +273,8 @@ def _register_hooks(app: Flask) -> None:
             "social_github": conf.get("social_github", ""),
             "contact_email": conf.get("contact_email", ""),
             "avatar": conf.get("avatar", ""),
-            "all_tags": _LazyCount(Post.all_tags),
+            # 只算已发布文章的标签，与侧栏/首页「已使用」口径一致（旧的 all_tags 含草稿标签，77≠56）
+            "all_tags": _LazyCount(lambda: dict(Post.tag_counts(9999))),
             "nav_on": nav_on,
             "nav_pages": nav_pages,
             "post_layout": conf.get("post_layout", "single"),

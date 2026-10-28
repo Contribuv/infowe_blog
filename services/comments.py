@@ -238,9 +238,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
 
     parent_raw = (form.get("parent_id") or "").strip()
     is_private = str(form.get("is_private") or "").strip().lower() in {"1", "on", "true", "yes"}
-    # 邮箱通知开关（表单默认勾选）：勾选时邮箱必填，用于接收回复提醒；不勾选则邮箱选填
     notify_on = str(form.get("notify") or "").strip().lower() in {"1", "on", "true", "yes"}
-    # 博主身份的表单不显示这个开关（博主不会收到「你自己的评论被回复」邮件），按开启入库
     if is_admin:
         notify_on = True
 
@@ -254,9 +252,9 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         return {"url": back, "error": "该昵称已被占用，请换一个"}
     if not content or len(content) > 2000:
         return {"url": back, "error": "评论内容不能为空且不能超过2000字"}
-    # 勾选邮箱通知却没填邮箱：后端兜底（前端 comments.js 也做了同样提示）
-    if notify_on and not email and not is_admin:
-        return {"url": back, "error": "已勾选邮箱通知，请填写邮箱；不需要提醒可取消勾选"}
+    # 邮箱必填（实名合规要求）：不填邮箱无法提交评论
+    if not email and not is_admin:
+        return {"url": back, "error": "请填写邮箱（必填，用于接收回复通知与显示头像）"}
 
     # 保留过滤前的原文：AI 托管要用它做敏感词硬拦截（过滤后原词已被替换成 *）
     raw_content = content
@@ -268,7 +266,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     if email:
         email = normalize_email(email)
         if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
-            return {"url": back, "error": "邮箱格式不正确（选填，仅用于头像）"}
+            return {"url": back, "error": "邮箱格式不正确"}
         email_hash = avatar.email_hash(email)
         qq = avatar.qq_from_email(email)
     if website:

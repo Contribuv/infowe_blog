@@ -39,7 +39,9 @@ def _sensitive_words() -> list[str]:
         mtime = 0.0
     if _WORD_CACHE["mtime"] != mtime:
         try:
-            words = [w.strip() for w in path.read_text(encoding="utf-8").splitlines() if w.strip()]
+            # 敏感词文件支持 # 注释行（分类标题），只取非注释的词条
+            words = [w.strip() for w in path.read_text(encoding="utf-8").splitlines()
+                     if w.strip() and not w.strip().startswith("#")]
         except OSError:
             words = []
         _WORD_CACHE.update(mtime=mtime, words=words)
@@ -61,15 +63,64 @@ def _sensitive_words() -> list[str]:
 
 
 def _blocked_word(text: str) -> str:
+    """安全拦截：返回命中的敏感词，未命中返回空串。
+
+    除原文直接匹配外，再做一次「去分隔符」归一化匹配：
+    发帖人常在词中间插符号绕过过滤（如「习*近*平」「六-四」），
+    把汉字/字母数字之间的符号和空白去掉后再比对，兜住这类变体。
+    """
     content = str(text or "").lower()
+    normalized = re.sub(
+        r"([0-9a-z\u4e00-\u9fff])[^0-9a-z\u4e00-\u9fff]+(?=[0-9a-z\u4e00-\u9fff])",
+        r"\1", content,
+    )
     for word in _sensitive_words():
-        if word and word.lower() in content:
+        if not word:
+            continue
+        low = word.lower()
+        if low in content or low in normalized:
             return word
     return ""
 
 
 def _enabled() -> bool:
     return plugins.enabled(KEY)
+
+
+# 审核视角的元信息词：模型把「这条评论属于正常提问」这类判断写进了 reply 里，
+# 出现在回复开头会像审核报告，必须裁掉
+_REPLY_META_WORDS = (
+    "审核", "这条评论", "该评论", "此评论", "评论内容", "此条评论",
+    "判定", "判断", "属于正常", "正常提问", "正常的技术提问",
+    "无违规", "未发现", "通过审核", "置信度",
+    "灌水", "广告", "辱骂", "敏感内容", "垃圾",
+)
+
+
+def _clean_reply(text: str) -> str:
+    """裁掉 AI 回复开头的「审核视角」开场白，只保留真正对访客说的话。
+
+    模型在同一次调用里既做审核又写回复，容易把审核结论串进 reply
+    （如「你好，这条评论属于正常的技术提问。……」。这里只裁剪开头连续
+    含审核元信息的句子，正文中间正常提及不影响；裁空则原样返回，避免误伤。
+    """
+    reply = str(text or "").strip().strip('"').strip()
+    if not reply:
+        return ""
+    # 去掉「回复：」「答：」之类前缀
+    reply = re.sub(r"^(回复|答复|答)\s*[：:]\s*", "", reply)
+    parts = re.split(r"(?<=[。！？!?；;])", reply)
+    skip = 0
+    for index, seg in enumerate(parts):
+        if any(word in seg for word in _REPLY_META_WORDS):
+            skip = index + 1
+            continue
+        break
+    cleaned = "".join(parts[skip:]).strip()
+    # 裁得太短说明可能误删了正文，退回原文
+    if len(cleaned) < 15:
+        return reply
+    return cleaned
 
 
 # ── 评论托管 ──────────────────────────────────────────────
@@ -148,7 +199,16 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 "回复只能依据「当前内容正文」：正文没有提到的信息不要臆测、不要编造，"
                 "确实没写就直说文章里没有提到；不要营销、不要推广站外内容。\n"
                 "只返回 JSON：{\"decision\":\"approve|reject|review\",\"reason\":\"简短理由\","
-                "\"reply\":\"给这条评论的回复，50-150字中文，必须紧扣当前内容正文\"}\n"
+                "\"reply\":\"给这条评论的回复，60-150字中文，必须紧扣当前内容正文\"}\n"
+                "reply 的写法（重要）：\n"
+                "- 你在扮演博主本人直接回答访客，语气自然，不要有客服腔。\n"
+                "- 严禁输出审核结论或任何元信息，例如「这条评论属于正常的技术提问」"
+                "「该评论无违规」「已通过审核」「内容正常」「根据正文…」这类句子。\n"
+                "- 不要用「你好，这条评论…」开头，直接进入答复内容；"
+                "需要称呼时直接说事，不要先复述自己在做什么判断。\n"
+                "- reply 里只写对访客说的话，审核判断只能写进 decision 和 reason。\n"
+                "- reply 严禁涉及国家领导人、政治、宗教、违法（毒品/赌博/诈骗/色情/枪爆）"
+                "等敏感话题，即使评论原文提到，也只能礼貌回避、不复述不展开。\n"
                 f"当前内容标题：{title}\n当前内容摘要：{excerpt}\n"
                 f"当前内容正文（节选）：\n<<<\n{context}\n>>>\n"
                 f"评论作者：{comment.get('author')}\n评论内容：\n<<<\n{content[:2000]}\n>>>"
@@ -165,7 +225,8 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
             action = ai_client.parse_action(text) or {}
             decision = str(action.get("decision") or "review")
             reason = str(action.get("reason") or "")[:300]
-            reply = str(action.get("reply") or "").strip()
+            # 模型有时把审核结论写进 reply，这里裁掉开头的审核视角句子
+            reply = _clean_reply(str(action.get("reply") or ""))
             meta = json.dumps({"decision": decision, "reason": reason}, ensure_ascii=False)
 
             if decision == "reject":
@@ -173,6 +234,14 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 return
             if decision != "approve":
                 db.execute("UPDATE comments SET ai_state='review', ai_meta=? WHERE id=?", (meta, cid))
+                return
+
+            # 兜底复检：即使模型判 approve，原文再过一遍安全拦截
+            # （防模型漏判或变体绕过），命中敏感词直接拒绝，不放行
+            final_hit = _blocked_word(content)
+            if final_hit:
+                meta = json.dumps({"decision": "reject", "reason": f"兜底拦截命中敏感词：{final_hit}"}, ensure_ascii=False)
+                db.execute("UPDATE comments SET status='rejected', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
                 return
 
             db.execute("UPDATE comments SET status='approved', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))

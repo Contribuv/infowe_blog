@@ -17,11 +17,6 @@
         {% if author_bio %}
         <p class="tech-side-bio">{{ author_bio | e | replace('\n', ' ') | safe }}</p>
         {% endif %}
-        <div class="tech-side-stats">
-            <span><b>{{ sidebar.side_post_total }}</b><em>文章</em></span>
-            <span><b>{{ sidebar.side_tag_total }}</b><em>标签</em></span>
-            <span><b>{{ sidebar.side_category_total }}</b><em>分类</em></span>
-        </div>
         {% if social_github or contact_email %}
         <div class="tech-side-social">
             {% if social_github %}<a href="{{ social_github }}" target="_blank" rel="noopener nofollow">GitHub</a>{% endif %}

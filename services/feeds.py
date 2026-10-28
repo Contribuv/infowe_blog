@@ -57,6 +57,9 @@ def _text(node, tag: str) -> str:
 def _clean(text: str, limit: int = 220) -> str:
     text = re.sub(r"<[^>]+>", " ", text or "")
     text = html.unescape(text)
+    # RSS 摘要常以 [...] / […] 标记原文被截断，透传到卡片里很难看；
+    # 去掉后由前端 CSS 做两行省略，只保留一套截断
+    text = re.sub(r"\[\s*(?:\.\.\.|…)\s*\]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     return text[:limit]
 
@@ -225,6 +228,9 @@ def aggregate(page: int = 1, per_page: int = PER_PAGE) -> tuple[list[dict], int,
     items = []
     for row in rows:
         item = dict(row)
+        # 存量数据入库时还没清洗 [...] 标记，渲染前统一再洗一次，
+        # 否则老文章卡片上会一直挂着 RSS 的截断占位符
+        item["summary"] = _clean(item.get("summary") or "")
         item["time_text"] = rel_time(item.get("published"))
         items.append(item)
 

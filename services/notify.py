@@ -164,15 +164,18 @@ def notify_comment(
     commenter = (email or "").strip()
 
     parent_author = ""
+    parent_content = ""
     reply_email = ""
     reply_private = False
     reply_notify = True
     if parent_id:
         parent = db.one(
-            "SELECT author, email, is_private, notify FROM comments WHERE id = ?", (parent_id,)
+            "SELECT author, email, content, is_private, notify FROM comments WHERE id = ?", (parent_id,)
         )
         if parent:
             parent_author = str(parent["author"] or "")
+            # 博主提醒邮件里要展示被回复的原评论，否则气泡只能写「原评论」占位
+            parent_content = str(parent["content"] or "")
             reply_email = str(parent["email"] or "").strip()
             reply_private = bool(int(parent["is_private"] or 0))
             # 被回复者提交时取消了「邮箱通知」→ 不再发回复邮件（旧数据默认 1）
@@ -181,6 +184,18 @@ def notify_comment(
     jobs: list[dict] = []
     admin_to = _admin_to()
     from_blogger = _is_blogger(commenter, author, is_admin)
+
+    author_avatar = ""
+    try:
+        from services import avatar
+        if email:
+            h = avatar.email_hash(email)
+            qq = avatar.qq_from_email(email)
+            if h or qq:
+                a, _ = avatar.urls(h, qq)
+                author_avatar = site + a if a and a.startswith('/') else a
+    except Exception:
+        pass
 
     # 1) 博主提醒：博主自己发言不再发给自己
     if admin_to and not from_blogger:
@@ -195,6 +210,8 @@ def notify_comment(
             when=when,
             status=status,
             parent_author=parent_author,
+            parent_content=parent_content,
+            author_avatar=author_avatar,
         )
         review = "待审核" if status != "approved" else "已通过"
         jobs.append(
@@ -222,6 +239,7 @@ def notify_comment(
                 content=content,
                 when=when,
                 parent_author=parent_author,
+                author_avatar=author_avatar,
             )
             jobs.append(
                 {
@@ -270,6 +288,19 @@ def notify_approved_reply(comment_id: int) -> None:
     label, title, detail_path = _comment_title(
         comment.get("project_id"), comment.get("post_id")
     )
+    author_avatar = ""
+    try:
+        from services import avatar
+        cemail = str(comment.get("email") or "").strip()
+        if cemail:
+            h = avatar.email_hash(cemail)
+            qq = avatar.qq_from_email(cemail)
+            if h or qq:
+                a, _ = avatar.urls(h, qq)
+                base = site_url.base()
+                author_avatar = base + a if a and a.startswith('/') else a
+    except Exception:
+        pass
     text, page = mail_template.reply_notice(
         blog_name=blog,
         site=site_url.base(),
@@ -280,6 +311,7 @@ def notify_approved_reply(comment_id: int) -> None:
         content=str(comment.get("content") or ""),
         when=str(comment.get("created_at") or ""),
         parent_author=str(parent.get("author") or ""),
+        author_avatar=author_avatar,
     )
     _dispatch(
         [

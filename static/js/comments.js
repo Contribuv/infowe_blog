@@ -223,8 +223,9 @@
     }
     var scroll = function () {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('cmt-anchor-flash');
-      setTimeout(function () { el.classList.remove('cmt-anchor-flash'); }, 1600);
+      var target = el.closest('.cmt-thread') || el.closest('.cmt-item') || el;
+      target.classList.add('cmt-anchor-flash');
+      setTimeout(function () { target.classList.remove('cmt-anchor-flash'); }, 1600);
     };
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(scroll);
     else setTimeout(scroll, 30);
@@ -331,8 +332,8 @@
     sync();
   }
 
-  /* ── 3.5 邮箱必填：就地拦截（Toast 说明原因 + 邮箱框红边 + 滚动聚焦），不再整页刷新 ── */
-  var EMAIL_HINT = '已勾选邮箱通知，请填写邮箱；不需要提醒可取消勾选';
+  /* ── 3.5 邮箱必填（实名合规要求，无条件）：就地拦截 ── */
+  var EMAIL_HINT = '请填写邮箱（必填，用于回复通知与头像）';
   function clearEmailError() {
     if (emailInput) {
       emailInput.classList.remove('is-invalid');
@@ -340,7 +341,6 @@
     }
   }
   function showEmailError() {
-    // 「已记住信息」时昵称/邮箱整行是隐藏的，先展开再聚焦，否则用户看不到被提醒的是哪个框
     if (fields && fields.hidden) {
       fields.hidden = false;
       if (remember) remember.hidden = true;
@@ -355,9 +355,7 @@
   }
   if (emailInput) emailInput.addEventListener('input', clearEmailError);
 
-  /* ── 4. 提交防重复 + 前置校验 ──
-     注意：addEventListener 的回调里 return false 并不取消默认提交，必须显式 preventDefault。
-     旧写法只弹了 toast、表单照样 POST → 后端拒绝后整页刷新回原页，看起来「居然能提交」。 */
+  /* ── 4. 提交防重复 + 前置校验 ── */
   if (submitBtn) {
     form.addEventListener('submit', function (ev) {
       if (form.dataset.submitting === '1') {
@@ -365,12 +363,9 @@
         if (window.toast) window.toast('正在提交，请稍候…', 'info', 2000);
         return;
       }
-      // 邮箱若仍是纯数字 QQ 号，提交前自动补全 @qq.com（后端另有格式校验）
       if (emailInput && QQ_RE.test(emailInput.value.trim())) {
         emailInput.value = emailInput.value.trim() + '@qq.com';
       }
-      /* 昵称前置校验：纯数字 / 网址开头 / 命中敏感词。后端另有同规则兜底，
-         这里只做即时提示，避免提交后跳回页面才看到错误。 */
       if (authorInput) {
         var author = authorInput.value.trim();
         var authorError = '';
@@ -403,9 +398,8 @@
           return;
         }
       }
-      /* 邮箱通知：勾选后邮箱必填。用 JS 校验而非原生 required —— 表单在「已记住信息」
-         时整行隐藏，隐藏控件触发原生校验只会报 not focusable 并卡住提交。 */
-      if (notifyInput && notifyInput.checked && emailInput && !emailInput.value.trim()) {
+      // 邮箱无条件必填：与后台校验保持一致，不勾选邮件通知也不能空着提交
+      if (emailInput && !emailInput.value.trim()) {
         ev.preventDefault();
         showEmailError();
         return;
@@ -444,27 +438,28 @@
     });
   }
 
-  /* ── 5.5 邮箱通知：勾选时邮箱必填，取消后邮箱可不填 ──
-     仅同步占位/说明文案，真正的必填校验在提交事件里做（避免原生 required + 隐藏控件卡死表单） */
+  /* ── 5.5 邮箱通知勾选：仅同步占位/说明文案 ──
+     邮箱本身始终必填（实名合规要求），与是否勾选邮件通知无关；
+     真正的必填校验在提交事件里做（避免原生 required + 隐藏控件卡死表单） */
   var notifyInput = document.getElementById('comment-notify');
   function syncNotify() {
-    if (!notifyInput || !emailInput) return;
-    var on = notifyInput.checked;
-    emailInput.placeholder = on
+    if (!emailInput) return;
+    // 必填状态固定，aria-required 恒为 true
+    emailInput.setAttribute('aria-required', 'true');
+    if (!notifyInput) return;
+    // 勾选邮件通知时提示语强调"接收回复提醒"，未勾选强调"显示头像"，但都必填
+    emailInput.placeholder = notifyInput.checked
       ? (emailInput.getAttribute('data-ph-on') || 'QQ 号或邮箱（必填）')
-      : (emailInput.getAttribute('data-ph-off') || 'QQ 号或邮箱（选填）');
-    emailInput.title = on
-      ? (emailInput.getAttribute('data-title-on') || '已勾选邮箱通知：邮箱必填，用于接收回复提醒')
-      : (emailInput.getAttribute('data-title-off') || '选填，用于显示头像');
-    emailInput.setAttribute('aria-required', on ? 'true' : 'false');
+      : (emailInput.getAttribute('data-ph-off') || 'QQ 号或邮箱（必填）');
+    emailInput.title = notifyInput.checked
+      ? (emailInput.getAttribute('data-title-on') || '评论需填写邮箱：用于接收回复通知与显示头像')
+      : (emailInput.getAttribute('data-title-off') || '评论需填写邮箱：用于接收回复通知与显示头像');
   }
   if (notifyInput) {
-    notifyInput.addEventListener('change', function () {
-      syncNotify();
-      // 取消勾选后邮箱不再是必填，之前的红字提醒要立刻撤掉
-      if (!notifyInput.checked) clearEmailError();
-    });
-    syncNotify();   // 回填记住的选择后同步一次（上次取消勾选则保持取消）
+    notifyInput.addEventListener('change', syncNotify);
+    syncNotify();   // 回填记住的选择后同步一次
+  } else if (emailInput) {
+    syncNotify();   // 没有通知勾选项时也要把 aria-required 置为必填
   }
 
   /* ── 6. 待审核评论：轻提示引导（页面上已有提示条，这里补一句可关闭的说明） ── */
