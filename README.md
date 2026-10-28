@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.30-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.30)
+[![version](https://img.shields.io/badge/version-3.4.31-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.31)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -913,14 +913,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.30**
+当前版本：**v3.4.31**
+
+### v3.4.31
+
+- 修复老版本 git 上在线升级报「配置 GitHub 远程失败」：`git remote get-url` 是 1.8.5 才有的子命令，CentOS 7 自带的 git 1.8.3 会把已存在的 origin 误判为不存在，改用 `git remote` 列名判断；add 撞名时自动改 set-url 兜底；git 命令统一带 `safe.directory`，兼容仓库属主与运行用户不一致的部署
+
+<details>
+<summary><b>历史版本（v3.4.30 及更早）</b></summary>
 
 ### v3.4.30
 
 - 修复升级页「升级源」选择行贴卡片左边缘的问题：样式收进 admin.css，与上下内容同样左右留白，间距统一走 spacing 变量
-
-<details>
-<summary><b>历史版本（v3.4.29 及更早）</b></summary>
 
 ### v3.4.29
 

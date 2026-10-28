@@ -248,19 +248,32 @@ def _normalize_source(source) -> dict:
     return {"key": DEFAULT_SOURCE, **SOURCES[DEFAULT_SOURCE]}
 
 
-def _ensure_remote(base: Path, name: str) -> subprocess.CompletedProcess | None:
-    """gitee 远程名不存在时自动补上（从 GitHub clone 的部署默认没有它）。"""
-    probe = subprocess.run(
-        ["git", "remote", "get-url", name],
-        cwd=str(base), capture_output=True, text=True, timeout=30,
+def _git(base: Path, *args: str, timeout: int = 30) -> subprocess.CompletedProcess:
+    """统一执行 git 命令。-c safe.directory 处理仓库属主与运行用户不一致的部署
+    （宝塔/多用户服务器上 git 2.35.2+ 会拒一切操作报 unsafe repository），单次生效
+    不改全局配置；老版本 git 对不认识的 -c 配置项静默忽略，无副作用。"""
+    return subprocess.run(
+        ["git", "-c", f"safe.directory={base}", *args],
+        cwd=str(base), capture_output=True, text=True, timeout=timeout,
     )
-    if probe.returncode == 0:
+
+
+def _ensure_remote(base: Path, name: str) -> subprocess.CompletedProcess | None:
+    """远程名不存在时自动补上（从 GitHub clone 的部署默认没有 gitee）。
+
+    判断是否存在必须用 `git remote` 列名：`git remote get-url` 是 1.8.5 才有的
+    子命令，CentOS 7 等老系统自带的 git 1.8.3 没有它，会把已存在的 origin 误判为
+    不存在，随后 add 撞上 "already exists" 报「配置远程失败」。
+    """
+    probe = _git(base, "remote")
+    if probe.returncode == 0 and name in probe.stdout.split():
         return None
     url = f"https://gitee.com/{GITEE_REPO}.git" if name == "gitee" else f"https://github.com/{GITHUB_REPO}.git"
-    return subprocess.run(
-        ["git", "remote", "add", name, url],
-        cwd=str(base), capture_output=True, text=True, timeout=30,
-    )
+    proc = _git(base, "remote", "add", name, url)
+    if proc.returncode != 0 and "already exists" in (proc.stderr or ""):
+        # 兜底：列名与 add 之间的任何残留/竞争导致撞名时，直接把 URL 纠正到预期仓库
+        proc = _git(base, "remote", "set-url", name, url)
+    return proc
 
 
 def start(source=None) -> tuple[bool, str]:
@@ -298,10 +311,7 @@ def _run(meta: dict) -> None:
                 "finished": time.time(),
             })
             return
-        proc = subprocess.run(
-            ["git", "pull", "--ff-only", remote],
-            cwd=str(base), capture_output=True, text=True, timeout=180,
-        )
+        proc = _git(base, "pull", "--ff-only", remote, timeout=180)
         if proc.returncode != 0:
             _write_state({
                 "state": "failed", "percent": 100, "label": "git pull 失败",
