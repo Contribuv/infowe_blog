@@ -87,9 +87,16 @@
 
     <!-- 评论区（与文章页共用同一片段，表单指向项目评论接口；关闭评论时整块不显示） -->
     {% if comments_enabled %}
+    {# flash 提到页面级：评论提交后 302 回本页，Toast 提示不再依赖评论片段 #}
+    {% include "_flash.html" %}
+    {% if comment_display|default('inline') == 'floating' %}
+    {# 浮窗模式：页面源码零评论，只输出 FAB + 空 dialog，内容开窗时异步拉取 #}
+    {% with comment_fragment_url = '/comment/project/' ~ project.id %}{% include "_comments_popup.html" %}{% endwith %}
+    {% else %}
     {% set comment_section_class = 'tech-comments' %}
     {% set comment_form_action = '/projects/' ~ project.id ~ '/comment' %}
     {% include "_comments.html" %}
+    {% endif %}
     {% endif %}
 </article>
 {% endblock %}
@@ -173,5 +180,9 @@
 {% if comments_enabled %}
 <script src="{{ url_for('static', filename='js/toast.js', t=static_ver) }}"></script>
 <script src="{{ url_for('static', filename='js/comments.js', t=static_ver) }}"></script>
+{% if comment_display|default('inline') == 'floating' %}
+<!-- 评论浮窗驱动（必须在 comments.js 之后：依赖 window.initComments） -->
+<script src="{{ url_for('static', filename='js/comments-popup.js', t=static_ver) }}"></script>
+{% endif %}
 {% endif %}
 {% endblock %}

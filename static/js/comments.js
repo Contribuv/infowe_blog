@@ -5,9 +5,19 @@
    ── 回复 ──   表单统一挂到「所属楼层组的回复区末尾」，不再插到已有回复之前
    ── 折叠 ──   回复数 > COLLAPSE_AT 时默认只显示 SHOW_COUNT 条
    ── 提示 ──   提交态、字数、待审核提示均由本文件驱动
+   ── v3.4.32 ── 由 IIFE 改为 window.initComments(root) 可重入函数：
+     整页加载时文件末尾自动执行 initComments(document)；
+     v3.4.33 评论浮窗把片段注入 dialog 后，comments-popup.js
+     会再次调用 initComments(片段容器)，因此内部查询一律以 root 为根，
+     不得假设 id 在整页唯一；document 级委托监听靠 contains 归属判断，多实例互不串扰。
    ═══════════════════════════════════════════════ */
-(function () {
+window.initComments = function (root) {
   'use strict';
+
+  root = root || document;
+  /* 以 root 为根按 id 查元素：浮窗片段里会出现与页面同名的 id，
+     document.getElementById 只会命中第一个，故必须用根限定查询 */
+  function byId(id) { return root.querySelector('#' + id); }
 
   var SHOW_COUNT = 2;    // 折叠态露出的回复条数
   var COLLAPSE_AT = 3;   // 回复数超过此值才折叠
@@ -47,28 +57,32 @@
       setTimeout(hangCheck, AV_TIMEOUT);
     }
   }
-  var avImgs = document.querySelectorAll('.cmt-avatar-img');
+  var avImgs = root.querySelectorAll('.cmt-avatar-img');
   Array.prototype.forEach.call(avImgs, initAvatar);
 
-  var form = document.getElementById('comment-form');
+  var form = byId('comment-form');
   if (!form) return;
+  /* 同一个表单只初始化一次：防止对同一容器重复调用 initComments 时
+     document 级委托监听（回复、表情关闭等）被重复绑定 */
+  if (form.dataset.cmtInit === '1') return;
+  form.dataset.cmtInit = '1';
 
-  function getList() { return document.getElementById('cmt-list'); }
-  var parentInput = document.getElementById('comment-parent-id');
-  var hint = document.getElementById('comment-replying');
-  var hintName = document.getElementById('comment-replying-name');
-  var cancelBtn = document.getElementById('comment-cancel-reply');
-  var anchor = document.getElementById('comment-form-anchor');
+  function getList() { return byId('cmt-list'); }
+  var parentInput = byId('comment-parent-id');
+  var hint = byId('comment-replying');
+  var hintName = byId('comment-replying-name');
+  var cancelBtn = byId('comment-cancel-reply');
+  var anchor = byId('comment-form-anchor');
   var textarea = form.querySelector('textarea');
   var submitBtn = form.querySelector('.submit');
   var counter = form.querySelector('.count');
-  var fields = document.getElementById('comment-fields');
-  var remember = document.getElementById('comment-remember');
-  var editBtn = document.getElementById('comment-remember-edit');
+  var fields = byId('comment-fields');
+  var remember = byId('comment-remember');
+  var editBtn = byId('comment-remember-edit');
   var authorInput = form.querySelector('input[name="author"]');
-  var emailInput = document.getElementById('comment-email');
-  var emailSuggest = document.getElementById('cmt-email-suggest');
-  var qqAv = document.getElementById('cmt-qq-av');
+  var emailInput = byId('comment-email');
+  var emailSuggest = byId('cmt-email-suggest');
+  var qqAv = byId('cmt-qq-av');
 
   /* ── 0.5 表单定位：仅当表单显示不全（底部/顶部被视口截断）时才滚动；
      完全可见（如文章内容较短、页面本身能装下表单）则不滚动，避免多余跳动 ── */
@@ -128,26 +142,41 @@
   }
 
   document.addEventListener('click', function (e) {
+    /* 活表单守卫：initComments 每次注入新片段都会重绑本监听（form.dataset.cmtInit
+       防重只认元素，新片段是全新表单元素防不住）。旧闭包持有的表单已随 innerHTML
+       销毁，不作废的话点「回复」时旧监听器会把脱离文档的旧表单塞回活楼层——
+       浮窗每开一次窗就多出一个「写下你的想法」（inline 翻页重渲染同理）。
+       当前 DOM 的活表单不是本闭包这只 → 本批监听器整体作废。 */
+    if (document.getElementById('comment-form') !== form) return;
+
     var btn = e.target.closest ? e.target.closest('.cmt-reply') : null;
     var list = getList();
     if (!btn || !list || !list.contains(btn)) return;
 
     var item = btn.closest('.cmt-item');
-    var box = repliesBoxOf(item);
-    if (!box) return;
+    if (!item) return;
 
     if (parentInput) parentInput.value = btn.getAttribute('data-reply-to') || '';
     if (hintName) hintName.textContent = btn.getAttribute('data-reply-name') || '';
     if (hint) hint.hidden = false;
-    form.classList.add('is-inline');
     var boxEl = form.querySelector('.cmt-box');
     if (boxEl && !boxEl.open) boxEl.open = true;   // 折叠态下点「回复」自动展开表单
-    box.appendChild(form);   // 追加到末尾，位于已有回复之后
 
-    if (typeof window.toast === 'function') {
-      // 不打断用户：仅静默定位，不弹提示
+    /* 浮窗模式（表单已停靠 .cmt-pop-foot）：输入框常驻弹窗底部，
+       点「回复」只切换上下文——hint 变成「回复 @某某」，不把表单搬进楼层，
+       视线无需在楼层与底部之间跳（微博 / X / Twikoo 同款交互）。
+       给被回复楼层加高亮闪烁，明确回复对象。foot 不再被搬空，保持显示。 */
+    if (form.closest('.cmt-pop-foot')) {
+      item.classList.add('cmt-anchor-flash');
+      setTimeout(function () { item.classList.remove('cmt-anchor-flash'); }, 1600);
+    } else {
+      /* 内嵌模式保持原交互：表单搬进该楼层组回复区末尾，紧贴被回复内容 */
+      var box = repliesBoxOf(item);
+      if (!box) return;
+      form.classList.add('is-inline');
+      box.appendChild(form);   // 追加到末尾，位于已有回复之后
+      scrollFormIntoView();
     }
-    scrollFormIntoView();
     if (textarea) setTimeout(function () { textarea.focus({ preventScroll: true }); }, 260);
   });
 
@@ -208,11 +237,44 @@
      折叠是用 hidden 实现的，隐藏元素没有布局盒子，浏览器直接跳转只能停在错误位置
      （后台评论管理点击 /projects/1#comment-68 定位不到就是此因）。这里保留折叠，
      仅在带锚点访问时自动展开命中的那一组，并短暂高亮目标。 */
+  var crossPageLoading = false;
+
+  /* 跨页锚点兜底：评论分页开启时，#comment-N 可能指向第 2 页及以后的楼层，
+     首屏服务端只渲染 cpage（默认第 1 页），DOM 里没有该元素 → 直接定位必然失败。
+     这里 fetch 片段端点 ?focus=N（服务端 page_of 算出目标页一次直出）替换列表，
+     再走一遍正常定位；任何旧的纯 hash 链接（后台通知/侧栏推荐）都能生效。 */
+  function revealHashCrossPage(id) {
+    var regionEl = byId('cmt-region');
+    if (!regionEl || crossPageLoading || !window.fetch) return;
+    if (regionEl.closest && regionEl.closest('dialog')) return;   // 浮窗有自己的 ?focus 链路
+    var frag = regionEl.getAttribute('data-frag');
+    if (!frag) return;
+    crossPageLoading = true;
+    fetch(frag + '?focus=' + encodeURIComponent(id), {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'fetch' }
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        var fresh = new DOMParser().parseFromString(text, 'text/html').getElementById('cmt-region');
+        if (!fresh) return;
+        resetReply();   // 与 AJAX 翻页一致：表单先回主位，避免回复态随旧列表被替换
+        regionEl.innerHTML = fresh.innerHTML;
+        refreshRegion();
+        if (document.getElementById('comment-' + id)) revealHashTarget();   // 此次 DOM 已有，正常定位
+      })
+      .catch(function () { /* 静默失败：保持页面现状，锚点失效但不影响浏览 */ })
+      .then(function () { crossPageLoading = false; });
+  }
+
   function revealHashTarget() {
     var hash = location.hash || '';
     if (hash.indexOf('#comment-') !== 0) return;
     var el = document.getElementById(hash.slice(1));
-    if (!el) return;
+    if (!el) return revealHashCrossPage(hash.slice('#comment-'.length));
     // 逐层向上展开包含它的折叠区（当前结构只有一层，写法兼容未来嵌套）
     var box = el.closest ? el.closest('.cmt-replies') : null;
     while (box) {
@@ -221,6 +283,9 @@
       box = box.parentElement && box.parentElement.closest
         ? box.parentElement.closest('.cmt-replies') : null;
     }
+    // 浮窗（<dialog>）内的滚动与高亮由 comments-popup.js 的 revealFocus 负责
+    //（它只滚弹窗内容区）；这里再 scrollIntoView 会连带滚动背后页面，两者叠加会错位
+    if (el.closest && el.closest('dialog')) return;
     var scroll = function () {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       var target = el.closest('.cmt-thread') || el.closest('.cmt-item') || el;
@@ -231,11 +296,16 @@
     else setTimeout(scroll, 30);
   }
   revealHashTarget();
-  window.addEventListener('hashchange', revealHashTarget);
+  /* hashchange 处理函数内部用 document.getElementById 全局查找，
+     天然覆盖浮窗片段；重复调用 initComments 时只绑一次，避免多次展开 */
+  if (!window.__cmtHashRevealBound) {
+    window.__cmtHashRevealBound = true;
+    window.addEventListener('hashchange', revealHashTarget);
+  }
 
   /* ── 2.6 评论分页：只替换评论区，避免整页跳转触发跨文档过渡动画（闪屏） ──
      渐进增强：不支持 fetch / pushState 时，分页链接仍是普通链接，照常整页跳转。 */
-  var region = document.getElementById('cmt-region');
+  var region = byId('cmt-region');
   var pageLoading = false;
 
   function prefersReducedMotion() {
@@ -254,7 +324,7 @@
 
   /* 翻页后定位到「评论区开头」（评论标题处），而不是文章顶部 */
   function scrollToCommentsTop() {
-    var title = document.querySelector('.cmt-title') || region;
+    var title = root.querySelector('.cmt-title') || region;
     if (!title) return;
     var current = window.pageYOffset || document.documentElement.scrollTop || 0;
     var top = Math.max(0, title.getBoundingClientRect().top + current - stickyHeaderHeight());
@@ -275,6 +345,9 @@
 
   function loadCommentPage(url, push) {
     if (!region || !window.fetch || pageLoading) return;
+    /* 浮窗（v3.4.33 <dialog>）里的分页：不写浏览器历史、失败不整页跳转、
+       翻页只滚浮窗内容区 —— 否则后退会落在裸片段地址、异常会把整页带到 /comment/... */
+    var inDialog = !!(region.closest && region.closest('dialog'));
     pageLoading = true;
     region.setAttribute('aria-busy', 'true');
     fetch(url, {
@@ -291,14 +364,21 @@
         resetReply();   // 表单先回到主位置，免得回复态表单随旧楼层一起被替换
         region.innerHTML = fresh.innerHTML;
         refreshRegion();
-        if (push !== false) {
+        if (push !== false && !inDialog) {
           var target = url.split('#')[0] + '#comments';
           history.pushState({ cmtPage: target }, '', target);
         }
-        scrollToCommentsTop();
+        if (inDialog) {
+          // 浮窗内只滚内容区（dialog 本身是滚动容器），背后页面保持不动
+          var scroller = region.closest('.cmt-pop-body') || region.closest('dialog');
+          if (scroller) scroller.scrollTop = 0;
+        } else {
+          scrollToCommentsTop();
+        }
       })
       .catch(function (err) {
         if (err && err.name === 'AbortError') return;
+        if (inDialog) return;   // 浮窗内静默恢复，用户可再点一次分页
         location.href = url;   // 任何异常都退回整页跳转，保证分页可用
       })
       .then(function () {
@@ -308,7 +388,9 @@
   }
 
   if (region) {
-    document.addEventListener('click', function (e) {
+    /* 点击委托绑在 region 上（不绑 document）：
+       浮窗片段里会有自己的分页链接，各实例互不串扰 */
+    region.addEventListener('click', function (e) {
       var link = e.target.closest ? e.target.closest('a[data-cmt-page]') : null;
       if (!link) return;
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -316,9 +398,13 @@
       loadCommentPage(link.href, true);
     });
 
-    window.addEventListener('popstate', function () {
-      loadCommentPage(location.href, false);
-    });
+    /* popstate 只属于页面级评论区：浮窗走自己的加载逻辑，不参与浏览器历史 */
+    if (root === document && !window.__cmtPopBound) {
+      window.__cmtPopBound = true;
+      window.addEventListener('popstate', function () {
+        loadCommentPage(location.href, false);
+      });
+    }
   }
 
   /* ── 3. 字数统计 ── */
@@ -330,6 +416,39 @@
     };
     textarea.addEventListener('input', sync);
     sync();
+  }
+
+  /* ── 3.2 草稿自动保存 ──
+     按表单提交地址（每篇文章/项目各一条）把未提交内容存进 localStorage，
+     误刷新、误返回、断电都不丢稿。input 防抖写入；提交校验全部通过
+     （即将整页 POST 跳转）时才清除——校验被拦截的分支不清，用户继续编辑。
+     服务端异常 redirect 回来时输入本就已丢，与清除时机无关；若后端拦截
+     （极少见，客户端已拦敏感词/格式），代价是重写一次，换取成功提交后
+     不会误恢复旧稿造成重复评论。 */
+  var DRAFT_KEY = 'cmt-draft:' + (form.getAttribute('action') || location.pathname);
+  var draftTimer = null;
+  function saveDraftSoon() {
+    if (!textarea) return;
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(function () {
+      try {
+        if (textarea.value) localStorage.setItem(DRAFT_KEY, textarea.value);
+        else localStorage.removeItem(DRAFT_KEY);
+      } catch (e) { /* 隐私模式 / 存储配额满：静默放弃，不影响正常评论 */ }
+    }, 400);
+  }
+  if (textarea) {
+    textarea.addEventListener('input', saveDraftSoon);
+    // 进入页面恢复：仅当输入框为空（用户尚未输入）时注入草稿，不覆盖任何新输入
+    var savedDraft = null;
+    try { savedDraft = localStorage.getItem(DRAFT_KEY); } catch (e) {}
+    if (savedDraft && !textarea.value) {
+      textarea.value = savedDraft;
+      if (counter) counter.textContent = textarea.value.length + ' / ' + MAX_LEN;
+      var draftBox = form.querySelector('.cmt-box');
+      if (draftBox) draftBox.open = true;   // 展开评论框让草稿可见
+      if (window.toast) window.toast('已恢复上次未提交的评论草稿', 'info', 2500);
+    }
   }
 
   /* ── 3.5 邮箱必填（实名合规要求，无条件）：就地拦截 ── */
@@ -416,6 +535,8 @@
         textarea.focus();
         return;
       }
+      // 校验全部通过，即将整页 POST：清除草稿，避免成功后回来误恢复旧稿
+      try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
       form.dataset.submitting = '1';
       submitBtn.disabled = true;
       submitBtn.textContent = '提交中…';
@@ -441,7 +562,7 @@
   /* ── 5.5 邮箱通知勾选：仅同步占位/说明文案 ──
      邮箱本身始终必填（实名合规要求），与是否勾选邮件通知无关；
      真正的必填校验在提交事件里做（避免原生 required + 隐藏控件卡死表单） */
-  var notifyInput = document.getElementById('comment-notify');
+  var notifyInput = byId('comment-notify');
   function syncNotify() {
     if (!emailInput) return;
     // 必填状态固定，aria-required 恒为 true
@@ -463,7 +584,7 @@
   }
 
   /* ── 6. 待审核评论：轻提示引导（页面上已有提示条，这里补一句可关闭的说明） ── */
-  var notice = document.getElementById('cmt-notice');
+  var notice = byId('cmt-notice');
   if (notice && !notice.dataset.seen) {
     var close = notice.querySelector('[data-notice-close]');
     if (close) {
@@ -538,9 +659,9 @@
     { name: '心与星', list: ['❤️', '💔', '💕', '💖', '💘', '✨', '🌟', '⭐', '💯'] },
     { name: '庆祝与符号', list: ['🎉', '🎊', '🎁', '🎂', '🔥', '✅', '❌', '⚠️', '👀', '💡', '🚀', '☕'] }
   ];
-  var emojiWrap = document.getElementById('cmt-emoji');
-  var emojiBtn = document.getElementById('cmt-emoji-btn');
-  var emojiPanel = document.getElementById('cmt-emoji-panel');
+  var emojiWrap = byId('cmt-emoji');
+  var emojiBtn = byId('cmt-emoji-btn');
+  var emojiPanel = byId('cmt-emoji-panel');
   if (emojiBtn && emojiPanel && textarea) {
     var frag = document.createDocumentFragment();
     EMOJI_GROUPS.forEach(function (g) {
@@ -564,14 +685,42 @@
     });
     emojiPanel.appendChild(frag);
 
+    /* 浮窗模式定位修正：表单停靠在 .cmt-pop-foot（max-height:45dvh 内部滚动，
+       overflow-y:auto），面板按 CSS 向上弹出（absolute bottom:100%）会被 foot
+       顶部裁掉一截——overflow 容器裁切所有溢出的后代（含 absolute 定位）。
+       打开时改用 fixed（脱离裁切链，foot 不滚动时位置稳定）：优先放按钮上方，
+       视口放不下改放按钮下方，水平方向夹在视口内；
+       内嵌模式无裁切容器，保持 CSS 定位不动 */
+    var clearEmojiPos = function () {
+      emojiPanel.style.position = '';
+      emojiPanel.style.top = '';
+      emojiPanel.style.bottom = '';
+      emojiPanel.style.left = '';
+    };
+    var placeEmojiPanel = function () {
+      if (!form || !form.closest('.cmt-pop-foot')) return;   // 非浮窗 foot 无需修正
+      emojiPanel.style.position = 'fixed';
+      emojiPanel.style.bottom = 'auto';
+      var btn = emojiBtn.getBoundingClientRect();
+      var w = emojiPanel.offsetWidth;
+      var h = emojiPanel.offsetHeight;
+      var vw = document.documentElement.clientWidth;
+      emojiPanel.style.left = Math.max(8, Math.min(btn.left, vw - w - 8)) + 'px';
+      var top = btn.top - 8 - h;                       // 8px = CSS 面板与按钮的间距
+      if (top < 8) top = Math.min(btn.bottom + 8, window.innerHeight - h - 8);
+      emojiPanel.style.top = Math.max(8, top) + 'px';
+    };
     var closeEmoji = function () {
       emojiPanel.hidden = true;
       emojiBtn.setAttribute('aria-expanded', 'false');
+      clearEmojiPos();
     };
     emojiBtn.addEventListener('click', function () {
       var willOpen = emojiPanel.hidden;
       emojiPanel.hidden = !willOpen;
       emojiBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      if (willOpen) placeEmojiPanel();
+      else clearEmojiPos();   // 再点按钮收起：与 closeEmoji 走同一清理
     });
     emojiPanel.addEventListener('click', function (e) {
       var b = e.target.closest ? e.target.closest('.cmt-emoji-item') : null;
@@ -592,9 +741,13 @@
       closeEmoji();   // 选毕即收起
     });
     document.addEventListener('click', function (e) {
-      if (emojiWrap && !emojiWrap.contains(e.target)) closeEmoji();
+      /* 旧批次作废：本闭包的表情面板已随旧片段销毁，作废避免每开一次窗
+         就累积一个空转监听器（同因见回复委托处的活表单守卫） */
+      if (!emojiWrap || document.getElementById('cmt-emoji') !== emojiWrap) return;
+      if (!emojiWrap.contains(e.target)) closeEmoji();
     });
     document.addEventListener('keydown', function (e) {
+      if (!emojiWrap || document.getElementById('cmt-emoji') !== emojiWrap) return;
       if (e.key === 'Escape') closeEmoji();
     });
   }
@@ -602,11 +755,11 @@
   /* ── 9. 图片上传：选本地图 → POST 上传 → 以缩略图卡片展示（正文保持纯文字） ──
      上传成功后不往输入框塞 ![](url)，而是把 URL 记入隐藏域 images、在下方显示缩略图；
      用户可继续打字，也能单独删除某张图。提交时由后端合并进评论并做站内白名单校验。 */
-  var imgup = document.getElementById('cmt-imgup');
-  var imgupBtn = document.getElementById('cmt-imgup-btn');
-  var imgupInput = document.getElementById('cmt-imgup-input');
-  var imgupList = document.getElementById('cmt-imgup-list');
-  var imagesInput = document.getElementById('comment-images');
+  var imgup = byId('cmt-imgup');
+  var imgupBtn = byId('cmt-imgup-btn');
+  var imgupInput = byId('cmt-imgup-input');
+  var imgupList = byId('cmt-imgup-list');
+  var imagesInput = byId('comment-images');
   if (imgup && imgupBtn && imgupInput && imgupList && imagesInput) {
     var IMG_MAX = 5 * 1024 * 1024;
     var IMG_COUNT = 6;   // 与后端 Comments::MAX_IMAGES 保持一致
@@ -701,8 +854,8 @@
 
   /* ── 10. 网址字段：缺协议时下拉补全 http:// / https://，失焦默认补 https:// ──
      type=text 不会触发原生 url 校验，故 www.demo.com 也能顺利提交。 */
-  var webInput = document.getElementById('comment-website');
-  var webSuggest = document.getElementById('cmt-website-suggest');
+  var webInput = byId('comment-website');
+  var webSuggest = byId('cmt-website-suggest');
   if (webInput && webSuggest) {
     var hasScheme = function (v) { return /^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//.test(v); };
     var hideWebSuggest = function () { webSuggest.hidden = true; };
@@ -794,6 +947,10 @@
      点空白处 / 关闭按钮 / 按 Esc 关闭；触摸屏支持双指捏合缩放、单指拖动、双击放大还原。
      用事件委托绑定在 document 上，动态插入的评论也生效。 */
   (function () {
+    /* 全局只建一份灯箱：document 级委托监听天然覆盖浮窗片段，
+       重复调用 initComments 时直接跳过，避免第二个灯箱和重复监听 */
+    if (window.__cmtLightboxReady) return;
+    window.__cmtLightboxReady = true;
     var box = null, pic = null;
     var MIN_S = 1, MAX_S = 5, DBL_ZOOM = 2.5;
     var scale = 1, tx = 0, ty = 0;      // 变换：先平移再缩放，作用于居中显示的图片
@@ -934,4 +1091,11 @@
       open(img.getAttribute('src'), img.getAttribute('alt'));
     });
   })();
-})();
+};
+
+/* 整页加载自动初始化；浮窗片段由 comments-popup.js 手动调 initComments(容器) */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function () { window.initComments(document); });
+} else {
+  window.initComments(document);
+}

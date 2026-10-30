@@ -1,0 +1,26 @@
+{# 评论浮窗壳（仅 comment_display == 'floating' 时由详情页引入）：
+   页面源码不含任何评论内容，只有左下角 FAB 按钮 + 空 dialog。
+   依赖上下文变量：
+     comment_total —— 页面评论总数（0 条时隐藏角标）
+     comment_fragment_url —— 片段端点（/comment/post/<id> 或 /comment/project/<id>）
+   行为全部由 comments-popup.js 驱动：开窗 fetch 片段 → initComments 注入 →
+   #comment-N 深链自动开窗定位；整页提交 302 回来带 hash 同样由它接管。#}
+<button type="button" id="cmt-fab" class="cmt-fab" data-frag="{{ comment_fragment_url }}"
+        data-fab-shape="{{ fab_shape|default('capsule') }}"
+        aria-label="打开评论" aria-haspopup="dialog" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span class="cmt-fab-text">评论</span>
+    {% if comment_total %}<span class="cmt-fab-badge">{{ comment_total }}</span>{% endif %}
+</button>
+
+<dialog class="cmt-pop" id="cmt-pop" aria-label="评论">
+    <div class="cmt-pop-head">
+        <span class="cmt-pop-title">评论 <span class="cmt-num">{{ comment_total }}</span></span>
+        <button type="button" class="cmt-pop-close" id="cmt-pop-close" aria-label="关闭评论">×</button>
+    </div>
+    {# 内容由 comments-popup.js fetch 片段后注入；初始为空保证页面源码零评论 #}
+    <div class="cmt-pop-body" id="cmt-pop-body"></div>
+    {# 固定底部表单区：注入后把 #comment-form 与归位锚点 #comment-form-anchor
+       一起搬进这里（comments-popup.js），回复取消/翻页后 resetReply 仍能插回原位 #}
+    <div class="cmt-pop-foot" id="cmt-pop-foot"></div>
+</dialog>

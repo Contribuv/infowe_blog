@@ -281,7 +281,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         import db
 
         if db.one(
-            f"SELECT id FROM comments WHERE id = ? AND {column} = ?",
+            f"SELECT id FROM comments WHERE id = ? AND {column} = ? AND deleted_at IS NULL",
             (int(parent_raw), target_id),
         ):
             parent_id = int(parent_raw)

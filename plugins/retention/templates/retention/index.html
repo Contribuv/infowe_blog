@@ -1,0 +1,164 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}留存记录{% endblock %}
+{% block admin_content %}
+{# 页内局部样式：只作用于本插件页，不污染全局 .filter-search（posts/orphans 页仍在用窄版） #}
+<style>
+/* 筛选表单：全局限宽 300px 只适合「搜索框 + 按钮」两件套，
+   本页有 2 个日期 + 关键词 + 按钮共 4 个控件，加宽并允许换行，防止溢出 */
+.retention-filter { flex: 1 1 380px; max-width: 540px; min-width: 0; flex-wrap: wrap; }
+.retention-filter input[type="date"] { flex: 0 1 150px; min-width: 130px; }
+.retention-filter input[name="q"] { flex: 1 1 110px; min-width: 100px; }
+/* AI 审计的 JSON 折叠块：等宽字体 + 保留缩进（外层 .comment-full 已有 pre-wrap/限高滚动） */
+.json-pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fz-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* 留存表格布局：长文本列（内容/参数/结果）限宽换行 + 折叠，
+   其余列一律单行不换行，保证一排放下不挤到换行 */
+.retention-table th, .retention-table td { white-space: nowrap; }
+.retention-table .wrap-cell {
+  max-width: 260px;
+  white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+}
+/* 折叠摘要最多 3 行，其余点开看全文 */
+.retention-table .wrap-cell summary {
+  display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 768px) {
+  /* 移动端：表单整行铺满，日期两件并排、关键词与按钮各占一行 */
+  .retention-filter { max-width: none; width: 100%; }
+  .retention-filter input[type="date"] { flex: 1 1 40%; }
+  .retention-filter input[name="q"] { flex: 1 1 55%; }
+  /* 分页按钮加大点击热区 */
+  .admin-pagination .page-btn { padding: 8px 18px; }
+}
+</style>
+<div class="page-header">
+    <h2>{{ icon('history', 20) | safe }} 留存记录 <span class="badge">{{ total }}</span></h2>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_plugin_retention_export', tab=active, start=args.get('start',''), end=args.get('end',''), q=args.get('q','')) }}"
+           class="btn btn-sm">{{ icon('download', 14, 'icon-sm') | safe }} 导出 CSV</a>
+    </div>
+</div>
+
+<!-- 数据源切换 + 筛选 -->
+<div class="filter-bar">
+    <div class="filter-tabs">
+        {% for key, spec in tabs.items() %}
+        <a href="{{ url_for('admin_plugin_retention', tab=key) }}"
+           class="filter-tag {% if active == key %}active{% endif %}">{{ spec.label }}</a>
+        {% endfor %}
+    </div>
+    <form class="filter-search retention-filter" method="GET">
+        <input type="hidden" name="tab" value="{{ active }}">
+        <input type="date" name="start" class="search-input-sm" title="开始日期" value="{{ args.get('start','') }}">
+        <span class="cell-muted">至</span>
+        <input type="date" name="end" class="search-input-sm" title="结束日期" value="{{ args.get('end','') }}">
+        <input type="text" name="q" class="search-input-sm" placeholder="关键词..." value="{{ args.get('q','') }}">
+        <button type="submit" class="btn btn-sm">筛选</button>
+    </form>
+</div>
+
+{% if rows %}
+<div class="card">
+    <div class="table-wrap">
+        <table class="table retention-table">
+            <thead>
+                <tr>
+                    {% for h in tabs[active].headers %}<th>{{ h }}</th>{% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    {% if active == 'ops' %}
+                    <td data-label="ID">{{ r.id }}</td>
+                    <td data-label="操作"><span class="badge" title="{{ r.action }}">{{ r.action_label }}</span></td>
+                    <td class="main-td" data-label="对象">{{ r.target or '—' }}</td>
+                    <td data-label="详情">{{ r.detail or '—' }}</td>
+                    <td data-label="操作人">{{ r.operator or '—' }}</td>
+                    <td data-label="IP">{{ r.ip or '—' }}</td>
+                    <td data-label="时间">{{ r.created_at[:16] }}</td>
+                    {% elif active == 'ai' %}
+                    <td data-label="ID">{{ r.id }}</td>
+                    <td data-label="动作"><span class="badge" title="{{ r.action }}">{{ r.action_label }}</span></td>
+                    {# 参数/结果：JSON 解析后折叠展示，摘要一行、展开看缩进全文；解析失败的脏数据直出 #}
+                    <td class="main-td wrap-cell" data-label="参数">
+                        {% if r.args_fmt %}
+                        <details class="comment-details">
+                            <summary title="点击展开或收起">{{ r.args_summary }}<span class="comment-toggle" aria-hidden="true"></span></summary>
+                            <div class="comment-full"><pre class="json-pre">{{ r.args_fmt }}</pre></div>
+                        </details>
+                        {% else %}{{ r.args or '—' }}{% endif %}
+                    </td>
+                    <td class="wrap-cell" data-label="结果">
+                        {% if r.result_fmt %}
+                        <details class="comment-details">
+                            <summary title="点击展开或收起">{{ r.result_summary }}<span class="comment-toggle" aria-hidden="true"></span></summary>
+                            <div class="comment-full"><pre class="json-pre">{{ r.result_fmt }}</pre></div>
+                        </details>
+                        {% else %}{{ r.result or '—' }}{% endif %}
+                    </td>
+                    <td data-label="成功">{% if r.ok %}<span class="badge badge-success">是</span>{% else %}<span class="badge badge-danger">否</span>{% endif %}</td>
+                    <td data-label="时间">{{ r.created_at[:16] }}</td>
+                    {% else %}
+                    <td data-label="ID">{{ r.id }}</td>
+                    <td class="main-td" data-label="昵称">
+                        <strong>{{ r.author }}</strong>
+                        {% if r.status == 'pending' %}<span class="badge badge-warning">待审核</span>
+                        {% elif r.status == 'approved' %}<span class="badge badge-success">已通过</span>
+                        {% else %}<span class="badge badge-danger">已拒绝</span>{% endif %}
+                        {% if r.deleted_at %}<span class="badge badge-private">已删除</span>{% endif %}
+                    </td>
+                    <td data-label="邮箱">{{ r.email or '—' }}</td>
+                    <td data-label="主页">
+                        {% if r.website %}<a href="{{ r.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ r.website[:30] }}</a>
+                        {% else %}<span class="cell-muted">—</span>{% endif %}
+                    </td>
+                    <td data-label="IP">{{ r.ip_text or '—' }}</td>
+                    <td data-label="归属地">{{ r.ip_location or '—' }}</td>
+                    <td class="wrap-cell" data-label="内容">
+                        {% if r.content|length > 80 %}
+                        <details class="comment-details">
+                            <summary>{{ r.content[:80] }}…</summary>
+                            <div class="comment-full">{{ r.content }}</div>
+                        </details>
+                        {% else %}{{ r.content }}{% endif %}
+                    </td>
+                    <td data-label="状态">{{ status_labels.get(r.status, r.status) }}</td>
+                    <td data-label="删除时间">{{ (r.deleted_at or '')[:16] or '—' }}</td>
+                    <td data-label="时间">{{ r.created_at[:16] }}</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 分页：保留当前 tab 与筛选条件 -->
+{% if total_pages > 1 %}
+<nav class="admin-pagination">
+    {% if page > 1 %}
+    <a href="{{ url_for('admin_plugin_retention', tab=active, start=args.get('start',''), end=args.get('end',''), q=args.get('q',''), page=page-1) }}" class="page-btn">上一页</a>
+    {% endif %}
+    <span class="page-info">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ url_for('admin_plugin_retention', tab=active, start=args.get('start',''), end=args.get('end',''), q=args.get('q',''), page=page+1) }}" class="page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% elif not exists %}
+<div class="empty-state">
+    <p>{{ tabs[active].label }}暂无数据（该数据源的表尚未生成）</p>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>暂无{{ tabs[active].label }}{% if args.get('q') or args.get('start') or args.get('end') %}，试试放宽筛选条件{% endif %}</p>
+</div>
+{% endif %}
+{% endblock %}

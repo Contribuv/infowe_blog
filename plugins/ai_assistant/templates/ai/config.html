@@ -20,7 +20,7 @@
 </div>
 {% endif %}
 
-<form method="POST" action="{{ url_for('admin_plugin_ai_save') }}" class="ai-config">
+<form method="POST" action="{{ url_for('admin_plugin_ai_save') }}" class="ai-config" enctype="multipart/form-data">
     <div class="ai-status">
         <span>当前模型：<b>{{ profile.name ~ ' · ' ~ profile.model if profile else '未配置' }}</b></span>
         <span>接口：<b>{{ profile.base_url if profile else '未配置' }}</b></span>
@@ -90,7 +90,7 @@
             <div class="ai-grid">
                 <label class="ai-switch">
                     <input type="checkbox" name="auto_execute" {% if cfg.auto_execute %}checked{% endif %}>
-                    <span><strong>写操作自动执行</strong><small>开启后 AI 直接建文章、改文章、回复评论，不再逐条确认</small></span>
+                    <span><strong>写操作自动执行</strong><small>开启后 AI 直接发文章、改文章、审核评论等，不再逐条确认（回复评论由「通过后 AI 回复」单独控制）</small></span>
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="comment_moderation" {% if cfg.comment_moderation %}checked{% endif %}>
@@ -98,7 +98,7 @@
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="comment_reply" {% if cfg.comment_reply %}checked{% endif %}>
-                    <span><strong>通过后 AI 回复</strong><small>结合文章内容生成中文回复，带「AI 助手」标识</small></span>
+                    <span><strong>通过后 AI 回复</strong><small>结合文章内容生成中文回复；昵称可在下方「AI 评论昵称」自定义，对话中 AI 回复评论也由本开关控制</small></span>
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="comment_reply_notify" {% if cfg.comment_reply_notify|default(true) %}checked{% endif %}>
@@ -108,6 +108,27 @@
                     <input type="checkbox" name="link_moderation" {% if cfg.link_moderation %}checked{% endif %}>
                     <span><strong>友链回链自动审核</strong><small>对方页面出现本站链接后自动通过并发信通知</small></span>
                 </label>
+                <div class="ai-identity span-2">
+                    <img class="ai-identity-avatar" id="ai-avatar-preview" alt="AI 头像"
+                         src="{{ cfg.ai_avatar|default('') or '/plugin-assets/ai_assistant/avatars/ai-bot.svg' }}"
+                         onerror="this.src='/plugin-assets/ai_assistant/avatars/ai-bot.svg'">
+                    <div class="ai-identity-main">
+                        <div class="ai-identity-name">
+                            <label for="ai-name-input">AI 评论昵称</label>
+                            <input type="text" name="ai_name" id="ai-name-input" class="input-text"
+                                   value="{{ cfg.ai_name|default('AI 助手') }}" maxlength="20" placeholder="AI 助手">
+                        </div>
+                        <div class="ai-identity-actions">
+                            <button type="button" class="btn btn-secondary" id="ai-avatar-pick">上传头像</button>
+                            <button type="button" class="btn btn-secondary" id="ai-avatar-reset">恢复默认</button>
+                            <input type="text" name="ai_avatar" id="ai-avatar-input" class="input-text"
+                                   value="{{ cfg.ai_avatar|default('') }}" maxlength="500"
+                                   placeholder="或粘贴图片链接，留空用默认卡通机器人">
+                            <input type="file" name="ai_avatar_file" id="ai-avatar-file" accept="image/*" hidden>
+                        </div>
+                        <span class="form-hint">上传后自动裁成方形；昵称与头像保存后，历史 AI 评论同步更新</span>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>评论最短长度</label>
                     <input type="number" name="comment_min_length" class="input-text" value="{{ cfg.comment_min_length }}" min="0" max="200">
@@ -138,4 +159,38 @@
         <button type="submit" class="btn btn-primary">保存配置</button>
     </div>
 </form>
+
+<script>
+(function () {
+    var DEFAULT_AVATAR = '/plugin-assets/ai_assistant/avatars/ai-bot.svg';
+    var pick = document.getElementById('ai-avatar-pick');
+    var reset = document.getElementById('ai-avatar-reset');
+    var file = document.getElementById('ai-avatar-file');
+    var link = document.getElementById('ai-avatar-input');
+    var preview = document.getElementById('ai-avatar-preview');
+    if (!pick || !file || !link || !preview) return;
+
+    // 选择文件：本地即时预览，清空链接框（保存时文件优先）
+    pick.addEventListener('click', function () { file.click(); });
+    file.addEventListener('change', function () {
+        var f = file.files && file.files[0];
+        if (!f) return;
+        preview.src = URL.createObjectURL(f);
+        link.value = '';
+    });
+
+    // 恢复默认：清空文件与链接，预览切回内置卡通机器人
+    reset.addEventListener('click', function () {
+        file.value = '';
+        link.value = '';
+        preview.src = DEFAULT_AVATAR;
+    });
+
+    // 手动改链接：同步预览（没选文件时生效）
+    link.addEventListener('input', function () {
+        if (file.files && file.files.length) return;
+        preview.src = link.value.trim() || DEFAULT_AVATAR;
+    });
+})();
+</script>
 {% endblock %}

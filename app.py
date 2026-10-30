@@ -262,6 +262,8 @@ def _register_hooks(app: Flask) -> None:
             "comments_enabled": conf.get("comments_enabled", "1"),
             "comment_notify": conf.get("comment_notify", "0"),
             "comment_image_upload": conf.get("comment_image_upload", "1"),
+            "comment_display": conf.get("comment_display", "inline"),
+            "fab_shape": conf.get("fab_shape", "capsule"),
             "sensitive_words_json": _sensitive_json(),
             "icp_beian": conf.get("icp_beian", ""),
             "police_beian": conf.get("police_beian", ""),
@@ -297,6 +299,8 @@ def _register_hooks(app: Flask) -> None:
             "upgrade_available": False,
             "lang_color": _lang_color,
             "icon": icon_svg,
+            # 侧边栏「留存记录」入口：插件停用时隐藏，避免 url_for 找不到路由
+            "retention_enabled": __import__("services.plugins", fromlist=["enabled"]).enabled("retention"),
         }
 
     @app.after_request

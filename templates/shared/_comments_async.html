@@ -1,0 +1,11 @@
+{# 评论浮窗片段（GET /comment/post/<id>、GET /comment/project/<id> 输出）：
+   页面源码不含评论内容，comments-popup.js 点击左下角按钮后 fetch 本片段注入 dialog。
+   分页链接由 _comment_pager 基于 request.path 生成，天然指向本片段地址，翻页仍在窗内闭环。
+   依赖上下文变量同 _comments_body.html，另加：
+     focus_id —— 深链 #comment-N 的 N（可空），服务端已据此选好页码 #}
+<div class="cmt{% if active_theme != 'default' %} cmt-skin-line{% endif %}">
+
+    <h2 class="cmt-title">评论 <span class="cmt-num">{{ comment_total }}</span></h2>
+
+    {% include "_comments_body.html" %}
+</div><!-- /.cmt -->

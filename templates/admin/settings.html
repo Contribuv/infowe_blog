@@ -224,6 +224,33 @@
                 </label>
             </div>
             <div class="form-group">
+                <label>评论展示方式</label>
+                <select name="comment_display" class="input-text">
+                    <option value="inline"{{ ' selected' if comment_display|default('inline') == 'inline' else '' }}>内嵌（页面底部完整展示）</option>
+                    <option value="floating"{{ ' selected' if comment_display|default('inline') == 'floating' else '' }}>浮窗（点击左下角按钮弹出）</option>
+                </select>
+                <span class="form-hint">内嵌：评论随文章页一起输出（默认）。浮窗：页面源码不含评论内容，访客点击左下角「评论」按钮后异步加载弹窗展示，适合想让正文更聚焦或减少首屏体积的场景；深链定位（#comment-N）仍可直达具体楼层。</span>
+            </div>
+            <div class="form-group" id="fab-shape-group">
+                <label>浮窗按钮样式（PC 端）</label>
+                <select name="fab_shape" class="input-text">
+                    <option value="capsule"{{ ' selected' if fab_shape|default('capsule') == 'capsule' else '' }}>胶囊（图标 + 「评论」文字 + 角标，默认）</option>
+                    <option value="circle"{{ ' selected' if fab_shape|default('capsule') == 'circle' else '' }}>圆形（48px 纯图标 + 角标，与移动端一致）</option>
+                </select>
+                <span class="form-hint">只在「浮窗」模式下生效且仅影响 PC 端，移动端恒为圆形。胶囊带文字说明最直观；圆形更简洁，但纯气泡图标可能被误读为客服/消息入口。</span>
+            </div>
+            <script>
+                // 评论展示方式切到「内嵌」时收起按钮样式项（值仍随表单提交，不丢配置）
+                (function () {
+                    var sel = document.querySelector('[name="comment_display"]');
+                    var grp = document.getElementById('fab-shape-group');
+                    if (!sel || !grp) return;
+                    function sync() { grp.style.display = sel.value === 'floating' ? '' : 'none'; }
+                    sel.addEventListener('change', sync);
+                    sync();
+                })();
+            </script>
+            <div class="form-group">
                 <label>评论每页条数</label>
                 <input type="number" name="comments_per_page" class="input-text"
                        value="{{ comments_per_page if comments_per_page is defined else '10' }}" min="0" max="100">
@@ -273,6 +300,29 @@
                 <textarea name="home_quotes" class="textarea-sm textarea-code" rows="10"
                           placeholder="一行一条，格式：文案|出处&#10;把踩过的坑写下来，下一次就能少走一点弯路。&#10;先让它跑起来，再让它跑得优雅。|本站">{{ home_quotes }}</textarea>
                 <span class="form-hint">一行一条，使用 <code>|</code> 分隔文案和出处，出处可省略；<code>#</code> 开头的行会被忽略。留空则使用内置 36 条。</span>
+            </div>
+        </div>
+        <!-- 导航菜单：每项一行（页面名 + 开关）。放在一言后让双栏左右配重（原先压轴导致右多左空） -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>导航菜单</h3>
+                <span class="card-hint">控制入口是否显示在顶部导航与页脚</span>
+            </div>
+            <div class="form-group">
+                <div class="nav-toggle-grid">
+                    {% for item in nav_all %}
+                    <label class="nav-toggle">
+                        <span class="nav-toggle-name">{{ item.label }}</span>
+                        <span class="switch">
+                            <input type="checkbox" name="nav_{{ item.key }}" value="1"{{ ' checked' if item.enabled else '' }}>
+                            <span class="slider"></span>
+                        </span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
             </div>
         </div>
         <!-- 图片水印：正文/灯箱图片叠加角落水印，无痕原图备份在 uploads/.originals（公网不可达） -->
@@ -514,30 +564,6 @@
                        value="{{ config.get('footer_powered_by', '') }}"
                        placeholder="如: Python &amp; Flask">
                 <span class="form-hint">版权行右侧的 Powered by 部分，留空则隐藏该项</span>
-            </div>
-        </div>
-
-        <!-- 导航菜单：每项一行（页面名 + 开关） -->
-        <div class="card">
-            <div class="card-header card-header--hint">
-                <h3>导航菜单</h3>
-                <span class="card-hint">控制入口是否显示在顶部导航与页脚</span>
-            </div>
-            <div class="form-group">
-                <div class="nav-toggle-grid">
-                    {% for item in nav_all %}
-                    <label class="nav-toggle">
-                        <span class="nav-toggle-name">{{ item.label }}</span>
-                        <span class="switch">
-                            <input type="checkbox" name="nav_{{ item.key }}" value="1"{{ ' checked' if item.enabled else '' }}>
-                            <span class="slider"></span>
-                        </span>
-                    </label>
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="form-group">
-                <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
             </div>
         </div>
 

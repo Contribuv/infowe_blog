@@ -57,6 +57,8 @@ def _comment_pager(pager: dict) -> dict:
     def url(target: int) -> str:
         args = request.args.to_dict(flat=True)
         args.pop("cpage", None)
+        # 浮窗深链参数只用于首次定位，不能带进分页链接（否则翻页永远跳回 focus 页）
+        args.pop("focus", None)
         if target > 1:
             args["cpage"] = str(target)
         query = urlencode(args)
@@ -77,14 +79,52 @@ def _comment_pager(pager: dict) -> dict:
     }
 
 
-def _load_comments(post_id: int | None, project_id: int | None, include_private: bool, my_comments: dict):
-    """按后台「评论每页条数」分页读取评论，返回 (列表, 总数, 分页信息)。"""
+def _load_comments(
+    post_id: int | None,
+    project_id: int | None,
+    include_private: bool,
+    my_comments: dict,
+    page: int | None = None,
+):
+    """按后台「评论每页条数」分页读取评论，返回 (列表, 总数, 分页信息)。
+
+    page 传 None 时从地址栏 cpage 读取；浮窗深链（?focus=N）由调用方算好页码传入。
+    """
     per_page = settings.get_int("comments_per_page", 10)
-    page = request.args.get("cpage", 1, type=int) or 1
+    if page is None:
+        page = request.args.get("cpage", 1, type=int) or 1
     comment_list, comment_total, pager = Comment.load(
         post_id, project_id, include_private, my_comments, page, per_page
     )
     return comment_list, comment_total, _comment_pager(pager)
+
+
+def _comments_context(post_id: int | None, project_id: int | None, page: int | None = None) -> dict:
+    """文章 / 项目详情页共用的评论上下文，返回可直接 **展开进 render_template 的字典。"""
+    enabled = comments_service.open_comments()
+    is_admin = auth.is_admin()
+    commenter = comments_service.commenter()
+    my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
+    if enabled:
+        comment_list, comment_total, comment_pager = _load_comments(
+            post_id, project_id, is_admin, my_comments, page
+        )
+    else:
+        comment_list, comment_total = [], 0
+        comment_pager = _comment_pager({})
+    return {
+        "comments": comment_list,
+        "comment_total": comment_total,
+        "comment_pager": comment_pager,
+        "comments_enabled": enabled,
+        "commenter": commenter,
+        "is_admin": is_admin,
+        "admin_avatar": avatar.admin_url(40) if is_admin else "",
+        "my_pending": 0 if is_admin else Comment.count_pending(comment_list),
+        # 片段端点地址：inline 模式深链锚点跨页兜底用（#comment-N 指向第 2 页及以后时，
+        # 首屏 DOM 没有该楼层，comments.js 据此 fetch ?focus=N 拉目标页再定位）
+        "comment_frag_url": f"/comment/post/{post_id}" if post_id else f"/comment/project/{project_id}",
+    }
 
 
 def index():
@@ -271,18 +311,7 @@ def post_detail(post_id: int):
         og_path = "/static/images/og-image.png"
 
     related = Post.related(post_id, post.get("tags") or [])
-    enabled = comments_service.open_comments()
-    is_admin = auth.is_admin()
-    commenter = comments_service.commenter()
-    my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
-    if enabled:
-        comment_list, comment_total, comment_pager = _load_comments(
-            post_id, None, is_admin, my_comments
-        )
-    else:
-        comment_list, comment_total = [], 0
-        comment_pager = _comment_pager({})
-    my_pending = 0 if is_admin else Comment.count_pending(comment_list)
+    cmt = _comments_context(post_id, None)
 
     side_posts, _ = Post.load("published", None, None, None, 1, 12)
     return render_template(
@@ -291,18 +320,11 @@ def post_detail(post_id: int):
         content=content,
         toc=toc,
         related=related,
-        comments=comment_list,
-        comment_total=comment_total,
-        comment_pager=comment_pager,
         prev_post=Post.adjacent(post["created_at"], True),
         next_post=Post.adjacent(post["created_at"], False),
-        comments_enabled=enabled,
         og_image_path=og_path,
-        commenter=commenter,
-        is_admin=is_admin,
-        admin_avatar=avatar.admin_url(40) if is_admin else "",
-        my_pending=my_pending,
         side_posts=side_posts,
+        **cmt,
     )
 
 
@@ -362,6 +384,41 @@ def comment_upload():
     ratelimit.touch("upload_burst", ip)
     ratelimit.touch("upload_day", ip)
     return jsonify({"url": url})
+
+
+def _comment_fragment(post_id: int | None = None, project_id: int | None = None) -> Response:
+    """评论浮窗片段（v3.4.33）：页面源码不含评论，开窗时 fetch 本端点注入 <dialog>。
+
+    分页链接由 _comment_pager 基于 request.path 生成，天然指向本片段，
+    翻页、回复、表情、上传全部在窗内闭环；深链 ?focus=N 先算好页码一次直达。
+    """
+    if not comments_service.open_comments():
+        abort(404)
+    if post_id is not None:
+        post = Post.get(post_id)
+        if not post or post["status"] not in {"published", "hidden"}:
+            abort(404)
+        form_action = f"/post/{post_id}/comment"
+    else:
+        if not settings.bool_of("nav_projects", True):
+            abort(404)
+        if not (project_id is not None and Project.get(project_id)):
+            abort(404)
+        form_action = f"/projects/{project_id}/comment"
+
+    # 深链 ?focus=N：算出该楼层所在页码，覆盖地址栏 cpage，一条请求直达目标页
+    focus_id = request.args.get("focus", 0, type=int) or 0
+    page = None
+    if focus_id:
+        per_page = settings.get_int("comments_per_page", 10)
+        page = Comment.page_of(focus_id, per_page, auth.is_admin())
+
+    return render_template(
+        "_comments_async.html",
+        comment_form_action=form_action,
+        focus_id=focus_id,
+        **_comments_context(post_id, project_id, page),
+    )
 
 
 def tags():
@@ -566,30 +623,12 @@ def project_detail(project_id: int):
     gh["age_text"] = _age_text(float(gh.get("ts") or 0))
     toc = markdown.toc_from_html(str(gh.get("readme") or ""))
 
-    enabled = comments_service.open_comments()
-    is_admin = auth.is_admin()
-    commenter = comments_service.commenter()
-    my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
-    if enabled:
-        comment_list, comment_total, comment_pager = _load_comments(
-            None, project_id, is_admin, my_comments
-        )
-    else:
-        comment_list, comment_total = [], 0
-        comment_pager = _comment_pager({})
     return render_template(
         "project_detail.html",
         project=project,
         gh=gh,
         toc=toc,
-        comments=comment_list,
-        comment_total=comment_total,
-        comment_pager=comment_pager,
-        comments_enabled=enabled,
-        commenter=commenter,
-        is_admin=is_admin,
-        admin_avatar=avatar.admin_url(40) if is_admin else "",
-        my_pending=0 if is_admin else Comment.count_pending(comment_list),
+        **_comments_context(None, project_id),
     )
 
 
@@ -724,6 +763,8 @@ def register(app) -> None:
         ("/post/<int:post_id>/view", "post_view", post_view, ["POST"]),
         ("/post/<int:post_id>/comment", "post_comment", post_comment, ["POST"]),
         ("/comment/upload", "comment_upload", comment_upload, ["POST"]),
+        ("/comment/post/<int:post_id>", "comment_fragment_post", _comment_fragment, ["GET"]),
+        ("/comment/project/<int:project_id>", "comment_fragment_project", _comment_fragment, ["GET"]),
         ("/tags", "tags", tags, ["GET"]),
         ("/search", "search", search, ["GET"]),
         ("/about", "about", about, ["GET"]),

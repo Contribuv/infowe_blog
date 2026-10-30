@@ -322,7 +322,7 @@ def orphans() -> list[dict]:
         parts = rel.split("/")
         if len(parts) < 2:
             continue
-        if parts[0].startswith(".") or parts[0] in {"avatar", "projects"}:
+        if parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects"}:
             continue
         url = "/uploads/" + rel
         if url in referenced:
@@ -346,7 +346,7 @@ def orphans() -> list[dict]:
 def delete_rel(rel: str) -> str:
     rel = unquote(str(rel or "")).replace("\\", "/").lstrip("/")
     parts = rel.split("/")
-    if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "projects"}:
+    if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects"}:
         return "非法路径"
     path = root() / rel
     if not path.is_file():
@@ -364,7 +364,7 @@ def delete_by_url(url: str) -> bool:
         return False
     rel = unquote(url.split("/uploads/", 1)[1])
     parts = rel.split("/")
-    if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "projects"}:
+    if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects"}:
         return False
     path = root() / rel
     if not path.is_file():

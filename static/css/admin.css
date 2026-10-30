@@ -7,6 +7,10 @@
    ========================================================== */
 
 /* ─────────── 1. 设计令牌 ─────────── */
+/* 纵向滚动条槽位预留：内容短于视口时也保留槽宽，滚动条出现/消失不再
+   引起页面水平位移（如留存记录三个 tab 行高不同，切换时左右跳 ~15px） */
+html { scrollbar-gutter: stable; }
+
 :root {
   color-scheme: dark;
   --bg:            #1a1d23;
@@ -166,7 +170,7 @@ svg { vertical-align: -3px; flex: none; }
   margin-left: 8px; padding: 1px 8px;
   font-size: 10px; font-weight: 600; letter-spacing: .08em;
   color: var(--accent); background: var(--accent-soft);
-  border: 1px solid var(--accent); border-radius: 20px;
+  border: 1px solid var(--accent); border-radius: var(--r-sm);
 }
 .admin-drawer-close {
   display: none; /* 仅移动端显示 */
@@ -296,7 +300,7 @@ svg { vertical-align: -3px; flex: none; }
   color: var(--text-secondary);
   background: var(--bg-surface-2);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--r-sm);
   white-space: nowrap;
 }
 .page-desc { font-size: var(--fz-sm); color: var(--text-tertiary); line-height: 1.5; }
@@ -360,8 +364,10 @@ svg { vertical-align: -3px; flex: none; }
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 1px 9px;
+  /* 徽章换行/并排时留出呼吸感，避免多个 badge 上下挤成一团 */
+  margin: 2px 3px 2px 0;
   font-size: var(--fz-xs); font-weight: 600; line-height: 1.7;
-  border-radius: 20px;
+  border-radius: var(--r-sm);
   background: var(--bg-surface-2);
   border: 1px solid var(--border);
   color: var(--text-secondary);
@@ -373,6 +379,16 @@ svg { vertical-align: -3px; flex: none; }
 .badge-danger  { background: var(--danger-soft);  border-color: transparent; color: var(--danger); }
 .badge-private { background: var(--accent-soft);  border-color: transparent; color: var(--accent); }
 .badge-featured, .badge-available { background: var(--warning-soft); border-color: transparent; color: var(--warning); }
+/* AI 助手小标：昵称右上角的纯文字上标（无底色块，视觉重量最轻，像脚注标记一样贴在名字后） */
+.cmt-ai-tag {
+  display: inline-block;
+  margin-left: 2px;
+  padding: 0;
+  font-size: 8px; font-weight: 700; line-height: 1; letter-spacing: .3px;
+  color: var(--accent);
+  background: none;
+  vertical-align: 4px;
+}
 
 /* ─────────── 8. Flash 提示（base 统一渲染，仅此一份） ─────────── */
 .admin-flash-wrap { display: flex; flex-direction: column; gap: var(--sp-2); }
@@ -487,7 +503,14 @@ svg { vertical-align: -3px; flex: none; }
   overflow-y: auto;
   line-height: 1.65;
 }
-.cell-sub { font-size: var(--fz-xs); color: var(--text-tertiary); margin-top: 2px; line-height: 1.4; }
+.cell-sub {
+  font-size: var(--fz-xs); color: var(--text-tertiary); margin-top: 2px; line-height: 1.4;
+  /* 单行省略：完整文案靠 title 悬浮查看，避免长说明把列撑宽、把后续列挤换行 */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* 状态列：宽度收窄固定，AI 审核说明在列内省略（完整理由见 title） */
+.status-cell { width: 150px; }
+.status-cell .cell-sub { max-width: 146px; }
 .cell-muted { color: var(--text-tertiary); }
 .cell-link { word-break: break-all; }
 /* 批量选择列：默认隐藏（页面更干净），进入批量模式（body.bulk-on）后显示。
@@ -629,12 +652,14 @@ input[type="checkbox"], input[type="radio"] {
   color: var(--text-secondary);
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--r-sm);
   transition: all var(--transition);
 }
 @media (hover: hover) and (pointer: fine) { .filter-tag:hover { border-color: var(--accent); color: var(--accent); } }
 .filter-tag.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 .filter-search { display: flex; gap: var(--sp-2); flex: 1; max-width: 300px; min-width: 200px; }
+/* 「至」等纯文字件：flex 默认 stretch 会把行块拉满、文字贴顶部，居中对齐 */
+.filter-search .cell-muted { align-self: center; }
 .filter-search input { flex: 1; }
 
 /* ─────────── 12.1 分段 Tab（同卡片内互斥面板；radio 驱动，纯 CSS 无 JS） ─────────── */
@@ -650,7 +675,7 @@ input[type="checkbox"], input[type="radio"] {
   color: var(--text-secondary);
   background: var(--bg-surface-2); /* 卡片底同色，用二级面色保证未选中态可见 */
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   cursor: pointer;
   transition: all var(--transition);
 }
@@ -768,7 +793,7 @@ body.bulk-on .bulk-bar { display: flex; }
   color: var(--text-secondary);
   background: var(--bg-surface-2);
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--r-sm);
   white-space: nowrap;
 }
 button.tag-chip { cursor: pointer; transition: all var(--transition); }
@@ -1083,7 +1108,7 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
 .theme-badge {
   padding: 0 8px; font-size: 10px; font-weight: 600; line-height: 1.8;
   color: var(--accent); background: var(--accent-soft);
-  border-radius: 20px; white-space: nowrap;
+  border-radius: var(--r-sm); white-space: nowrap;
 }
 .theme-author { font-size: var(--fz-xs); color: var(--text-tertiary); }
 .theme-desc { font-size: var(--fz-xs); color: var(--text-secondary); line-height: 1.5; }

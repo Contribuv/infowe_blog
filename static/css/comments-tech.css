@@ -10,7 +10,12 @@
 /* ── tech 评论容器：与相关区块之间留 24px 上距（default 同节奏），底部靠 .tech-main 的 64px padding 收口 ── */
 .tech-comments{margin:24px 0 0}
 
-.cmt{
+/* 评论区设计变量。
+   .cmt-pop-foot（浮窗固定底部表单区）同享：浮窗模式下 #comment-form 被搬出
+   .cmt 包裹进 foot，若不在此供变量，表单的 border/background 等
+   var(--c-*) 声明会因变量未定义而整条失效（表现为卡片描边、输入框颜色丢失） */
+.cmt,
+.cmt-pop-foot{
   --av-root:40px;    /* 根评论头像 */
   --av-reply:28px;   /* 回复头像 */
   --gap:12px;        /* 头像与内容间距 */
@@ -143,15 +148,32 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .cmt-box:not([open]) .cmt-toggle{
   padding:10px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);
 }
+/* 折叠态单框原则（分场景）：
+   浮窗 foot：form 外框会与占位条描边叠成「两个外边框」→ 外圈透明，占位条是唯一边界；
+   内嵌主位：相反——保留 form 外框（与楼层卡同构，padding 对齐），
+   占位条去描边改纯浅底条，form 外框是唯一边界 */
+.cmt-pop-foot .cmt-form:has(.cmt-box:not([open])){border-color:transparent}
+.cmt .cmt-form:not(.is-inline) .cmt-box:not([open]) .cmt-toggle{border-color:transparent}
+/* 内嵌主位与楼层卡同构：同 18px 20px 内距，占位条/输入区与楼层内容左右对齐；
+   外框 hover 不提亮（安静的卡片边界），反馈交给占位条底色与提示语 */
+.cmt .cmt-form:not(.is-inline){padding:18px 20px}
+@media (hover:hover) and (pointer:fine){.cmt .cmt-form:not(.is-inline):hover{border-color:var(--c-hairline)}}
 .cmt-toggle-placeholder{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--c-text3)}
 .cmt-toggle-act{flex:none;font-size:12.5px;font-weight:500;color:var(--c-accent)}
 .cmt-toggle-close{display:none;flex:1 1 auto;font-size:12.5px}
 .cmt-box[open] .cmt-toggle-placeholder,
 .cmt-box[open] .cmt-toggle-act{display:none}
 .cmt-box[open] .cmt-toggle-close{display:inline}
+/* hover：整卡都是展开热区，悬停卡片任意位置都提亮占位条。分场景：
+   浮窗 foot / 回复态 is-inline——占位条自带描边，hover 描边转 accent + 极淡底；
+   内嵌主位——占位条平时无描边，hover 只做底色微亮，不突然冒出边框 */
 @media (hover:hover) and (pointer:fine){
-  .cmt-form .cmt-box:not([open]) .cmt-toggle:hover{border-color:var(--c-accent)}
-  .cmt-form .cmt-box:not([open]) .cmt-toggle:hover .cmt-toggle-placeholder{color:var(--c-text2)}
+  .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle,
+  .cmt-form.is-inline:has(.cmt-box:not([open])):hover .cmt-toggle{
+    border-color:var(--c-accent);background:color-mix(in srgb,var(--c-accent) 5%,var(--c-sub));
+  }
+  .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])):hover .cmt-toggle{background:var(--c-reply)}
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-placeholder{color:var(--c-text2)}
 }
 /* 键盘聚焦：与输入框同款焦点环，明确这里可以按回车展开 */
 .cmt-form .cmt-box:not([open]) .cmt-toggle:focus-visible{
@@ -243,6 +265,14 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-emoji-btn{width:30px;height:30px;font-size:17px;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;padding:0;transition:border-color .15s}
 @media (hover:hover) and (pointer:fine){ .cmt-emoji-btn:hover{background:var(--c-reply);border-color:var(--c-accent)} }
 .cmt-emoji-panel{position:absolute;bottom:calc(100% + 8px);left:0;z-index:30;width:min(300px,calc(100vw - 56px));max-height:220px;overflow-y:auto;padding:10px 12px;background:var(--c-sub);border:1px solid var(--c-border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16)}
+/* 滚动条细化：表情面板与浮窗表单区都是小高度滚动容器（220px / 45dvh），
+   Chromium 默认 ~15px 粗滚动条在其中非常突兀——thin + 6px 圆角半透明滑块。
+   移动端浮窗列表区走「滚动条不显示」，foot/面板不受影响，细条继续可用 */
+.cmt-emoji-panel,.cmt-pop-foot{scrollbar-width:thin;scrollbar-color:var(--c-border-h) transparent}
+.cmt-emoji-panel::-webkit-scrollbar,.cmt-pop-foot::-webkit-scrollbar{width:6px;height:6px}
+.cmt-emoji-panel::-webkit-scrollbar-track,.cmt-pop-foot::-webkit-scrollbar-track{background:transparent}
+.cmt-emoji-panel::-webkit-scrollbar-thumb,.cmt-pop-foot::-webkit-scrollbar-thumb{background:var(--c-border-h);border-radius:3px}
+.cmt-emoji-panel::-webkit-scrollbar-thumb:hover,.cmt-pop-foot::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--c-text) 35%,transparent)}
 .cmt-emoji-group+.cmt-emoji-group{margin-top:8px}
 .cmt-emoji-title{font-size:11px;color:var(--c-text3);margin-bottom:4px}
 .cmt-emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(30px,1fr));gap:2px}

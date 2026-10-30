@@ -1,0 +1,267 @@
+/* 评论浮窗（v3.4.33）：右侧悬浮按钮 + 原生 <dialog> 弹窗。
+   仅 comment_display == 'floating' 时由 base.html 引入。
+   配色全部走 theme.css 的 CSS 变量（亮/暗主题自适应）；
+   z-index 规避：back-top 150、搜索 200、灯箱 400、全屏 9999 —— FAB 取 300，
+   dialog showModal 进入顶层不参与比价。 */
+
+/* ── 右侧悬浮按钮（抬高于回到顶部按钮，两者不重叠） ── */
+.cmt-fab {
+  position: fixed;
+  /* 宽屏下与主容器（max-width 1200px）右缘保持 24px 间距，不再贴屏幕最右缘；
+     窄屏（容器不满 1200 时）维持 18px 常规贴边。
+     用 100%（视口、不含滚动条）而非 100vw（含滚动条），避免宽屏下多出半条滚动条的偏差 */
+  right: max(18px, calc((100% - 1248px) / 2));
+  /* 高于回到顶部按钮（bottom 20~76px 区间）错开；
+     再抬到 108px 以避开页脚（.tech-footer 常规约 99px 高），
+     拉到底时另有 JS 淡出兜底（.is-near-bottom） */
+  bottom: 108px;
+  z-index: 300;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-strong, #c6ced9);
+  border-radius: 999px;
+  background: var(--glass-bg, rgba(251, 252, 253, .86));
+  backdrop-filter: blur(8px);
+  color: var(--text, #161b24);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow, 0 1px 2px rgba(16, 27, 43, .06)), 0 4px 14px rgba(16, 27, 43, .1);
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, opacity .2s ease;
+}
+.cmt-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow, 0 1px 2px rgba(16, 27, 43, .06)), 0 8px 20px rgba(16, 27, 43, .16);
+}
+.cmt-fab:active { transform: translateY(0); }
+.cmt-fab svg { width: 17px; height: 17px; flex: none; }
+.cmt-fab-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent, #2f7ad1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* FAB 在右侧 108px 高度起，回到顶部（.tech-top）占 20~76px，竖向错开不打架 */
+
+/* 浮窗模式：回顶按钮与 FAB 中心轴对齐。
+   两者右缘公式同源（与主容器右缘 24px 间距），再按各自半径补偿：
+   FAB 圆 48px（半径 24）；回顶未滚动 44px 方形（+2）、滚动后 36px 圆形（+6），
+   垂直堆叠时图标中心落在同一条竖线上。
+   仅桌面生效——移动端沿用各自 20px 贴边的既有排布（中心差 2px 视觉已齐）；
+   id 选择器确保压过 theme.css 的 .tech-top 通用样式（内嵌模式不加载本文件，不受影响） */
+@media (min-width: 641px) {
+  #tech-top { right: calc(max(18px, (100% - 1248px) / 2) + 2px); }
+  #tech-top.scrolled { right: calc(max(18px, (100% - 1248px) / 2) + 6px); }
+}
+
+/* 让位：①弹窗打开时 FAB 与浮窗 foot 区在中等宽度窗口下会重叠（FAB 在遮罩下
+   不可点但透出可见），由 :has 联动淡出；②页面拉到底页脚露出时 JS 挂
+   .is-near-bottom 同样淡出，滚离底部自动恢复 */
+body:has(.cmt-pop[open]) .cmt-fab,
+.cmt-fab.is-near-bottom {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── 弹窗骨架（display 必须由 [open] 驱动：
+   dialog:not([open]) 时原生 UA 是 display:none，若无 [open] 限定地写 display:flex，
+   会让弹窗未打开就常驻页面（移动端贴底 92dvh），close() 后视觉上也关不掉） ── */
+.cmt-pop {
+  width: min(880px, calc(100vw - 48px));
+  /* 固定高度：翻页/评论多少都不改变弹窗尺寸，避免视觉跳动 */
+  height: min(84dvh, 900px);
+  padding: 0;
+  border: 1px solid var(--border, #e1e6ed);
+  border-radius: 14px;
+  background: var(--bg, #fbfcfd);
+  color: var(--text, #161b24);
+  box-shadow: 0 18px 48px rgba(16, 27, 43, .22);
+  overflow: hidden;   /* 圆角由外壳裁切，滚动交给内容区 */
+  display: none;
+}
+.cmt-pop[open] {
+  display: flex;
+  flex-direction: column;
+}
+.cmt-pop::backdrop {
+  background: var(--overlay, rgba(16, 27, 43, .45));
+  backdrop-filter: blur(2px);
+}
+/* 原生 dialog 默认 margin:auto 居中；这里显式声明便于覆盖浏览器默认 */
+.cmt-pop { margin: auto; }
+
+.cmt-pop-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border, #e1e6ed);
+  background: var(--bg-subtle, #f0f3f7);
+}
+.cmt-pop-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+.cmt-pop-close {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary, #5a6575);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.cmt-pop-close:hover {
+  background: var(--hover-bg, #eef2f7);
+  color: var(--text, #161b24);
+}
+
+/* 内容区：唯一滚动容器（分页/定位都只滚这里，背后页面不动） */
+.cmt-pop-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  -webkit-overflow-scrolling: touch;
+  /* 滚动条默认隐形、滚动时淡入（.is-scrolling 由 JS 滚动监听挂到弹窗上）：
+     粗细压到 6px，颜色走主题变量，亮暗自适应 */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color .25s ease;
+}
+.cmt-pop.is-scrolling .cmt-pop-body {
+  scrollbar-color: var(--border-strong, #c6ced9) transparent;
+}
+.cmt-pop-body::-webkit-scrollbar { width: 6px; }
+.cmt-pop-body::-webkit-scrollbar-track { background: transparent; }
+.cmt-pop-body::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+  transition: background-color .25s ease;
+}
+.cmt-pop.is-scrolling .cmt-pop-body::-webkit-scrollbar-thumb {
+  background: var(--border-strong, #c6ced9);
+}
+/* 加载中：占位提示，避免开窗瞬间一片空白 */
+.cmt-pop[aria-busy="true"] .cmt-pop-body::before {
+  content: "评论加载中…";
+  display: block;
+  padding: 32px 0;
+  text-align: center;
+  color: var(--text-secondary, #5a6575);
+  font-size: 14px;
+}
+.cmt-pop[aria-busy="true"] .cmt-pop-body { pointer-events: none; }
+
+/* 固定底部表单区：表单始终可见，不用滚到列表末尾才能写评论；
+   <details> 展开后过高时内部滚动（限 45dvh），不把评论列表挤没 */
+.cmt-pop-foot {
+  flex: none;
+  border-top: 1px solid var(--border, #e1e6ed);
+  background: var(--bg, #fbfcfd);
+  padding: 12px 16px;
+  max-height: 45dvh;
+  overflow-y: auto;
+}
+.cmt-pop-foot .cmt-form {
+  /* 表单保持原有卡片外观（描边/内距/背景都在 .cmt-form 上，与内嵌模式观感一致），
+     只去掉自带的 margin-top（间距由 foot 的 padding 收口）；
+     foot 的 border-top 是与滚动区的分隔线，不构成双框 */
+  margin: 0;
+}
+/* 回复态：表单被 comments.js 挪进楼层回复区时，底部留出的 foot 空壳不再占位 */
+.cmt-pop-foot:empty { display: none; }
+
+/* 片段注入后复用 .cmt 体系配色（变量定义在 comments-tech.css 的 .cmt 块） */
+.cmt-pop-body .cmt { margin-top: 0; }
+/* 弹窗头部已有「评论 N」标题：隐藏片段自带的大标题，避免同一标题出现两次；
+   总数变化由 comments-popup.js 的 syncTotal() 同步进头部的 .cmt-num */
+.cmt-pop-body .cmt-title { display: none; }
+
+/* ── 圆形形态（48px 纯图标）：后台「浮窗按钮样式」设为 circle 时启用（data-fab-shape）。
+   与下方移动端 48px 规则同款——移动端 ≤640px 无视设置恒为圆形；
+   胶囊（默认）不匹配本选择器，保持 图标+「评论」文字+角标 ── */
+.cmt-fab[data-fab-shape="circle"] {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border-radius: 50%;
+}
+.cmt-fab[data-fab-shape="circle"] .cmt-fab-text { display: none; }
+.cmt-fab[data-fab-shape="circle"] .cmt-fab-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  box-shadow: 0 0 0 2px var(--bg, #fbfcfd);
+}
+
+/* ── 移动端：底部抽屉（92dvh）。
+   FAB 改为标准移动端形态：48px 圆形纯图标贴右下角（right/bottom 20px + 安全区），
+   文字隐藏、角标挂右上角——之前与回顶并排放大胶囊要占近半屏宽，挤压感明显。
+   回到顶部（.tech-top）移动端 bottom 72px + safe-area、44px 高（滚动后 56px 圆形，
+   占 72~128px 高度带）：FAB 占 20~68px，两者同列上下排、间隙 4px，互不遮挡 */
+@media (max-width: 640px) {
+  .cmt-fab {
+    right: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  .cmt-fab-text { display: none; }
+  .cmt-fab-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    box-shadow: 0 0 0 2px var(--bg, #fbfcfd);
+  }
+  .cmt-pop {
+    margin: auto auto 0;   /* 贴底 */
+    width: 100%;
+    max-width: 100%;
+    height: 92dvh;
+    max-height: 92dvh;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+  }
+  /* 底部给 Home Indicator 留安全区；触屏由系统惯性滚动反馈，细滚动条不再显示 */
+  .cmt-pop-body {
+    padding: 14px 12px calc(28px + env(safe-area-inset-bottom));
+    scrollbar-width: none;
+  }
+  .cmt-pop-body::-webkit-scrollbar { width: 0; }
+  /* 抽屉贴底，表单区是屏幕最底元素，同样要让开 Home Indicator */
+  .cmt-pop-foot {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ── 无障碍：尊重系统减弱动态效果 ── */
+@media (prefers-reduced-motion: reduce) {
+  .cmt-fab { transition: none; }
+  .cmt-fab:hover { transform: none; }
+}
+
+/* ── 打印：浮窗内容不进纸面（评论区走 inline 时由页面本身输出；浮窗模式打印正文即可） ── */
+@media print {
+  .cmt-fab, .cmt-pop { display: none !important; }
+}

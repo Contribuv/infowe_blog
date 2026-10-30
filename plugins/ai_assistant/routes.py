@@ -15,6 +15,43 @@ from . import ai_client, config, tools
 KEY = "ai_assistant"
 
 
+def _save_ai_avatar(file) -> tuple[str, str]:
+    """上传 AI 头像：居中裁方并缩到 144px，存 var/uploads/ai-avatar/。
+
+    返回 (相对 URL, 错误信息)。透明图先铺白底再存 JPEG，避免透明区域发黑；
+    保存新图后删除上一张自定义头像，避免 uploads 目录堆积。
+    """
+    from pathlib import Path
+
+    from PIL import Image
+
+    from config import UPLOADS_DIR
+
+    try:
+        img = Image.open(file.stream).convert("RGBA")
+        w, h = img.size
+        size = max(1, min(w, h))
+        left, top = (w - size) // 2, (h - size) // 2
+        img = img.crop((left, top, left + size, top + size)).resize((144, 144), Image.LANCZOS)
+        bg = Image.new("RGB", img.size, (255, 255, 255))
+        bg.paste(img, mask=img.split()[3])
+        folder = Path(UPLOADS_DIR) / "ai-avatar"
+        folder.mkdir(parents=True, exist_ok=True)
+        import secrets as _secrets
+        import time as _time
+        # 时间戳 + 随机后缀：URL 每次必变，换头像后不会被浏览器缓存挡住
+        name = f"avatar_{int(_time.time())}_{_secrets.token_hex(3)}.jpg"
+        bg.save(folder / name, "JPEG", quality=85)
+        old_url = str(config.get().get("ai_avatar") or "")
+        if "/uploads/ai-avatar/" in old_url:
+            old_name = old_url.split("/uploads/ai-avatar/", 1)[1].split("?", 1)[0]
+            if old_name and old_name != name:
+                (folder / old_name).unlink(missing_ok=True)
+        return f"/uploads/ai-avatar/{name}", ""
+    except Exception:
+        return "", "不是有效的图片文件"
+
+
 def _mask(value: str) -> str:
     value = str(value or "")
     if not value:
@@ -147,6 +184,44 @@ def register(app) -> None:
             data["comment_reply_time_mode"] = mode
         if "system_prompt" in request.form:
             data["system_prompt"] = request.form.get("system_prompt", "")
+        identity_changed = False
+        if "ai_name" in request.form:
+            # 昵称留空时回退默认值，避免评论区出现无名 AI
+            name = str(request.form.get("ai_name") or "").strip()[:20] or "AI 助手"
+            if name != str(old.get("ai_name") or "AI 助手"):
+                identity_changed = True
+            data["ai_name"] = name
+        if "ai_avatar" in request.form:
+            url = str(request.form.get("ai_avatar") or "").strip()[:500]
+            # 只接受图片链接或站内路径；缺协议时自动补 https
+            if url and not url.startswith(("http://", "https://", "/")):
+                url = "https://" + url
+            if url != str(old.get("ai_avatar") or "").strip():
+                identity_changed = True
+            data["ai_avatar"] = url
+        # 文件上传优先于链接输入：表单选了图片就用上传结果
+        avatar_file = request.files.get("ai_avatar_file")
+        if avatar_file and avatar_file.filename:
+            url, err = _save_ai_avatar(avatar_file)
+            if err:
+                flash(f"头像上传失败：{err}", "error")
+                # 上传失败不动现有头像：前端已清空链接框，不能被当成「恢复默认」
+                data["ai_avatar"] = str(old.get("ai_avatar") or "")
+            elif url:
+                if url != str(old.get("ai_avatar") or ""):
+                    identity_changed = True
+                data["ai_avatar"] = url
+        # 换成外链或恢复默认时，清掉上一张本地上传的头像文件，避免堆积
+        new_url = str(data.get("ai_avatar") or "")
+        old_url = str(old.get("ai_avatar") or "")
+        if "/uploads/ai-avatar/" in old_url and "/uploads/ai-avatar/" not in new_url:
+            from pathlib import Path as _Path
+
+            from config import UPLOADS_DIR
+
+            name = _Path(old_url.split("/uploads/ai-avatar/", 1)[1].split("?", 1)[0]).name
+            if name:
+                (_Path(UPLOADS_DIR) / "ai-avatar" / name).unlink(missing_ok=True)
         # 防呆：最长长度 ≤ 最短长度时，任何评论都会被跳过（AI 静默不工作），
         # 这类配置没有任何意义，直接按「不限」保存并明确提示，避免再次踩坑
         min_len = int(data.get("comment_min_length") or 0)
@@ -155,6 +230,11 @@ def register(app) -> None:
             data["comment_max_length"] = 0
             flash("评论最长长度需大于最短长度，已按「不限」保存", "error")
         config.save(data)
+        if identity_changed:
+            # 昵称或头像变了：历史 AI 评论同步更新，避免新旧混排
+            from . import jobs
+
+            jobs.sync_ai_identity()
         flash("配置已保存", "success")
         return redirect(url_for("admin_plugin_ai_config"))
 
@@ -227,7 +307,12 @@ def register(app) -> None:
                     continue
                 if name in tools.WRITE_TOOLS:
                     force = name in tools.FORCE_CONFIRM
-                    if cfg.get("auto_execute") and not force and write_count < 3:
+                    # 「AI 回复评论」由 comment_reply 单独控制：它关闭时，
+                    # 即使写操作自动执行开启，reply_comment 也转为逐条确认
+                    auto_ok = cfg.get("auto_execute") and (
+                        name != "reply_comment" or cfg.get("comment_reply")
+                    )
+                    if auto_ok and not force and write_count < 3:
                         write_count += 1
                         result = tools.execute(name, args)
                         _add_message(conv_id, "tool", json.dumps(result, ensure_ascii=False), {"tool": name, **meta})

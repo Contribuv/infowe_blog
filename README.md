@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.31-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.31)
+[![version](https://img.shields.io/badge/version-3.4.34-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.34)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -38,7 +38,7 @@
 | 文章状态 | `published` / `draft` / `hidden`（隐藏文章仅 URL 可直达） |
 | 浏览 | 全文搜索、标签聚合、年份归档、分页 |
 | 订阅 | `/feed.xml` RSS |
-| 评论 | 嵌套回复、审核、私密评论、图片、敏感词、IP 归属地、分页 |
+| 评论 | 嵌套回复、审核、私密评论、图片、敏感词、IP 归属地、分页、内嵌/浮窗双模式、草稿自动保存、跨页锚点直达 |
 | 项目 | GitHub/Gitee 同步、语言占比、README 渲染与图片本地化、项目评论 |
 | 友链 | 申请、审核、本站信息卡片 |
 | 关于 | 简介、技能、时间线 |
@@ -52,7 +52,11 @@
 
 - 仪表盘：文章/评论/项目/友链统计、待审核评论/友链申请提醒、最近更新
 - 文章：新建、编辑、预览、删除、批量发布/草稿/隐藏
+- 回收站：文章软删除，恢复、彻底删除、批量与一键清空
 - 分类 / 标签 / 项目 / 友链 / 时间线 / 评论：增删改查与批量操作
+- 留存审计（插件）：后台操作记录、AI 审核记录、评论留存，日期/关键词筛选与 CSV 导出
+- AI 助手：机器人昵称/头像自定义、评论 AI 审核、通过后 AI 回复，审核记录与徽章
+- 邮件通知：评论/回复/AI 回复/友链申请 HTML 通知邮件（Outlook 兼容，正文不出站）
 - 上传：图片 / 媒体 / 附件，白名单与大小限制，水印
 - 孤儿文件清理：扫描未被引用的上传文件
 - 主题切换
@@ -152,6 +156,7 @@ Windows 可直接双击 `run.bat`。
 ├── models/                # 数据模型：文章/分类/评论/项目/友链/时间线/用户
 ├── services/              # 业务服务：认证/OTP/Markdown/上传/备份/同步/状态
 ├── routes/                # 路由：前台/后台/认证/静态资源/API
+├── plugins/               # 插件：AI 助手、留存审计（自带路由/模板/静态资源）
 ├── templates/
 │   ├── admin/             # 后台模板
 │   └── shared/            # 公共模板片段
@@ -913,14 +918,32 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.31**
+当前版本：**v3.4.34**
+
+### v3.4.34
+
+- 文章回收站：删除文章改为软删除（`posts.deleted_at`），后台新增回收站页，支持恢复、彻底删除、批量操作与一键清空，文章列表带回收站数量角标；前台列表、搜索、RSS、AI 上下文全站过滤已删文章
+- 留存审计插件（`plugins/retention`）：三合一审计页——后台操作记录（新增 `op_logs` 表，自动记录登录、文章、友链、评论、设置等关键操作）、AI 审核记录、评论留存（软删除评论可查可恢复）；支持日期区间 + 关键词筛选与 CSV 导出（utf-8-sig，Excel 打开不乱码），日志保留 180 天、每 24 小时自动清理
+- 评论通知邮件模板重做：全 table 布局 + 内联样式（Outlook 兼容），8px 圆角体系、32px 圆形头像（gravatar/QQ 头像，无头像用首字母色块兜底）、强调色自动取自当前主题；新增通用通知模板，AI 回复与友链申请通知一并接入 HTML 邮件；评论正文不出站（邮件只放占位文案 + 链接），命中敏感词显示「【不当言语】请后台审核」，回复通知带「你之前说」原评论引用块
+- AI 助手增强：机器人昵称/头像后台可配（新增 `ai-bot.svg` 默认头像，历史 AI 评论一键同步身份）；「通过后 AI 回复」同时接管回复评论；AI 审核后自动清页面缓存；后台评论管理显示 AI 审核记录与徽章；ai-avatar 加入上传白名单
+- 评论体验：草稿自动保存（localStorage 按文章维度暂存，误刷新不丢稿，提交成功自动清除）；评论分页开启时 `#comment-N` 跨页锚点自动拉取评论片段直达目标楼层，折叠回复自动展开并高亮
+
+<details>
+<summary><b>历史版本（v3.4.33 及更早）</b></summary>
+
+### v3.4.33
+
+- 评论浮窗模式上线：后台「评论展示方式」可选 `inline`（内嵌，默认，行为不变）/ `floating`（浮窗）。浮窗模式下页面源码不含评论内容，左下角悬浮按钮带评论数角标，点击弹出原生 `<dialog>` 弹窗并 AJAX 拉取评论片段（`/comment/post/<id>`、`/comment/project/<id>`），支持 `#comment-N` 深链自动定位到弹窗内目标楼层
+- 弹窗内完整可用：AJAX 分页（不 pushState、不整页跳转）、整页表单提交后 302 回详情页自动开窗定位、折叠回复展开、表情、图片上传；移动端为贴底抽屉（92dvh 上圆角），暗色主题自适应，打印时隐藏；不支持 `<dialog>` 的环境悬浮按钮保持隐藏、优雅降级
+- 配套重构：评论模板拆为 `_comments_body.html`（主体，双模式共用）/ `_comments.html`（inline 壳）/ `_comments_async.html`（片段端点）/ `_comments_popup.html`（浮窗骨架）；`comments.js` 锚点定位对 `<dialog>` 内目标不再触发背后页面滚动（交给浮窗自身的 revealFocus）
+
+### v3.4.32
+
+- 零行为变化重构，为评论浮窗模式（v3.4.33）打地基：`comments.js` 由 IIFE 改为可重入的 `window.initComments(root)`，内部元素查询以 root 为根（`byId` 助手），hashchange / popstate / 灯箱等全局监听加幂等守卫，同一表单重复初始化直接跳过；评论 flash 从 `_comments.html` 提升为页面级 `shared/_flash.html`（文章页 / 项目页各自引入）；`front.py` 抽出 `_comments_context()` 合并两处详情路由的重复评论上下文
 
 ### v3.4.31
 
 - 修复老版本 git 上在线升级报「配置 GitHub 远程失败」：`git remote get-url` 是 1.8.5 才有的子命令，CentOS 7 自带的 git 1.8.3 会把已存在的 origin 误判为不存在，改用 `git remote` 列名判断；add 撞名时自动改 set-url 兜底；git 命令统一带 `safe.directory`，兼容仓库属主与运行用户不一致的部署
-
-<details>
-<summary><b>历史版本（v3.4.30 及更早）</b></summary>
 
 ### v3.4.30
 

@@ -56,7 +56,8 @@ DEFAULTS: dict = {
         "- sync_project：args {id}（0 表示全部）\n\n"
         "## 确认规则\n"
         "新建/修改/删除文章、新建/修改/删除分类、删除评论、删除友链、删除项目必须管理员手动确认；"
-        "评论通过/拒绝/回复、友链新增/通过/拒绝、项目同步在「写操作自动执行」开启时直接生效。\n"
+        "评论通过/拒绝、友链新增/通过/拒绝、项目同步在「写操作自动执行」开启时直接生效；"
+        "评论回复额外需要「通过后 AI 回复」开启，未开启时回复同样逐条确认。\n"
         "用户明确说「发布」时，create_post 的 status 用 published；说「草稿」才用 draft。\n\n"
         "## 写作风格（很重要）\n"
         "- 用第一人称，像自己踩坑后的复盘，不要教程腔。\n"
@@ -78,6 +79,10 @@ DEFAULTS: dict = {
         "- 评论回复 50-150 字，结合文章内容，不营销、不编造事实。\n"
         "- 不确定的信息先查工具，不要猜。"
     ),
+    # AI 评论显示的昵称（前台徽章固定显示「AI 助手」，不随昵称变化）
+    "ai_name": "AI 助手",
+    # AI 评论头像：自定义图片 URL；留空用内置卡通机器人默认头像
+    "ai_avatar": "",
     "comment_moderation": True,
     "comment_reply": True,
     "comment_reply_notify": True,
@@ -205,13 +210,13 @@ def set_active(pid: str) -> bool:
     return True
 
 
-def provider_avatar(profile: dict | None) -> str:
-    """按模型标识稳定映射到头像库（8 个内置头像）。"""
-    if not profile:
-        return "/plugin-assets/ai_assistant/avatars/ai-1.svg"
-    key = f"{profile.get('id')}:{profile.get('model')}"
-    index = sum(key.encode("utf-8")) % 8 + 1
-    return f"/plugin-assets/ai_assistant/avatars/ai-{index}.svg"
+DEFAULT_AVATAR = "/plugin-assets/ai_assistant/avatars/ai-bot.svg"
+
+
+def ai_avatar_url() -> str:
+    """AI 评论头像：后台自定义 URL 优先，留空用内置卡通机器人。"""
+    url = str(get().get("ai_avatar") or "").strip()
+    return url or DEFAULT_AVATAR
 
 
 def save(data: dict) -> None:

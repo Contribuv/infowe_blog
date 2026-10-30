@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flask import g, make_response, request, session
+from flask import g, has_request_context, make_response, request, session
 
 from config import CACHE_DIR
 
@@ -79,13 +79,18 @@ def _cacheable() -> bool:
     return True
 
 
-def _paths(url: str) -> tuple[Path, Path]:
+def _folder(url: str) -> Path:
+    """缓存目录名只由路径首段决定，不依赖 host，后台线程也能算。"""
     path = urlparse(url).path or "/"
     segment = path.strip("/").split("/")[0] or "home"
     segment = re.sub(r"[^A-Za-z0-9_-]", "_", segment)[:40] or "home"
+    return PAGE_ROOT / segment
+
+
+def _paths(url: str) -> tuple[Path, Path]:
+    folder = _folder(url)
     # host 参与 key，避免 www / 裸域互相污染绝对链接
     digest = hashlib.sha1(f"{request.host}|{url}".encode("utf-8")).hexdigest()
-    folder = PAGE_ROOT / segment
     return folder / f"{digest}.html", folder / f"{digest}.json"
 
 
@@ -189,9 +194,14 @@ def clear_all() -> None:
 
 
 def invalidate_path(path: str) -> None:
+    """按路径清缓存；可在后台线程（无请求上下文）调用。
+
+    文件夹扫描不依赖 host，能清掉该路径所有 host 的缓存；
+    精确键清理需要 request.host，无请求上下文时跳过（孤儿 html 无 meta 本就不可命中）。
+    """
     targets = {path, path.rstrip("/"), path + "/"}
     # 同一路径可能带查询串派生多个缓存键（如评论分页 ?cpage=2），按 meta 里的 url 一并清理
-    folder = _paths(path)[0].parent
+    folder = _folder(path)
     if folder.is_dir():
         for meta_file in folder.glob("*.json"):
             try:
@@ -201,6 +211,8 @@ def invalidate_path(path: str) -> None:
             if urlparse(str(meta.get("url") or "")).path in targets:
                 meta_file.unlink(missing_ok=True)
                 meta_file.with_suffix(".html").unlink(missing_ok=True)
+    if not has_request_context():
+        return
     for candidate in targets:
         html_path, meta_path = _paths(candidate)
         try:

@@ -14,7 +14,7 @@ from flask import (
 )
 
 from models import User
-from services import auth, notify, otp, settings
+from services import auth, hooks, notify, otp, settings
 from services.comments import request_ip
 
 
@@ -95,9 +95,11 @@ def admin_login():
             session.pop("_captcha_nonce", None)
             session.pop("_captcha_sig", None)
             session.pop("_captcha_q", None)
+            hooks.emit("admin.action", {"action": "login.success", "target": username, "detail": "密码登录"})
             return redirect(url_for("admin_dashboard"))
         if status == "otp":
             return redirect(url_for("admin_otp"))
+        hooks.emit("admin.action", {"action": "login.fail", "target": username, "detail": message})
         error = message
         if auth.captcha_required(ip):
             required = True
@@ -119,6 +121,12 @@ def admin_login():
 def admin_logout():
     from services import comments as comments_service
 
+    user = auth.current_user()
+    hooks.emit("admin.action", {
+        "action": "login.logout",
+        "target": str(user["username"]) if user else "",
+        "detail": "退出登录",
+    })
     # 退出前先看「访客记忆」cookie：旧版本以博主身份评论时会把博主昵称/邮箱写进去，
     # 退出登录后前台评论表单仍会回显博主资料，这里一并清掉（访客自己的资料不受影响）。
     # 注意顺序：必须在 auth.logout() 之前读，此时仍能以管理员身份读到原始 cookie。
@@ -149,6 +157,7 @@ def admin_otp():
             error = "请输入验证码或恢复码"
         elif otp.consume_recovery(code) or otp.verify(otp.secret(), code):
             auth.finish_otp()
+            hooks.emit("admin.action", {"action": "login.success", "target": username, "detail": "OTP 验证"})
             return redirect(url_for("admin_dashboard"))
         else:
             auth.register_failure(request_ip())

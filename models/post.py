@@ -37,7 +37,8 @@ def load(
     per_page: int = PAGE_SIZE,
     category_id: int | None = None,
 ) -> tuple[list[dict], int]:
-    conditions: list[str] = []
+    # 回收站（deleted_at 非空）的文章对前台和后台列表都不可见
+    conditions: list[str] = ["deleted_at IS NULL"]
     params: list[Any] = []
     if status is not None:
         conditions.append("status = ?")
@@ -75,7 +76,7 @@ def load(
 def all_years() -> list[str]:
     rows = db.query(
         "SELECT DISTINCT SUBSTR(created_at, 1, 4) AS year FROM posts "
-        "WHERE status = 'published' ORDER BY year DESC"
+        "WHERE status = 'published' AND deleted_at IS NULL ORDER BY year DESC"
     )
     return [str(r["year"]) for r in rows]
 
@@ -84,14 +85,14 @@ def year_counts() -> dict[str, int]:
     """每年已发布文章数，供归档页年份标题使用。"""
     rows = db.query(
         "SELECT SUBSTR(created_at, 1, 4) AS year, COUNT(*) AS n FROM posts "
-        "WHERE status = 'published' GROUP BY year ORDER BY year DESC"
+        "WHERE status = 'published' AND deleted_at IS NULL GROUP BY year ORDER BY year DESC"
     )
     return {str(r["year"]): int(r["n"]) for r in rows}
 
 
 def tag_counts(limit: int = 12) -> list[tuple[str, int]]:
     """热门标签，供首页/归档页侧栏使用。"""
-    rows = db.query("SELECT tags FROM posts WHERE status = 'published'")
+    rows = db.query("SELECT tags FROM posts WHERE status = 'published' AND deleted_at IS NULL")
     counts: dict[str, int] = {}
     for row in rows:
         for tag in json_list(row["tags"]):
@@ -103,12 +104,12 @@ def tag_counts(limit: int = 12) -> list[tuple[str, int]]:
 
 
 def get(post_id: int) -> dict | None:
-    row = db.one("SELECT * FROM posts WHERE id = ?", (post_id,))
+    row = db.one("SELECT * FROM posts WHERE id = ? AND deleted_at IS NULL", (post_id,))
     return hydrate(row) if row else None
 
 
 def get_by_slug(slug: str) -> dict | None:
-    row = db.one("SELECT * FROM posts WHERE slug = ?", (slug,))
+    row = db.one("SELECT * FROM posts WHERE slug = ? AND deleted_at IS NULL", (slug,))
     return hydrate(row) if row else None
 
 
@@ -124,7 +125,7 @@ def related(current_id: int, tags: list[str], limit: int = 4) -> list[dict]:
     conds = " OR ".join(["tags LIKE ? ESCAPE '\\'"] * len(escaped))
     params = [int(current_id), *[f'%"{e}"%' for e in escaped], int(limit)]
     rows = db.query(
-        f"SELECT * FROM posts WHERE status = 'published' AND id != ? AND ({conds}) "
+        f"SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL AND id != ? AND ({conds}) "
         "ORDER BY created_at DESC LIMIT ?",
         tuple(params),
     )
@@ -133,7 +134,7 @@ def related(current_id: int, tags: list[str], limit: int = 4) -> list[dict]:
 
 def featured(limit: int = 3) -> list[dict]:
     rows = db.query(
-        "SELECT * FROM posts WHERE status = 'published' AND is_featured = 1 "
+        "SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL AND is_featured = 1 "
         "ORDER BY created_at DESC LIMIT ?",
         (limit,),
     )
@@ -142,20 +143,20 @@ def featured(limit: int = 3) -> list[dict]:
 
 def home_posts(limit: int = 6, exclude_featured: bool = False) -> list[dict]:
     featured_rows = db.query(
-        "SELECT * FROM posts WHERE status = 'published' AND is_featured = 1 ORDER BY created_at DESC"
+        "SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL AND is_featured = 1 ORDER BY created_at DESC"
     )
     featured_ids = [int(r["id"]) for r in featured_rows]
     if exclude_featured:
         if featured_ids:
             marks = ",".join("?" * len(featured_ids))
             rows = db.query(
-                f"SELECT * FROM posts WHERE status = 'published' AND id NOT IN ({marks}) "
+                f"SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL AND id NOT IN ({marks}) "
                 "ORDER BY created_at DESC LIMIT ?",
                 (*featured_ids, limit),
             )
         else:
             rows = db.query(
-                "SELECT * FROM posts WHERE status = 'published' ORDER BY created_at DESC LIMIT ?",
+                "SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT ?",
                 (limit,),
             )
         return [hydrate(r) for r in rows]
@@ -163,18 +164,18 @@ def home_posts(limit: int = 6, exclude_featured: bool = False) -> list[dict]:
     if featured_ids:
         marks = ",".join("?" * len(featured_ids))
         latest = db.query(
-            f"SELECT * FROM posts WHERE status = 'published' AND id NOT IN ({marks}) "
+            f"SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL AND id NOT IN ({marks}) "
             "ORDER BY created_at DESC",
             featured_ids,
         )
     else:
-        latest = db.query("SELECT * FROM posts WHERE status = 'published' ORDER BY created_at DESC")
+        latest = db.query("SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL ORDER BY created_at DESC")
     return [hydrate(r) for r in (featured_rows + latest)][:limit]
 
 
 def all_tags() -> dict[str, int]:
     counts: dict[str, int] = {}
-    for row in db.query("SELECT tags FROM posts"):
+    for row in db.query("SELECT tags FROM posts WHERE deleted_at IS NULL"):
         for tag in json_list(row["tags"]):
             tag = str(tag)
             counts[tag] = counts.get(tag, 0) + 1
@@ -183,14 +184,19 @@ def all_tags() -> dict[str, int]:
 
 def stats() -> dict:
     return {
-        "total": int(db.scalar("SELECT COUNT(*) FROM posts", (), 0)),
-        "published": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='published'", (), 0)),
-        "drafts": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='draft'", (), 0)),
-        "hidden": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='hidden'", (), 0)),
+        "total": int(db.scalar("SELECT COUNT(*) FROM posts WHERE deleted_at IS NULL", (), 0)),
+        "published": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='published' AND deleted_at IS NULL", (), 0)),
+        "drafts": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='draft' AND deleted_at IS NULL", (), 0)),
+        "hidden": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='hidden' AND deleted_at IS NULL", (), 0)),
+        "trashed": int(db.scalar("SELECT COUNT(*) FROM posts WHERE deleted_at IS NOT NULL", (), 0)),
         "projects": int(db.scalar("SELECT COUNT(*) FROM projects", (), 0)),
         "links": int(db.scalar("SELECT COUNT(*) FROM links WHERE status='approved'", (), 0)),
-        "comments": int(db.scalar("SELECT COUNT(*) FROM comments", (), 0)),
-        "pending": int(db.scalar("SELECT COUNT(*) FROM comments WHERE status='pending'", (), 0)),
+        "comments": int(db.scalar("SELECT COUNT(*) FROM comments WHERE deleted_at IS NULL", (), 0)),
+        "pending": int(
+            db.scalar(
+                "SELECT COUNT(*) FROM comments WHERE status='pending' AND deleted_at IS NULL", (), 0
+            )
+        ),
     }
 
 
@@ -283,17 +289,66 @@ def save(form: dict, post_id: int | None = None) -> int:
 
 
 def delete(post_id: int) -> None:
-    db.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+    """软删除：移入回收站，可恢复；彻底删除请用 purge()。"""
+    db.execute(
+        "UPDATE posts SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+        (db.now(), post_id),
+    )
 
 
-def delete_with_uploads(post_id: int) -> int:
+def trash(post_id: int) -> None:
+    """移入回收站（软删单篇）。"""
+    delete(post_id)
+
+
+def trash_many(ids: list[int]) -> int:
+    ids = [int(i) for i in ids if int(i) > 0]
+    if not ids:
+        return 0
+    marks = ",".join("?" * len(ids))
+    return db.execute(
+        f"UPDATE posts SET deleted_at = ? WHERE deleted_at IS NULL AND id IN ({marks})",
+        (db.now(), *ids),
+    ).rowcount
+
+
+def restore(post_id: int) -> None:
+    """从回收站恢复。"""
+    db.execute("UPDATE posts SET deleted_at = NULL WHERE id = ?", (post_id,))
+
+
+def restore_many(ids: list[int]) -> int:
+    ids = [int(i) for i in ids if int(i) > 0]
+    if not ids:
+        return 0
+    marks = ",".join("?" * len(ids))
+    return db.execute(
+        f"UPDATE posts SET deleted_at = NULL WHERE id IN ({marks})", ids
+    ).rowcount
+
+
+def trash_list() -> list[dict]:
+    """回收站列表。"""
+    rows = db.query(
+        "SELECT * FROM posts WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC, id DESC"
+    )
+    return [hydrate(r) for r in rows]
+
+
+def trash_count() -> int:
+    return int(db.scalar("SELECT COUNT(*) FROM posts WHERE deleted_at IS NOT NULL", (), 0) or 0)
+
+
+def _purge_rows(rows: list) -> int:
+    """物理删除给定文章行并清理不再被引用的上传文件，返回清理文件数。"""
     from services import upload
 
-    row = db.one("SELECT title, content, excerpt, tags FROM posts WHERE id = ?", (post_id,))
-    gone = upload.extract_urls(
-        (row["title"] or "", row["content"] or "", row["excerpt"] or "", row["tags"] or "")
-    ) if row else set()
-    db.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+    gone: set[str] = set()
+    for row in rows:
+        gone |= upload.extract_urls(
+            (row["title"] or "", row["content"] or "", row["excerpt"] or "", row["tags"] or "")
+        )
+        db.execute("DELETE FROM posts WHERE id = ?", (row["id"],))
     if not gone:
         return 0
     survivors = upload.referenced_urls()
@@ -302,6 +357,32 @@ def delete_with_uploads(post_id: int) -> int:
         if url and url not in survivors and upload.delete_by_url(url):
             removed += 1
     return removed
+
+
+def purge(post_id: int) -> int:
+    """彻底删除（回收站里的删除）：物理删行 + 清理不再被引用的上传文件。"""
+    row = db.one("SELECT id, title, content, excerpt, tags FROM posts WHERE id = ?", (post_id,))
+    return _purge_rows([row]) if row else 0
+
+
+def purge_many(ids: list[int]) -> int:
+    """批量彻底删除。引用扫描只做一次，避免每篇都全表扫（O(n²)）。"""
+    ids = [int(i) for i in ids if int(i) > 0]
+    if not ids:
+        return 0
+    marks = ",".join("?" * len(ids))
+    rows = db.query(f"SELECT id, title, content, excerpt, tags FROM posts WHERE id IN ({marks})", ids)
+    _purge_rows(rows)
+    return len(rows)
+
+
+def empty_trash() -> int:
+    """清空回收站：真删全部软删文章并清理附件。"""
+    rows = db.query("SELECT id, title, content, excerpt, tags FROM posts WHERE deleted_at IS NOT NULL")
+    if not rows:
+        return 0
+    _purge_rows(rows)
+    return len(rows)
 
 
 def bulk_set_status(ids: list[int], status: str) -> int:
@@ -313,39 +394,16 @@ def bulk_set_status(ids: list[int], status: str) -> int:
     return db.execute(f"UPDATE posts SET status = ? WHERE id IN ({marks})", (status, *ids)).rowcount
 
 
-def bulk_delete(ids: list[int]) -> int:
-    """批量删除。引用扫描只做一次，避免每篇都全表扫 6 张表（O(n²)）。"""
-    from services import upload
-
-    ids = [int(i) for i in ids if int(i) > 0]
-    if not ids:
-        return 0
-    gone: set[str] = set()
-    for pid in ids:
-        row = db.one("SELECT title, content, excerpt, tags FROM posts WHERE id = ?", (pid,))
-        if row:
-            gone |= upload.extract_urls(
-                (row["title"] or "", row["content"] or "", row["excerpt"] or "", row["tags"] or "")
-            )
-        db.execute("DELETE FROM posts WHERE id = ?", (pid,))
-    if gone:
-        survivors = upload.referenced_urls()
-        for url in gone:
-            if url and url not in survivors:
-                upload.delete_by_url(url)
-    return len(ids)
-
-
 def adjacent(created_at: str, earlier: bool) -> dict | None:
     if earlier:
         row = db.one(
-            "SELECT id, title FROM posts WHERE status='published' AND created_at < ? "
+            "SELECT id, title FROM posts WHERE status='published' AND deleted_at IS NULL AND created_at < ? "
             "ORDER BY created_at DESC LIMIT 1",
             (created_at,),
         )
     else:
         row = db.one(
-            "SELECT id, title FROM posts WHERE status='published' AND created_at > ? "
+            "SELECT id, title FROM posts WHERE status='published' AND deleted_at IS NULL AND created_at > ? "
             "ORDER BY created_at ASC LIMIT 1",
             (created_at,),
         )

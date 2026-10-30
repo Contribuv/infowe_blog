@@ -28,6 +28,7 @@ def _comments(limit: int = 5) -> list[dict]:
         "c.is_private = 0",
         "c.is_owner = 0",
         "c.is_ai = 0",
+        "c.deleted_at IS NULL",
         "(c.post_id IS NOT NULL OR c.project_id IS NOT NULL)",
     ]
     params: list = []
@@ -70,7 +71,7 @@ def _comments(limit: int = 5) -> list[dict]:
 def data() -> dict:
     cats = [item for item in Category.stats() if int(item.get("post_count") or 0) > 0]
     all_tags = Post.tag_counts(9999)
-    post_total = int(db.scalar("SELECT COUNT(*) FROM posts WHERE status = 'published'", (), 0) or 0)
+    post_total = int(db.scalar("SELECT COUNT(*) FROM posts WHERE status = 'published' AND deleted_at IS NULL", (), 0) or 0)
     return {
         "side_tags": all_tags[:12],
         "side_categories": cats,

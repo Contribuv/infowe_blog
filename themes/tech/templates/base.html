@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <!-- 允许双指缩放（WCAG 1.4.4）；旧版曾加 maximum-scale/user-scalable=no 并用
-         disable-zoom.js 拦截手势，会让低视力用户无法放大，已整体移除 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+         disable-zoom.js 拦截手势，会让低视力用户无法放大，已整体移除
+         interactive-widget=resizes-content：Android Chrome 108+ 软键盘弹出时收缩
+         布局视口，评论浮窗（dvh 定高）随之变矮，底部输入区不被键盘遮住；
+         不支持的浏览器（iOS Safari 等）忽略该值，由 comments-popup.js 的
+         visualViewport 兜底处理 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <!-- 防白屏闪烁：主题 CSS 加载前先给 html 上色，避免深色主题刷新/跳转时闪白 -->
     <style>
       html { background: #1a1d23; color-scheme: dark; }
@@ -63,6 +67,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown-body.css', t=static_ver) }}">
     <!-- 评论区（tech 独立样式，与 default 的 comments.css 互不影响）+ Toast 轻提示 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/comments-tech.css', t=static_ver) }}">
+    {% if comment_display|default('inline') == 'floating' %}
+    <!-- 评论浮窗模式（v3.4.33）：FAB 按钮 + <dialog> 弹窗样式 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/comments-popup.css', t=static_ver) }}">
+    {% endif %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/toast.css', t=static_ver) }}">
     <script src="{{ url_for('static', filename='vendor/highlight.js/highlight.min.js', t=static_ver) }}" defer></script>
     <!-- 补一个 common 构建里没有的 Dockerfile 语法；.dockerignore 也复用这套规则 -->
@@ -200,7 +208,14 @@
         if (!btn) return;
         var sel = btn.getAttribute('data-feedback-to') || '#comments';
         var target = document.querySelector(sel);
-        if (!target) return;
+        if (!target) {
+          // 浮窗模式：页面没有 #comments 区，改走评论浮窗并聚焦评论输入框
+          if (window.__cmtOpen) {
+            e.preventDefault();
+            window.__cmtOpen('', true);
+          }
+          return;
+        }
         e.preventDefault();
         var y = target.getBoundingClientRect().top + (window.scrollY || window.pageYOffset || document.documentElement.scrollTop);
         // 不再用 smooth：长页面滑到评论区要等一秒多，中途还会掠过无关内容；

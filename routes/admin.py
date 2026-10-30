@@ -16,7 +16,7 @@ from flask import (
 import db
 from config import BACKUPS_DIR, DATA_DIR, UPLOADS_DIR, VERSION, ADMIN_PATH_RESERVED, NAV_PAGES
 from models import Category, Comment, Link, Post, Project, Timeline, User
-from services import auth, avatar, backup, github, lang, markdown, notify, otp, project_sync
+from services import auth, avatar, backup, github, hooks, lang, markdown, notify, otp, project_sync
 from services import settings, status, theme, upload
 
 LOGIN = auth.admin_required
@@ -50,12 +50,17 @@ def _ids(name: str) -> list[int]:
     return [int(v) for v in values if str(v).isdigit()]
 
 
+def _audit(action: str, target: str = "", detail: str = "") -> None:
+    """后台关键操作统一发审计事件，「留存记录」插件订阅后落库留痕。"""
+    hooks.emit("admin.action", {"action": action, "target": target, "detail": detail})
+
+
 # ── 仪表盘 ─────────────────────────────────────────────
 @LOGIN
 def admin_dashboard():
     stats = Post.stats()
     link_stats = Link.stats()
-    rows = db.query("SELECT * FROM posts ORDER BY updated_at DESC, id DESC LIMIT 5")
+    rows = db.query("SELECT * FROM posts WHERE deleted_at IS NULL ORDER BY updated_at DESC, id DESC LIMIT 5")
     recent = [Post.hydrate(r) for r in rows]
     return render_template(
         "admin/dashboard.html",
@@ -90,6 +95,7 @@ def admin_posts():
         page=page,
         total_pages=total_pages,
         total=total,
+        trash_count=Post.trash_count(),
         args=request.args,
     )
 
@@ -105,9 +111,9 @@ def admin_posts_bulk():
         flash("未选择任何文章", "error")
         return redirect(url_for("admin_posts"))
     if action == "delete":
-        for pid in ids:
-            Post.delete_with_uploads(pid)
-        flash(f"已删除 {len(ids)} 篇文章", "success")
+        Post.trash_many(ids)
+        _audit("post.trash", f"批量 {len(ids)} 篇")
+        flash(f"已将 {len(ids)} 篇文章移入回收站", "success")
     else:
         mapping = {"publish": ("published", "已发布"), "unpublish": ("draft", "草稿"), "hide": ("hidden", "隐藏")}
         state, label = mapping[action]
@@ -157,6 +163,7 @@ def admin_post_edit(post_id: int):
         return redirect(url_for("admin_posts"))
     if request.method == "POST":
         Post.save(request.form, post_id)
+        _audit("post.edit", post.get("title") or f"#{post_id}")
         flash("文章已更新", "success")
         return redirect(url_for("admin_posts"))
     post["content"] = re.sub(r"<(https?://[^>\s]+)>", r"[\1](\1)", post.get("content") or "")
@@ -168,12 +175,73 @@ def admin_post_edit(post_id: int):
 
 @LOGIN
 def admin_post_delete(post_id: int):
-    removed = Post.delete_with_uploads(post_id)
-    if removed:
-        flash(f"文章已删除，并清理 {removed} 个不再被引用的上传文件", "success")
+    post = Post.get(post_id)
+    Post.trash(post_id)
+    if post:
+        _audit("post.trash", post.get("title") or f"#{post_id}")
+        flash(f"《{post.get('title')}》已移入回收站，可在回收站恢复", "success")
     else:
-        flash("文章已删除", "success")
+        flash("文章不存在或已在回收站", "error")
     return redirect(url_for("admin_posts"))
+
+
+@LOGIN
+def admin_posts_trash():
+    return render_template(
+        "admin/posts_trash.html",
+        posts=Post.trash_list(),
+        trash_count=Post.trash_count(),
+    )
+
+
+@LOGIN
+def admin_post_restore(post_id: int):
+    Post.restore(post_id)
+    _audit("post.restore", f"#{post_id}")
+    flash("文章已从回收站恢复", "success")
+    return redirect(url_for("admin_posts_trash"))
+
+
+@LOGIN
+def admin_post_purge(post_id: int):
+    post = db.one("SELECT title FROM posts WHERE id = ?", (post_id,))
+    removed = Post.purge(post_id)
+    if post:
+        _audit("post.purge", post["title"] or f"#{post_id}")
+    if removed:
+        flash(f"文章已彻底删除，并清理 {removed} 个不再被引用的上传文件", "success")
+    else:
+        flash("文章已彻底删除", "success")
+    return redirect(url_for("admin_posts_trash"))
+
+
+@LOGIN
+def admin_posts_trash_bulk():
+    action = request.form.get("action", "")
+    ids = _ids("post_ids")
+    if action not in {"restore", "purge"}:
+        flash("无效的批量操作", "error")
+        return redirect(url_for("admin_posts_trash"))
+    if not ids:
+        flash("未选择任何文章", "error")
+        return redirect(url_for("admin_posts_trash"))
+    if action == "restore":
+        Post.restore_many(ids)
+        _audit("post.restore", f"批量 {len(ids)} 篇")
+        flash(f"已恢复 {len(ids)} 篇文章", "success")
+    else:
+        Post.purge_many(ids)
+        _audit("post.purge", f"批量 {len(ids)} 篇")
+        flash(f"已彻底删除 {len(ids)} 篇文章", "success")
+    return redirect(url_for("admin_posts_trash"))
+
+
+@LOGIN
+def admin_posts_empty_trash():
+    count = Post.empty_trash()
+    _audit("post.purge", f"清空回收站 {count} 篇")
+    flash(f"回收站已清空（彻底删除 {count} 篇文章）", "success")
+    return redirect(url_for("admin_posts_trash"))
 
 
 @LOGIN
@@ -375,7 +443,9 @@ def admin_link_edit(link_id: int):
 
 @LOGIN
 def admin_link_delete(link_id: int):
+    link = Link.get(link_id)
     Link.delete(link_id)
+    _audit("link.delete", str(link.get("name") or f"#{link_id}") if link else f"#{link_id}")
     flash("链接已删除", "success")
     return redirect(url_for("admin_links"))
 
@@ -393,6 +463,7 @@ def admin_links_bulk():
     if action == "delete":
         for lid in ids:
             Link.delete(lid)
+        _audit("link.delete", f"批量 {len(ids)} 条")
         flash(f"已删除 {len(ids)} 条链接", "success")
     else:
         state = "approved" if action == "approve" else "rejected"
@@ -472,6 +543,18 @@ def admin_comments():
     cfg_ok = avatar.configured_avatar_exists()
     default_url = avatar.default_url()
     for item in items:
+        # AI 评论头像与前台一致：优先用 AI 设置的头像，未设置则用 AI 默认头像
+        if int(item.get("is_ai") or 0):
+            ai_avatar = str(item.get("ai_avatar") or "")
+            if not ai_avatar:
+                try:
+                    from plugins.ai_assistant.config import ai_avatar_url
+                    ai_avatar = ai_avatar_url()
+                except Exception:
+                    ai_avatar = ""
+            item["admin_avatar"] = ai_avatar or default_url
+            item["admin_avatar_default"] = default_url
+            continue
         is_author = bool(author_name) and item.get("author") == author_name
         if is_author and cfg_avatar and cfg_ok:
             item["admin_avatar"] = cfg_avatar
@@ -503,6 +586,7 @@ def _comments_back():
 def admin_comment_approve(comment_id: int):
     previous = Comment.get(comment_id)
     Comment.set_status(comment_id, "approved")
+    _audit("comment.approve", f"#{comment_id}", str(previous.get("author") or "") if previous else "")
     # 待审核 -> 通过时，补发「收到回复」邮件给被回复的访客
     if previous and previous.get("status") != "approved":
         notify.notify_approved_reply(comment_id)
@@ -512,8 +596,10 @@ def admin_comment_approve(comment_id: int):
 
 @LOGIN
 def admin_comment_delete(comment_id: int):
+    previous = Comment.get(comment_id)
     Comment.delete(comment_id)
-    flash("评论及其回复已删除", "success")
+    _audit("comment.delete", f"#{comment_id}", str(previous.get("author") or "") if previous else "")
+    flash("评论及其回复已删除（正文保留在「留存记录 · 评论留存」可查）", "success")
     return _comments_back()
 
 
@@ -532,18 +618,21 @@ def admin_comments_bulk():
         fresh = [
             int(row["id"])
             for row in db.query(
-                f"SELECT id FROM comments WHERE id IN ({marks}) AND status != 'approved'",
+                f"SELECT id FROM comments WHERE id IN ({marks}) AND status != 'approved' "
+                f"AND deleted_at IS NULL",
                 ids,
             )
         ]
         Comment.bulk(ids, "approve")
         for cid in fresh:
             notify.notify_approved_reply(cid)
+        _audit("comment.approve", f"批量 {len(ids)} 条")
         flash(f"已通过 {len(ids)} 条评论", "success")
     else:
         for cid in ids:
             Comment.delete(cid)
-        flash(f"已删除 {len(ids)} 条评论及其回复", "success")
+        _audit("comment.delete", f"批量 {len(ids)} 条")
+        flash(f"已删除 {len(ids)} 条评论及其回复（正文保留在留存记录可查）", "success")
     return _comments_back()
 
 
@@ -833,6 +922,8 @@ def _settings_view() -> dict:
         "otp_new_codes": session.pop("_otp_new_codes", None),
         "otp_mail_ok": bool(settings.get_str("smtp_host", "")),
         "comments_enabled": settings.get_str("comments_enabled", "1"),
+        "comment_display": settings.get_str("comment_display", "inline"),
+        "fab_shape": settings.get_str("fab_shape", "capsule"),
         "comments_per_page": settings.get_str("comments_per_page", "10"),
         "posts_per_page": settings.get_str("posts_per_page", "20"),
         "home_posts_count": settings.get_str("home_posts_count", "6"),
@@ -877,6 +968,16 @@ def _save_settings():
         except ValueError:
             per_page = 10
         settings.set_value("comments_per_page", str(max(0, min(100, per_page))))
+
+    # 评论展示方式只接受 inline / floating，其它值一律回退默认
+    if full_form or "comment_display" in request.form:
+        display = (request.form.get("comment_display") or "").strip()
+        settings.set_value("comment_display", display if display in ("inline", "floating") else "inline")
+
+    # 浮窗按钮形态只接受 capsule / circle，其它值一律回退默认
+    if full_form or "fab_shape" in request.form:
+        shape = (request.form.get("fab_shape") or "").strip()
+        settings.set_value("fab_shape", shape if shape in ("capsule", "circle") else "capsule")
 
     if "admin_comments_per_page" in request.form:
         try:
@@ -1032,6 +1133,7 @@ def _save_settings():
             flash(message, "error")
 
     flash("设置已保存", "success")
+    _audit("settings.save", "", "保存站点设置")
     # 设置可能影响前台 HTML（首页一言、导航、统计代码等），统一清页面缓存
     from services import page_cache
     page_cache.clear_all()
@@ -1229,8 +1331,13 @@ def register(app) -> None:
         ("/admin/posts", "admin_posts", admin_posts, ["GET"]),
         ("/admin/posts/bulk", "admin_posts_bulk", admin_posts_bulk, ["POST"]),
         ("/admin/posts/new", "admin_post_new", admin_post_new, ["GET", "POST"]),
+        ("/admin/posts/trash", "admin_posts_trash", admin_posts_trash, ["GET"]),
+        ("/admin/posts/trash/bulk", "admin_posts_trash_bulk", admin_posts_trash_bulk, ["POST"]),
+        ("/admin/posts/trash/empty", "admin_posts_empty_trash", admin_posts_empty_trash, ["POST"]),
         ("/admin/posts/<int:post_id>/edit", "admin_post_edit", admin_post_edit, ["GET", "POST"]),
         ("/admin/posts/<int:post_id>/delete", "admin_post_delete", admin_post_delete, ["POST"]),
+        ("/admin/posts/<int:post_id>/restore", "admin_post_restore", admin_post_restore, ["POST"]),
+        ("/admin/posts/<int:post_id>/purge", "admin_post_purge", admin_post_purge, ["POST"]),
         ("/admin/posts/<int:post_id>/preview", "admin_post_preview", admin_post_preview, ["GET"]),
         ("/admin/posts/preview-content", "admin_preview_content", admin_preview_content, ["POST"]),
         ("/admin/categories", "admin_categories", admin_categories, ["GET"]),

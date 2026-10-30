@@ -4,6 +4,7 @@
 <div class="page-header">
     <h2>{{ icon('file-text', 20) | safe }} 文章管理 <span class="badge">{{ total }}</span></h2>
     <div class="page-actions">
+        <a href="{{ url_for('admin_posts_trash') }}" class="btn btn-secondary btn-sm">{{ icon('trash-2', 14, 'icon-sm') | safe }} 回收站{% if trash_count %} <span class="badge">{{ trash_count }}</span>{% endif %}</a>
         <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary btn-sm">{{ icon('pencil', 14, 'icon-sm') | safe }} 新建文章</a>
     </div>
 </div>
@@ -35,7 +36,7 @@
             <button type="submit" class="btn btn-sm btn-success" data-action="publish">批量发布</button>
             <button type="submit" class="btn btn-sm" data-action="unpublish">批量下线</button>
             <button type="submit" class="btn btn-sm" data-action="hide">批量隐藏</button>
-            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">移入回收站</button>
         </div>
         <div class="table-wrap">
         <table class="table">
@@ -96,7 +97,7 @@
 {# 单条删除表单定义在批量表单之外：HTML 禁止嵌套 form，否则浏览器丢弃内层 action，
    按钮归属外层 bulkPosts，提交到批量接口并报「无效的批量操作」。 #}
 {% for post in posts %}
-    <form id="delForm{{ post.id }}" method="POST" action="{{ url_for('admin_post_delete', post_id=post.id) }}" class="hidden" onsubmit="return confirm('确定删除《{{ post.title }}》？此操作不可恢复。')"></form>
+    <form id="delForm{{ post.id }}" method="POST" action="{{ url_for('admin_post_delete', post_id=post.id) }}" class="hidden" onsubmit="return confirm('确定把《{{ post.title }}》移入回收站？之后可在回收站恢复或彻底删除。')"></form>
 {% endfor %}
 </div>
 
@@ -148,7 +149,7 @@
         if (!action) return;
         var n = document.querySelectorAll('.row-check:checked').length;
         if (!n) { e.preventDefault(); alert('请先勾选要操作的文章'); return; }
-        if (action === 'delete' && !confirm('确定删除选中的 ' + n + ' 篇文章？此操作不可恢复。')) { e.preventDefault(); return; }
+        if (action === 'delete' && !confirm('确定把选中的 ' + n + ' 篇文章移入回收站？之后可在回收站恢复或彻底删除。')) { e.preventDefault(); return; }
         document.getElementById('bulkAction').value = action;
     });
 

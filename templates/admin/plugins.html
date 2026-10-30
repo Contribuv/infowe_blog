@@ -31,6 +31,9 @@
                 <a href="{{ admin_prefix }}/plugins/ai" class="btn btn-secondary btn-sm">配置</a>
                 <a href="{{ admin_prefix }}/plugins/ai/chat" class="btn btn-primary btn-sm">打开对话</a>
                 {% endif %}
+                {% if p.key == 'retention' and p.enabled and p.installed %}
+                <a href="{{ admin_prefix }}/plugins/retention" class="btn btn-primary btn-sm">查看记录</a>
+                {% endif %}
                 <form method="POST" action="{{ url_for('admin_plugin_toggle') }}">
                     <input type="hidden" name="key" value="{{ p.key }}">
                     <button type="submit" class="btn btn-secondary btn-sm">{{ '停用' if p.enabled else '启用' }}</button>

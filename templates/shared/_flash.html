@@ -1,0 +1,11 @@
+{# 页面级 flash → Toast：渲染成隐藏节点，由 toast.js 统一消费（全文档扫描 [data-toast]）。
+   v3.4.32 从 _comments.html 提升到页面级：评论片段将被浮窗（v3.4.33）按需注入 dialog，
+   flash 不能再随片段走——提交后 302 回整页，由页面级节点承载提示。
+   仅在需要的详情页 include（links_apply 等页面有自己的 flash 展示，勿重复引入）。 #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, msg in messages %}
+<span data-toast="{{ msg }}" data-toast-type="{% if category == 'error' %}error{% else %}success{% endif %}" hidden></span>
+{% endfor %}
+{% endif %}
+{% endwith %}

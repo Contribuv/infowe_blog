@@ -1,0 +1,8 @@
+{
+  "key": "retention",
+  "name": "留存记录",
+  "version": "1.0.0",
+  "description": "聚合后台操作审计、AI 审计与评论留存信息，支持筛选查看与 CSV 导出（176 号令合规留痕）",
+  "entry": "plugins.retention:register",
+  "admin_menu": { "group": "system", "label": "插件管理", "url": "admin_plugins" }
+}

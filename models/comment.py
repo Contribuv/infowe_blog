@@ -31,15 +31,15 @@ def load(
     my_comments = my_comments or {}
 
     if include_private:
-        sql = f"SELECT * FROM comments WHERE {column} = ? AND (status='approved' OR is_private=1)"
+        sql = f"SELECT * FROM comments WHERE {column} = ? AND (status='approved' OR is_private=1) AND deleted_at IS NULL"
         params: list[Any] = [value]
     else:
-        sql = f"SELECT * FROM comments WHERE {column} = ? AND status='approved' AND is_private=0"
+        sql = f"SELECT * FROM comments WHERE {column} = ? AND status='approved' AND is_private=0 AND deleted_at IS NULL"
         params = [value]
         ids = [int(k) for k in my_comments if str(k).isdigit()]
         if ids:
             marks = ",".join("?" * len(ids))
-            sql += f" OR (id IN ({marks}) AND {column} = ? AND status != 'rejected')"
+            sql += f" OR (id IN ({marks}) AND {column} = ? AND status != 'rejected' AND deleted_at IS NULL)"
             params = [*params, *ids, value]
     sql += " ORDER BY created_at ASC, id ASC"
     rows = [dict(r) for r in db.query(sql, params)]
@@ -85,6 +85,13 @@ def load(
                 ai_avatar = ""
             if ai_avatar:
                 c["avatar"], c["avatar_fallback"] = ai_avatar, ""
+            else:
+                # 未设置自定义头像时回退 AI 默认头像，前台/后台/AI 设置页三端一致
+                try:
+                    from plugins.ai_assistant.config import ai_avatar_url
+                    c["avatar"], c["avatar_fallback"] = ai_avatar_url(), ""
+                except Exception:
+                    pass
         if not c["avatar"]:
             c["avatar"], c["avatar_fallback"] = avatar_default, ""
         c["avatar_default"] = avatar_default
@@ -160,7 +167,7 @@ def page_of(comment_id: int, per_page: int, include_private: bool = False) -> in
     earlier = int(
         db.scalar(
             f"SELECT COUNT(*) FROM comments WHERE {column} = ? AND parent_id IS NULL "
-            f"AND {visible} AND (created_at < ? OR (created_at = ? AND id < ?))",
+            f"AND deleted_at IS NULL AND {visible} AND (created_at < ? OR (created_at = ? AND id < ?))",
             (value, root.get("created_at"), root.get("created_at"), int(root["id"])),
             0,
         )
@@ -207,12 +214,18 @@ def save(
 
 
 def delete(comment_id: int) -> None:
+    """软删除：只打 deleted_at 时间戳，正文与回复全部保留在库中供留痕查询。
+
+    级联收集整棵回复树一并标记；前台各查询统一过滤 deleted_at IS NULL。
+    """
     ids = [comment_id]
     visited = {comment_id}
     frontier = [comment_id]
     while frontier:
         marks = ",".join("?" * len(frontier))
-        rows = db.query(f"SELECT id FROM comments WHERE parent_id IN ({marks})", frontier)
+        rows = db.query(
+            f"SELECT id FROM comments WHERE parent_id IN ({marks}) AND deleted_at IS NULL", frontier
+        )
         frontier = []
         for row in rows:
             cid = int(row["id"])
@@ -221,7 +234,7 @@ def delete(comment_id: int) -> None:
                 frontier.append(cid)
                 ids.append(cid)
     marks = ",".join("?" * len(ids))
-    db.execute(f"DELETE FROM comments WHERE id IN ({marks})", ids)
+    db.execute(f"UPDATE comments SET deleted_at = ? WHERE id IN ({marks})", [db.now(), *ids])
 
 
 def set_status(comment_id: int, status: str) -> None:
@@ -231,13 +244,14 @@ def set_status(comment_id: int, status: str) -> None:
 
 def admin_list(page: int = 1, per_page: int = 0) -> tuple[list[dict], int]:
     """后台评论列表，返回 (当前页数据, 总数)；per_page > 0 时分页。"""
-    total = int(db.scalar("SELECT COUNT(*) FROM comments", (), 0))
+    total = int(db.scalar("SELECT COUNT(*) FROM comments WHERE deleted_at IS NULL", (), 0))
     sql = (
         "SELECT c.*, p.title AS post_title, p.id AS post_id, pj.name AS project_name, "
         "pa.author AS parent_author FROM comments c "
         "LEFT JOIN posts p ON c.post_id = p.id "
         "LEFT JOIN projects pj ON c.project_id = pj.id "
         "LEFT JOIN comments pa ON c.parent_id = pa.id "
+        "WHERE c.deleted_at IS NULL "
         "ORDER BY (c.status = 'pending') DESC, c.is_private DESC, c.created_at DESC, c.id DESC"
     )
     params: list[Any] = []
@@ -254,12 +268,27 @@ def admin_list(page: int = 1, per_page: int = 0) -> tuple[list[dict], int]:
         item["project_id"] = int(item["project_id"]) if item.get("project_id") is not None else None
         item["is_private"] = int(item.get("is_private") or 0)
         item["parent_author"] = item.get("parent_author") or ""
+        # AI 审核记录：ai_meta 存 JSON（decision/reason/error），拆成模板直接可用的字段
+        try:
+            meta = json.loads(item.get("ai_meta") or "{}")
+        except (TypeError, ValueError):
+            meta = {}
+        if not isinstance(meta, dict):
+            meta = {}
+        item["ai_state"] = str(item.get("ai_state") or "idle")
+        item["ai_decision"] = str(meta.get("decision") or "")
+        item["ai_reason"] = str(meta.get("reason") or meta.get("error") or "")
+        item["ai_avatar"] = str(meta.get("avatar") or "")
         result.append(item)
     return result, total
 
 
 def pending_count() -> int:
-    return int(db.scalar("SELECT COUNT(*) FROM comments WHERE status='pending'", (), 0))
+    return int(
+        db.scalar(
+            "SELECT COUNT(*) FROM comments WHERE status='pending' AND deleted_at IS NULL", (), 0
+        )
+    )
 
 
 def bulk(ids: list[int], action: str) -> int:

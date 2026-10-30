@@ -1,0 +1,120 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}回收站{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('trash-2', 20) | safe }} 回收站 <span class="badge">{{ trash_count }}</span></h2>
+    <div class="page-actions">
+        {% if posts %}
+        <form method="POST" action="{{ url_for('admin_posts_empty_trash') }}" class="inline-form"
+              onsubmit="return confirm('确定清空回收站？这将彻底删除全部 {{ trash_count }} 篇文章及其未被引用的上传文件，不可恢复！')">
+            <button type="submit" class="btn btn-danger btn-sm">清空回收站</button>
+        </form>
+        {% endif %}
+        <a href="{{ url_for('admin_posts') }}" class="btn btn-secondary btn-sm">{{ icon('arrow-left', 14, 'icon-sm') | safe }} 返回文章列表</a>
+    </div>
+</div>
+
+<p class="text-muted" style="margin-bottom:14px;">这里的文章已从前台和后台列表移除，但内容仍在库中。点「恢复」可撤销删除，点「彻底删除」才会真正抹掉（不可恢复）。</p>
+
+<div class="card">
+    <form method="POST" action="{{ url_for('admin_posts_trash_bulk') }}" id="bulkTrash">
+        <input type="hidden" name="action" id="bulkAction" value="">
+        <div class="bulk-bar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="checkAll"> 全选
+            </label>
+            <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
+            <button type="submit" class="btn btn-sm btn-success" data-action="restore">批量恢复</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="purge">批量彻底删除</button>
+        </div>
+        <div class="table-wrap">
+        <table class="table">
+        <thead>
+            <tr>
+                <th class="col-check">选择</th>
+                <th class="w-35">标题</th>
+                <th>原状态</th>
+                <th>删除时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td class="col-check" data-label="选择">
+                    <input type="checkbox" class="row-check" name="post_ids[]" value="{{ post.id }}" form="bulkTrash" aria-label="选择文章 {{ post.id }}">
+                </td>
+                <td class="main-td" data-label="标题">{{ post.title }}</td>
+                <td data-label="原状态">
+                    {% if post.status == 'published' %}
+                    <span class="badge badge-success">已发布</span>
+                    {% elif post.status == 'hidden' %}
+                    <span class="badge badge-info">隐藏</span>
+                    {% else %}
+                    <span class="badge badge-warning">草稿</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" data-label="删除时间">{{ post.deleted_at[:16] if post.deleted_at else '' }}</td>
+                <td data-label="操作">
+                    <div class="btn-group">
+                        <button type="submit" form="restoreForm{{ post.id }}" class="btn btn-sm btn-success">恢复</button>
+                        <button type="submit" form="purgeForm{{ post.id }}" class="btn btn-sm btn-danger">彻底删除</button>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-muted text-center">回收站是空的</td></tr>
+            {% endfor %}
+        </tbody>
+        </table>
+        </div>
+    </form>
+{# 单条表单定义在批量表单之外：HTML 禁止嵌套 form #}
+{% for post in posts %}
+    <form id="restoreForm{{ post.id }}" method="POST" action="{{ url_for('admin_post_restore', post_id=post.id) }}" class="hidden"></form>
+    <form id="purgeForm{{ post.id }}" method="POST" action="{{ url_for('admin_post_purge', post_id=post.id) }}" class="hidden"
+          onsubmit="return confirm('确定彻底删除《{{ post.title }}》？此操作不可恢复！')"></form>
+{% endfor %}
+</div>
+{% endblock %}
+
+{% block admin_scripts %}
+<script>
+(function () {
+    'use strict';
+    var form = document.getElementById('bulkTrash');
+    if (!form) return;
+    var checkAll = document.getElementById('checkAll');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
+    var count = document.getElementById('bulkCount');
+
+    function update() {
+        var n = document.querySelectorAll('.row-check:checked').length;
+        count.textContent = n;
+        if (checkAll) {
+            checkAll.checked = boxes.length > 0 && n === boxes.length;
+            checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+    }
+    if (checkAll) {
+        checkAll.addEventListener('change', function () {
+            boxes.forEach(function (b) { b.checked = checkAll.checked; });
+            update();
+        });
+    }
+    boxes.forEach(function (b) { b.addEventListener('change', update); });
+
+    form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = document.querySelectorAll('.row-check:checked').length;
+        if (!n) { e.preventDefault(); alert('请先勾选要操作的文章'); return; }
+        if (action === 'purge' && !confirm('确定彻底删除选中的 ' + n + ' 篇文章？此操作不可恢复！')) { e.preventDefault(); return; }
+        document.getElementById('bulkAction').value = action;
+    });
+
+    update();
+})();
+</script>
+{% endblock %}

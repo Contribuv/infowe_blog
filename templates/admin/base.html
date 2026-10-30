@@ -72,9 +72,15 @@
                 </div>
                 <div class="admin-nav-group">
                     <div class="admin-nav-title">系统</div>
-                    <a href="{{ url_for('admin_plugins') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/plugins') %}active{% endif %}">
+                    <a href="{{ url_for('admin_plugins') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/plugins') and not request.path.startswith(admin_prefix ~ '/plugins/retention') %}active{% endif %}">
                         {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>插件管理</span>
                     </a>
+                    {# 插件路由：停用插件后 url_for 会抛 BuildError，用字符串拼接 + 启用判断兜底 #}
+                    {% if retention_enabled %}
+                    <a href="{{ admin_prefix }}/plugins/retention" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/plugins/retention') %}active{% endif %}">
+                        {{ icon('history', 20, 'admin-nav-icon') | safe }}<span>留存记录</span>
+                    </a>
+                    {% endif %}
                     <a href="{{ url_for('admin_settings') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/settings' %}active{% endif %}">
                         {{ icon('settings', 20, 'admin-nav-icon') | safe }}<span>博客设置</span>
                     </a>

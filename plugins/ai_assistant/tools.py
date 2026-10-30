@@ -131,11 +131,11 @@ def _dispatch(name: str, args: dict) -> dict:
         order = "ASC" if str(args.get("order") or "") == "oldest" else "DESC"
         limit = _limit(args.get("limit"), 10)
         params: list = []
+        # 软删（回收站）文章不进入 AI 视野
+        where = "WHERE deleted_at IS NULL"
         if status in _POST_STATUSES:
-            where = "WHERE status = ?"
+            where += " AND status = ?"
             params.append(status)
-        else:
-            where = ""
         rows = db.query(
             f"SELECT id, title, status, tags, created_at FROM posts {where} "
             f"ORDER BY created_at {order}, id {order} LIMIT ?",
@@ -167,6 +167,8 @@ def _dispatch(name: str, args: dict) -> dict:
         limit = _limit(args.get("limit"), 10)
         where: list[str] = []
         params: list = []
+        # 已软删除的评论不再进入 AI 视野（正文保留在留存插件供人工查阅）
+        where.append("deleted_at IS NULL")
         if status in {"pending", "approved", "rejected"}:
             where.append("status = ?")
             params.append(status)
@@ -254,11 +256,17 @@ def _dispatch(name: str, args: dict) -> dict:
 
     if name == "get_stats":
         return {"ok": True, "stats": {
-            "posts": int(db.scalar("SELECT COUNT(*) FROM posts", (), 0)),
-            "published": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='published'", (), 0)),
-            "drafts": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='draft'", (), 0)),
-            "comments": int(db.scalar("SELECT COUNT(*) FROM comments", (), 0)),
-            "pending_comments": int(db.scalar("SELECT COUNT(*) FROM comments WHERE status='pending'", (), 0)),
+            "posts": int(db.scalar("SELECT COUNT(*) FROM posts WHERE deleted_at IS NULL", (), 0)),
+            "published": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='published' AND deleted_at IS NULL", (), 0)),
+            "drafts": int(db.scalar("SELECT COUNT(*) FROM posts WHERE status='draft' AND deleted_at IS NULL", (), 0)),
+            "comments": int(
+                db.scalar("SELECT COUNT(*) FROM comments WHERE deleted_at IS NULL", (), 0)
+            ),
+            "pending_comments": int(
+                db.scalar(
+                    "SELECT COUNT(*) FROM comments WHERE status='pending' AND deleted_at IS NULL", (), 0
+                )
+            ),
             "links": int(db.scalar("SELECT COUNT(*) FROM links", (), 0)),
             "pending_links": int(db.scalar("SELECT COUNT(*) FROM links WHERE status='pending'", (), 0)),
         }}
@@ -330,9 +338,9 @@ def _dispatch(name: str, args: dict) -> dict:
         pid = int(args.get("id") or 0)
         if not Post.get(pid):
             return {"ok": False, "error": "文章不存在"}
-        removed = Post.delete_with_uploads(pid)
-        suffix = f"，清理 {removed} 个附件" if removed else ""
-        return {"ok": True, "message": f"已删除文章 #{pid}{suffix}"}
+        # 与后台一致：删除只进回收站，可恢复；彻底删除由博主在后台操作
+        Post.trash(pid)
+        return {"ok": True, "message": f"文章 #{pid} 已移入回收站（可在后台回收站恢复）"}
 
     if name == "delete_category":
         cid = int(args.get("id") or 0)
@@ -432,10 +440,18 @@ def _dispatch(name: str, args: dict) -> dict:
         parent = Comment.get(cid)
         if not parent or not content:
             return {"ok": False, "error": "评论不存在或回复为空"}
+        # 昵称/头像读配置，与评论托管回复保持一致（徽章固定显示「AI 助手」）
+        from . import config as ai_config
+
+        ai_name = str(ai_config.get().get("ai_name") or "").strip() or "AI 助手"
         new_id = Comment.save(
-            parent.get("post_id"), "AI 助手", "", "", "", content,
+            parent.get("post_id"), ai_name, "", "", "", content,
             cid, 0, "", "", "approved", parent.get("project_id"), "",
             is_ai=1,
+        )
+        db.execute(
+            "UPDATE comments SET ai_meta=? WHERE id=?",
+            (json.dumps({"avatar": ai_config.ai_avatar_url()}, ensure_ascii=False), new_id),
         )
         return {"ok": True, "id": new_id, "message": f"已回复评论 #{cid}"}
 

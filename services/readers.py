@@ -71,6 +71,7 @@ def _public_filter(months: int | None = RANK_MONTHS) -> tuple[str, list]:
         "c.is_private = 0",
         "c.is_owner = 0",
         "c.is_ai = 0",
+        "c.deleted_at IS NULL",
     ]
     params: list = []
     if blogger:

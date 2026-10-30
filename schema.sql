@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS posts (
     status TEXT DEFAULT 'published',
     is_featured INTEGER DEFAULT 0,
     category_id INTEGER DEFAULT NULL,
+    deleted_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS comments (
     ai_meta TEXT DEFAULT '',
     is_owner INTEGER DEFAULT 0,
     is_picked INTEGER DEFAULT 0,
+    deleted_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments (post_id);

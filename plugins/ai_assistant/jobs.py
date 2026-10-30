@@ -18,7 +18,7 @@ from flask import current_app
 import db
 from config import CACHE_DIR
 from models import Comment, Link, Post, Project
-from services import notify, plugins, settings, site_url
+from services import mail_template, notify, plugins, settings, site_url
 
 from . import ai_client, config
 
@@ -139,6 +139,52 @@ def _in_reply_time_window(cfg: dict) -> bool:
     return True
 
 
+def _invalidate_page(comment: dict) -> None:
+    """AI 在后台线程改了评论公开状态后，主动清对应页面缓存。
+
+    后台线程没有请求上下文，app.py 的 before_request 失效逻辑不会触发；
+    不清的话 /post/* 匿名缓存（TTL 30 分钟）里还是旧评论区，
+    会出现「审核通过了但访客看不到」的时隐时现现象。
+    """
+    try:
+        from services import page_cache
+
+        pid = int(comment.get("post_id") or 0)
+        if pid:
+            page_cache.invalidate_path(f"/post/{pid}")
+        elif comment.get("project_id"):
+            page_cache.invalidate_path("/projects")
+        page_cache.invalidate_path("/")
+    except Exception:
+        pass
+
+
+def sync_ai_identity() -> None:
+    """把所有 AI 评论的昵称与头像对齐到当前配置。
+
+    保存配置后立即调用（改名/换头像历史评论同步生效）；插件注册时兜底跑一次，
+    让没经过保存流程的存量数据也能追平（如首次升级到默认机器人头像）。
+    """
+    cfg = config.get()
+    name = str(cfg.get("ai_name") or "").strip() or "AI 助手"
+    avatar = config.ai_avatar_url()
+    for row in db.query("SELECT id, author, ai_meta FROM comments WHERE is_ai=1"):
+        row = dict(row)  # sqlite3.Row 没有 .get()，转 dict 后再取字段
+        try:
+            meta = json.loads(row.get("ai_meta") or "{}")
+        except (TypeError, ValueError):
+            meta = {}
+        if not isinstance(meta, dict):
+            meta = {}
+        if str(row.get("author") or "") == name and str(meta.get("avatar") or "") == avatar:
+            continue
+        meta["avatar"] = avatar
+        db.execute(
+            "UPDATE comments SET author=?, ai_meta=? WHERE id=?",
+            (name, json.dumps(meta, ensure_ascii=False), row["id"]),
+        )
+
+
 def on_comment(payload: dict) -> None:
     if not _enabled():
         return
@@ -160,7 +206,8 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
         try:
             cfg = config.get()
             cur = db.execute(
-                "UPDATE comments SET ai_state='running' WHERE id=? AND ai_state='idle'",
+                "UPDATE comments SET ai_state='running' WHERE id=? AND ai_state='idle' "
+                "AND deleted_at IS NULL",
                 (cid,),
             )
             if cur.rowcount == 0:
@@ -245,11 +292,14 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 return
 
             db.execute("UPDATE comments SET status='approved', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
+            _invalidate_page(comment)
             if cfg.get("comment_reply") and reply and not _blocked_word(reply) and _in_reply_time_window(cfg):
                 profile = config.active_profile()
-                avatar = config.provider_avatar(profile)
+                avatar = config.ai_avatar_url()
+                # 昵称/头像后台可配（徽章固定显示「AI 助手」，与昵称解耦）
+                ai_name = str(cfg.get("ai_name") or "").strip() or "AI 助手"
                 new_id = Comment.save(
-                    comment.get("post_id"), "AI 助手", "", "", "", reply,
+                    comment.get("post_id"), ai_name, "", "", "", reply,
                     cid, 0, "", "", "approved", comment.get("project_id"), "",
                     is_ai=1,
                 )
@@ -267,18 +317,29 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                         comment_notify = str(settings.get_str("comment_notify", "0") or "0").lower()
                         if comment_notify in {"1", "on", "true", "yes"}:
                             parent_email = str(comment.get("email") or "").strip()
-                            if parent_email and "@" in parent_email and not parent_email.lower().endswith("@qq.com"):
+                            # QQ 邮箱同样放行：正文已改为占位文案不出站，邮件只剩通知+链接，无反垃圾风险
+                            if parent_email and "@" in parent_email:
                                 post = Post.get(int(comment.get("post_id") or 0))
                                 title = str((post or {}).get("title") or "")
                                 link = site_url.post_url(post) if post else site_url.base()
-                                content_text = (
-                                    f"你好，{comment.get('author') or '访客'}：\n\n"
-                                    f"你在《{title}》的评论有了新的回复：\n\n"
-                                    f"{reply}\n\n"
-                                    f"查看原文：{link}#comment-{new_id}\n\n"
-                                    "此邮件由系统自动发送，请勿直接回复。"
+                                # 与全站评论通知规范一致：回复正文不出站，只放占位文案+链接
+                                reply_text, reply_page = mail_template.reply_notice(
+                                    blog_name=settings.get_str("blog_name", "博客"),
+                                    site=site_url.base(),
+                                    label="文章",
+                                    title=title,
+                                    url=f"{link}#comment-{new_id}",
+                                    author=mail_template.blogger_name(),
+                                    content=notify._mail_placeholder(reply),
+                                    when=datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                    parent_author=str(comment.get("author") or "访客"),
                                 )
-                                notify.send(parent_email, "[评论回复] " + (title or "博客评论"), content_text)
+                                notify.send(
+                                    parent_email,
+                                    "[评论回复] " + (title or "博客评论"),
+                                    reply_text,
+                                    reply_page,
+                                )
                     except Exception:
                         pass
         except Exception:
@@ -298,15 +359,24 @@ def on_link(payload: dict) -> None:
     name = str(payload.get("name") or "")
     url = str(payload.get("url") or "")
     site = site_url.base()
-    text = (
-        f"你好，{name}：\n\n"
-        f"已收到你的友链申请。请先在贵站添加本站友链，添加后系统会自动审核：\n\n"
-        f"站点名称：{settings.get_str('blog_name', '本站')}\n"
-        f"站点地址：{site}\n\n"
-        f"你提交的地址：{url}\n\n"
-        "审核通过后会再发一封邮件通知。\n"
+    blog = settings.get_str("blog_name", "本站")
+    body_html = (
+        '<div style="font-size:15px;line-height:1.8;color:#1f2a33;">'
+        '已收到你的友链申请。请先在贵站添加本站友链，添加后系统会自动审核。</div>'
+        '<div style="padding:14px 0 0 0;font-size:14px;line-height:1.9;color:#5c6b78;">'
+        '站点名称：%s<br>站点地址：%s<br>你提交的地址：%s</div>'
+        '<div style="padding:10px 0 0 0;font-size:13px;color:#8a97a4;">审核通过后会再发一封邮件通知。</div>'
+    ) % (mail_template.esc(blog), mail_template.esc(site), mail_template.esc(url))
+    text, page = mail_template.generic_notice(
+        blog_name=blog,
+        site=site,
+        tag="友链申请",
+        headline="请先在贵站添加本站友链",
+        body_html=body_html,
+        button_text="打开本站",
+        button_url=site,
     )
-    notify.send(email, "[友链申请] 请先添加本站友链", text)
+    notify.send(email, "[友链申请] 请先添加本站友链", text, page)
 
 
 def _site_host() -> str:
@@ -370,11 +440,25 @@ def check_pending_links() -> None:
             )
             email = str(link.get("email") or "").strip()
             if email:
-                notify.send(
-                    email,
-                    "[友链] 已通过审核",
-                    f"你好，{link.get('name')}：\n\n已在贵站检测到本站友链，申请已自动通过。\n{site_url.base()}\n",
+                link_body = (
+                    '<div style="font-size:15px;line-height:1.8;color:#1f2a33;">'
+                    '已在贵站检测到本站友链，申请已自动通过。</div>'
+                    '<div style="padding:14px 0 0 0;font-size:14px;line-height:1.9;color:#5c6b78;">'
+                    '站点名称：%s<br>站点地址：%s</div>'
+                ) % (
+                    mail_template.esc(settings.get_str("blog_name", "本站")),
+                    mail_template.esc(site_url.base()),
                 )
+                link_text, link_page = mail_template.generic_notice(
+                    blog_name=settings.get_str("blog_name", "本站"),
+                    site=site_url.base(),
+                    tag="审核通过",
+                    headline="你的友链申请已通过",
+                    body_html=link_body,
+                    button_text="打开本站",
+                    button_url=site_url.base(),
+                )
+                notify.send(email, "[友链] 已通过审核", link_text, link_page)
             continue
         hours = int(config.get().get("link_check_hours") or 72)
         if attempts * 10 >= hours * 60:

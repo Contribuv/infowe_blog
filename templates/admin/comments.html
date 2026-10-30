@@ -24,7 +24,7 @@
             <thead>
                 <tr>
                     <th class="col-check">选择</th>
-                    <th>状态</th>
+                    <th class="status-cell">状态</th>
                     <th>作者</th>
                     <th>内容</th>
                     <th>文章 / 项目</th>
@@ -41,16 +41,28 @@
                     <td class="col-check" data-label="选择">
                         <input type="checkbox" class="row-check" name="comment_ids[]" value="{{ c.id }}" form="bulkForm" aria-label="选择评论 {{ c.id }}">
                     </td>
-                    <td data-label="状态">
+                    <td class="status-cell" data-label="状态">
                         {% if c.status == 'pending' %}<span class="badge badge-warning">待审核</span>
-                        {% else %}<span class="badge badge-success">已通过</span>{% endif %}
+                        {% elif c.status == 'approved' %}<span class="badge badge-success">已通过</span>
+                        {% else %}<span class="badge badge-danger">已拒绝</span>{% endif %}
                         {% if c.is_private %}<span class="badge badge-private">私密</span>{% endif %}
+                        {# AI 审核记录：ai_state 是流水线状态，ai_decision/ai_reason 来自 ai_meta JSON #}
+                        {% if c.ai_state and c.ai_state != 'idle' %}
+                        <div class="cell-sub" {% if c.ai_reason %}title="{{ c.ai_reason }}"{% endif %}>
+                            {%- if c.ai_state == 'running' %}AI 审核中
+                            {%- elif c.ai_state == 'skipped' %}AI 跳过（长度不符）
+                            {%- elif c.ai_state == 'review' %}AI 转人工
+                            {%- elif c.ai_state == 'done' %}AI 已审{% if c.ai_decision %} · {{ {'approve': '通过', 'reject': '拒绝', 'review': '转人工'}.get(c.ai_decision, c.ai_decision) }}{% endif %}
+                            {%- endif %}{% if c.ai_reason %}：{{ c.ai_reason[:60] }}{% if c.ai_reason|length > 60 %}…{% endif %}{% endif %}
+                        </div>
+                        {% endif %}
                     </td>
                     <td class="main-td" data-label="作者">
                         <span class="cmt-admin-author">
                             {% if c.admin_avatar %}<img class="cmt-admin-avatar" src="{{ c.admin_avatar }}" alt="{{ c.author }}" loading="lazy" data-default="{{ c.admin_avatar_default }}" onerror="if(this.src!==this.getAttribute('data-default')){this.src=this.getAttribute('data-default');}">{% endif %}
                             <span class="cmt-admin-id">
-                                <strong>{{ c.author }}</strong>
+                                {# AI 小标必须放在 strong 内部：.cmt-admin-id 是纵向 flex，独立 span 会被挤到第二行 #}
+                                <strong>{{ c.author }}{% if c.is_ai %}<span class="cmt-ai-tag">AI</span>{% endif %}</strong>
                                 {% if c.parent_author %}<div class="cell-sub">回复 @{{ c.parent_author }}</div>{% endif %}
                             </span>
                         </span>

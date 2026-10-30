@@ -53,6 +53,10 @@ DEFAULTS: dict[str, str] = {
     "comments_enabled": "1",
     "comment_notify": "1",
     "comment_image_upload": "1",
+    # 评论展示方式：inline 内嵌（默认）/ floating 浮窗（点击左下角按钮弹出）
+    "comment_display": "inline",
+    # 浮窗按钮形态（仅 floating 时生效）：capsule 胶囊=图标+文字+角标（默认）/ circle 圆形=48px 纯图标
+    "fab_shape": "capsule",
     "comments_per_page": "10",
     "admin_comments_per_page": "20",
     "sensitive_filter_enabled": "0",

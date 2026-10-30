@@ -23,6 +23,31 @@
 .ai-grid .form-group { margin-bottom: 0; }
 .ai-grid .span-2 { grid-column: 1 / -1; }
 
+/* AI 身份块：头像预览 + 昵称/上传操作，与 ai-switch 同风格的整行卡片 */
+.ai-identity {
+  display: flex; align-items: center; gap: var(--sp-4);
+  padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--bg-surface-2);
+}
+.ai-identity-avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  object-fit: cover; flex: none;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+}
+.ai-identity-main {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.ai-identity-main label { font-size: var(--fz-sm); font-weight: 600; color: var(--text); }
+.ai-identity-name { display: flex; align-items: center; gap: var(--sp-3); }
+.ai-identity-name label { flex: none; }
+.ai-identity-name .input-text { flex: 1; min-width: 0; }
+.ai-identity-actions { display: flex; align-items: center; gap: var(--sp-2); }
+.ai-identity-actions .input-text { flex: 1; min-width: 0; }
+.ai-identity-actions .btn { flex: none; }
+
 .ai-rules {
   margin: 0; padding-left: 18px;
   display: flex; flex-direction: column; gap: 6px;
@@ -234,6 +259,11 @@
 @media (max-width: 960px) {
   .ai-grid { grid-template-columns: 1fr; }
   .ai-grid .span-2 { grid-column: auto; }
+  /* 窄屏身份块改为纵向堆叠，按钮和链接输入换行 */
+  .ai-identity { flex-direction: column; align-items: stretch; }
+  .ai-identity-avatar { align-self: center; }
+  .ai-identity-actions { flex-wrap: wrap; }
+  .ai-identity-actions .input-text { flex: 1 1 200px; }
 }
 @media (max-width: 767px) {
   .ai-page { height: calc(100dvh - 130px); min-height: 420px; }
