@@ -326,6 +326,11 @@ def register(app) -> None:
                         "pending": {"id": mid, "tool": name, "args": args, "text": text, "meta": meta, "force": force},
                     })
             content = action.get("content") if action and action.get("type") == "reply" else text
+            if action is None and '"type"' in text and '"tool"' in text:
+                # 输出是没闭合的工具 JSON：通常是 max_tokens 不够被截断，
+                # 原样吐给用户是天书，改成可操作的提示
+                content = "这一步没有完成：模型输出超长被截断了。" \
+                          "可以到「AI 配置」把最大 Token 调大（建议 8192），或让 AI 分段处理这篇内容。"
             content = str(content or "").strip() or "（模型没有返回内容）"
             _add_message(conv_id, "assistant", content, meta)
             return jsonify({"conversation_id": conv_id, "reply": content, "meta": meta})

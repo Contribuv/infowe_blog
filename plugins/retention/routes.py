@@ -114,7 +114,9 @@ def _human_summary(obj) -> str:
 def _fmt_ai_row(row: dict) -> dict:
     """AI 审计的 args/result 是 JSON 字符串：解析成缩进文本供折叠展示，并给单行摘要。
 
-    解析失败（非 JSON 的历史脏数据）时保持原样，由模板直出兜底。
+    历史数据里超长 JSON 被 [:4000] 硬截断过，是非法 JSON、解析必失败；
+    这类也不能直出——4000 字符长串会把单元格撑成几百行，整页排版爆炸。
+    解析失败时原样放进折叠区，摘要给前 60 字。
     """
     for col in ("args", "result"):
         raw = row.get(col)
@@ -127,6 +129,9 @@ def _fmt_ai_row(row: dict) -> dict:
             if obj is not None:
                 pretty = json.dumps(obj, ensure_ascii=False, indent=2)
                 summary = _human_summary(obj)
+            else:
+                pretty = raw
+                summary = raw[:60] + ("…" if len(raw) > 60 else "")
         row[col + "_fmt"] = pretty
         row[col + "_summary"] = summary
     return row

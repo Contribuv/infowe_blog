@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.34-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.34)
+[![version](https://img.shields.io/badge/version-3.4.35-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.35)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -918,7 +918,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.34**
+当前版本：**v3.4.35**
+
+### v3.4.35
+
+- AI 助手修复：`list_comments` 带邮箱/昵称/文章 ID 等具体条件时默认查全部状态评论（此前默认只看待审，全是已通过评论的用户查出来是空，看起来像指令失效）；`max_tokens` 默认 4096→8192，长文重构不再因输出上限打满导致 JSON 截断失败；模型输出被截断时返回明确兜底提示而非残缺结果；system_prompt 内置指令迁移为带 `status:all` 的新写法
+- 留存审计页修复（`plugins/retention`）：AI 审计「参数/结果」长 JSON 改为「一行摘要 + 点击展开全文」折叠展示，非法 JSON（历史超长截断残片）同样折叠不再直出；配合 `.wrap-cell` 补 `width` 硬约束（`table-layout:auto` 下仅 `max-width` 会被内容撑破），修复超长内容把卡片/表格撑爆、整页排版溢出的问题
+- AI 审计源头修复：审计写入超长 JSON 时改存带截断标记的合法 JSON（此前硬截断产生尾部不闭合的非法残片，是留存页排版爆炸的根源）
+
+<details>
+<summary><b>历史版本（v3.4.34 及更早）</b></summary>
 
 ### v3.4.34
 
@@ -927,9 +936,6 @@ chown -R www:www var
 - 评论通知邮件模板重做：全 table 布局 + 内联样式（Outlook 兼容），8px 圆角体系、32px 圆形头像（gravatar/QQ 头像，无头像用首字母色块兜底）、强调色自动取自当前主题；新增通用通知模板，AI 回复与友链申请通知一并接入 HTML 邮件；评论正文不出站（邮件只放占位文案 + 链接），命中敏感词显示「【不当言语】请后台审核」，回复通知带「你之前说」原评论引用块
 - AI 助手增强：机器人昵称/头像后台可配（新增 `ai-bot.svg` 默认头像，历史 AI 评论一键同步身份）；「通过后 AI 回复」同时接管回复评论；AI 审核后自动清页面缓存；后台评论管理显示 AI 审核记录与徽章；ai-avatar 加入上传白名单
 - 评论体验：草稿自动保存（localStorage 按文章维度暂存，误刷新不丢稿，提交成功自动清除）；评论分页开启时 `#comment-N` 跨页锚点自动拉取评论片段直达目标楼层，折叠回复自动展开并高亮
-
-<details>
-<summary><b>历史版本（v3.4.33 及更早）</b></summary>
 
 ### v3.4.33
 

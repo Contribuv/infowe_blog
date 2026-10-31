@@ -56,11 +56,21 @@ ALL_TOOLS = {**READ_TOOLS, **WRITE_TOOLS}
 _POST_STATUSES = {"published", "draft", "hidden"}
 
 
+def _clip_json(value: dict, limit: int = 4000) -> str:
+    """审计列超长时的存储：硬截断会把 JSON 切成非法残片（尾部不闭合），
+    留存页解析失败只能直出长串、撑坏表格排版；改为存带截断标记的合法 JSON。"""
+    text = json.dumps(value, ensure_ascii=False)
+    if len(text) <= limit:
+        return text
+    head = text[: limit - 80].rstrip()
+    return json.dumps({"truncated": True, "preview": head + "…"}, ensure_ascii=False)
+
+
 def _audit(action: str, args: dict, result: dict, ok: bool) -> None:
     try:
         db.execute(
             "INSERT INTO ai_audit (action, args, result, ok, created_at) VALUES (?,?,?,?,datetime('now','localtime'))",
-            (action, json.dumps(args, ensure_ascii=False)[:4000], json.dumps(result, ensure_ascii=False)[:4000], 1 if ok else 0),
+            (action, _clip_json(args), _clip_json(result), 1 if ok else 0),
         )
     except Exception:
         pass
@@ -163,7 +173,12 @@ def _dispatch(name: str, args: dict) -> dict:
         }}
 
     if name == "list_comments":
-        status = str(args.get("status") or "pending")
+        # 带邮箱/昵称/文章等具体条件时，用户意图是「找某人的评论」而非看待审列表，
+        # 默认查全部状态（否则全是已通过的评论会被 pending 默认值滤成空，看起来像失效）
+        has_filter = bool(str(args.get("email") or "").strip()
+                          or str(args.get("author") or "").strip()
+                          or args.get("post_id"))
+        status = str(args.get("status") or ("all" if has_filter else "pending"))
         limit = _limit(args.get("limit"), 10)
         where: list[str] = []
         params: list = []

@@ -14,7 +14,7 @@ DEFAULTS: dict = {
     "providers": [],
     "active": "",
     "temperature": 0.4,
-    "max_tokens": 4096,
+    "max_tokens": 8192,
     "timeout": 60,
     "system_prompt": (
         "你是这个博客后台的 AI 助手，只能用简体中文思考和回复。\n\n"
@@ -69,7 +69,7 @@ DEFAULTS: dict = {
         "- 最新 10 篇文章 -> list_posts {limit:10}\n"
         "- 第 75 篇文章写了什么 -> get_post {id:75}\n"
         "- 看待审核评论 -> list_comments {status:pending}\n"
-        "- xxx@qq.com 的所有评论 -> list_comments {email:xxx@qq.com, limit:50}\n"
+        "- xxx@qq.com 的所有评论 -> list_comments {email:xxx@qq.com, limit:50, status:all}\n"
         "- 改第 75 篇开头 -> 先 get_post 拿全文，再用 update_post 提交完整正文\n"
         "- 写一篇关于 X 的文章，分类选技术 -> 先 list_categories，再 create_post {title, content, category:技术}\n"
         "- 新建一个叫 X 的分类 -> create_category {name:X}\n"
@@ -142,13 +142,21 @@ def get() -> dict:
     saved_prompt = str(saved.get("system_prompt") or "")
     if not saved_prompt or saved_prompt.startswith("你是这个 Flask 博客的后台 AI 助手"):
         data["system_prompt"] = DEFAULTS["system_prompt"]
+    else:
+        # 旧示例不带 status 时 list_comments 只查待审核，导致「列出某邮箱所有评论」查空；
+        # 已保存的自定义 prompt 只做这一处精确替换，其余内容不动
+        data["system_prompt"] = saved_prompt.replace(
+            "list_comments {email:xxx@qq.com, limit:50}",
+            "list_comments {email:xxx@qq.com, limit:50, status:all}",
+        )
 
-    # 旧版本默认 1200 对长文章不够，升级到 4096
+    # 旧版默认 1200 对长文章不够，升级到 8192：
+    # 实测 4096 时重构一篇 3750 字的文章，update_post 的 JSON 会被截断导致解析失败
     try:
-        if int(data.get("max_tokens") or 0) < 3000:
-            data["max_tokens"] = 4096
+        if int(data.get("max_tokens") or 0) < 8000:
+            data["max_tokens"] = 8192
     except (TypeError, ValueError):
-        data["max_tokens"] = 4096
+        data["max_tokens"] = 8192
 
     data["providers"] = providers
     active = str(data.get("active") or "")

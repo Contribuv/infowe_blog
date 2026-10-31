@@ -17,9 +17,12 @@
   overflow-wrap: anywhere;
 }
 /* 留存表格布局：长文本列（内容/参数/结果）限宽换行 + 折叠，
-   其余列一律单行不换行，保证一排放下不挤到换行 */
+   其余列一律单行不换行，保证一排放下不挤到换行。
+   注意：table-layout:auto 下仅 max-width 对 td 不是硬约束，会被内容撑破，
+   必须 width + max-width 一起写才真正限得住 */
 .retention-table th, .retention-table td { white-space: nowrap; }
 .retention-table .wrap-cell {
+  width: 260px;
   max-width: 260px;
   white-space: normal; overflow-wrap: anywhere; word-break: break-word;
 }
@@ -86,20 +89,21 @@
                     {% elif active == 'ai' %}
                     <td data-label="ID">{{ r.id }}</td>
                     <td data-label="动作"><span class="badge" title="{{ r.action }}">{{ r.action_label }}</span></td>
-                    {# 参数/结果：JSON 解析后折叠展示，摘要一行、展开看缩进全文；解析失败的脏数据直出 #}
+                    {# 参数/结果：JSON 解析后折叠展示，摘要一行、展开看缩进全文；
+                       历史截断的非法 JSON 也走折叠（summary/fmt 由路由兜底），绝不直出长串 #}
                     <td class="main-td wrap-cell" data-label="参数">
-                        {% if r.args_fmt %}
+                        {% if r.args_summary %}
                         <details class="comment-details">
                             <summary title="点击展开或收起">{{ r.args_summary }}<span class="comment-toggle" aria-hidden="true"></span></summary>
-                            <div class="comment-full"><pre class="json-pre">{{ r.args_fmt }}</pre></div>
+                            <div class="comment-full"><pre class="json-pre">{{ r.args_fmt or r.args }}</pre></div>
                         </details>
                         {% else %}{{ r.args or '—' }}{% endif %}
                     </td>
                     <td class="wrap-cell" data-label="结果">
-                        {% if r.result_fmt %}
+                        {% if r.result_summary %}
                         <details class="comment-details">
                             <summary title="点击展开或收起">{{ r.result_summary }}<span class="comment-toggle" aria-hidden="true"></span></summary>
-                            <div class="comment-full"><pre class="json-pre">{{ r.result_fmt }}</pre></div>
+                            <div class="comment-full"><pre class="json-pre">{{ r.result_fmt or r.result }}</pre></div>
                         </details>
                         {% else %}{{ r.result or '—' }}{% endif %}
                     </td>
