@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.35-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.35)
+[![version](https://img.shields.io/badge/version-3.4.36-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.36)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -56,7 +56,7 @@
 - 分类 / 标签 / 项目 / 友链 / 时间线 / 评论：增删改查与批量操作
 - 留存审计（插件）：后台操作记录、AI 审核记录、评论留存，日期/关键词筛选与 CSV 导出
 - AI 助手：机器人昵称/头像自定义、评论 AI 审核、通过后 AI 回复，审核记录与徽章
-- 邮件通知：评论/回复/AI 回复/友链申请 HTML 通知邮件（Outlook 兼容，正文不出站）
+- 邮件通知：评论/回复/AI 回复/友链申请 HTML 通知邮件（Outlook 兼容，正文展示真实内容，敏感词除外）
 - 上传：图片 / 媒体 / 附件，白名单与大小限制，水印
 - 孤儿文件清理：扫描未被引用的上传文件
 - 主题切换
@@ -918,16 +918,22 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.35**
+当前版本：**v3.4.36**
+
+### v3.4.36
+
+- 通知邮件正文真实化：撤销 v3.4.34 的「评论正文不出站」占位设计——新评论、回复、AI 回复通知邮件正文均展示真实内容（此前一律显示占位文案「评论原文内容保持不变」，收件人看不到任何实际内容，通知失去意义）；仅命中敏感词或已拒绝的评论仍只显示「【不当言语】请后台审核」，防止恶意内容随官方邮件外发
+- 评论作者行样式修复：徽章（博主 / AI 助手 / 私密 / 待审核）圆角由 20px 胶囊改为 8px 方圆角，与主题标签（tech-tag）一致；行高与内距收紧，与昵称、时间的基线对齐更整齐，内嵌与浮窗评论共用同套 CSS 同步生效
+- 留存审计页布局修复（`plugins/retention`）：评论留存 / 操作留存 tab 的长内容列（IPv6 地址、归属地、长 URL、长文本）新增可换行压缩类（`wrap-text`），修复全列强制单行导致的整表超宽横向溢出；移动端卡片视图的数据标签与表头统一
+
+<details>
+<summary><b>历史版本（v3.4.35 及更早）</b></summary>
 
 ### v3.4.35
 
 - AI 助手修复：`list_comments` 带邮箱/昵称/文章 ID 等具体条件时默认查全部状态评论（此前默认只看待审，全是已通过评论的用户查出来是空，看起来像指令失效）；`max_tokens` 默认 4096→8192，长文重构不再因输出上限打满导致 JSON 截断失败；模型输出被截断时返回明确兜底提示而非残缺结果；system_prompt 内置指令迁移为带 `status:all` 的新写法
 - 留存审计页修复（`plugins/retention`）：AI 审计「参数/结果」长 JSON 改为「一行摘要 + 点击展开全文」折叠展示，非法 JSON（历史超长截断残片）同样折叠不再直出；配合 `.wrap-cell` 补 `width` 硬约束（`table-layout:auto` 下仅 `max-width` 会被内容撑破），修复超长内容把卡片/表格撑爆、整页排版溢出的问题
 - AI 审计源头修复：审计写入超长 JSON 时改存带截断标记的合法 JSON（此前硬截断产生尾部不闭合的非法残片，是留存页排版爆炸的根源）
-
-<details>
-<summary><b>历史版本（v3.4.34 及更早）</b></summary>
 
 ### v3.4.34
 

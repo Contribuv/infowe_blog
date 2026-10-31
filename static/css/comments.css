@@ -85,7 +85,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-loc{font-size:11px;color:var(--c-text3);font-style:normal}
 /* 属地加显式前缀：裸地名易被误读为第二个时间或正文，与微博/知乎口径一致 */
 .cmt-loc::before{content:"· IP属地："}
-.cmt-badge{font-size:10.5px;line-height:1.6;padding:0 7px;border-radius:20px;font-weight:500;border:1px solid transparent}
+/* 徽章与主题标签（tech-tag）同款方圆角，行高贴近同行小字，整排视觉更齐 */
+.cmt-badge{font-size:10.5px;line-height:1.4;padding:1px 7px;border-radius:8px;font-weight:500;border:1px solid transparent}
 .cmt-badge--author{background:var(--c-accent-weak);color:var(--c-accent)}
 .cmt-badge--private{background:rgba(224,179,62,.16);color:#9a6700}
 .cmt-badge--pending{background:var(--c-reply);color:var(--c-text3);border-color:var(--c-border);border-style:dashed}

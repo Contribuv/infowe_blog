@@ -20,19 +20,18 @@ from services import mail_template, settings, site_url
 
 _SMTP_PORTS = {25: False, 465: True, 587: False, 994: True}
 
-# 评论内容不出站：邮件里的评论/回复正文一律不外发原文，只放占位提示。
-# 命中屏蔽词或已被拒绝 → 不当提示；其余 → 原文占位（原文只留在站内后台查看）。
-_PLACEHOLDER_NORMAL = "评论原文内容保持不变"
+# 邮件里的评论/回复正文展示真实内容（否则通知邮件失去意义）；
+# 仅命中屏蔽词或已被拒绝的评论不外发原文，只提示到后台查看。
 _PLACEHOLDER_BAD = "【不当言语】请后台审核"
 
 
-def _mail_placeholder(content: str, status: str = "") -> str:
-    """生成邮件中展示的评论正文占位文案。"""
+def _mail_content(content: str, status: str = "") -> str:
+    """生成邮件中展示的评论正文：正常内容原样展示，敏感/拒绝内容只放提示。"""
     from services import sensitive
 
     if (status or "").strip().lower() == "rejected" or sensitive.has(content or ""):
         return _PLACEHOLDER_BAD
-    return _PLACEHOLDER_NORMAL
+    return content or ""
 
 
 def send(
@@ -190,9 +189,8 @@ def notify_comment(
         )
         if parent:
             parent_author = str(parent["author"] or "")
-            # 博主提醒邮件里要展示被回复的原评论，否则气泡只能写「原评论」占位；
-            # 原文不出站，只放占位文案
-            parent_content = _mail_placeholder(str(parent["content"] or ""), str(parent["status"] or ""))
+            # 博主提醒邮件里要展示被回复的原评论，与回复正文同一套外发规则
+            parent_content = _mail_content(str(parent["content"] or ""), str(parent["status"] or ""))
             reply_email = str(parent["email"] or "").strip()
             reply_private = bool(int(parent["is_private"] or 0))
             # 被回复者提交时取消了「邮箱通知」→ 不再发回复邮件（旧数据默认 1）
@@ -223,7 +221,7 @@ def notify_comment(
             title=title,
             url=url,
             author=author,
-            content=_mail_placeholder(content, status),
+            content=_mail_content(content, status),
             when=when,
             status=status,
             parent_author=parent_author,
@@ -253,7 +251,7 @@ def notify_comment(
                 title=title,
                 url=url,
                 author=author,
-                content=_mail_placeholder(content, status),
+                content=_mail_content(content, status),
                 when=when,
                 parent_author=parent_author,
                 parent_content=parent_content,
@@ -326,10 +324,10 @@ def notify_approved_reply(comment_id: int) -> None:
         title=title,
         url=_detail_url(detail_path, int(comment_id)),
         author=str(comment.get("author") or ""),
-        content=_mail_placeholder(str(comment.get("content") or ""), "approved"),
+        content=_mail_content(str(comment.get("content") or ""), "approved"),
         when=str(comment.get("created_at") or ""),
         parent_author=str(parent.get("author") or ""),
-        parent_content=_mail_placeholder(
+        parent_content=_mail_content(
             str(parent.get("content") or ""), str(parent.get("status") or "")
         ),
         author_avatar=author_avatar,

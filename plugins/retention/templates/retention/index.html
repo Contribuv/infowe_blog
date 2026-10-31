@@ -21,6 +21,13 @@
    注意：table-layout:auto 下仅 max-width 对 td 不是硬约束，会被内容撑破，
    必须 width + max-width 一起写才真正限得住 */
 .retention-table th, .retention-table td { white-space: nowrap; }
+/* 可压缩列（邮箱/主页/IP/归属地/详情等）：不设固定宽度，交给 table-layout:auto
+   分配——内容短则单行，内容长（IPv6、长 URL）则换行压缩，避免整表超宽横向溢出 */
+.retention-table td.wrap-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .retention-table .wrap-cell {
   width: 260px;
   max-width: 260px;
@@ -81,8 +88,8 @@
                     {% if active == 'ops' %}
                     <td data-label="ID">{{ r.id }}</td>
                     <td data-label="操作"><span class="badge" title="{{ r.action }}">{{ r.action_label }}</span></td>
-                    <td class="main-td" data-label="对象">{{ r.target or '—' }}</td>
-                    <td data-label="详情">{{ r.detail or '—' }}</td>
+                    <td class="main-td wrap-text" data-label="对象">{{ r.target or '—' }}</td>
+                    <td class="wrap-text" data-label="详情">{{ r.detail or '—' }}</td>
                     <td data-label="操作人">{{ r.operator or '—' }}</td>
                     <td data-label="IP">{{ r.ip or '—' }}</td>
                     <td data-label="时间">{{ r.created_at[:16] }}</td>
@@ -118,13 +125,13 @@
                         {% else %}<span class="badge badge-danger">已拒绝</span>{% endif %}
                         {% if r.deleted_at %}<span class="badge badge-private">已删除</span>{% endif %}
                     </td>
-                    <td data-label="邮箱">{{ r.email or '—' }}</td>
-                    <td data-label="主页">
+                    <td class="wrap-text" data-label="邮箱">{{ r.email or '—' }}</td>
+                    <td class="wrap-text" data-label="主页">
                         {% if r.website %}<a href="{{ r.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ r.website[:30] }}</a>
                         {% else %}<span class="cell-muted">—</span>{% endif %}
                     </td>
-                    <td data-label="IP">{{ r.ip_text or '—' }}</td>
-                    <td data-label="归属地">{{ r.ip_location or '—' }}</td>
+                    <td class="wrap-text" data-label="IP">{{ r.ip_text or '—' }}</td>
+                    <td class="wrap-text" data-label="归属地">{{ r.ip_location or '—' }}</td>
                     <td class="wrap-cell" data-label="内容">
                         {% if r.content|length > 80 %}
                         <details class="comment-details">
@@ -135,7 +142,7 @@
                     </td>
                     <td data-label="状态">{{ status_labels.get(r.status, r.status) }}</td>
                     <td data-label="删除时间">{{ (r.deleted_at or '')[:16] or '—' }}</td>
-                    <td data-label="时间">{{ r.created_at[:16] }}</td>
+                    <td data-label="评论时间">{{ r.created_at[:16] }}</td>
                     {% endif %}
                 </tr>
                 {% endfor %}

@@ -317,12 +317,12 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                         comment_notify = str(settings.get_str("comment_notify", "0") or "0").lower()
                         if comment_notify in {"1", "on", "true", "yes"}:
                             parent_email = str(comment.get("email") or "").strip()
-                            # QQ 邮箱同样放行：正文已改为占位文案不出站，邮件只剩通知+链接，无反垃圾风险
+                            # QQ 邮箱同样放行
                             if parent_email and "@" in parent_email:
                                 post = Post.get(int(comment.get("post_id") or 0))
                                 title = str((post or {}).get("title") or "")
                                 link = site_url.post_url(post) if post else site_url.base()
-                                # 与全站评论通知规范一致：回复正文不出站，只放占位文案+链接
+                                # 与全站评论通知规范一致：邮件展示真实回复正文
                                 reply_text, reply_page = mail_template.reply_notice(
                                     blog_name=settings.get_str("blog_name", "博客"),
                                     site=site_url.base(),
@@ -330,7 +330,7 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                                     title=title,
                                     url=f"{link}#comment-{new_id}",
                                     author=mail_template.blogger_name(),
-                                    content=notify._mail_placeholder(reply),
+                                    content=notify._mail_content(reply),
                                     when=datetime.now().strftime("%Y-%m-%d %H:%M"),
                                     parent_author=str(comment.get("author") or "访客"),
                                 )
