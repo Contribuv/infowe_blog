@@ -9,7 +9,10 @@ _registry: dict[str, list[Callable[..., Any]]] = defaultdict(list)
 
 
 def on(name: str, func: Callable[..., Any]) -> Callable[..., Any]:
-    _registry[name].append(func)
+    bucket = _registry[name]
+    # 去重：插件停用后重新启用会再次订阅，避免同一回调重复执行
+    if not any(item is func for item in bucket):
+        bucket.append(func)
     return func
 
 

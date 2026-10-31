@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.4.36-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.4.36)
+[![version](https://img.shields.io/badge/version-3.5.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -38,7 +38,7 @@
 | 文章状态 | `published` / `draft` / `hidden`（隐藏文章仅 URL 可直达） |
 | 浏览 | 全文搜索、标签聚合、年份归档、分页 |
 | 订阅 | `/feed.xml` RSS |
-| 评论 | 嵌套回复、审核、私密评论、图片、敏感词、IP 归属地、分页、内嵌/浮窗双模式、草稿自动保存、跨页锚点直达 |
+| 评论 | 嵌套回复、审核、私密评论、图片、敏感词、IP 归属地、UA 设备标识、新朋友/回头客/常客标签、分页、内嵌/浮窗双模式、草稿自动保存、跨页锚点直达 |
 | 项目 | GitHub/Gitee 同步、语言占比、README 渲染与图片本地化、项目评论 |
 | 友链 | 申请、审核、本站信息卡片 |
 | 关于 | 简介、技能、时间线 |
@@ -54,6 +54,7 @@
 - 文章：新建、编辑、预览、删除、批量发布/草稿/隐藏
 - 回收站：文章软删除，恢复、彻底删除、批量与一键清空
 - 分类 / 标签 / 项目 / 友链 / 时间线 / 评论：增删改查与批量操作
+- 插件：AI 助手、留存审计内置，后台启用/停用即时生效，无需重启
 - 留存审计（插件）：后台操作记录、AI 审核记录、评论留存，日期/关键词筛选与 CSV 导出
 - AI 助手：机器人昵称/头像自定义、评论 AI 审核、通过后 AI 回复，审核记录与徽章
 - 邮件通知：评论/回复/AI 回复/友链申请 HTML 通知邮件（Outlook 兼容，正文展示真实内容，敏感词除外）
@@ -918,16 +919,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.4.36**
+当前版本：**v3.5.0**
+
+### v3.5.0
+
+- 插件启停即时生效：后台启用/停用插件不再需要重启服务。启动时统一注册插件路由，未启用时由守卫直接返回 404；启用时执行建表、启动定时任务并订阅 hooks，停用立即失效。修复更新或新装博客后启用插件、访问插件页面一律 404 的问题
+- 插件契约调整：`register(app)` 只注册路由，新增可选 `on_enable(app)` 承担建表/定时任务/hooks；旧插件保持兼容；`hooks.on()` 去重，反复启停不会重复执行回调；插件静态资源也随启用状态开关
+- 评论者标签：新增「新朋友 / 回头客 / 常客」三档（1 次 / 2–4 次 / 5 次及以上），按邮箱哈希统计全站已通过评论数；博主与 AI 不参与，楼中楼只保留博主/AI 等身份标识
+- 评论 UA 展示：评论提交时记录 User-Agent，前台显示「Chrome · Windows」设备标签（悬停可看完整 UA）；后台评论管理与留存审计的操作记录、评论留存同步显示，CSV 导出也带上设备列
+- 评论样式：标签改为长方形小圆角（3px），低饱和淡底 + 同色描边，昵称统一正文色；标签中心与昵称、时间基线对齐
+- 数据库：新增 `comments.user_agent`、`op_logs.user_agent`，启动时自动升级并备份
+
+<details>
+<summary><b>历史版本（v3.4.36 及更早）</b></summary>
 
 ### v3.4.36
 
 - 通知邮件正文真实化：撤销 v3.4.34 的「评论正文不出站」占位设计——新评论、回复、AI 回复通知邮件正文均展示真实内容（此前一律显示占位文案「评论原文内容保持不变」，收件人看不到任何实际内容，通知失去意义）；仅命中敏感词或已拒绝的评论仍只显示「【不当言语】请后台审核」，防止恶意内容随官方邮件外发
 - 评论作者行样式修复：徽章（博主 / AI 助手 / 私密 / 待审核）圆角由 20px 胶囊改为 8px 方圆角，与主题标签（tech-tag）一致；行高与内距收紧，与昵称、时间的基线对齐更整齐，内嵌与浮窗评论共用同套 CSS 同步生效
 - 留存审计页布局修复（`plugins/retention`）：评论留存 / 操作留存 tab 的长内容列（IPv6 地址、归属地、长 URL、长文本）新增可换行压缩类（`wrap-text`），修复全列强制单行导致的整表超宽横向溢出；移动端卡片视图的数据标签与表头统一
-
-<details>
-<summary><b>历史版本（v3.4.35 及更早）</b></summary>
 
 ### v3.4.35
 

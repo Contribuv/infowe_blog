@@ -165,7 +165,7 @@ def create_app(test_config: dict | None = None) -> Flask:
     _register_hooks(app)
     _register_cli(app)
     with app.app_context():
-        plugins_service.load_enabled(app)
+        plugins_service.load_all(app)
     if not app.config.get("TESTING"):
         _start_status_scheduler(app)
         from services import feeds as feeds_service

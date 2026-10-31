@@ -10,6 +10,11 @@ from models.base import row_to_dict
 
 ADMIN_PAGE_SIZE = 20
 
+# 评论者资历档位：第 1 次=新朋友，2-4 次=回头客，5 次及以上=常客。
+# 阈值集中在这里，想调档直接改常量。
+LEVEL_RETURNING_FROM = 2
+LEVEL_REGULAR_FROM = 5
+
 
 def load(
     post_id: int | None = None,
@@ -24,7 +29,7 @@ def load(
     返回 (顶层评论, 评论总数, 分页信息)。per_page > 0 时按顶层评论分页，
     楼中楼回复始终跟随所属根评论一起展示。
     """
-    from services import avatar, comments as comments_service, settings
+    from services import avatar, comments as comments_service, settings, ua
 
     column = "project_id" if project_id is not None else "post_id"
     value = project_id if project_id is not None else post_id
@@ -43,6 +48,17 @@ def load(
             params = [*params, *ids, value]
     sql += " ORDER BY created_at ASC, id ASC"
     rows = [dict(r) for r in db.query(sql, params)]
+
+    # 评论者资历：按邮箱哈希（回退昵称）统计全站已通过评论数，
+    # 用于前台展示「新朋友 / 常客」标签；博主与 AI 不参与。
+    author_counts = {
+        str(r["ident"]): int(r["n"])
+        for r in db.query(
+            "SELECT COALESCE(NULLIF(email_hash, ''), author) AS ident, COUNT(*) AS n "
+            "FROM comments WHERE status = 'approved' AND deleted_at IS NULL "
+            "GROUP BY ident"
+        )
+    }
 
     if my_comments and not include_private:
         rows = [
@@ -68,6 +84,17 @@ def load(
         c["children"] = []
         c["is_ai"] = int(c.get("is_ai") or 0)
         c["is_author"] = bool(author_name) and c.get("author") == author_name
+        ident = str(c.get("email_hash") or c.get("author") or "")
+        c["author_comments"] = author_counts.get(ident, 1)
+        c["author_level"] = ""
+        if not c["is_author"] and not c["is_ai"]:
+            if c["author_comments"] < LEVEL_RETURNING_FROM:
+                c["author_level"] = "new"
+            elif c["author_comments"] < LEVEL_REGULAR_FROM:
+                c["author_level"] = "returning"
+            else:
+                c["author_level"] = "regular"
+        c["ua_label"] = ua.describe(str(c.get("user_agent") or ""))
         if c["is_author"]:
             if cfg_avatar and cfg_ok:
                 c["avatar"], c["avatar_fallback"] = cfg_avatar, ""
@@ -202,14 +229,16 @@ def save(
     is_ai: int = 0,
     is_owner: bool = False,
     notify: bool = True,
+    user_agent: str = "",
 ) -> int:
     return db.insert(
         "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, "
-        "website, content, status, is_private, notify, qq, ip_text, ip_location, is_ai, is_owner, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "website, content, status, is_private, notify, qq, ip_text, ip_location, is_ai, is_owner, "
+        "user_agent, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (post_id, project_id, parent_id, author, email, email_hash, website, content,
          status, 1 if is_private else 0, 1 if notify else 0, qq, ip_text, ip_location,
-         1 if is_ai else 0, 1 if is_owner else 0, db.now()),
+         1 if is_ai else 0, 1 if is_owner else 0, str(user_agent or "")[:400], db.now()),
     )
 
 

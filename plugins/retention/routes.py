@@ -17,10 +17,10 @@ PAGE_SIZE = 30
 TABS = {
     "ops": {
         "label": "操作记录",
-        "sql": "SELECT id, action, target, detail, operator, ip, created_at FROM op_logs",
-        "headers": ["ID", "操作", "对象", "详情", "操作人", "IP", "时间"],
+        "sql": "SELECT id, action, target, detail, operator, ip, user_agent, created_at FROM op_logs",
+        "headers": ["ID", "操作", "对象", "详情", "操作人", "IP", "设备/UA", "时间"],
         "time_col": "created_at",
-        "keyword_cols": "action, target, detail, operator, ip",
+        "keyword_cols": "action, target, detail, operator, ip, user_agent",
     },
     "ai": {
         "label": "AI 审计",
@@ -33,13 +33,13 @@ TABS = {
         "label": "评论留存",
         # 不过滤 deleted_at：软删除的评论正是本 tab 的核心价值——正文永久可查
         "sql": (
-            "SELECT id, author, email, website, ip_text, ip_location, content, status, "
+            "SELECT id, author, email, website, ip_text, ip_location, user_agent, content, status, "
             "deleted_at, created_at"
             " FROM comments WHERE is_ai = 0"
         ),
-        "headers": ["ID", "昵称", "邮箱", "主页", "IP", "归属地", "内容", "状态", "删除时间", "评论时间"],
+        "headers": ["ID", "昵称", "邮箱", "主页", "IP", "归属地", "设备/UA", "内容", "状态", "删除时间", "评论时间"],
         "time_col": "created_at",
-        "keyword_cols": "author, email, website, ip_text, content",
+        "keyword_cols": "author, email, website, ip_text, user_agent, content",
     },
 }
 
@@ -201,6 +201,11 @@ def register(app) -> None:
         rows = [dict(r) for r in rows]
         if key == "ai":
             rows = [_fmt_ai_row(r) for r in rows]
+        if key in {"comments", "ops"}:
+            from services import ua
+
+            for r in rows:
+                r["ua_label"] = ua.describe(str(r.get("user_agent") or ""))
         # 动作码转中文展示（未收录的原样显示）
         labels = OPS_LABELS if key == "ops" else AI_ACTION_LABELS if key == "ai" else {}
         for r in rows:

@@ -299,6 +299,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         ip_location.of(ip),
         is_owner=is_admin,
         notify=notify_on,
+        user_agent=request.headers.get("User-Agent", ""),
     )
     _touch_cooldown("comment", ip)
 

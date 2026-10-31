@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS op_logs (
     detail TEXT DEFAULT '',
     operator TEXT DEFAULT '',
     ip TEXT DEFAULT '',
+    user_agent TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_op_logs_time ON op_logs (created_at DESC);

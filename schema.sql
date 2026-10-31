@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS comments (
     ai_meta TEXT DEFAULT '',
     is_owner INTEGER DEFAULT 0,
     is_picked INTEGER DEFAULT 0,
+    user_agent TEXT DEFAULT '',
     deleted_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );

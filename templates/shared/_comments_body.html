@@ -19,18 +19,22 @@
         {% else %}
         {% set av_inner %}{{ c.author[0] | upper }}{% endset %}
         {% endif %}
-        {% if c.website %}<a class="cmt-avatar-link" href="{{ c.website }}" target="_blank" rel="noopener nofollow" title="{{ c.website }}"><div class="cmt-avatar">{{ av_inner }}</div></a>
-        {% else %}<div class="cmt-avatar">{{ av_inner }}</div>{% endif %}
+        {% if c.website %}<a class="cmt-avatar-link" href="{{ c.website }}" target="_blank" rel="noopener nofollow" title="{{ c.website }}"><div class="cmt-avatar{% if c.is_author %} cmt-avatar--owner{% endif %}">{{ av_inner }}</div></a>
+        {% else %}<div class="cmt-avatar{% if c.is_author %} cmt-avatar--owner{% endif %}">{{ av_inner }}</div>{% endif %}
         <div class="cmt-main">
             <header class="cmt-head">
-                {% if c.website %}<a class="cmt-author" href="{{ c.website }}" target="_blank" rel="noopener nofollow" title="{{ c.website }}">{{ c.author }}</a>
-                {% else %}<span class="cmt-author">{{ c.author }}</span>{% endif %}
+                {% if c.website %}<a class="cmt-author{% if c.is_author %} cmt-author--owner{% elif lv == 'root' and c.author_level %} cmt-author--{{ c.author_level }}{% endif %}" href="{{ c.website }}" target="_blank" rel="noopener nofollow" title="{{ c.website }}">{{ c.author }}</a>
+                {% else %}<span class="cmt-author{% if c.is_author %} cmt-author--owner{% elif lv == 'root' and c.author_level %} cmt-author--{{ c.author_level }}{% endif %}">{{ c.author }}</span>{% endif %}
                 {% if c.is_author %}<span class="cmt-badge cmt-badge--author">博主</span>{% endif %}
+                {# 资历标签只在根评论展示，楼中楼保留博主/AI 等身份标识即可 #}
+                {% if lv == 'root' and c.author_level == 'new' %}<span class="cmt-badge cmt-badge--new">新朋友</span>{% endif %}
+                {% if lv == 'root' and c.author_level == 'returning' %}<span class="cmt-badge cmt-badge--returning">回头客</span>{% endif %}
+                {% if lv == 'root' and c.author_level == 'regular' %}<span class="cmt-badge cmt-badge--regular">常客</span>{% endif %}
                 {% if c.is_ai %}<span class="cmt-badge cmt-badge--ai">AI 助手</span>{% endif %}
                 {% if c.is_private %}<span class="cmt-badge cmt-badge--private">私密</span>{% endif %}
                 {% if c.status == 'pending' %}<span class="cmt-badge cmt-badge--pending">待审核</span>{% endif %}
                 {% if reply_to %}<a class="cmt-at" href="#comment-{{ c.parent_id }}">@{{ reply_to }}</a>{% endif %}
-                <time class="cmt-time">{{ c.created_at [:16] }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}
+                <time class="cmt-time">{{ c.created_at [:16] }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}{% if c.ua_label %}<span class="cmt-ua" title="{{ c.user_agent }}">{{ c.ua_label }}</span>{% endif %}
             </header>
             <p class="cmt-text">{{ c.content_html | safe }}</p>
             <footer class="cmt-actions">

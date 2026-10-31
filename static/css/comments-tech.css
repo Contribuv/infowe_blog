@@ -95,14 +95,23 @@
 .cmt-author{font-size:13.5px;font-weight:600;color:var(--c-text)}
 a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (hover:hover) and (pointer:fine){ a.cmt-author:hover{color:var(--c-accent)} }
+/* 昵称统一正文色：身份差异全部交给标签颜色表达，避免昵称也跟着花 */
+.cmt-avatar--owner{--av-bg:linear-gradient(135deg,#f2b544,#e08a2e);--av-color:#fff}
+/* 设备信息跟在 IP 属地后，同为 11px 弱化小字，与时间/属地用间隔点分隔 */
+.cmt-ua{font-size:11px;color:var(--c-text3);font-style:normal}
+.cmt-ua::before{content:"·";margin-right:4px}
 /* 元信息（时间/属地）跟在昵称与徽章之后同排：与身份组多留 6px，弱化成 11px 小字 */
 .cmt-time{margin-left:6px;font-size:11px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-loc{font-size:11px;color:var(--c-text3);font-style:normal}
 /* 属地加显式前缀：裸地名易被误读为第二个时间或正文，与微博/知乎口径一致 */
 .cmt-loc::before{content:"· IP属地："}
 /* 徽章与主题标签（tech-tag）同款方圆角，行高贴近同行小字，整排视觉更齐 */
-.cmt-badge{font-size:10.5px;line-height:1.4;padding:1px 7px;border-radius:8px;font-weight:500;border:1px solid transparent}
-.cmt-badge--author{background:var(--c-accent-weak);color:var(--c-accent)}
+.cmt-badge{font-size:11px;line-height:1;padding:0 7px;height:17px;box-sizing:border-box;display:inline-flex;align-items:center;border-radius:3px;font-weight:500;border:1px solid transparent;position:relative;top:-1px}
+/* 标签用低饱和淡底 + 同色描边，三种身份仍可区分但不抢正文 */
+.cmt-badge--new{background:rgba(63,174,124,.11);color:#83c5a5;border-color:rgba(63,174,124,.20)}
+.cmt-badge--regular{background:rgba(139,111,224,.11);color:#a99ce2;border-color:rgba(139,111,224,.20)}
+.cmt-badge--returning{background:rgba(212,163,115,.11);color:#d4b08a;border-color:rgba(212,163,115,.20)}
+.cmt-badge--author{background:rgba(107,156,245,.11);color:#8fb0e8;border-color:rgba(107,156,245,.20)}
 .cmt-badge--private{background:rgba(224,179,62,.16);color:var(--warning,#8a5a00)}
 .cmt-badge--pending{background:var(--c-reply);color:var(--c-text3);border-color:var(--c-border);border-style:dashed}
 .cmt-text{margin-top:9px;font-size:14px;line-height:1.75;color:var(--c-text2);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -343,4 +352,4 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 }
 
 /* AI 助手回复标识 */
-.cmt-badge--ai{background:var(--c-accent-weak,#e7eff7);color:var(--c-accent,#1c5b8f);border:1px solid color-mix(in srgb,var(--c-accent,#1c5b8f) 25%,transparent)}
+.cmt-badge--ai{background:rgba(90,150,190,.11);color:#8fb8d0;border-color:rgba(90,150,190,.20)}

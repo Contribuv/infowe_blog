@@ -93,7 +93,8 @@
                     <td data-label="来源">
                         {% if c.ip_location %}<span class="badge">{{ c.ip_location }}</span>{% endif %}
                         {% if c.ip_text %}<div class="cell-sub">{{ c.ip_text }}</div>{% endif %}
-                        {% if not c.ip_location and not c.ip_text %}<span class="cell-muted">—</span>{% endif %}
+                        {% if c.user_agent %}<div class="cell-sub" title="{{ c.user_agent }}">{{ c.ua_label or c.user_agent }}</div>{% endif %}
+                        {% if not c.ip_location and not c.ip_text and not c.user_agent %}<span class="cell-muted">—</span>{% endif %}
                     </td>
                     <td data-label="时间">{{ c.created_at [:16] }}</td>
                     <td class="actions-cell" data-label="操作">

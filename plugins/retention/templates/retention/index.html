@@ -92,6 +92,7 @@
                     <td class="wrap-text" data-label="详情">{{ r.detail or '—' }}</td>
                     <td data-label="操作人">{{ r.operator or '—' }}</td>
                     <td data-label="IP">{{ r.ip or '—' }}</td>
+                    <td class="wrap-text" data-label="设备/UA" title="{{ r.user_agent }}">{{ r.ua_label or r.user_agent or '—' }}</td>
                     <td data-label="时间">{{ r.created_at[:16] }}</td>
                     {% elif active == 'ai' %}
                     <td data-label="ID">{{ r.id }}</td>
@@ -132,6 +133,7 @@
                     </td>
                     <td class="wrap-text" data-label="IP">{{ r.ip_text or '—' }}</td>
                     <td class="wrap-text" data-label="归属地">{{ r.ip_location or '—' }}</td>
+                    <td class="wrap-text" data-label="设备/UA" title="{{ r.user_agent }}">{{ r.ua_label or r.user_agent or '—' }}</td>
                     <td class="wrap-cell" data-label="内容">
                         {% if r.content|length > 80 %}
                         <details class="comment-details">

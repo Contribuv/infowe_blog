@@ -10,13 +10,13 @@ from datetime import datetime
 from pathlib import Path
 
 from flask import (
-    abort, flash, jsonify, redirect, render_template, request, send_file, session, url_for,
+    abort, current_app, flash, jsonify, redirect, render_template, request, send_file, session, url_for,
 )
 
 import db
 from config import BACKUPS_DIR, DATA_DIR, UPLOADS_DIR, VERSION, ADMIN_PATH_RESERVED, NAV_PAGES
 from models import Category, Comment, Link, Post, Project, Timeline, User
-from services import auth, avatar, backup, github, hooks, lang, markdown, notify, otp, project_sync
+from services import auth, avatar, backup, github, hooks, lang, markdown, notify, otp, project_sync, ua
 from services import settings, status, theme, upload
 
 LOGIN = auth.admin_required
@@ -543,6 +543,7 @@ def admin_comments():
     cfg_ok = avatar.configured_avatar_exists()
     default_url = avatar.default_url()
     for item in items:
+        item["ua_label"] = ua.describe(str(item.get("user_agent") or ""))
         # AI 评论头像与前台一致：优先用 AI 设置的头像，未设置则用 AI 默认头像
         if int(item.get("is_ai") or 0):
             ai_avatar = str(item.get("ai_avatar") or "")
@@ -801,8 +802,18 @@ def admin_plugin_toggle():
     key = (request.form.get("key") or "").strip()
     item = plugins_service.get(key)
     if item:
-        plugins_service.set_enabled(key, not item["enabled"])
-        flash("插件已启用，重启服务后生效" if not item["enabled"] else "插件已停用，重启服务后生效", "success")
+        enabling = not item["enabled"]
+        plugins_service.set_enabled(key, enabling)
+        try:
+            if enabling:
+                plugins_service.activate(current_app, key)
+            else:
+                plugins_service.deactivate(current_app, key)
+        except Exception:  # noqa: BLE001
+            current_app.logger.exception("plugin %s toggle failed", key)
+            flash("插件状态已保存，但运行时加载失败，请查看服务日志", "error")
+        else:
+            flash("插件已启用，已即时生效" if enabling else "插件已停用，已即时生效", "success")
     return redirect(url_for("admin_plugins"))
 
 

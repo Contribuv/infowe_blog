@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import importlib
 import json
+from functools import wraps
 from pathlib import Path
+
+from flask import abort
 
 import db
 from config import PLUGINS_DIR
@@ -116,18 +119,122 @@ def save_config(key: str, data: dict) -> None:
     )
 
 
-def load_enabled(app) -> None:
-    """调用启用插件的 register(app)。插件异常只记录，不影响主站启动。"""
+def _entry(manifest: dict) -> tuple[str, str] | None:
+    entry = str((manifest or {}).get("entry") or "").strip()
+    if ":" not in entry:
+        return None
+    module_name, func_name = entry.split(":", 1)
+    module_name, func_name = module_name.strip(), func_name.strip()
+    if not module_name or not func_name:
+        return None
+    return module_name, func_name
+
+
+def _load_module(manifest: dict):
+    parsed = _entry(manifest)
+    if parsed is None:
+        return None, None
+    return importlib.import_module(parsed[0]), parsed[1]
+
+
+def _guard_endpoints(app, key: str, endpoints: set[str]) -> None:
+    """给插件路由包一层启用校验：停用后请求直接 404，无需重启。"""
+    for endpoint in endpoints:
+        view = app.view_functions.get(endpoint)
+        if view is None or getattr(view, "__plugin_guard_key__", None) == key:
+            continue
+
+        @wraps(view)
+        def guarded(*args, _view=view, _key=key, **kwargs):
+            if not enabled(_key):
+                abort(404)
+            return _view(*args, **kwargs)
+
+        guarded.__plugin_guard_key__ = key
+        app.view_functions[endpoint] = guarded
+
+
+def _register_routes(app, register_func) -> set[str]:
+    before = set(app.view_functions)
+    register_func(app)
+    return set(app.view_functions) - before
+
+
+# 旧契约插件（没有 on_enable）的路由只能注册一次，避免重复启用时 endpoint 冲突
+def _legacy_registered(app) -> set[str]:
+    return app.extensions.setdefault("plugin_legacy_registered", set())
+
+
+def load_all(app) -> None:
+    """加载所有已安装插件。
+
+    新契约：插件模块的 ``register(app)`` 只注册路由，``on_enable(app)`` 承担
+    建表、启动定时任务、订阅 hooks 等只在启用时需要执行的副作用。
+
+    - ``register`` 始终调用，因此后台启用后无需重启即可访问；
+    - 未启用插件的路由由 ``_guard_endpoints`` 拦截为 404；
+    - 兼容旧插件：没有 ``on_enable`` 的模块维持原行为（仅启用时完整加载）。
+    """
     for item in all_rows():
-        if not item["enabled"] or not item["installed"]:
+        if not item["installed"]:
             continue
+        key = str(item["key"])
         manifest = item["manifest"]
-        entry = str(manifest.get("entry") or "")
-        if ":" not in entry:
-            continue
-        module_name, func_name = entry.split(":", 1)
         try:
-            module = importlib.import_module(module_name)
-            getattr(module, func_name)(app)
+            module, func_name = _load_module(manifest)
+            if module is None:
+                continue
+            register_func = getattr(module, func_name)
+            on_enable = getattr(module, "on_enable", None)
+            if on_enable is None:
+                # 旧契约：register 同时负责副作用，只能在启用时整体加载
+                legacy = _legacy_registered(app)
+                if item["enabled"] and key not in legacy:
+                    register_func(app)
+                    legacy.add(key)
+                continue
+            _guard_endpoints(app, key, _register_routes(app, register_func))
+            if item["enabled"]:
+                on_enable(app)
         except Exception:  # noqa: BLE001
-            app.logger.exception("plugin %s failed to load", item["key"])
+            app.logger.exception("plugin %s failed to load", key)
+
+
+def load_enabled(app) -> None:
+    """向后兼容别名，等同 :func:`load_all`。"""
+    load_all(app)
+
+
+def activate(app, key: str) -> None:
+    """运行时启用插件：执行 on_enable，路由已在启动时注册，无需重启。"""
+    item = get(key)
+    if not item or not item["installed"]:
+        return
+    module, func_name = _load_module(item["manifest"])
+    if module is None:
+        return
+    on_enable = getattr(module, "on_enable", None)
+    if on_enable is not None:
+        on_enable(app)
+        return
+    # 旧插件：没有 on_enable，尝试运行时补注册路由（仅首次）
+    legacy = _legacy_registered(app)
+    if key in legacy:
+        return
+    register_func = getattr(module, func_name)
+    _guard_endpoints(app, key, _register_routes(app, register_func))
+    legacy.add(key)
+
+
+def deactivate(app, key: str) -> None:
+    """运行时停用插件：调用可选的 on_disable，路由守卫会立即拦截请求。"""
+    item = get(key)
+    if not item:
+        return
+    try:
+        module, _ = _load_module(item["manifest"])
+    except Exception:  # noqa: BLE001
+        return
+    on_disable = getattr(module, "on_disable", None) if module else None
+    if on_disable is not None:
+        on_disable(app)

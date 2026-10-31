@@ -178,7 +178,10 @@ def readme_image():
 def plugin_asset(plugin_key: str, filename: str):
     """插件静态资源：/plugin-assets/<key>/<path>。"""
     from config import PLUGINS_DIR
+    from services import plugins as plugins_service
 
+    if not plugins_service.enabled(plugin_key):
+        abort(404)
     base = (Path(PLUGINS_DIR) / plugin_key / "static").resolve()
     target = (base / filename).resolve()
     try:

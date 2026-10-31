@@ -7,11 +7,19 @@ import time
 
 import db
 
+KEY = "retention"
+
 # 操作审计默认保留天数（176 号令要求网络日志留存 6 个月以上，取 180 天）
 KEEP_DAYS = 180
 
 _lock = threading.Lock()
 _thread_started = False
+
+
+def _enabled() -> bool:
+    from services import plugins
+
+    return plugins.enabled(KEY)
 
 
 def on_admin_action(payload) -> None:
@@ -22,9 +30,12 @@ def on_admin_action(payload) -> None:
     """
     if not isinstance(payload, dict):
         return
-    from flask import has_request_context
+    from flask import has_request_context, request
 
+    # 先判上下文再查库：hooks 也可能在无请求上下文的地方 emit
     if not has_request_context():
+        return
+    if not _enabled():
         return
     from services import auth
     from services.comments import request_ip
@@ -32,13 +43,14 @@ def on_admin_action(payload) -> None:
     user = auth.current_user()
     operator = str(user["username"]) if user else ""
     db.execute(
-        "INSERT INTO op_logs (action, target, detail, operator, ip) VALUES (?,?,?,?,?)",
+        "INSERT INTO op_logs (action, target, detail, operator, ip, user_agent) VALUES (?,?,?,?,?,?)",
         (
             str(payload.get("action") or "")[:64],
             str(payload.get("target") or "")[:200],
             str(payload.get("detail") or "")[:500],
             operator[:64],
             request_ip()[:64],
+            str(request.headers.get("User-Agent", ""))[:400],
         ),
     )
     db.get_db().commit()
@@ -68,8 +80,9 @@ def start_scheduler(app) -> None:
         time.sleep(60)
         while True:
             try:
-                with app.app_context():
-                    cleanup()
+                if _enabled():
+                    with app.app_context():
+                        cleanup()
             except Exception:
                 app.logger.exception("retention cleanup failed")
             time.sleep(86400)
