@@ -711,8 +711,18 @@ def rss_feed():
 
 def readers_page():
     limit = max(1, min(50, settings.get_int("readers_limit", 10)))
-    data = readers_service.rank(1, per_page=limit)
+    page = request.args.get("page", 1, type=int) or 1
+    data = readers_service.rank(page, per_page=limit)
     return render_template("readers.html", **data)
+
+
+def reader_comments(rid: str):
+    """单个读者的留言档案：公开评论时间线，支持翻页。"""
+    page = request.args.get("page", 1, type=int) or 1
+    data = readers_service.detail(rid, page=page)
+    if not data:
+        abort(404)
+    return render_template("reader_detail.html", **data)
 
 
 def interactions_page():
@@ -770,6 +780,7 @@ def register(app) -> None:
         ("/about", "about", about, ["GET"]),
         ("/circle", "circle", circle, ["GET"]),
         ("/readers", "readers_page", readers_page, ["GET"]),
+        ("/readers/<rid>", "reader_comments", reader_comments, ["GET"]),
         ("/interactions", "interactions_page", interactions_page, ["GET"]),
         ("/links", "links_page", links_page, ["GET"]),
         ("/links/apply", "links_apply", links_apply, ["GET", "POST"]),

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from datetime import datetime, timedelta
 
@@ -10,6 +11,8 @@ from services import avatar, settings
 
 RANK_MONTHS = 6
 RANK_PER_PAGE = 10
+DETAIL_PER_PAGE = 10
+DETAIL_TEXT_LIMIT = 220
 
 
 def _blogger() -> str:
@@ -19,6 +22,11 @@ def _blogger() -> str:
 def _key(row: dict) -> str:
     """同一个读者优先按邮箱哈希聚合；没留邮箱时退回昵称。"""
     return str(row.get("email_hash") or "").strip().lower() or str(row.get("author") or "").strip().lower()
+
+
+def reader_id(key: str) -> str:
+    """公开读者标识：对内部聚合键做一次单向短哈希，避免邮箱哈希出现在地址栏。"""
+    return hashlib.sha256(str(key or "").encode("utf-8")).hexdigest()[:12]
 
 
 def _plain(text: str, limit: int | None = None) -> str:
@@ -115,6 +123,7 @@ def rank(page: int = 1, per_page: int = RANK_PER_PAGE) -> dict:
         items.append(
             {
                 "rank": index,
+                "reader_id": reader_id(bucket["key"]),
                 "author": row.get("author") or "匿名读者",
                 "website": _site(str(row.get("website") or "")),
                 "avatar": _avatar(row),
@@ -139,6 +148,70 @@ def rank(page: int = 1, per_page: int = RANK_PER_PAGE) -> dict:
         "page": page,
         "total_pages": total_pages,
         "stats": stats,
+    }
+
+
+def detail(rid: str, page: int = 1, per_page: int = DETAIL_PER_PAGE) -> dict | None:
+    """单个读者的公开留言时间线（不限 6 个月），找不到返回 None。"""
+    target = str(rid or "").strip().lower()
+    if not target:
+        return None
+
+    where, params = _public_filter(months=None)
+    rows = _rows(where, params)
+    mine = [row for row in rows if _key(row) and reader_id(_key(row)) == target]
+    if not mine:
+        return None
+
+    total = len(mine)
+    cutoff = datetime.now() - timedelta(days=30 * RANK_MONTHS)
+    recent = 0
+    for row in mine:
+        try:
+            if datetime.fromisoformat(str(row.get("created_at") or "")) >= cutoff:
+                recent += 1
+        except ValueError:
+            pass
+
+    per_page = max(1, min(50, int(per_page or DETAIL_PER_PAGE)))
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(max(1, int(page or 1)), total_pages)
+    start = (page - 1) * per_page
+
+    items = []
+    for row in mine[start:start + per_page]:
+        title, url = _source(row)
+        full = _plain(str(row.get("content") or ""))
+        text = full if len(full) <= DETAIL_TEXT_LIMIT else full[:DETAIL_TEXT_LIMIT].rstrip() + "…"
+        items.append(
+            {
+                "id": row.get("id"),
+                "created_at": row.get("created_at") or "",
+                "text": text,
+                "truncated": len(full) > DETAIL_TEXT_LIMIT,
+                "source_title": title,
+                "source_url": url,
+            }
+        )
+
+    latest = mine[0]
+    earliest = mine[-1]
+    return {
+        "reader": {
+            "id": reader_id(_key(latest)),
+            "author": latest.get("author") or "匿名读者",
+            "website": _site(str(latest.get("website") or "")),
+            "avatar": _avatar(latest),
+            "total": total,
+            "recent": recent,
+            "sources": len({(row.get("post_id"), row.get("project_id")) for row in mine}),
+            "first_at": earliest.get("created_at") or "",
+            "last_at": latest.get("created_at") or "",
+        },
+        "items": items,
+        "total": total,
+        "page": page,
+        "total_pages": total_pages,
     }
 
 

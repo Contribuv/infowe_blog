@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ reader.author }}的留言{% endblock %}
+{% block content %}
+<div class="tech-page-head">
+    <p class="tech-reader-back"><a href="{{ url_for('readers_page') }}">返回留言榜单</a></p>
+    <h1 class="tech-page-title">{{ reader.author }}的留言</h1>
+    <p class="tech-page-desc">共 {{ reader.total }} 条公开留言{% if reader.recent and reader.recent != reader.total %}，其中近 6 个月 {{ reader.recent }} 条{% endif %}</p>
+</div>
+
+<section class="tech-reader-hero">
+    <img class="tech-reader-hero-avatar" src="{{ reader.avatar }}" alt="{{ reader.author }}" loading="lazy"
+         onerror="this.src='/static/images/default-avatar.svg'">
+    <div class="tech-reader-hero-body">
+        <div class="tech-reader-hero-line">
+            {% if reader.website %}
+            <a class="tech-reader-hero-name" href="{{ reader.website }}" target="_blank" rel="noopener nofollow">{{ reader.author }}</a>
+            {% else %}
+            <strong class="tech-reader-hero-name">{{ reader.author }}</strong>
+            {% endif %}
+            <span class="tech-reader-count">{{ reader.total }} 条留言</span>
+        </div>
+        <div class="tech-reader-hero-meta">
+            <span>{{ reader.sources }} 篇文章</span>
+            <span>首次 {{ reader.first_at[:10] }}</span>
+            <span>最近 {{ reader.last_at[:10] }}</span>
+        </div>
+    </div>
+</section>
+
+{% if items %}
+<ol class="tech-comment-archive">
+    {% for c in items %}
+    <li class="tech-archive-item">
+        <div class="tech-archive-head">
+            <time datetime="{{ c.created_at }}">{{ c.created_at[:16] }}</time>
+            {% if c.source_title and c.source_url %}
+            <a class="tech-archive-source" href="{{ c.source_url }}">{{ c.source_title }}</a>
+            {% endif %}
+        </div>
+        {% if c.text %}
+        <p class="tech-archive-text">{{ c.text }}{% if c.truncated and c.source_url %} <a class="tech-archive-more" href="{{ c.source_url }}">查看全文</a>{% endif %}</p>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ol>
+{% else %}
+<div class="tech-empty">
+    <div class="tech-empty-icon">✍</div>
+    <h3>还没有可展示的留言</h3>
+    <p>这位读者的留言可能尚未通过审核。</p>
+</div>
+{% endif %}
+
+{% if total_pages > 1 %}
+<nav class="tech-pagination" aria-label="留言分页">
+    {% if page > 1 %}
+    <a href="{{ url_for('reader_comments', rid=reader.id, page=page-1) }}" class="tech-page-btn">上一页</a>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            {% if p == page %}
+            <span class="tech-page-btn active" aria-current="page">{{ p }}</span>
+            {% else %}
+            <a href="{{ url_for('reader_comments', rid=reader.id, page=p) }}" class="tech-page-btn">{{ p }}</a>
+            {% endif %}
+        {% elif p == page - 3 or p == page + 3 %}
+            <span class="tech-page-ellipsis">…</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+    <a href="{{ url_for('reader_comments', rid=reader.id, page=page+1) }}" class="tech-page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

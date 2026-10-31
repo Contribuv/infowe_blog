@@ -80,8 +80,11 @@ def start_scheduler(app) -> None:
         time.sleep(60)
         while True:
             try:
-                if _enabled():
-                    with app.app_context():
+                # _enabled() 内部要查库（db 连接挂在应用上下文上），
+                # 必须先进入 app_context 再判断，否则后台线程报
+                # Working outside of application context
+                with app.app_context():
+                    if _enabled():
                         cleanup()
             except Exception:
                 app.logger.exception("retention cleanup failed")

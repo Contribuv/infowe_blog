@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.5.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.0)
+[![version](https://img.shields.io/badge/version-3.5.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.1)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.5.0**
+当前版本：**v3.5.1**
+
+### v3.5.1
+
+- 读者留言档案：新增 `/readers/<id>` 页面，点击榜单/前三甲的「N 条留言」即可进入该读者的公开留言时间线（不限 6 个月，支持翻页，超过 220 字的留言截断并提供「查看全文」链接回源文章）；档案卡片带悬停高亮，留言数统计（文章数、首次/最近时间）一并展示
+- 留言榜单分页：榜单超过一页时底部出现分页条（每页人数由后台 `readers_limit` 控制），首位读者引导文案同步调整
+- 全站样式审计：补齐 19 处缺失的触屏 hover 守卫（`@media (hover: hover) and (pointer: fine)`），消除移动端点按后悬停样式残留；清理约 200 行死代码（已下线的互动页、旧灯箱、走心评论区块等未再被引用的规则），theme.css 瘦身 5KB、压缩产物 98KB
+- 修复留存审计定时清理报 `Working outside of application context`：后台线程先入应用上下文再判断插件启停（此前在上下文外查库，启动 60 秒后的首轮清理必然抛异常）
+
+<details>
+<summary><b>历史版本（v3.5.0 及更早）</b></summary>
 
 ### v3.5.0
 
@@ -929,9 +939,6 @@ chown -R www:www var
 - 评论 UA 展示：评论提交时记录 User-Agent，前台显示「Chrome · Windows」设备标签（悬停可看完整 UA）；后台评论管理与留存审计的操作记录、评论留存同步显示，CSV 导出也带上设备列
 - 评论样式：标签改为长方形小圆角（3px），低饱和淡底 + 同色描边，昵称统一正文色；标签中心与昵称、时间基线对齐
 - 数据库：新增 `comments.user_agent`、`op_logs.user_agent`，启动时自动升级并备份
-
-<details>
-<summary><b>历史版本（v3.4.36 及更早）</b></summary>
 
 ### v3.4.36
 

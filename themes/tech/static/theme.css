@@ -508,11 +508,6 @@ html.page-enter .tech-main {
 .tech-quote-src { flex: none; font-size: 13px; color: var(--text-secondary); }
 .tech-quote-src:empty { display: none; }
 
-/* ── 首页 Hero：统一信息层级 ── */
-.tech-page-desc--mono {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  letter-spacing: .01em;
-}
 
 /* ── 全局搜索：导航下拉面板（入口为导航栏放大镜） ── */
 .tech-search-layer {
@@ -1299,8 +1294,6 @@ html.page-enter .tech-main {
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-.tech-share-row { display: flex; gap: 10px; }
-
 .tech-about-empty { color: var(--text-secondary); }
 
 /* ── 评论 ── */
@@ -1828,7 +1821,7 @@ html { touch-action: manipulation; }
 .tech-links-intro p { margin: 0 0 12px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
 .tech-links-intro p:last-child { margin-bottom: 0; }
 .tech-links-intro a { color: var(--accent); text-decoration: none; }
-.tech-links-intro a:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .tech-links-intro a:hover { text-decoration: underline; } }
 .tech-links-rules {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1864,7 +1857,7 @@ html { touch-action: manipulation; }
   font: inherit; font-size: 13px; color: var(--text-secondary); cursor: pointer;
   transition: color .15s ease, border-color .15s ease;
 }
-.tech-copy:hover { color: var(--accent); border-color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .tech-copy:hover { color: var(--accent); border-color: var(--accent); } }
 .tech-copy.copied { color: var(--success); border-color: var(--success); }
 
 /* ── 状态页（官方 svc-* 类名，status.js 依赖）──
@@ -2062,55 +2055,6 @@ html { touch-action: manipulation; }
   .tech-post-body { max-width: none; }
 }
 
-/* ═══ 文章媒体灯箱：图片/视频点击浮窗，图片多图左右轮转 ═══ */
-.tech-lightbox {
-  position: fixed; inset: 0; z-index: 400;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(8, 9, 13, .92);
-  opacity: 0; visibility: hidden;
-  transition: opacity .2s ease, visibility .2s;
-}
-.tech-lightbox.open { opacity: 1; visibility: visible; }
-.tech-lightbox-stage {
-  display: flex; align-items: center; justify-content: center;
-  max-width: 92vw; max-height: 86vh;
-}
-.tech-lightbox-media {
-  max-width: 92vw; max-height: 86vh;
-  border-radius: 8px; box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
-  background: #000; object-fit: contain;
-}
-.tech-lightbox-stage video.tech-lightbox-media { width: auto; }
-.tech-lightbox-close {
-  position: absolute; top: 16px; right: 16px; z-index: 2;
-  width: 40px; height: 40px; border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .08);
-  color: #fff; font-size: 22px; line-height: 1; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-@media (hover: hover) and (pointer: fine) { .tech-lightbox-close:hover { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .45); } }
-.tech-lightbox-nav {
-  position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
-  width: 44px; height: 44px; border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .08);
-  color: #fff; font-size: 26px; line-height: 1; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  padding-bottom: 2px;
-}
-@media (hover: hover) and (pointer: fine) { .tech-lightbox-nav:hover { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .45); } }
-.tech-lightbox-prev { left: 16px; }
-.tech-lightbox-next { right: 16px; }
-.tech-lightbox-count {
-  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-  color: rgba(255, 255, 255, .78); font-size: 13px;
-  font-variant-numeric: tabular-nums; letter-spacing: .05em; z-index: 2;
-}
-@media (max-width: 480px) {
-  .tech-lightbox-close { top: 10px; right: 10px; }
-  .tech-lightbox-prev { left: 8px; }
-  .tech-lightbox-next { right: 8px; }
-  .tech-lightbox-nav { width: 38px; height: 38px; font-size: 22px; }
-}
 
 /* ═══ 交互手感统一（2026-09：键盘焦点 / 按压反馈 / hover 微动）═══ */
 /* 键盘可达元素统一焦点环（输入/下拉已有各自的 accent 焦点样式，不重复叠加） */
@@ -2326,7 +2270,7 @@ html { touch-action: manipulation; }
   color: var(--text);
   text-decoration: none;
 }
-.circle-title:hover { color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .circle-title:hover { color: var(--accent); } }
 .circle-summary {
   margin: 6px 0 0;
   overflow-wrap: anywhere;
@@ -2360,7 +2304,7 @@ html { touch-action: manipulation; }
   text-decoration: none;
 }
 .circle-site span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.circle-site:hover { color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .circle-site:hover { color: var(--accent); } }
 .circle-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; flex: none; }
 .circle-time { white-space: nowrap; flex: none; }
 
@@ -2385,7 +2329,7 @@ html { touch-action: manipulation; }
   color: var(--text-secondary);
   text-decoration: none;
 }
-.circle-pager a:hover { border-color: var(--accent); color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .circle-pager a:hover { border-color: var(--accent); color: var(--accent); } }
 .circle-pager .is-current { border-color: transparent; background: var(--bg-subtle); color: var(--text); }
 .circle-pager .is-disabled { opacity: .4; }
 .circle-pager .is-gap { border: 0; background: none; color: var(--text-secondary); }
@@ -2680,7 +2624,7 @@ html { touch-action: manipulation; }
   color: var(--text-secondary);
 }
 .tech-miles-tag { color: var(--text-secondary); text-decoration: none; }
-.tech-miles-tag:hover { color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .tech-miles-tag:hover { color: var(--accent); } }
 .tech-miles-arrow {
   flex: none;
   padding-top: 2px;
@@ -2689,8 +2633,10 @@ html { touch-action: manipulation; }
   transform: translateX(-4px);
   transition: opacity .18s ease, transform .18s ease;
 }
-.tech-miles-item:hover .tech-miles-title a { color: var(--accent); }
-.tech-miles-item:hover .tech-miles-arrow { opacity: 1; transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-miles-item:hover .tech-miles-title a { color: var(--accent); }
+  .tech-miles-item:hover .tech-miles-arrow { opacity: 1; transform: none; }
+}
 
 /* 窄屏改成与文章列表同款的独立卡片：负 margin 外扩在窄屏会把 hover 高亮块
    顶到版心外，触摸端看起来就是「背景框溢出」；这里改为描边卡片 + 间距分隔 */
@@ -2738,8 +2684,7 @@ html { touch-action: manipulation; }
 }
 
 /* ── 读者页：留言榜单 ── */
-.tech-reader-stats,
-.tech-interaction-stats { margin-top: 20px; }
+.tech-reader-stats { margin-top: 20px; }
 .tech-reader-stats.circle-stats {
   background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
 }
@@ -2802,7 +2747,7 @@ html { touch-action: manipulation; }
 .tech-reader-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 6px 10px;
 }
 .tech-reader-name {
@@ -2811,7 +2756,7 @@ html { touch-action: manipulation; }
   color: var(--text);
   text-decoration: none;
 }
-a.tech-reader-name:hover { color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { a.tech-reader-name:hover { color: var(--accent); } }
 .tech-reader-count {
   padding: 0 7px;
   border-radius: 999px;
@@ -2841,88 +2786,15 @@ a.tech-reader-name:hover { color: var(--accent); }
   color: var(--text-secondary);
 }
 .tech-reader-source a { color: var(--accent); text-decoration: none; }
-.tech-reader-source a:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .tech-reader-source a:hover { text-decoration: underline; } }
 
-/* ── 互动页：走心评论 ── */
-.tech-interactions {
-  column-count: 2;
-  column-gap: 12px;
-}
-.tech-interaction-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  margin: 0 0 12px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: transparent;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-.tech-interaction-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.tech-interaction-avatar {
-  flex: none;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-subtle);
-}
-.tech-interaction-who { min-width: 0; }
-.tech-interaction-name {
-  display: block;
-  font-size: 14.5px;
-  font-weight: 600;
-  color: var(--text);
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-a.tech-interaction-name:hover { color: var(--accent); }
-.tech-interaction-time {
-  display: block;
-  margin-top: 1px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.tech-interaction-text {
-  margin: 10px 0 0;
-  font-size: 13.5px;
-  line-height: 1.7;
-  color: var(--text-secondary);
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.tech-interaction-foot {
-  margin-top: auto;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-.tech-interaction-foot a { color: var(--accent); text-decoration: none; }
-.tech-interaction-foot a:hover { text-decoration: underline; }
-
-/* 榜单和互动卡片沿用全站 hover */
-.tech-reader-item,
-.tech-interaction-card {
+/* 榜单卡片沿用全站 hover */
+.tech-reader-item {
   transition: background-color .18s ease, border-color .18s ease,
               box-shadow .18s ease, transform .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .tech-reader-item:hover,
-  .tech-interaction-card:hover {
+  .tech-reader-item:hover {
     background: var(--hover-bg);
     border-color: var(--hover-ring);
     box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
@@ -2947,16 +2819,11 @@ a.tech-interaction-name:hover { color: var(--accent); }
 }
 .tech-apply-notes li { overflow-wrap: anywhere; }
 .tech-apply-notes a { color: var(--accent); text-decoration: none; }
-.tech-apply-notes a:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .tech-apply-notes a:hover { text-decoration: underline; } }
 
-@media (max-width: 860px) {
-  .tech-interactions { column-count: 1; }
-}
 @media (max-width: 640px) {
-  .tech-reader-stats,
-  .tech-interaction-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .tech-reader-stats > div,
-  .tech-interaction-stats > div { padding: 12px; }
+  .tech-reader-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tech-reader-stats > div { padding: 12px; }
   .tech-reader-item { gap: 10px; padding: 13px 0; border-color: transparent; border-bottom-color: var(--border); border-radius: 0; }
   .tech-reader-item:last-child { border-bottom-color: transparent; }
   .tech-reader-avatar { width: 38px; height: 38px; }
@@ -3069,7 +2936,7 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   color: var(--text);
   text-decoration: none;
 }
-a.tech-podium-name:hover { color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { a.tech-podium-name:hover { color: var(--accent); } }
 .tech-podium-count { margin-left: auto; font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; }
 .tech-podium-item--1 .tech-podium-count { color: var(--medal); }
 .tech-podium-quote {
@@ -3094,7 +2961,7 @@ a.tech-podium-name:hover { color: var(--accent); }
   color: var(--text-secondary);
 }
 .tech-podium-source a { color: var(--accent); text-decoration: none; }
-.tech-podium-source a:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) { .tech-podium-source a:hover { text-decoration: underline; } }
 @media (hover: hover) and (pointer: fine) {
   .tech-podium-item:hover {
     background: var(--hover-bg);
@@ -3104,17 +2971,6 @@ a.tech-podium-name:hover { color: var(--accent); }
   }
 }
 
-/* 走心评论区块 */
-.tech-picked { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
-.tech-picked-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 12px;
-  margin-bottom: 14px;
-}
-.tech-picked-head h2 { margin: 0; font-size: 19px; font-weight: 700; }
-.tech-picked-head span { font-size: 12.5px; color: var(--text-secondary); }
 
 @media (max-width: 640px) {
   .tech-podium { grid-template-columns: 1fr; gap: 8px; }
@@ -3315,48 +3171,6 @@ a.tech-podium-name:hover { color: var(--accent); }
   font-size: 11px;
   padding: 0 6px;
 }
-.tech-side-comments { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.tech-side-comments li { display: flex; gap: 9px; }
-.tech-side-cmt-avatar {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-subtle);
-}
-.tech-side-cmt-main { flex: 1; min-width: 0; }
-.tech-side-cmt-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
-.tech-side-cmt-head strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
-  color: var(--text);
-}
-.tech-side-cmt-head time { flex: none; font-size: 11.5px; color: var(--text-secondary); }
-.tech-side-cmt-main p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.tech-side-cmt-source {
-  display: block;
-  max-width: 100%;
-  margin-top: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--accent);
-  font-size: 11.5px;
-  text-decoration: none;
-}
 /* 十年之约「今天读什么」：服务端抓取后用本站样式渲染，不再用跨域 iframe */
 .tech-widget {
   padding: 14px;
@@ -3390,7 +3204,7 @@ a.tech-podium-name:hover { color: var(--accent); }
   text-decoration: none;
   overflow-wrap: anywhere;
 }
-.tech-widget-article:hover { color: var(--accent); }
+@media (hover: hover) and (pointer: fine) { .tech-widget-article:hover { color: var(--accent); } }
 .tech-widget small {
   display: block;
   margin-top: 2px;
@@ -3407,10 +3221,7 @@ a.tech-podium-name:hover { color: var(--accent); }
   font-size: 12px;
   text-decoration: none;
 }
-.tech-widget-wormhole:hover { text-decoration: underline; }
-.tech-side-widget-dark { display: none; }
-html[data-theme="dark"] .tech-side-widget-light { display: none; }
-html[data-theme="dark"] .tech-side-widget-dark { display: block; }
+@media (hover: hover) and (pointer: fine) { .tech-widget-wormhole:hover { text-decoration: underline; } }
 .tech-side-widget-link {
   display: block;
   margin-top: 8px;
@@ -3659,3 +3470,50 @@ html.tech-external-open { overflow: hidden; }
   gap: 4px;
 }
 .tech-project-card-head .tech-project-stars { margin-left: auto; }
+
+/* ── 读者详情：个人留言档案 ── */
+.tech-reader-back { margin: 0 0 8px; font-size: 12.5px; }
+.tech-reader-back a { color: var(--text-secondary); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .tech-reader-back a:hover { color: var(--accent); } }
+.tech-reader-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 22px 0 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-subtle);
+}
+.tech-reader-hero-avatar {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg);
+}
+.tech-reader-hero-body { min-width: 0; }
+.tech-reader-hero-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.tech-reader-hero-name { font-size: 17px; font-weight: 600; color: var(--text); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { a.tech-reader-hero-name:hover { color: var(--accent); } }
+.tech-reader-hero-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+.tech-comment-archive { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.tech-archive-item { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: transparent; }
+.tech-archive-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; font-size: 12px; color: var(--text-secondary); }
+.tech-archive-source { color: var(--text-secondary); text-decoration: none; border-bottom: 1px dashed color-mix(in srgb, var(--text-secondary) 40%, transparent); }
+@media (hover: hover) and (pointer: fine) { .tech-archive-source:hover { color: var(--accent); border-bottom-color: currentColor; } }
+.tech-archive-text { margin: 7px 0 0; font-size: 13.5px; line-height: 1.75; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (hover: hover) and (pointer: fine) { .tech-archive-item:hover { background: var(--hover-bg); } }
+.tech-archive-more { color: var(--accent); text-decoration: none; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) { .tech-archive-more:hover { text-decoration: underline; } }
+a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
+@media (hover: hover) and (pointer: fine) {
+  a.tech-reader-count:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  a.tech-podium-count:hover { color: var(--accent); }
+}
+@media (max-width: 640px) {
+  .tech-reader-hero { padding: 16px; gap: 12px; }
+  .tech-reader-hero-avatar { width: 48px; height: 48px; }
+  .tech-reader-hero-name { font-size: 16px; }
+}
