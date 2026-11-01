@@ -553,31 +553,25 @@ html.page-enter .tech-main {
 
 /* ── 文章列表（列表式） ── */
 .tech-post-list { list-style: none; margin: 0; padding: 0; }
-/* 整卡可点：hover 背景向左右各外扩 8px 留出呼吸空间（负 margin 技巧，内容仍与正文严格对齐）；
-   外扩 16px 在宽屏上视觉溢出过多，8px 为「不贴边也不溢出」的折中；
-   分割线必须用 border-bottom（元素自身边框，会跟随 border-radius 圆角内收），
-   不能用 ::after 直线——直线两端会戳出圆角背景块外侧，hover 时产生割裂感；
+/* 整卡可点，样式与侧栏卡片 .tech-side-card 同款：1px 描边 + 12px 圆角独立卡片，
+   hover 也只是淡背景 + 描边换色，不做位移/阴影（与侧栏一致）。
    触摸端禁用系统点按高亮，避免 Android 点按闪灰色块 */
 .tech-post-item {
   position: relative;
-  padding: 16px;
-  margin: 0 -8px 24px;
-  border-radius: 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 18px;
+  margin: 0 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color .18s ease, box-shadow .18s ease;
+  transition: background-color .18s ease, border-color .18s ease;
 }
-.tech-post-item:last-child { border-bottom: none; }
-/* hover 仅在「宽屏 + 支持悬停 + 精确指针（鼠标）」的设备生效：
-   - (pointer: fine) 过滤 iPad / 触屏 Android 误报，避免点按后 :hover 滞留高亮卡死
-   - (min-width: 768px) 让移动端与 PC 窄窗口一律不显示 hover 背景，退化为纯分割线列表 */
-@media (hover: hover) and (pointer: fine) and (min-width: 768px) {
-  /* 悬停只加一层几乎看不出的主色底 + 一条淡描边；
-     以前那套「液态玻璃 + 白色高光 + 大投影」会让卡片在深底上突然发白，
-     在浅底上又像贴纸，已经整段撤掉 */
+/* hover 守卫与 .tech-side-card 一致：
+   (pointer: fine) 过滤 iPad / 触屏 Android 误报，避免点按后 :hover 滞留高亮卡死 */
+@media (hover: hover) and (pointer: fine) {
   .tech-post-item:hover {
     background: var(--hover-bg);
-    box-shadow: inset 0 0 0 1px var(--hover-ring);
+    border-color: var(--hover-ring);
   }
   .tech-post-item:hover .tech-post-title a { color: var(--accent); }
   .tech-post-item:hover .tech-post-arrow { opacity: 1; transform: translateX(0); }
@@ -589,23 +583,10 @@ html.page-enter .tech-main {
   transition: opacity .18s ease, transform .18s ease;
   pointer-events: none;
 }
-/* 窄屏（移动端 / PC 窄窗口 / 平板竖向）：统一改成与友链、项目卡同款的独立卡片
-   —— 1px 描边 + 12px 圆角 + 内边距，不再用负 margin 外扩。
-   负 margin 只能在宽屏有多余留白时用；窄屏下 -8px 会把 hover 高亮块推到版心边缘，
-   在触摸设备上就是一整块「背景框溢出」。分割改由卡片间距承担。 */
+/* 窄屏：卡片基础样式已是独立描边卡片，这里只收紧内边距、隐藏箭头 */
 @media (max-width: 1000px) {
-  .tech-post-item {
-    margin: 0 0 14px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-  }
-  .tech-post-item:last-child {
-    margin-bottom: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  /* 窄屏去掉大范围投影，只保留卡片自身的底色/描边变化，避免阴影渗出卡片外 */
-  .tech-post-item:hover { box-shadow: none; }
+  .tech-post-item { padding: 14px 16px; }
+  .tech-post-item:last-child { margin-bottom: 0; }
   .tech-post-arrow { display: none; }
 }
 .tech-post-meta {
@@ -2659,8 +2640,8 @@ html { touch-action: manipulation; }
   .tech-miles-title { font-size: 15px; }
 }
 
-/* ── 全站卡片 hover：统一底色、描边、上浮和轻阴影 ── */
-.tech-post-item,
+/* ── 全站卡片 hover：统一底色、描边、上浮和轻阴影 ──
+   .tech-post-item 不在此列：它与侧栏卡片 .tech-side-card 一致，只做底色+描边变化 */
 .tech-link-card,
 .circle-item,
 .circle-stats > div,
@@ -2670,7 +2651,6 @@ html { touch-action: manipulation; }
               box-shadow .18s ease, transform .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .tech-post-item:hover,
   .tech-link-card:hover,
   .circle-item:hover,
   .circle-stats > div:hover,
@@ -2824,8 +2804,8 @@ html { touch-action: manipulation; }
 @media (max-width: 640px) {
   .tech-reader-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .tech-reader-stats > div { padding: 12px; }
-  .tech-reader-item { gap: 10px; padding: 13px 0; border-color: transparent; border-bottom-color: var(--border); border-radius: 0; }
-  .tech-reader-item:last-child { border-bottom-color: transparent; }
+  /* 列表项保持与 PC / 前三名一致的完整卡片边框，仅微调内边距 */
+  .tech-reader-item { gap: 10px; padding: 13px 14px; }
   .tech-reader-avatar { width: 38px; height: 38px; }
   .tech-reader-quote { -webkit-line-clamp: 3; line-clamp: 3; }
   .tech-apply-notes { padding: 16px; }

@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 允许双指缩放（WCAG 1.4.4）；旧版曾加 maximum-scale/user-scalable=no 并用
-         disable-zoom.js 拦截手势，会让低视力用户无法放大，已整体移除
+    <!-- 站主要求限制移动端缩放：maximum-scale=1 禁双指/双击整页缩放，user-scalable=no 兼容旧内核；
+         iOS 对 <16px 输入框聚焦仍会强制放大，与缩放开关无关，由移动端 16px 输入框字号兜底；
          interactive-widget=resizes-content：Android Chrome 108+ 软键盘弹出时收缩
          布局视口，评论浮窗（dvh 定高）随之变矮，底部输入区不被键盘遮住；
          不支持的浏览器（iOS Safari 等）忽略该值，由 comments-popup.js 的
          visualViewport 兜底处理 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <!-- 防白屏闪烁：主题 CSS 加载前先给 html 上色，避免深色主题刷新/跳转时闪白 -->
     <style>
       html { background: #1a1d23; color-scheme: dark; }

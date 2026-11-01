@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.5.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.1)
+[![version](https://img.shields.io/badge/version-3.5.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.2)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.5.1**
+当前版本：**v3.5.2**
+
+### v3.5.2
+
+- 首页文章卡片与侧栏卡片统一：文章列表项改为 1px 描边 + 12px 圆角独立卡片，悬停只做淡背景与描边换色（与侧栏博主卡片完全一致，不再位移/上浮/阴影），移动端同时禁用系统点按高亮残留
+- 移动端限制整页缩放：viewport 加入 `maximum-scale=1` / `user-scalable=no`，iPhone 上双指、双击不再误放大页面（输入框聚焦时的系统放大仍由移动端 16px 输入框字号兜底，不受影响）
+- 修复移动端读者留言榜单边框丢失：4 名起的列表项恢复与 PC 端、前三名领奖台一致的完整描边卡片（此前窄屏被降级为透明分割线）
+
+<details>
+<summary><b>历史版本（v3.5.1 及更早）</b></summary>
 
 ### v3.5.1
 
@@ -927,9 +936,6 @@ chown -R www:www var
 - 留言榜单分页：榜单超过一页时底部出现分页条（每页人数由后台 `readers_limit` 控制），首位读者引导文案同步调整
 - 全站样式审计：补齐 19 处缺失的触屏 hover 守卫（`@media (hover: hover) and (pointer: fine)`），消除移动端点按后悬停样式残留；清理约 200 行死代码（已下线的互动页、旧灯箱、走心评论区块等未再被引用的规则），theme.css 瘦身 5KB、压缩产物 98KB
 - 修复留存审计定时清理报 `Working outside of application context`：后台线程先入应用上下文再判断插件启停（此前在上下文外查库，启动 60 秒后的首轮清理必然抛异常）
-
-<details>
-<summary><b>历史版本（v3.5.0 及更早）</b></summary>
 
 ### v3.5.0
 
