@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.0)
+[![version](https://img.shields.io/badge/version-3.6.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.1)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.0**
+当前版本：**v3.6.1**
+
+### v3.6.1
+
+- 评论归属地改为「省 · 市」：显示为「四川省 · 成都市」「内蒙古自治区 · 呼和浩特市」，直辖市只保留一条，并去掉「IP属地：」前缀；新评论直接按新格式入库，启动时自动迁移历史数据（装了 ip2region 库还会用 IP 重解析被截断的旧值）
+- 设备 / 浏览器信息移到作者行末尾，跟在地名后面；图标保持纯色描边，并修正了图标与文字的基线对齐
+- 楼中楼间距：每条回复上下各 9px + 细分隔线，最后一条不再额外留底部内边距，卡片顶部与底部留白一致（底部不再多空 9px）；有 UA / 没 UA 的回复间距完全相同
+- 评论区垂直节奏与整页对齐：标题 → 表单、表单 → 列表、列表 → 分页统一 20px；文章 → 上下篇、上下篇 → 评论区统一 24px
+
+<details>
+<summary><b>历史版本（v3.6.0 及更早）</b></summary>
 
 ### v3.6.0
 
@@ -933,9 +943,6 @@ chown -R www:www var
 - 博客圈改版：文章卡片改为单栏，头部头像 + 站点名 + 日期、标题、两行摘要、相对时间 +「阅读全文」；列表底部新增「已经看了 N 篇」，最后一页显示收尾文案；四个统计卡片顺序改为「今日 / 本周 / 本月 / 订阅站点」并把内部改为标签在上的单栏；摘要自动清理短代码与 Markdown 语法；区块间距统一 20px、卡片间距 12px，卡片高度压缩约 20%
 - 读者页：规则说明独立成卡片（标题居中、正文左对齐）；领奖台改为亚军 · 冠军 · 季军（冠军居中），移动端仍按 1-2-3 排列；移动端序号从独立一列改为头像左上角标，内容区宽度增加约 44px
 - 侧栏与站点细节：博主行改为「博主：名字」，社交链接改为 SVG + 文字；简介保留换行；全站按钮统一黑白配色；文章页删除底部重复标签，「复制链接」改为「复制」
-
-<details>
-<summary><b>历史版本（v3.5.5 及更早）</b></summary>
 
 ### v3.5.5
 
