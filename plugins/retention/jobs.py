@@ -9,8 +9,8 @@ import db
 
 KEY = "retention"
 
-# 操作审计默认保留天数（176 号令要求网络日志留存 6 个月以上，取 180 天）
-KEEP_DAYS = 180
+# 操作审计保留天数；0 = 永久保存，不做任何清理
+KEEP_DAYS = 0
 
 _lock = threading.Lock()
 _thread_started = False
@@ -57,7 +57,9 @@ def on_admin_action(payload) -> None:
 
 
 def cleanup(days: int = KEEP_DAYS) -> int:
-    """删除超过保留期的操作审计，返回删除条数。"""
+    """删除超过保留期的操作审计，返回删除条数；days<=0 表示永久保存，直接跳过。"""
+    if int(days) <= 0:
+        return 0
     cur = db.execute(
         "DELETE FROM op_logs WHERE created_at < datetime('now','localtime','-%d days')" % int(days)
     )

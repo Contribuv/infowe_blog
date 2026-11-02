@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.5.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.3)
+[![version](https://img.shields.io/badge/version-3.5.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,14 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.5.3**
+当前版本：**v3.5.4**
+
+### v3.5.4
+
+- 留存审计日志改为永久保存：`op_logs` 不再按 180 天自动清理（`KEEP_DAYS = 0`），历史记录全部保留
+
+<details>
+<summary><b>历史版本（v3.5.3 及更早）</b></summary>
 
 ### v3.5.3
 
@@ -930,17 +937,11 @@ chown -R www:www var
 - AI 评论回复策略：新增「每条都回复 / 随机抽一部分回复」与回复概率配置（默认 30%），未抽中的评论只审核不生成回复以省 token；移除已无意义的「评论最长长度」配置
 - 回归测试：三视口（1440/768/390）× 17 页 × 深浅色共 70 轮 + 交互自测 5 次全部通过
 
-<details>
-<summary><b>历史版本（v3.5.2 及更早）</b></summary>
-
 ### v3.5.2
 
 - 首页文章卡片与侧栏卡片统一：文章列表项改为 1px 描边 + 12px 圆角独立卡片，悬停只做淡背景与描边换色（与侧栏博主卡片完全一致，不再位移/上浮/阴影），移动端同时禁用系统点按高亮残留
 - 移动端限制整页缩放：viewport 加入 `maximum-scale=1` / `user-scalable=no`，iPhone 上双指、双击不再误放大页面（输入框聚焦时的系统放大仍由移动端 16px 输入框字号兜底，不受影响）
 - 修复移动端读者留言榜单边框丢失：4 名起的列表项恢复与 PC 端、前三名领奖台一致的完整描边卡片（此前窄屏被降级为透明分割线）
-
-<details>
-<summary><b>历史版本（v3.5.1 及更早）</b></summary>
 
 ### v3.5.1
 
@@ -973,7 +974,7 @@ chown -R www:www var
 ### v3.4.34
 
 - 文章回收站：删除文章改为软删除（`posts.deleted_at`），后台新增回收站页，支持恢复、彻底删除、批量操作与一键清空，文章列表带回收站数量角标；前台列表、搜索、RSS、AI 上下文全站过滤已删文章
-- 留存审计插件（`plugins/retention`）：三合一审计页——后台操作记录（新增 `op_logs` 表，自动记录登录、文章、友链、评论、设置等关键操作）、AI 审核记录、评论留存（软删除评论可查可恢复）；支持日期区间 + 关键词筛选与 CSV 导出（utf-8-sig，Excel 打开不乱码），日志保留 180 天、每 24 小时自动清理
+- 留存审计插件（`plugins/retention`）：三合一审计页——后台操作记录（新增 `op_logs` 表，自动记录登录、文章、友链、评论、设置等关键操作）、AI 审核记录、评论留存（软删除评论可查可恢复）；支持日期区间 + 关键词筛选与 CSV 导出（utf-8-sig，Excel 打开不乱码），日志永久保存（不自动清理）
 - 评论通知邮件模板重做：全 table 布局 + 内联样式（Outlook 兼容），8px 圆角体系、32px 圆形头像（gravatar/QQ 头像，无头像用首字母色块兜底）、强调色自动取自当前主题；新增通用通知模板，AI 回复与友链申请通知一并接入 HTML 邮件；评论正文不出站（邮件只放占位文案 + 链接），命中敏感词显示「【不当言语】请后台审核」，回复通知带「你之前说」原评论引用块
 - AI 助手增强：机器人昵称/头像后台可配（新增 `ai-bot.svg` 默认头像，历史 AI 评论一键同步身份）；「通过后 AI 回复」同时接管回复评论；AI 审核后自动清页面缓存；后台评论管理显示 AI 审核记录与徽章；ai-avatar 加入上传白名单
 - 评论体验：草稿自动保存（localStorage 按文章维度暂存，误刷新不丢稿，提交成功自动清除）；评论分页开启时 `#comment-N` 跨页锚点自动拉取评论片段直达目标楼层，折叠回复自动展开并高亮
