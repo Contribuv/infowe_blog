@@ -48,22 +48,15 @@
 
     <!-- 文章底部 -->
     <footer class="tech-post-footer">
-        <!-- 标签下移：方便读者读完后跳转相关话题 -->
-        {% if post.tags %}
-        <div class="tech-post-tags-bottom">
-            {% for tag in post.tags %}
-            <a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag">{{ tag }}</a>
-            {% endfor %}
-        </div>
-        {% endif %}
+
         <div class="tech-post-actions">
             <button class="tech-btn" data-share-open title="分享文章" data-title="{{ post.title }}">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                 分享
             </button>
-            <button class="tech-btn" id="copyLinkBtn" title="复制链接">
+            <button class="tech-btn" id="copyLinkBtn" title="复制">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                复制链接
+                复制
             </button>
             <button class="tech-btn" onclick="history.back()" title="返回上一页">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -407,7 +400,7 @@
     });
 })();
 
-/* 复制链接按钮：一键复制当前页 URL，toast 反馈 */
+/* 复制按钮：一键复制当前页 URL，toast 反馈 */
 (function () {
     var btn = document.getElementById('copyLinkBtn');
     if (!btn) return;

@@ -398,8 +398,17 @@ def admin_projects_sync_status():
 # ── 友链 ──────────────────────────────────────────────
 @LOGIN
 def admin_links():
+    import json
+
+    pending = Link.load("pending")
+    for link in pending:
+        try:
+            meta = json.loads(link.get("ai_meta") or "{}")
+        except (TypeError, ValueError):
+            meta = {}
+        link["review_reason"] = str(meta.get("reason") or "")
     return render_template(
-        "admin/links.html", links=Link.load("approved"), pending=Link.load("pending")
+        "admin/links.html", links=Link.load("approved"), pending=pending
     )
 
 

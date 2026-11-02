@@ -353,3 +353,115 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* AI 助手回复标识 */
 .cmt-badge--ai{background:rgba(90,150,190,.11);color:#8fb8d0;border-color:rgba(90,150,190,.20)}
 
+
+
+/* 评论按钮黑白配 */
+.cmt-form .submit{
+  background:color-mix(in srgb,var(--c-text) 76%,var(--bg));
+  color:var(--bg);
+  border:0;
+  border-radius:8px;
+}
+[data-theme="dark"] .cmt-form .submit{
+  background:color-mix(in srgb,var(--c-text) 82%,var(--bg));
+  color:var(--bg);
+}
+@media (hover:hover) and (pointer:fine){
+  .cmt-form .submit:not([disabled]):hover,
+  [data-theme="dark"] .cmt-form .submit:not([disabled]):hover{
+    background:var(--c-text);
+    color:var(--bg);
+    filter:none;
+  }
+}
+.cmt-page-btn.active{
+  background:var(--c-text);
+  border-color:transparent;
+  color:var(--bg);
+}
+[data-theme="dark"] .cmt-page-btn.active{color:var(--bg)}
+
+
+/* 评论入口：去掉独立底色，和外层表单合为一个整体 */
+.cmt-form .cmt-box:not([open]) .cmt-toggle{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  padding:2px 0;
+}
+@media (hover:hover) and (pointer:fine){
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle{background:transparent}
+}
+/* 回复按钮：只留右侧 SVG */
+.cmt-actions{margin-top:8px;display:flex;justify-content:flex-end}
+.cmt-reply{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:4px;border:0;border-radius:6px;background:none;
+  color:var(--c-text3);cursor:pointer;
+}
+@media (hover:hover) and (pointer:fine){
+  .cmt-reply:hover{color:var(--c-text);background:color-mix(in srgb,var(--c-text) 5%,transparent)}
+}
+.cmt-reply-icon{width:17px;height:17px}
+/* UA 行：系统 + 浏览器 */
+.cmt-byline{
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;
+  margin-top:6px;font-size:11px;color:var(--c-text3);
+}
+.cmt-byline .cmt-ua{display:inline-flex;align-items:center;gap:4px}
+.cmt-byline .cmt-ua::before{content:none}
+.cmt-byline .cmt-ua+.cmt-ua::before{content:"·";margin-right:6px;opacity:.5}
+.cmt-ua-icon{width:12px;height:12px;flex:none;opacity:.85}
+
+
+/* 评论入口 hover：不铺底色，只提亮文字 */
+@media (hover: hover) and (pointer: fine) {
+  .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle,
+  .cmt-form.is-inline:has(.cmt-box:not([open])):hover .cmt-toggle {
+    border-color: transparent;
+    background: transparent;
+  }
+  .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])):hover .cmt-toggle {
+    background: transparent;
+  }
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-placeholder { color: var(--c-text); }
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-act { color: var(--c-accent); }
+}
+
+/* 楼中楼：每条回复统一节奏——上下各 7px + 一条细分隔线。
+   首条也带线，避免「第一条回复比后面紧」的断层；
+   有没有 UA 行都是同一间距，不会因为缺 UA 显得忽宽忽窄 */
+.cmt-replies { margin-top: 7px; }
+.cmt-replies > .cmt-item {
+  padding-top: 7px;
+  border-top: 1px solid var(--c-hairline);
+}
+.cmt-replies > .cmt-item + .cmt-item { margin-top: 7px; }
+.cmt-text { margin-bottom: 0; }
+.cmt-byline { margin-top: 6px; }
+.cmt-byline + .cmt-actions { margin-top: 6px; }
+
+
+/* 评论：左侧内容 + 右侧居中的互动图标 */
+.cmt-main{display:flex;align-items:center;gap:14px}
+.cmt-content{flex:1;min-width:0}
+.cmt-actions{margin:0;flex:none;align-self:center;display:block}
+.cmt-reply{
+  display:inline-flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  padding:7px 6px;
+  border-radius:8px;
+}
+.cmt-reply-icon{width:18px;height:18px}
+.cmt-reply-count{
+  min-width:0;
+  padding:0;
+  background:none;
+  font-size:10.5px;
+  line-height:1;
+  color:var(--c-text3);
+}
+.cmt-actions .cmt-reply:hover .cmt-reply-count,
+.cmt-actions .cmt-reply:hover .cmt-reply-icon{color:var(--c-accent)}

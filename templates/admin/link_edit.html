@@ -27,6 +27,11 @@
             <input type="url" name="avatar" value="{{ link.avatar if link else '' }}" class="form-input" placeholder="https://">
         </div>
         <div class="form-group">
+            <label>友链页地址（选填）</label>
+            <input type="url" name="backlink_url" value="{{ link.backlink_url if link else '' }}" class="form-input" placeholder="https://example.com/links">
+            <span class="form-hint">AI 会优先检查这个页面；留空则从站点首页自动查找友链页</span>
+        </div>
+        <div class="form-group">
             <label>RSS 地址（选填）</label>
             <input type="url" name="rss" value="{{ link.rss if link else '' }}" class="form-input" placeholder="https://example.com/feed.xml">
             <span class="form-hint">通过审核后会聚合到前台「博客圈」页面</span>

@@ -491,6 +491,7 @@ def circle():
         "circle.html",
         items=items,
         total=total,
+        seen=min(total, page * per_page),
         stats=stats,
         page=page,
         total_pages=total_pages,
@@ -529,8 +530,9 @@ def links_apply():
             url = "http://" + url
         email = (request.form.get("email") or "").strip()
         rss = (request.form.get("rss") or "").strip()
+        backlink_url = (request.form.get("backlink_url") or "").strip()
         link_id = Link.save(
-            {"name": name, "url": url, "description": description, "avatar": avatar_url, "rss": rss, "sort_order": 0},
+            {"name": name, "url": url, "description": description, "avatar": avatar_url, "rss": rss, "backlink_url": backlink_url, "sort_order": 0},
             None,
             "pending",
         )

@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS links (
     status TEXT DEFAULT 'approved',
     email TEXT DEFAULT '',
     rss TEXT DEFAULT '',
+    backlink_url TEXT DEFAULT '',
     feed_state TEXT DEFAULT '',
     feed_error TEXT DEFAULT '',
     feed_checked_at REAL DEFAULT 0,

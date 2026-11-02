@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 import db
-from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask import Response, flash, jsonify, redirect, render_template, request, stream_with_context, url_for
 
 from services import auth
 from services import plugins as plugins_service
@@ -175,7 +175,8 @@ def register(app) -> None:
                     data[key] = float(request.form.get(key)) if key == "temperature" else int(request.form.get(key))
                 except (TypeError, ValueError):
                     pass
-        for key in ("comment_moderation", "comment_reply", "comment_reply_notify", "link_moderation", "auto_execute"):
+        for key in ("comment_moderation", "comment_reply", "comment_reply_notify", "link_moderation",
+                    "link_ai_audit", "auto_execute"):
             data[key] = str(request.form.get(key, "")).lower() in {"1", "on", "true", "yes"}
         if "comment_reply_time_mode" in request.form:
             mode = str(request.form.get("comment_reply_time_mode") or "all").strip().lower()
@@ -271,6 +272,115 @@ def register(app) -> None:
             active=cfg.get("active") or "",
             daily_calls=_daily_calls(),
         )
+
+    @auth.admin_required
+    def ai_api_chat_stream():
+        """SSE 版对话：先实时推送推理过程，再推送正文；工具调用沿用原流程。"""
+        data = request.get_json(silent=True) or {}
+        message = str(data.get("message") or "").strip()
+        if not message:
+            return jsonify({"error": "消息不能为空"}), 400
+        cfg = config.get()
+        if _daily_calls() >= int(cfg.get("daily_call_limit") or 300):
+            return jsonify({"error": "已达到今日 AI 调用上限，请到配置页调整"}), 429
+        conv_id = int(data.get("conversation_id") or 0)
+
+        def sse(event: str, payload: dict) -> str:
+            return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+        def generate():
+            nonlocal conv_id
+            if not conv_id:
+                conv_id = _new_conversation(message)
+            _add_message(conv_id, "user", message)
+            yield sse("start", {"conversation_id": conv_id})
+
+            history = _history(conv_id, 20)
+            messages = [{"role": "system", "content": str(cfg.get("system_prompt") or "")}] + history
+            if history and history[-1]["role"] != "user":
+                messages.append({"role": "user", "content": message})
+
+            meta: dict = {}
+            write_count = 0
+            for _ in range(4):
+                text = ""
+                sent = 0
+                failed = False
+                for kind, payload in ai_client.stream_chat(messages):
+                    if kind == "reasoning":
+                        yield sse("reasoning", {"t": payload})
+                    elif kind == "content":
+                        text += str(payload)
+                        # 模型正文包在 {"type":"reply","content":"..."} 里，
+                        # 只把已生成的正文部分推给前端，避免用户看到半截 JSON
+                        visible = ai_client.partial_reply_text(text)
+                        if len(visible) > sent:
+                            yield sse("content", {"t": visible[sent:]})
+                            sent = len(visible)
+                    elif kind == "error":
+                        _add_message(conv_id, "assistant", str(payload), meta)
+                        yield sse("error", {"message": str(payload)})
+                        failed = True
+                        break
+                    elif kind == "done":
+                        data_done = payload if isinstance(payload, dict) else {}
+                        text = str(data_done.get("text") or text)
+                        meta = data_done.get("meta") or {}
+                if failed:
+                    return
+
+                action = ai_client.parse_action(text)
+                if action and action.get("type") == "tool":
+                    name = str(action.get("tool") or "")
+                    args = action.get("args") if isinstance(action.get("args"), dict) else {}
+                    if name in tools.READ_TOOLS:
+                        yield sse("discard", {})
+                        result = tools.execute(name, args)
+                        _add_message(conv_id, "tool", json.dumps(result, ensure_ascii=False), {"tool": name, **meta})
+                        yield sse("tool", {"text": result.get("message") or result.get("error") or "已执行"})
+                        messages.append({"role": "assistant", "content": text})
+                        messages.append({"role": "user", "content": "工具结果：" + json.dumps(result, ensure_ascii=False)[:6000]})
+                        continue
+                    if name in tools.WRITE_TOOLS:
+                        force = name in tools.FORCE_CONFIRM
+                        auto_ok = cfg.get("auto_execute") and (
+                            name != "reply_comment" or cfg.get("comment_reply")
+                        )
+                        if auto_ok and not force and write_count < 3:
+                            write_count += 1
+                            yield sse("discard", {})
+                            result = tools.execute(name, args)
+                            _add_message(conv_id, "tool", json.dumps(result, ensure_ascii=False), {"tool": name, **meta})
+                            yield sse("tool", {"text": result.get("message") or result.get("error") or "已执行"})
+                            messages.append({"role": "assistant", "content": text})
+                            messages.append({"role": "user", "content": "工具结果：" + json.dumps(result, ensure_ascii=False)[:6000]})
+                            continue
+                        action_meta = {"tool": name, "args": args, **meta}
+                        mid = _add_message(conv_id, "pending", text, action_meta)
+                        yield sse("discard", {})
+                        yield sse("pending", {
+                            "id": mid, "tool": name, "args": args,
+                            "text": text, "meta": meta, "force": force,
+                        })
+                        return
+
+                content = action.get("content") if action and action.get("type") == "reply" else text
+                if action is None and '"type"' in text and '"tool"' in text:
+                    content = "这一步没有完成：模型输出超长被截断了。" \
+                              "可以到「AI 配置」把最大 Token 调大（建议 8192），或让 AI 分段处理这篇内容。"
+                content = str(content or "").strip() or "（模型没有返回内容）"
+                _add_message(conv_id, "assistant", content, meta)
+                yield sse("done", {"reply": content, "meta": meta})
+                return
+
+            fallback = "这一步没有完成，请换一种说法再试。"
+            _add_message(conv_id, "assistant", fallback, meta)
+            yield sse("done", {"reply": fallback, "meta": meta})
+
+        resp = Response(stream_with_context(generate()), mimetype="text/event-stream")
+        resp.headers["Cache-Control"] = "no-cache"
+        resp.headers["X-Accel-Buffering"] = "no"
+        return resp
 
     @auth.admin_required
     def ai_api_chat():
@@ -393,6 +503,7 @@ def register(app) -> None:
     app.add_url_rule(prefix + "/plugins/ai/models/active", "admin_plugin_ai_models_active", ai_models_active, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/chat", "admin_plugin_ai_chat", ai_chat, methods=["GET"])
     app.add_url_rule(prefix + "/plugins/ai/api/chat", "admin_plugin_ai_api_chat", ai_api_chat, methods=["POST"])
+    app.add_url_rule(prefix + "/plugins/ai/api/chat/stream", "admin_plugin_ai_api_chat_stream", ai_api_chat_stream, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/confirm", "admin_plugin_ai_api_confirm", ai_api_confirm, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/new", "admin_plugin_ai_api_new", ai_api_new, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/ai/api/provider", "admin_plugin_ai_api_provider", ai_api_provider, methods=["POST"])

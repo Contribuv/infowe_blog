@@ -8,7 +8,6 @@
 
   var conv = parseInt(box.getAttribute('data-conv') || '0', 10) || 0;
   var busy = false;
-  var waitTimer = null;
 
   function metaText(meta) {
     if (!meta || !meta.model) return '';
@@ -20,6 +19,10 @@
   }
 
   function scroll() { box.scrollTop = box.scrollHeight; }
+
+  function nearBottom() {
+    return box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  }
 
   function makeRow(role) {
     var row = document.createElement('div');
@@ -98,28 +101,6 @@
     return row;
   }
 
-  function startThinking() {
-    var row = makeRow('assistant');
-    row.className += ' ai-thinking';
-    var bubble = document.createElement('div');
-    bubble.className = 'ai-bubble ai-bubble-assistant';
-    bubble.innerHTML = '<span class="ai-dots"><i></i><i></i><i></i></span><span>正在思考</span><span class="ai-wait">0.0s</span>';
-    row.appendChild(bubble);
-    box.appendChild(row);
-    scroll();
-    var started = Date.now();
-    var wait = bubble.querySelector('.ai-wait');
-    waitTimer = setInterval(function () {
-      wait.textContent = ((Date.now() - started) / 1000).toFixed(1) + 's';
-    }, 100);
-    return row;
-  }
-
-  function stopThinking(row) {
-    if (waitTimer) { clearInterval(waitTimer); waitTimer = null; }
-    if (row && row.parentNode) row.parentNode.removeChild(row);
-  }
-
   function addPending(p) {
     var row = makeRow('assistant');
     row.className += ' ai-pending';
@@ -178,15 +159,212 @@
     sendBtn.textContent = value ? '思考中…' : '发送';
   }
 
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (busy) return;
-    var text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-    add('user', text);
-    setBusy(true);
-    var thinking = startThinking();
+  // ── SSE：逐行解析 event/data ─────────────────────────────
+  function consumeSSE(resp, onEvent) {
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buffer = '';
+    function pump() {
+      return reader.read().then(function (res) {
+        if (res.done) return;
+        buffer += decoder.decode(res.value, { stream: true });
+        var idx;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          var chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          var name = 'message';
+          var data = '';
+          chunk.split('\n').forEach(function (line) {
+            if (line.indexOf('event:') === 0) name = line.slice(6).trim();
+            else if (line.indexOf('data:') === 0) data += line.slice(5).trim();
+          });
+          if (!data) continue;
+          var payload = null;
+          try { payload = JSON.parse(data); } catch (err) { payload = null; }
+          if (payload) onEvent(name, payload);
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }
+
+  function liveRow() {
+    var row = makeRow('assistant');
+    row.className += ' ai-live';
+
+    var details = document.createElement('details');
+    details.className = 'ai-reasoning ai-reasoning-live';
+    details.open = true;
+    var summary = document.createElement('summary');
+    summary.textContent = '推理过程（推理中…）';
+    var rbody = document.createElement('div');
+    rbody.className = 'ai-reasoning-body';
+    details.appendChild(summary);
+    details.appendChild(rbody);
+    row.appendChild(details);
+
+    var status = document.createElement('div');
+    status.className = 'ai-status';
+    status.innerHTML = '<span class="ai-dots"><i></i><i></i><i></i></span>' +
+      '<span class="ai-status-text">正在思考</span><span class="ai-wait">0.0s</span>';
+    row.appendChild(status);
+
+    var bubble = document.createElement('div');
+    bubble.className = 'ai-bubble ai-bubble-assistant ai-bubble-live';
+    bubble.style.display = 'none';
+    row.appendChild(bubble);
+
+    box.appendChild(row);
+    scroll();
+
+    var started = Date.now();
+    var wait = status.querySelector('.ai-wait');
+    var timer = setInterval(function () {
+      wait.textContent = ((Date.now() - started) / 1000).toFixed(1) + 's';
+    }, 100);
+
+    var state = {
+      row: row,
+      details: details,
+      summary: summary,
+      rbody: rbody,
+      status: status,
+      statusText: status.querySelector('.ai-status-text'),
+      bubble: bubble,
+      answer: '',
+      reasoning: '',
+      toolMode: false,
+      settled: false,
+    };
+
+    state.stop = function () {
+      clearInterval(timer);
+      if (state.status && state.status.parentNode) state.status.parentNode.removeChild(state.status);
+      state.status = null;
+    };
+    state.setStatus = function (text) {
+      if (state.statusText) state.statusText.textContent = text;
+    };
+    state.pushReasoning = function (piece) {
+      state.reasoning += piece;
+      details.style.display = '';
+      rbody.textContent = state.reasoning;
+      if (state.status) state.setStatus('正在推理');
+      if (nearBottom()) scroll();
+    };
+    state.pushContent = function (piece) {
+      state.answer += piece;
+      state.bubble.style.display = '';
+      state.bubble.textContent = state.answer;
+      if (state.details.open) {
+        state.details.open = false;
+        state.summary.textContent = '推理过程（已完成）';
+      }
+      if (nearBottom()) scroll();
+    };
+    state.discard = function () {
+      state.answer = '';
+      state.toolMode = true;
+      state.bubble.textContent = '';
+      state.bubble.style.display = 'none';
+    };
+    state.finish = function (reply, meta) {
+      state.stop();
+      state.settled = true;
+      if (state.reasoning) {
+        state.details.open = false;
+        state.summary.textContent = '推理过程';
+      } else if (state.details.parentNode) {
+        state.details.parentNode.removeChild(state.details);
+      }
+      var text = String(reply || '').trim();
+      if (text) {
+        state.bubble.textContent = text;
+        state.bubble.style.display = '';
+      } else if (!state.toolMode) {
+        state.bubble.textContent = '（模型没有返回内容）';
+        state.bubble.style.display = '';
+      }
+      var line = metaText(meta);
+      if (line) {
+        var metaRow = document.createElement('div');
+        metaRow.className = 'ai-meta-row';
+        metaRow.textContent = line;
+        state.row.appendChild(metaRow);
+      }
+      scroll();
+    };
+    state.fail = function (message) {
+      state.stop();
+      state.settled = true;
+      state.bubble.style.display = '';
+      state.bubble.textContent = message;
+      scroll();
+    };
+    return state;
+  }
+
+  function streamSend(text) {
+    var live = liveRow();
+    fetch(urls.chatStream, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: conv, message: text })
+    })
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.json().catch(function () { return {}; }).then(function (d) {
+            throw new Error(d.error || ('HTTP ' + resp.status));
+          });
+        }
+        return consumeSSE(resp, function (name, payload) {
+          if (name === 'start' && payload.conversation_id) {
+            conv = payload.conversation_id;
+          } else if (name === 'reasoning') {
+            live.pushReasoning(payload.t || '');
+          } else if (name === 'content') {
+            live.pushContent(payload.t || '');
+          } else if (name === 'discard') {
+            live.discard();
+          } else if (name === 'tool') {
+            add('tool', payload.text || '已执行');
+            if (live.row.parentNode) box.appendChild(live.row);
+            scroll();
+          } else if (name === 'pending') {
+            if (live.row.parentNode) live.row.parentNode.removeChild(live.row);
+            live.stop();
+            addPending(payload);
+          } else if (name === 'done') {
+            live.finish(payload.reply, payload.meta);
+          } else if (name === 'error') {
+            live.fail(payload.message || 'AI 请求失败');
+          }
+        });
+      })
+      .catch(function (err) {
+        if (!live.settled) live.fail('请求失败：' + (err && err.message ? err.message : err));
+      })
+      .then(function () {
+        setBusy(false);
+        input.focus();
+      });
+  }
+
+  function legacySend(text) {
+    var row = makeRow('assistant');
+    row.className += ' ai-thinking';
+    var bubble = document.createElement('div');
+    bubble.className = 'ai-bubble ai-bubble-assistant';
+    bubble.innerHTML = '<span class="ai-dots"><i></i><i></i><i></i></span><span>正在思考</span><span class="ai-wait">0.0s</span>';
+    row.appendChild(bubble);
+    box.appendChild(row);
+    scroll();
+    var started = Date.now();
+    var wait = bubble.querySelector('.ai-wait');
+    var timer = setInterval(function () {
+      wait.textContent = ((Date.now() - started) / 1000).toFixed(1) + 's';
+    }, 100);
 
     fetch(urls.chat, {
       method: 'POST',
@@ -195,7 +373,8 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        stopThinking(thinking);
+        clearInterval(timer);
+        if (row.parentNode) row.parentNode.removeChild(row);
         if (d.conversation_id) conv = d.conversation_id;
         if (d.pending) {
           addPending(d.pending);
@@ -206,13 +385,29 @@
         }
       })
       .catch(function (err) {
-        stopThinking(thinking);
+        clearInterval(timer);
+        if (row.parentNode) row.parentNode.removeChild(row);
         add('assistant', '请求失败：' + err);
       })
       .then(function () {
         setBusy(false);
         input.focus();
       });
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy) return;
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    add('user', text);
+    setBusy(true);
+    if (urls.chatStream && window.fetch && window.TextDecoder) {
+      streamSend(text);
+    } else {
+      legacySend(text);
+    }
   });
 
   input.addEventListener('keydown', function (e) {

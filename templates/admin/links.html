@@ -32,6 +32,8 @@
                 <th>名称</th>
                 <th>头像</th>
                 <th>URL</th>
+                <th>验证页</th>
+                <th>AI 审核</th>
                 <th>描述</th>
                 <th>操作</th>
             </tr>
@@ -45,6 +47,14 @@
                 <td class="main-td" data-label="名称"><strong>{{ l.name }}</strong></td>
                 <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}">{% else %}{{ l.name[0] }}{% endif %}</span></td>
                 <td data-label="URL"><a href="{{ l.url }}" target="_blank" class="link-url">{{ l.url[:60] }}</a></td>
+                <td data-label="验证页">
+                    {% if l.backlink_url %}<a href="{{ l.backlink_url }}" target="_blank" class="link-url">{{ l.backlink_url[:40] }}</a>
+                    {% else %}<span class="muted">自动查找</span>{% endif %}
+                </td>
+                <td data-label="AI 审核">
+                    {% if l.review_reason %}<span class="badge badge-warn" title="{{ l.review_reason }}">{{ l.review_reason[:16] }}</span>
+                    {% else %}<span class="muted">检查中</span>{% endif %}
+                </td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
                 <td class="actions-cell" data-label="操作">
                     <button type="submit" form="approveForm{{ l.id }}" class="btn btn-sm btn-primary">通过</button>

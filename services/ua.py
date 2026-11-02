@@ -61,3 +61,23 @@ def describe(user_agent: str) -> str:
     if client and system:
         return f"{client} · {system}"
     return client or system
+
+
+def system(user_agent: str) -> str:
+    ua = str(user_agent or "").strip().lower()
+    if not ua:
+        return ""
+    for needle, label in _SYSTEMS:
+        if needle.lower() in ua:
+            return label
+    return ""
+
+
+def client(user_agent: str) -> str:
+    ua = str(user_agent or "").strip().lower()
+    if not ua:
+        return ""
+    for needle, label in _CLIENTS:
+        if needle.lower() in ua:
+            return label
+    return ""

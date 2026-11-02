@@ -108,6 +108,10 @@
                     <input type="checkbox" name="link_moderation" {% if cfg.link_moderation %}checked{% endif %}>
                     <span><strong>友链回链自动审核</strong><small>对方页面出现本站链接后自动通过并发信通知</small></span>
                 </label>
+                <label class="ai-switch">
+                    <input type="checkbox" name="link_ai_audit" {% if cfg.link_ai_audit|default(true) %}checked{% endif %}>
+                    <span><strong>友链 AI 内容审核</strong><small>抓取对方首页标题与正文，判断色情、赌博、诈骗、采集等风险；未配置模型时自动跳过，不影响回链检测</small></span>
+                </label>
                 <div class="ai-identity span-2">
                     <img class="ai-identity-avatar" id="ai-avatar-preview" alt="AI 头像"
                          src="{{ cfg.ai_avatar|default('') or '/plugin-assets/ai_assistant/avatars/ai-bot.svg' }}"

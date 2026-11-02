@@ -103,6 +103,7 @@
 <script>
 window.AI_URLS = {
   chat: {{ url_for('admin_plugin_ai_api_chat') | tojson }},
+  chatStream: {{ url_for('admin_plugin_ai_api_chat_stream') | tojson }},
   confirm: {{ url_for('admin_plugin_ai_api_confirm') | tojson }},
   newChat: {{ url_for('admin_plugin_ai_api_new') | tojson }},
   provider: {{ url_for('admin_plugin_ai_api_provider') | tojson }},

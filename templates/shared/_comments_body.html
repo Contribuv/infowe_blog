@@ -4,7 +4,36 @@
      comments / comment_total / comment_pager / my_pending / commenter / is_admin / admin_avatar
      comment_form_action —— 评论提交地址（如 /post/1/comment、/projects/2/comment）
      focus_id —— 可选，浮窗深链定位（#comment-N 的 N），片段端点传入；inline 模式不传 #}
-    {% if my_pending %}
+    
+{% macro os_svg(name) %}
+{%- if name == 'Windows' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.6v6.7H3zM11.2 4.4 21 3v8.3h-9.8zM3 12.3h7.2v6.7L3 18zM11.2 12.3H21V21l-9.8-1.3z"/></svg>
+{%- elif name in ('macOS', 'iOS', 'iPadOS') -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 12.9c0-2 1.6-3 1.7-3.1-.9-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.3 2-1.4 2.4-.4 6 1 8 .6 1 1.4 2.1 2.4 2 1-.1 1.3-.6 2.5-.6s1.5.6 2.6.6c1.1 0 1.8-1 2.4-2 .8-1.1 1.1-2.2 1.1-2.3 0 0-2-.8-2-3z"/><path d="M14.5 6.4c.5-.6.8-1.4.7-2.2-.7 0-1.5.5-2 1.1-.4.5-.8 1.3-.7 2.1.8.1 1.5-.4 2-1z"/></svg>
+{%- elif name == 'Android' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 9h10v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z"/><path d="m8 9-1.5-3M16 9l1.5-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="9.5" cy="7" r=".8"/><circle cx="14.5" cy="7" r=".8"/><path d="M9 19v2M15 19v2" stroke="currentColor" stroke-width="1.5"/></svg>
+{%- elif name == 'Linux' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3c-2 0-3 2-3 4 0 1.5-.5 2.5-1.2 3.6C7 12 6 13.8 6 16c0 2.5 2.7 4 6 4s6-1.5 6-4c0-2.2-1-4-1.8-5.4C15.5 9.5 15 8.5 15 7c0-2-1-4-3-4z"/><circle cx="10.5" cy="8" r=".6" fill="#fff"/><circle cx="13.5" cy="8" r=".6" fill="#fff"/><path d="M10.5 10.5c.5.5 2.5.5 3 0" stroke="#fff" fill="none"/></svg>
+{%- else -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+{%- endif -%}
+{% endmacro %}
+
+{% macro browser_svg(name) %}
+{%- if name == 'Chrome' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path d="M12 3v5.2M4.2 16.5l4.5-2.6M19.8 16.5l-4.5-2.6"/></svg>
+{%- elif name == 'Safari' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.2 5.3-5.3 2.2 2.2-5.3z"/></svg>
+{%- elif name == 'Firefox' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M18.5 8.5c-1.2-2.2-3.6-3.5-6.2-3.5-4.4 0-8 3.6-8 8 0 4.4 3.6 8 8 8 2.4 0 4.6-1.1 6-2.8"/></svg>
+{%- elif name == 'Edge' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 12c0-4.4 3.6-8 8-8 2.8 0 5.2 1.4 6.6 3.6-1.4-.7-2.9-1.1-4.4-1.1-3.9 0-7 3.1-7 7 0 1.2.3 2.3.9 3.2"/><path d="M20 12c0 4.4-3.6 8-8 8-2.8 0-5.2-1.4-6.6-3.6 1.4.7 2.9 1.1 4.4 1.1 3.9 0 7-3.1 7-7 0-1.2-.3-2.3-.9-3.2"/></svg>
+{%- else -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18"/></svg>
+{%- endif -%}
+{% endmacro %}
+
+{% if my_pending %}
     <div class="cmt-notice" id="cmt-notice">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01" stroke-linecap="round"/></svg>
         <span>你有 <b>{{ my_pending }}</b> 条评论正在审核中，通过后将公开展示，审核期间仅你可见。</span>
@@ -22,6 +51,7 @@
         {% if c.website %}<a class="cmt-avatar-link" href="{{ c.website }}" target="_blank" rel="noopener nofollow" title="{{ c.website }}"><div class="cmt-avatar{% if c.is_author %} cmt-avatar--owner{% endif %}">{{ av_inner }}</div></a>
         {% else %}<div class="cmt-avatar{% if c.is_author %} cmt-avatar--owner{% endif %}">{{ av_inner }}</div>{% endif %}
         <div class="cmt-main">
+            <div class="cmt-content">
             <header class="cmt-head">
                 {% if c.website %}<a class="cmt-author{% if c.is_author %} cmt-author--owner{% elif lv == 'root' and c.author_level %} cmt-author--{{ c.author_level }}{% endif %}" href="{{ c.website }}" target="_blank" rel="noopener nofollow" title="{{ c.website }}">{{ c.author }}</a>
                 {% else %}<span class="cmt-author{% if c.is_author %} cmt-author--owner{% elif lv == 'root' and c.author_level %} cmt-author--{{ c.author_level }}{% endif %}">{{ c.author }}</span>{% endif %}
@@ -34,12 +64,22 @@
                 {% if c.is_private %}<span class="cmt-badge cmt-badge--private">私密</span>{% endif %}
                 {% if c.status == 'pending' %}<span class="cmt-badge cmt-badge--pending">待审核</span>{% endif %}
                 {% if reply_to %}<a class="cmt-at" href="#comment-{{ c.parent_id }}">@{{ reply_to }}</a>{% endif %}
-                <time class="cmt-time">{{ c.created_at [:16] }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}{% if c.ua_label %}<span class="cmt-ua" title="{{ c.user_agent }}">{{ c.ua_label }}</span>{% endif %}
+                <time class="cmt-time">{{ c.time_text or c.created_at [:16] }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}
             </header>
             <p class="cmt-text">{{ c.content_html | safe }}</p>
-            <footer class="cmt-actions">
-                <button type="button" class="cmt-reply" data-reply-to="{{ c.id }}" data-reply-name="{{ c.author }}">回复</button>
-            </footer>
+            {% if c.ua_system or c.ua_client %}
+            <div class="cmt-byline" title="{{ c.user_agent }}">
+                {% if c.ua_system %}<span class="cmt-ua">{{ os_svg(c.ua_system) }}{{ c.ua_system }}</span>{% endif %}
+                {% if c.ua_client %}<span class="cmt-ua">{{ browser_svg(c.ua_client) }}{{ c.ua_client }}</span>{% endif %}
+            </div>
+            {% endif %}
+            </div>
+            <div class="cmt-actions">
+                <button type="button" class="cmt-reply" data-reply-to="{{ c.id }}" data-reply-name="{{ c.author }}" title="回复 {{ c.author }}" aria-label="回复 {{ c.author }}">
+                    <svg class="cmt-reply-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+                    {% if lv == 'root' %}<span class="cmt-reply-count">{{ c.reply_count or 0 }}</span>{% endif %}
+                </button>
+            </div>
         </div>
     </article>
     {% endmacro %}

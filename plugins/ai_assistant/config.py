@@ -94,6 +94,7 @@ DEFAULTS: dict = {
     "comment_daily_limit": 50,
     "comment_reply_time_mode": "all",
     "link_moderation": True,
+    "link_ai_audit": True,
     "link_check_hours": 72,
     "daily_call_limit": 300,
     "auto_execute": True,

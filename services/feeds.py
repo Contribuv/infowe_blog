@@ -57,6 +57,12 @@ def _text(node, tag: str) -> str:
 def _clean(text: str, limit: int = 220) -> str:
     text = re.sub(r"<[^>]+>", " ", text or "")
     text = html.unescape(text)
+    # Markdown 图片 / 链接：摘要里只保留可读文字，别把语法原样丢出去
+    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", text)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    # WordPress / 主题短代码：{riven_notice type="red"}、[gallery ids="1,2"]
+    text = re.sub(r"\{\s*[A-Za-z_][\w-]*(?:\s[^}]*)?\}", " ", text)
+    text = re.sub(r"\[\s*[A-Za-z_][\w-]*(?:\s[^\]]*)?\]", " ", text)
     # RSS 摘要常以 [...] / […] 标记原文被截断，透传到卡片里很难看；
     # 去掉后由前端 CSS 做两行省略，只保留一套截断
     text = re.sub(r"\[\s*(?:\.\.\.|…)\s*\]", " ", text)
@@ -207,7 +213,19 @@ def rel_time(ts: float) -> str:
         return f"{int(diff // 3600)} 小时前"
     if diff < 86400 * 2:
         return "昨天"
-    return datetime.fromtimestamp(ts).strftime("%m-%d")
+    if diff < 86400 * 30:
+        return f"{int(diff // 86400)} 天前"
+    if diff < 86400 * 365:
+        return f"{max(1, int(diff // 86400 // 30))} 个月前"
+    return f"{max(1, int(diff // 86400 // 365))} 年前"
+
+
+def date_text(ts: float) -> str:
+    ts = float(ts or 0)
+    if not ts:
+        return ""
+    dt = datetime.fromtimestamp(ts)
+    return f"{dt.year}年{dt.month}月{dt.day}日"
 
 
 def aggregate(page: int = 1, per_page: int = PER_PAGE) -> tuple[list[dict], int, dict]:
@@ -232,6 +250,7 @@ def aggregate(page: int = 1, per_page: int = PER_PAGE) -> tuple[list[dict], int,
         # 否则老文章卡片上会一直挂着 RSS 的截断占位符
         item["summary"] = _clean(item.get("summary") or "")
         item["time_text"] = rel_time(item.get("published"))
+        item["date_text"] = date_text(item.get("published"))
         items.append(item)
 
     now = datetime.now()

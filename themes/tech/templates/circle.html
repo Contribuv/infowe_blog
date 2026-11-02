@@ -9,25 +9,40 @@
     <a class="tech-btn tech-btn-primary" href="/links/apply">我要申请</a>
 </div>
 
-<div class="circle-stats">
-    <div><b>{{ stats.sites }}</b><span>订阅站点</span></div>
-    <div><b>{{ stats.month }}</b><span>本月文章</span></div>
-    <div><b>{{ stats.week }}</b><span>本周文章</span></div>
+{# 四个统计卡片：顺序为「今日 → 本周 → 本月 → 订阅站点」，外框与 hover 沿用旧样式，
+   只把卡片内部改成上下单栏（标签在上、数字在下） #}
+<div class="circle-stats circle-stats--circle">
     <div><b>{{ stats.today }}</b><span>今日文章</span></div>
+    <div><b>{{ stats.week }}</b><span>本周文章</span></div>
+    <div><b>{{ stats.month }}</b><span>本月文章</span></div>
+    <div><b>{{ stats.sites }}</b><span>订阅站点</span></div>
 </div>
 
 {% if items %}
 <div class="circle-list">
     {% for it in items %}
     <article class="circle-item">
-        <a class="circle-title" href="{{ it.url }}" target="_blank" rel="noopener nofollow">{{ it.title }}</a>
-        {% if it.summary %}<p class="circle-summary">{{ it.summary }}</p>{% endif %}
-        <div class="circle-meta">
-            <a class="circle-site" href="{{ it.site_url }}" target="_blank" rel="noopener">
-                {% if it.site_avatar %}<img class="circle-avatar" src="{{ it.site_avatar }}" alt="" loading="lazy" onerror="this.remove()">{% endif %}
-                <span>{{ it.site_name }}</span>
+        <div class="circle-head">
+            {% if it.site_avatar %}
+            <a class="circle-avatar-link" href="{{ it.site_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">
+                <img class="circle-avatar" src="{{ it.site_avatar }}" alt="" loading="lazy" onerror="this.closest('.circle-avatar-link').remove()">
             </a>
+            {% else %}
+            <span class="circle-avatar circle-avatar--letter" aria-hidden="true">{{ it.site_name[:1] | upper }}</span>
+            {% endif %}
+            <div class="circle-head-info">
+                <a class="circle-site-name" href="{{ it.site_url }}" target="_blank" rel="noopener">{{ it.site_name }}</a>
+                <time class="circle-date">{{ it.date_text }}</time>
+            </div>
+        </div>
+        <h2 class="circle-title"><a href="{{ it.url }}" target="_blank" rel="noopener nofollow">{{ it.title }}</a></h2>
+        {% if it.summary %}<p class="circle-summary">{{ it.summary }}</p>{% endif %}
+        <div class="circle-foot">
             <time class="circle-time">{{ it.time_text }}</time>
+            <a class="circle-more" href="{{ it.url }}" target="_blank" rel="noopener nofollow">
+                阅读全文
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </a>
         </div>
     </article>
     {% endfor %}
@@ -42,6 +57,15 @@
     {% endfor %}
     {% if page < total_pages %}<a href="?page={{ page + 1 }}">下一页</a>{% else %}<span class="is-disabled">下一页</span>{% endif %}
 </nav>
+
+<div class="circle-end">
+    <p class="circle-end-count">已经看了 <b>{{ seen }}</b> 篇</p>
+    {% if page >= total_pages %}
+    <p class="circle-end-note">不是，兄弟，你这么喜欢在我这儿看别人的文章吗？{{ total }} 篇文章都被你看光了，要不你去别的地方逛逛？</p>
+    {% else %}
+    <p class="circle-end-note">还有 {{ total - seen }} 篇没看，确定不继续往下翻翻？</p>
+    {% endif %}
+</div>
 {% else %}
 <div class="tech-empty">
     <p>还没有可展示的友链动态。</p>

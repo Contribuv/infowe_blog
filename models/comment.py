@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 import db
@@ -14,6 +15,26 @@ ADMIN_PAGE_SIZE = 20
 # 阈值集中在这里，想调档直接改常量。
 LEVEL_RETURNING_FROM = 2
 LEVEL_REGULAR_FROM = 5
+
+
+def _relative_time(value: str) -> str:
+    """前台评论时间：刚刚 / 分钟前 / 小时前 / 天前 / 完整时间。"""
+    try:
+        dt = datetime.strptime(value[:19], "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return ""
+    now = datetime.now()
+    delta = now - dt
+    seconds = int(delta.total_seconds())
+    if seconds < 60:
+        return "刚刚"
+    if seconds < 3600:
+        return f"{seconds // 60}分钟前"
+    if delta.days < 1:
+        return f"{seconds // 3600}小时前"
+    if delta.days <= 15:
+        return f"{delta.days}天前"
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def load(
@@ -95,6 +116,9 @@ def load(
             else:
                 c["author_level"] = "regular"
         c["ua_label"] = ua.describe(str(c.get("user_agent") or ""))
+        c["time_text"] = _relative_time(str(c.get("created_at") or ""))
+        c["ua_system"] = ua.system(str(c.get("user_agent") or ""))
+        c["ua_client"] = ua.client(str(c.get("user_agent") or ""))
         if c["is_author"]:
             if cfg_avatar and cfg_ok:
                 c["avatar"], c["avatar_fallback"] = cfg_avatar, ""
@@ -142,8 +166,13 @@ def load(
         for child in node["children"]:
             set_depth(child, depth + 1)
 
+    def count_descendants(node: dict) -> int:
+        return sum(1 + count_descendants(child) for child in node.get("children") or [])
+
     for root in roots:
         set_depth(root, 0)
+        # 整条楼中楼的回复总数（不只是直接子评论），供前台根评论展示
+        root["reply_count"] = count_descendants(root)
 
     total_roots = len(roots)
     pager = {"page": 1, "per_page": 0, "total_pages": 1, "total_roots": total_roots}
