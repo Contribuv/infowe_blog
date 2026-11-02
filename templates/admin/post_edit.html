@@ -223,6 +223,21 @@
         t = t.toLowerCase();
         return currentTagNames().some(function (x) { return x.toLowerCase() === t; });
     }
+    // 输入框去重：大小写不敏感、保留首次出现，规范化逗号分隔（blur/change 与提交前调用，
+    // 不在 input 逐字触发，避免打字过程中光标被重写值打断）
+    function dedupeTags() {
+        var seen = {}, out = [];
+        currentTagNames().forEach(function (t) {
+            var k = t.toLowerCase();
+            if (!seen[k]) { seen[k] = 1; out.push(t); }
+        });
+        var next = out.join(', ');
+        if (next !== tagsInput.value) {
+            tagsInput.value = next;
+            renderChips();
+        }
+    }
+    tagsInput.addEventListener('change', dedupeTags);
     function addTag(t) {
         if (!t || hasTag(t)) return;
         var val = tagsInput.value.trim();
@@ -587,6 +602,7 @@
     var form = document.getElementById('post-form');
     if (form) {
         form.addEventListener('submit', function () {
+            dedupeTags();          // 提交前去重（焦点仍在标签框时 change 可能未触发）
             textarea.value = vditor.getValue();
         });
     }

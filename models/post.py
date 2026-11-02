@@ -228,7 +228,13 @@ def _auto_excerpt(content: str, limit: int = 200) -> str:
 
 def save(form: dict, post_id: int | None = None) -> int:
     title = (form.get("title") or "").strip()
-    tags = [t.strip() for t in (form.get("tags") or "").split(",") if t.strip()]
+    # 标签去重：大小写不敏感，保留首次出现（前端 change 时也去重，此处兜底防绕过）
+    tags, seen = [], set()
+    for t in (form.get("tags") or "").split(","):
+        t = t.strip()
+        if t and t.lower() not in seen:
+            seen.add(t.lower())
+            tags.append(t)
     tags_json = json_dump(tags)
 
     slug = (form.get("slug") or "").strip()
