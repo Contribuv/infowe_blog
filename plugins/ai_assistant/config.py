@@ -15,7 +15,7 @@ DEFAULTS: dict = {
     "active": "",
     "temperature": 0.4,
     "max_tokens": 8192,
-    "timeout": 60,
+    "timeout": 120,
     "system_prompt": (
         "你是这个博客后台的 AI 助手，只能用简体中文思考和回复。\n\n"
         "## 权限规则\n"
@@ -154,6 +154,14 @@ def get() -> dict:
             "list_comments {email:xxx@qq.com, limit:50}",
             "list_comments {email:xxx@qq.com, limit:50, status:all}",
         )
+
+    # 旧默认 60s 对 reasoning 模型不够：实测 mimo-v2.6-flash 写 2000 字要 56s+，
+    # 多轮对话/长回复必超时，表现为「回复会中断」；旧值低于 120 的统一升到 120
+    try:
+        if int(data.get("timeout") or 0) < 120:
+            data["timeout"] = 120
+    except (TypeError, ValueError):
+        data["timeout"] = 120
 
     # 旧版默认 1200 对长文章不够，升级到 8192：
     # 实测 4096 时重构一篇 3750 字的文章，update_post 的 JSON 会被截断导致解析失败
