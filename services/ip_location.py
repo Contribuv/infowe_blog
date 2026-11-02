@@ -59,10 +59,10 @@ def _short_province(name: str) -> str:
 
 
 def display_location(value: str | None) -> str:
-    """归属地展示成「省 · 市」：中国 江西省 九江市 移动 CN -> 江西 · 九江市。
+    """归属地展示成「省 · 市」：中国 河北省 邢台市 移动 CN -> 河北省 · 邢台市。
 
-    库里历史数据有「省 市」「国家 省 市 运营商 代码」等写法；直辖市只留一条，
-    本地/内网原样保留，已经带「 · 」的直接返回。
+    库里历史数据有「省 市」「国家 省 市 运营商 代码」等写法；省份保留原始
+    写法（省 / 自治区 / 特别行政区都不删），直辖市只留一条，本地/内网原样保留。
     """
     text = str(value or "").strip()
     if not text:
@@ -75,8 +75,7 @@ def display_location(value: str | None) -> str:
     if not kept:
         return ""
     if len(kept) == 1:
-        only = kept[0]
-        return _short_province(only) if only.endswith(_PROVINCE_SUFFIX) else only
+        return kept[0]
 
     province = kept[0]
     for token in kept[:-1]:
@@ -84,10 +83,9 @@ def display_location(value: str | None) -> str:
             province = token
             break
     city = kept[-1]
-    short = _short_province(province)
-    if city == province or short == city or short in _MUNICIPALITIES:
+    if city == province or _short_province(province) in _MUNICIPALITIES:
         return city
-    return f"{short} · {city}"
+    return f"{province} · {city}"
 
 
 # 兼容旧调用名
