@@ -311,7 +311,17 @@ def _run(meta: dict) -> None:
                 "finished": time.time(),
             })
             return
-        proc = _git(base, "pull", "--ff-only", remote, timeout=180)
+        # 显式指定当前分支：remote 非当前分支的默认上游时（如 origin=GitHub、gitee=另一个远程），
+        # `git pull <remote>` 会报 "did not specify a branch" 而失败
+        head = _git(base, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        if not head or head == "HEAD":
+            _write_state({
+                "state": "failed", "percent": 100, "label": "升级失败",
+                "summary": "当前处于 detached HEAD，无法确定拉取分支；请先 git checkout 主分支",
+                "finished": time.time(),
+            })
+            return
+        proc = _git(base, "pull", "--ff-only", remote, head, timeout=180)
         if proc.returncode != 0:
             _write_state({
                 "state": "failed", "percent": 100, "label": "git pull 失败",
