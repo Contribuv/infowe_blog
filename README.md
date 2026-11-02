@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.5.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.4)
+[![version](https://img.shields.io/badge/version-3.5.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.5)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,14 +919,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.5.4**
+当前版本：**v3.5.5**
+
+### v3.5.5
+
+- 修复 AI 对话回复中断：默认 60s 请求超时对 reasoning 模型不够（mimo 写 2000 字实测 56s+），升到 120s 并自动迁移旧配置
+- 修复 Gitee 源在线升级失败：`pull` 未指定分支，remote 非当前分支的默认上游时报 `did not specify a branch`；改为显式拉取当前分支，detached HEAD 时给出明确提示
+- 后台页头「回收站」按钮修复：计数徽章自带 margin/边框把按钮撑高约 10px 且边框内套边框，与「新建文章」一高一低、观感割裂；新增 `.btn .badge` 压平为按钮内扁平胶囊，两按钮等高对齐
+- 文章标签禁止重复：前端失焦与提交时大小写不敏感去重（保留首次出现、规范化逗号分隔），后端 `save()` 解析时同步去重兜底，防绕过直接 POST
+
+<details>
+<summary><b>历史版本（v3.5.4 及更早）</b></summary>
 
 ### v3.5.4
 
 - 留存审计日志改为永久保存：`op_logs` 不再按 180 天自动清理（`KEEP_DAYS = 0`），历史记录全部保留
-
-<details>
-<summary><b>历史版本（v3.5.3 及更早）</b></summary>
 
 ### v3.5.3
 
