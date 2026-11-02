@@ -69,10 +69,8 @@ def display_location(value: str | None) -> str:
         return ""
     if text in {"本地", "内网"}:
         return text
-    if " · " in text:
-        return text
 
-    parts = [p for p in re.split(r"[\s|]+", text) if p]
+    parts = [p for p in re.split(r"[·\s|]+", text) if p]
     kept = [p for p in parts if p.lower() not in _IGNORED and p not in _ISPS]
     if not kept:
         return ""
@@ -81,7 +79,7 @@ def display_location(value: str | None) -> str:
         return _short_province(only) if only.endswith(_PROVINCE_SUFFIX) else only
 
     province = kept[0]
-    for token in kept:
+    for token in kept[:-1]:
         if token.endswith(_PROVINCE_SUFFIX) or token.endswith("市"):
             province = token
             break

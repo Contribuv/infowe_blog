@@ -104,7 +104,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-time{margin-left:6px;font-size:11px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-loc{font-size:11px;color:var(--c-text3);font-style:normal}
 /* 属地加显式前缀：裸地名易被误读为第二个时间或正文，与微博/知乎口径一致 */
-.cmt-loc::before{content:"· "}
+.cmt-loc::before{content:"·";margin-right:4px}
 /* 徽章与主题标签（tech-tag）同款方圆角，行高贴近同行小字，整排视觉更齐 */
 .cmt-badge{font-size:11px;line-height:1;padding:0 7px;height:17px;box-sizing:border-box;display:inline-flex;align-items:center;border-radius:3px;font-weight:500;border:1px solid transparent;position:relative;top:-1px}
 /* 标签用低饱和淡底 + 同色描边，三种身份仍可区分但不抢正文 */
@@ -409,6 +409,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   margin-top:6px;font-size:11px;line-height:1;color:var(--c-text3);
 }
 .cmt-byline .cmt-ua{display:inline-flex;align-items:center;gap:4px;line-height:1}
+/* 设备/浏览器信息挂在作者行末尾（跟着地名），不再单独占一行 */
+.cmt-head .cmt-byline{margin-top:0;align-self:center;gap:4px 8px}
+.cmt-head .cmt-byline::before{content:"·";opacity:.5}
 .cmt-byline .cmt-ua::before{content:none}
 .cmt-byline .cmt-ua+.cmt-ua::before{content:"·";margin-right:6px;opacity:.5}
 .cmt-ua-icon{width:13px;height:13px;flex:none}

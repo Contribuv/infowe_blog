@@ -71,14 +71,14 @@
                 {% if c.status == 'pending' %}<span class="cmt-badge cmt-badge--pending">待审核</span>{% endif %}
                 {% if reply_to %}<a class="cmt-at" href="#comment-{{ c.parent_id }}">@{{ reply_to }}</a>{% endif %}
                 <time class="cmt-time">{{ c.time_text or c.created_at [:16] }}</time>{% if c.ip_location %}<span class="cmt-loc">{{ c.ip_location }}</span>{% endif %}
+                {% if c.ua_system or c.ua_client %}
+                <span class="cmt-byline" title="{{ c.user_agent }}">
+                    {% if c.ua_system %}<span class="cmt-ua">{{ os_svg(c.ua_system) }}{{ c.ua_system }}</span>{% endif %}
+                    {% if c.ua_client %}<span class="cmt-ua">{{ browser_svg(c.ua_client) }}{{ c.ua_client }}</span>{% endif %}
+                </span>
+                {% endif %}
             </header>
             <p class="cmt-text">{{ c.content_html | safe }}</p>
-            {% if c.ua_system or c.ua_client %}
-            <div class="cmt-byline" title="{{ c.user_agent }}">
-                {% if c.ua_system %}<span class="cmt-ua">{{ os_svg(c.ua_system) }}{{ c.ua_system }}</span>{% endif %}
-                {% if c.ua_client %}<span class="cmt-ua">{{ browser_svg(c.ua_client) }}{{ c.ua_client }}</span>{% endif %}
-            </div>
-            {% endif %}
             </div>
             <div class="cmt-actions">
                 <button type="button" class="cmt-reply" data-reply-to="{{ c.id }}" data-reply-name="{{ c.author }}" title="回复 {{ c.author }}" aria-label="回复 {{ c.author }}">
