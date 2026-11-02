@@ -50,7 +50,7 @@ def load(
     返回 (顶层评论, 评论总数, 分页信息)。per_page > 0 时按顶层评论分页，
     楼中楼回复始终跟随所属根评论一起展示。
     """
-    from services import avatar, comments as comments_service, settings, ua
+    from services import avatar, comments as comments_service, ip_location, settings, ua
 
     column = "project_id" if project_id is not None else "post_id"
     value = project_id if project_id is not None else post_id
@@ -116,6 +116,8 @@ def load(
             else:
                 c["author_level"] = "regular"
         c["ua_label"] = ua.describe(str(c.get("user_agent") or ""))
+        # 归属地只展示到城市级：历史数据里可能还带着国家/省份/运营商
+        c["ip_location"] = ip_location.short_location(c.get("ip_location"))
         c["time_text"] = _relative_time(str(c.get("created_at") or ""))
         c["ua_system"] = ua.system(str(c.get("user_agent") or ""))
         c["ua_client"] = ua.client(str(c.get("user_agent") or ""))

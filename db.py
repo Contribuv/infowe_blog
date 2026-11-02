@@ -234,6 +234,10 @@ def init_db(app) -> None:
     conn = connect(db_path)
     try:
         sync_schema(conn, schema_text)
+        # 历史评论的 IP 归属地统一压成城市级（中国 江西省 九江市 移动 CN -> 九江市）
+        from services import ip_location
+
+        ip_location.migrate_comments(conn)
     finally:
         conn.close()
 
