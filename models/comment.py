@@ -271,6 +271,32 @@ def set_status(comment_id: int, status: str) -> None:
         db.execute("UPDATE comments SET status = ? WHERE id = ?", (status, comment_id))
 
 
+def mark_manual(comment_id: int, label: str, status: str = "") -> None:
+    """人工审核留痕：label 写入 ai_meta.manual，后台「状态」列展示说明；label 为空则清除。
+
+    status 非空时一并更新评论状态（如拒绝 = rejected）。
+    """
+    row = db.one("SELECT ai_meta FROM comments WHERE id = ?", (comment_id,))
+    meta: dict = {}
+    try:
+        raw = json.loads((row["ai_meta"] if row else "") or "{}")
+        if isinstance(raw, dict):
+            meta = raw
+    except (TypeError, ValueError):
+        meta = {}
+    if label:
+        meta["manual"] = label
+    else:
+        meta.pop("manual", None)
+    payload = json.dumps(meta, ensure_ascii=False)
+    if status:
+        db.execute(
+            "UPDATE comments SET status = ?, ai_meta = ? WHERE id = ?", (status, payload, comment_id)
+        )
+    else:
+        db.execute("UPDATE comments SET ai_meta = ? WHERE id = ?", (payload, comment_id))
+
+
 def admin_list(page: int = 1, per_page: int = 0) -> tuple[list[dict], int]:
     """后台评论列表，返回 (当前页数据, 总数)；per_page > 0 时分页。"""
     total = int(db.scalar("SELECT COUNT(*) FROM comments WHERE deleted_at IS NULL", (), 0))
@@ -307,6 +333,10 @@ def admin_list(page: int = 1, per_page: int = 0) -> tuple[list[dict], int]:
         item["ai_state"] = str(item.get("ai_state") or "idle")
         item["ai_decision"] = str(meta.get("decision") or "")
         item["ai_reason"] = str(meta.get("reason") or meta.get("error") or "")
+        # 人工审核说明（拒绝时写入），后台状态列单独展示
+        item["ai_manual"] = str(meta.get("manual") or "")
+        # AI 未回复原因（随机未抽中 / 不在时段 / 命中屏蔽词）
+        item["ai_reply_skip"] = str(meta.get("reply_skip") or "")
         item["ai_avatar"] = str(meta.get("avatar") or "")
         result.append(item)
     return result, total
@@ -336,6 +366,13 @@ def bulk(ids: list[int], action: str) -> int:
     if action in {"pending"}:
         marks = ",".join("?" * len(ids))
         return db.execute(f"UPDATE comments SET status='pending' WHERE id IN ({marks})", ids).rowcount
+    # 拒绝：状态置 rejected，前台不展示但后台列表保留记录
+    if action in {"reject", "rejected"}:
+        marks = ",".join("?" * len(ids))
+        count = db.execute(f"UPDATE comments SET status='rejected' WHERE id IN ({marks})", ids).rowcount
+        for cid in ids:
+            mark_manual(cid, "已拒绝（前台不显示，记录保留）")
+        return count
     return 0
 
 

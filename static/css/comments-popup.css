@@ -1,4 +1,4 @@
-/* 评论浮窗（v3.4.33）：右侧悬浮按钮 + 原生 <dialog> 弹窗。
+﻿/* 评论浮窗（v3.4.33）：右侧悬浮按钮 + 原生 <dialog> 弹窗。
    仅 comment_display == 'floating' 时由 base.html 引入。
    配色全部走 theme.css 的 CSS 变量（亮/暗主题自适应）；
    z-index 规避：back-top 150、搜索 200、灯箱 400、全屏 9999 —— FAB 取 300，
@@ -22,20 +22,19 @@
   padding: 10px 16px;
   border: 1px solid var(--border-strong, #c6ced9);
   border-radius: 999px;
-  background: var(--glass-bg, rgba(251, 252, 253, .86));
-  backdrop-filter: blur(8px);
+  background: var(--bg, #fbfcfd);
+  backdrop-filter: none; /* 扁平化：FAB 去毛玻璃 */
   color: var(--text, #161b24);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: var(--shadow, 0 1px 2px rgba(16, 27, 43, .06)), 0 4px 14px rgba(16, 27, 43, .1);
-  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, opacity .2s ease;
+  box-shadow: none; /* 扁平化：FAB 去投影，靠描边区分 */
+  transition: border-color .16s ease, background-color .16s ease, opacity .2s ease;
 }
 .cmt-fab:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow, 0 1px 2px rgba(16, 27, 43, .06)), 0 8px 20px rgba(16, 27, 43, .16);
+  border-color: var(--accent, #2f7ad1); /* 扁平化：hover 不上浮不加深投影 */
 }
-.cmt-fab:active { transform: translateY(0); }
+.cmt-fab:active { transform: none; }
 .cmt-fab svg { width: 17px; height: 17px; flex: none; }
 .cmt-fab-badge {
   min-width: 18px;
@@ -93,8 +92,7 @@ body:has(.cmt-pop[open]) .cmt-fab,
   flex-direction: column;
 }
 .cmt-pop::backdrop {
-  background: var(--overlay, rgba(16, 27, 43, .45));
-  backdrop-filter: blur(2px);
+  background: var(--overlay, rgba(16, 27, 43, .45)); /* 扁平化：遮罩去模糊 */
 }
 /* 原生 dialog 默认 margin:auto 居中；这里显式声明便于覆盖浏览器默认 */
 .cmt-pop { margin: auto; }
@@ -133,6 +131,8 @@ body:has(.cmt-pop[open]) .cmt-fab,
 /* 内容区：唯一滚动容器（分页/定位都只滚这里，背后页面不动） */
 .cmt-pop-body {
   flex: 1 1 auto;
+  /* 站主要求：浮窗内同样表单在上、评论内容在下——foot(表单) 提到 body(列表) 之前 */
+  order: 2;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 16px;
@@ -171,7 +171,9 @@ body:has(.cmt-pop[open]) .cmt-fab,
    <details> 展开后过高时内部滚动（限 45dvh），不把评论列表挤没 */
 .cmt-pop-foot {
   flex: none;
+  order: 1; /* 表单区排到列表上方（见 .cmt-pop-body 的 order:2） */
   border-top: 1px solid var(--border, #e1e6ed);
+  border-bottom: 1px solid var(--border, #e1e6ed); /* 原在列表下方的分隔线改为表单下沿 */
   background: var(--bg, #fbfcfd);
   padding: 12px 16px;
   max-height: 45dvh;
@@ -265,3 +267,4 @@ body:has(.cmt-pop[open]) .cmt-fab,
 @media print {
   .cmt-fab, .cmt-pop { display: none !important; }
 }
+

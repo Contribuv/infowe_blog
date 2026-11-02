@@ -1,4 +1,4 @@
-@charset "UTF-8";
+﻿@charset "UTF-8";
 /* ==============================================
    infowe Blog · 分享面板（default / tech 两主题通用）
    仅使用两主题共有的 CSS 变量（带缺省回退，保证任意主题可用）
@@ -62,9 +62,10 @@
   text-decoration: none;
   color: var(--text-secondary, #656d76);
   border-radius: 10px;
-  transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
 }
-@media (hover: hover) and (pointer: fine) { .share-item:hover { color: var(--text, #1f2328); background: var(--bg-hover, var(--bg-subtle, rgba(0, 0, 0, 0.06))); transform: translateY(-1px); } }
+/* 扁平化：hover 只换底色，不上浮 */
+@media (hover: hover) and (pointer: fine) { .share-item:hover { color: var(--text, #1f2328); background: var(--bg-hover, var(--bg-subtle, rgba(0, 0, 0, 0.06))); } }
 .share-chip {
   width: 46px; height: 46px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -125,3 +126,4 @@
   font-size: 12px; line-height: 1.6;
   color: var(--text-tertiary, var(--text-secondary, #8b949e));
 }
+

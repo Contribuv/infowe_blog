@@ -1,4 +1,4 @@
-@charset "UTF-8";
+﻿@charset "UTF-8";
 /* ═══════════════════════════════════════════════
    Toast 轻提示（两套主题共用）
    PC 右下角堆叠；移动端底部居中并避开安全区
@@ -38,3 +38,4 @@
 @media (prefers-reduced-motion:reduce){
   .toast{transition:opacity .15s}
 }
+

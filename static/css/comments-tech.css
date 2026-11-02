@@ -1,4 +1,4 @@
-@charset "UTF-8";
+﻿@charset "UTF-8";
 /* ═══════════════════════════════════════════════════════════
    评论区（tech 主题专用 · 盖楼 v2，独立于 default 的 comments.css）
    结构：一个楼层 = 根评论 + 它下面全部回复，同属 .cmt-thread
@@ -135,7 +135,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 /* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
 /* 毛玻璃：底色在文件末尾「毛玻璃降级」段统一给出（默认实色 + 特性查询升级） */
-.cmt-form{margin-top:20px;-webkit-backdrop-filter:saturate(180%) blur(16px);backdrop-filter:saturate(180%) blur(16px);border:1px solid var(--c-hairline);border-radius:var(--c-radius);padding:14px 16px}
+/* 扁平化：去掉毛玻璃，仅保留描边卡 */
+.cmt-form{margin-top:20px;border:1px solid var(--c-hairline);border-radius:var(--c-radius);padding:14px 16px}
 .cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
@@ -238,6 +239,15 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 #cmt-region{transition:opacity .15s ease}
 #cmt-region[aria-busy="true"]{opacity:.6}
 
+/* 站主要求：表单在上、评论内容在下。DOM 不动（回复挂回/分页逻辑不受影响），用 flex order 调视觉顺序 */
+.cmt{display:flex;flex-direction:column}
+.cmt>.cmt-notice{order:1}
+.cmt>.cmt-title{order:2}
+.cmt>.cmt-form{order:3}
+.cmt>#comment-form-anchor{order:4}
+.cmt>#cmt-region{order:5;margin-top:20px}
+.cmt>.cmt-form{margin-top:0} /* 与标题的 18px 间距由 .cmt-title 的 margin-bottom 收口 */
+
 /* ── 移动端：收紧尺度，回复区缩进对齐根评论正文左缘（36+10=46） ── */
 @media (max-width:767px){
   .cmt{--av-root:36px;--av-reply:26px;--gap:10px;--indent:46px}
@@ -335,21 +345,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-suggest-item+.cmt-suggest-item{border-top:1px solid var(--c-border)}
 @media (hover:hover) and (pointer:fine){ .cmt-suggest-item:hover{color:var(--c-accent)} }
 
-/* ═══ 评论表单：透明底 ═══
-   表单不要底色块，只留 1px 描边和圆角，让页面本身的墨蓝底直接透出来；
-   边框保留是为了在深色背景上仍能看出输入区域的范围。
-   这里同样避开 `@supports not`（压缩后会失效），用「默认透明 + 正向查询兜底」。
+/* ═══ 评论表单：透明底（扁平化已去掉毛玻璃，只保留描边） ═══
+   表单不要底色块，只留 1px 描边和圆角，让页面底色直接透出来。
    注意 .cmt-form.is-inline 的 background:none 特异性更高，不受影响。 */
-.cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
-@supports (backdrop-filter: blur(1px)){
-  .cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
-}
-@supports (-webkit-backdrop-filter: blur(1px)){
-  .cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
-}
-@media (max-width:767px){
-  .cmt-form{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
-}
+.cmt-form{background:transparent}
 
 /* AI 助手回复标识 */
 .cmt-badge--ai{background:rgba(90,150,190,.11);color:#8fb8d0;border-color:rgba(90,150,190,.20)}
+

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import random
 import re
 import socket
 import threading
@@ -139,6 +140,39 @@ def _in_reply_time_window(cfg: dict) -> bool:
     return True
 
 
+def _reply_roll(cfg: dict) -> bool:
+    """随机回复抽签：random 模式按「回复概率」掷点，all 模式恒为回。
+
+    抽查而非按计数，所以 10 条通过的评论会自然落在 2~5 条区间。
+    """
+    mode = str(cfg.get("comment_reply_mode") or "all").strip().lower()
+    if mode != "random":
+        return True
+    try:
+        rate = int(cfg.get("comment_reply_rate") or 0)
+    except (TypeError, ValueError):
+        rate = 30
+    rate = max(0, min(100, rate))
+    return random.randint(1, 100) <= rate
+
+
+def _reply_skip_note(cfg: dict, will_reply: bool, reply: str) -> str:
+    """本次没有生成回复时，写给后台「状态」列看的说明文案。"""
+    if not cfg.get("comment_reply"):
+        return "AI 回复已关闭（未生成回复）"
+    if not _in_reply_time_window(cfg):
+        return "AI 跳过：不在托管时段"
+    if not will_reply:
+        try:
+            rate = int(cfg.get("comment_reply_rate") or 0)
+        except (TypeError, ValueError):
+            rate = 30
+        return f"AI 随机跳过：本次未抽中（回复概率 {rate}%）"
+    if not reply:
+        return "AI 跳过：模型未生成回复"
+    return "AI 跳过：回复内容命中屏蔽词"
+
+
 def _invalidate_page(comment: dict) -> None:
     """AI 在后台线程改了评论公开状态后，主动清对应页面缓存。
 
@@ -217,13 +251,15 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 return
             content = str(comment.get("content") or "").strip()
             min_len = int(cfg.get("comment_min_length") or 10)
-            max_len = int(cfg.get("comment_max_length") or 0)
+            # 只保留最短长度门槛：太短的评论不送 AI，原因写进 ai_meta 供后台查看
             if len(content) < min_len:
-                db.execute("UPDATE comments SET ai_state='skipped' WHERE id=?", (cid,))
+                db.execute(
+                    "UPDATE comments SET ai_state='skipped', ai_meta=? WHERE id=?",
+                    (json.dumps({"reason": f"低于最短长度 {min_len} 字"}, ensure_ascii=False), cid),
+                )
                 return
-            if max_len > 0 and len(content) > max_len:
-                db.execute("UPDATE comments SET ai_state='skipped' WHERE id=?", (cid,))
-                return
+            # 先抽签决定这条到底回不回：未抽中就不让模型生成回复，省 token
+            will_reply = bool(cfg.get("comment_reply")) and _in_reply_time_window(cfg) and _reply_roll(cfg)
             # 本地硬规则先拦：领导人、官员、政府敏感词直接拒绝，不交给模型判断
             blocked = _blocked_word(raw_content or content)
             if blocked:
@@ -260,6 +296,9 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 f"当前内容正文（节选）：\n<<<\n{context}\n>>>\n"
                 f"评论作者：{comment.get('author')}\n评论内容：\n<<<\n{content[:2000]}\n>>>"
             )
+            if not will_reply:
+                # 本次没抽中就只做审核，reply 必须为空，避免白花输出 token
+                prompt += "\n本次不需要生成回复：reply 必须是空字符串 \"\"。"
             ok, text, _ = ai_client.chat(
                 [{"role": "system", "content": "你是中文内容审核助手，只输出 JSON。"},
                  {"role": "user", "content": prompt}],
@@ -342,6 +381,15 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                                 )
                     except Exception:
                         pass
+            else:
+                # 未生成回复：把原因写进 ai_meta.reply_skip，后台状态列可见
+                db.execute("UPDATE comments SET ai_meta=? WHERE id=?", (
+                    json.dumps(
+                        {"decision": "approve", "reason": reason,
+                         "reply_skip": _reply_skip_note(cfg, will_reply, reply)},
+                        ensure_ascii=False,
+                    ), cid,
+                ))
         except Exception:
             try:
                 db.execute("UPDATE comments SET ai_state='review' WHERE id=?", (cid,))

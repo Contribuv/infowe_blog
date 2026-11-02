@@ -87,7 +87,10 @@ DEFAULTS: dict = {
     "comment_reply": True,
     "comment_reply_notify": True,
     "comment_min_length": 10,
-    "comment_max_length": 0,
+    # AI 回复策略：all 每条都回 / random 按比例随机抽（10 条里约回 3~5 条）
+    "comment_reply_mode": "all",
+    # 随机模式下的回复概率（百分比）：30 表示约 30% 的通过评论会收到 AI 回复
+    "comment_reply_rate": 30,
     "comment_daily_limit": 50,
     "comment_reply_time_mode": "all",
     "link_moderation": True,
@@ -121,6 +124,8 @@ def get() -> dict:
     saved = plugins.config(KEY)
     data = dict(DEFAULTS)
     data.update(saved)
+    # 已废弃的「评论最长长度」：旧库残留的键不再暴露给代码与设置页
+    data.pop("comment_max_length", None)
 
     providers: list[dict] = []
     for raw in saved.get("providers") or []:

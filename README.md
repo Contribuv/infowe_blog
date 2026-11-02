@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.5.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.2)
+[![version](https://img.shields.io/badge/version-3.5.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.3)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.5.2**
+当前版本：**v3.5.3**
+
+### v3.5.3
+
+- 主题样式对齐线上版：以 infowe.site 线上主题为唯一样式基准拉回本地，文章内页与项目内页正文版心统一为 780px（窄视口由父容器 padding 收口），下方评论区同步收窄
+- 评论区顺序反转：表单在上、评论内容在下；内嵌模式用 flex `order` 实现（不改 DOM），浮窗模式 foot/body 同步反转，两种模式均适配
+- 全站扁平化：清除卡片投影、悬停上浮与毛玻璃（弹层/抽屉/搜索面板等浮层按白名单保留），hover 改为淡背景与描边换色
+- 评论后台新增「拒绝」：单条与批量均可拒绝，前台不再显示、记录保留在后台；拒绝说明与 AI 未回复原因（随机未抽中/不在时段/命中屏蔽词）在「状态」列单独展示，改回通过时自动清除旧说明
+- AI 评论回复策略：新增「每条都回复 / 随机抽一部分回复」与回复概率配置（默认 30%），未抽中的评论只审核不生成回复以省 token；移除已无意义的「评论最长长度」配置
+- 回归测试：三视口（1440/768/390）× 17 页 × 深浅色共 70 轮 + 交互自测 5 次全部通过
+
+<details>
+<summary><b>历史版本（v3.5.2 及更早）</b></summary>
 
 ### v3.5.2
 

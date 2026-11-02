@@ -17,6 +17,8 @@
         </label>
         <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
         <button type="submit" class="btn btn-sm btn-success" data-action="approve">批量通过</button>
+        {# 批量拒绝：置 rejected，前台不显示、后台留记录 #}
+        <button type="submit" class="btn btn-sm btn-danger" data-action="reject">批量拒绝</button>
         <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
     </div>
     <div class="table-wrap">
@@ -50,11 +52,19 @@
                         {% if c.ai_state and c.ai_state != 'idle' %}
                         <div class="cell-sub" {% if c.ai_reason %}title="{{ c.ai_reason }}"{% endif %}>
                             {%- if c.ai_state == 'running' %}AI 审核中
-                            {%- elif c.ai_state == 'skipped' %}AI 跳过（长度不符）
+                            {%- elif c.ai_state == 'skipped' %}AI 跳过{% if not c.ai_reason %}（长度不符）{% endif %}
                             {%- elif c.ai_state == 'review' %}AI 转人工
                             {%- elif c.ai_state == 'done' %}AI 已审{% if c.ai_decision %} · {{ {'approve': '通过', 'reject': '拒绝', 'review': '转人工'}.get(c.ai_decision, c.ai_decision) }}{% endif %}
                             {%- endif %}{% if c.ai_reason %}：{{ c.ai_reason[:60] }}{% if c.ai_reason|length > 60 %}…{% endif %}{% endif %}
                         </div>
+                        {% endif %}
+                        {# AI 未回复原因：随机未抽中 / 不在时段 / 命中屏蔽词 #}
+                        {% if c.ai_reply_skip %}
+                        <div class="cell-sub" title="{{ c.ai_reply_skip }}">{{ c.ai_reply_skip }}</div>
+                        {% endif %}
+                        {# 人工审核说明（拒绝时写入）：AI 记录之外单独一行，无 AI 记录也能显示 #}
+                        {% if c.ai_manual %}
+                        <div class="cell-sub" title="{{ c.ai_manual }}">{{ c.ai_manual }}</div>
                         {% endif %}
                     </td>
                     <td class="main-td" data-label="作者">
@@ -100,6 +110,8 @@
                     <td class="actions-cell" data-label="操作">
                         {% if c.status == 'pending' %}
                         <button type="submit" form="approveForm{{ c.id }}" class="btn btn-sm btn-success">通过</button>
+                        {# 拒绝：前台隐藏、后台保留记录（AI 转人工待审同样可拒绝） #}
+                        <button type="submit" form="rejectForm{{ c.id }}" class="btn btn-sm btn-danger">拒绝</button>
                         {% endif %}
                         <button type="submit" form="delForm{{ c.id }}" class="btn btn-sm btn-danger">删除</button>
                     </td>
@@ -115,6 +127,7 @@
 {% for c in comments %}
     {% if c.status == 'pending' %}
     <form id="approveForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" class="hidden"><input type="hidden" name="page" value="{{ page }}"></form>
+    <form id="rejectForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_reject', comment_id=c.id) }}" class="hidden"><input type="hidden" name="page" value="{{ page }}"></form>
     {% endif %}
     <form id="delForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" class="hidden" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')"><input type="hidden" name="page" value="{{ page }}"></form>
 {% endfor %}

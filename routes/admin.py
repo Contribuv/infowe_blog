@@ -587,11 +587,24 @@ def _comments_back():
 def admin_comment_approve(comment_id: int):
     previous = Comment.get(comment_id)
     Comment.set_status(comment_id, "approved")
+    # 从「已拒绝」改回通过时，清掉旧的人工拒绝说明，避免状态列说反
+    Comment.mark_manual(comment_id, "")
     _audit("comment.approve", f"#{comment_id}", str(previous.get("author") or "") if previous else "")
     # 待审核 -> 通过时，补发「收到回复」邮件给被回复的访客
     if previous and previous.get("status") != "approved":
         notify.notify_approved_reply(comment_id)
     flash("评论已通过", "success")
+    return _comments_back()
+
+
+@LOGIN
+def admin_comment_reject(comment_id: int):
+    # 拒绝 = 前台不展示、后台保留记录（含 AI 转人工待审的评论）
+    previous = Comment.get(comment_id)
+    # 拒绝时把人工说明写进 ai_meta，后台「状态」列直接可见（AI 转人工的失败原因仍保留）
+    Comment.mark_manual(comment_id, "人工拒绝：前台不显示，记录保留在后台", "rejected")
+    _audit("comment.reject", f"#{comment_id}", str(previous.get("author") or "") if previous else "")
+    flash("评论已拒绝，前台不再显示（记录保留在后台可查）", "success")
     return _comments_back()
 
 
@@ -608,11 +621,17 @@ def admin_comment_delete(comment_id: int):
 def admin_comments_bulk():
     action = request.form.get("action", "")
     ids = _ids("comment_ids")
-    if action not in {"approve", "delete"}:
+    if action not in {"approve", "delete", "reject"}:
         flash("无效的批量操作", "error")
         return _comments_back()
     if not ids:
         flash("未选择任何评论", "error")
+        return _comments_back()
+    if action == "reject":
+        # 批量拒绝：置 rejected，后台留痕不删行
+        Comment.bulk(ids, "reject")
+        _audit("comment.reject", f"批量 {len(ids)} 条")
+        flash(f"已拒绝 {len(ids)} 条评论（前台不再显示，记录保留在后台）", "success")
         return _comments_back()
     if action == "approve":
         marks = ",".join("?" * len(ids))
@@ -625,6 +644,9 @@ def admin_comments_bulk():
             )
         ]
         Comment.bulk(ids, "approve")
+        for cid in ids:
+            # 批量通过同样清掉旧的人工拒绝说明
+            Comment.mark_manual(cid, "")
         for cid in fresh:
             notify.notify_approved_reply(cid)
         _audit("comment.approve", f"批量 {len(ids)} 条")
@@ -1378,6 +1400,7 @@ def register(app) -> None:
         ("/admin/timeline/bulk", "admin_timeline_bulk", admin_timeline_bulk, ["POST"]),
         ("/admin/comments", "admin_comments", admin_comments, ["GET"]),
         ("/admin/comments/<int:comment_id>/approve", "admin_comment_approve", admin_comment_approve, ["POST"]),
+        ("/admin/comments/<int:comment_id>/reject", "admin_comment_reject", admin_comment_reject, ["POST"]),
         ("/admin/comments/<int:comment_id>/delete", "admin_comment_delete", admin_comment_delete, ["POST"]),
         ("/admin/comments/bulk", "admin_comments_bulk", admin_comments_bulk, ["POST"]),
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),

@@ -132,10 +132,20 @@
                 <div class="form-group">
                     <label>评论最短长度</label>
                     <input type="number" name="comment_min_length" class="input-text" value="{{ cfg.comment_min_length }}" min="0" max="200">
+                    <span class="form-hint">低于该字数的评论不送 AI 处理（挡掉「好」「谢谢」这类短评）</span>
                 </div>
                 <div class="form-group">
-                    <label>评论最长长度（0 表示不限）</label>
-                    <input type="number" name="comment_max_length" class="input-text" value="{{ cfg.comment_max_length|default(0) }}" min="0" max="10000">
+                    <label>AI 回复策略</label>
+                    <select name="comment_reply_mode" class="input-text">
+                        <option value="all" {{ 'selected' if (cfg.comment_reply_mode|default('all')) == 'all' else '' }}>每条都回复</option>
+                        <option value="random" {{ 'selected' if (cfg.comment_reply_mode|default('all')) == 'random' else '' }}>随机抽一部分回复</option>
+                    </select>
+                    <span class="form-hint">随机模式按下方概率抽签，10 条通过评论通常回复 2~5 条</span>
+                </div>
+                <div class="form-group">
+                    <label>随机回复概率（%）</label>
+                    <input type="number" name="comment_reply_rate" class="input-text" value="{{ cfg.comment_reply_rate|default(30) }}" min="0" max="100">
+                    <span class="form-hint">30 表示约 30% 的通过评论会收到 AI 回复；未抽中的会在后台写明「随机跳过」</span>
                 </div>
                 <div class="form-group">
                     <label>AI 回复托管时段</label>

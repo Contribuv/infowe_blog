@@ -169,7 +169,7 @@ def register(app) -> None:
     def ai_config_save():
         old = config.get()
         data = dict(old)
-        for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_max_length", "comment_daily_limit", "link_check_hours", "daily_call_limit"):
+        for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_reply_rate", "comment_daily_limit", "link_check_hours", "daily_call_limit"):
             if key in request.form:
                 try:
                     data[key] = float(request.form.get(key)) if key == "temperature" else int(request.form.get(key))
@@ -182,6 +182,12 @@ def register(app) -> None:
             if mode not in {"all", "day", "night"}:
                 mode = "all"
             data["comment_reply_time_mode"] = mode
+        # AI 回复策略：all 每条都回 / random 按概率随机回复
+        if "comment_reply_mode" in request.form:
+            reply_mode = str(request.form.get("comment_reply_mode") or "all").strip().lower()
+            if reply_mode not in {"all", "random"}:
+                reply_mode = "all"
+            data["comment_reply_mode"] = reply_mode
         if "system_prompt" in request.form:
             data["system_prompt"] = request.form.get("system_prompt", "")
         identity_changed = False
@@ -222,13 +228,10 @@ def register(app) -> None:
             name = _Path(old_url.split("/uploads/ai-avatar/", 1)[1].split("?", 1)[0]).name
             if name:
                 (_Path(UPLOADS_DIR) / "ai-avatar" / name).unlink(missing_ok=True)
-        # 防呆：最长长度 ≤ 最短长度时，任何评论都会被跳过（AI 静默不工作），
-        # 这类配置没有任何意义，直接按「不限」保存并明确提示，避免再次踩坑
-        min_len = int(data.get("comment_min_length") or 0)
-        max_len = int(data.get("comment_max_length") or 0)
-        if max_len > 0 and max_len <= min_len:
-            data["comment_max_length"] = 0
-            flash("评论最长长度需大于最短长度，已按「不限」保存", "error")
+        # 已移除「最长长度」配置：prompt 侧已对正文/评论做截断，超长评论不会撑爆 token，
+        # 只在旧配置里残留 comment_max_length 键，保存时顺手清掉
+        if "comment_max_length" in data:
+            data.pop("comment_max_length", None)
         config.save(data)
         if identity_changed:
             # 昵称或头像变了：历史 AI 评论同步更新，避免新旧混排

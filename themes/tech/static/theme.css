@@ -1,4 +1,4 @@
-﻿@charset "UTF-8";
+﻿﻿@charset "UTF-8";
 /* ═══════════════════════════════════════════════
    tech 主题 · 极简单栏 · 移动端优先 · GitHub 风格
    导航/页脚容器 .tech-shell（max-width 1000px）
@@ -33,8 +33,8 @@
      交互色统一收在 --hover-* 两个令牌里：深色浅色都只是「极淡一层」，
      不再有会发白的玻璃高光。 */
   --bg: #fbfcfd;
-  /* 导航毛玻璃半透明背景：与底色同源，保留底色识别 */
-  --nav-bg: rgba(251, 252, 253, .82);
+  /* 导航实色背景：扁平化去毛玻璃，与底色同色 */
+  --nav-bg: #fbfcfd;
   --bg-subtle: #f0f3f7;
   --bg-code: #f2f5f9;
   --border: #e1e6ed;
@@ -81,8 +81,8 @@
      层级不再靠蓝调变化区分，而是照后台用 #161a24 / #12151f 两档表面，
      边框改成低透明度白线，整体更接近后台那种「干净的深色面板」 */
   --bg: #1a1d23;
-  /* 暗色导航毛玻璃：与底色同源同透明度 */
-  --nav-bg: rgba(26, 29, 35, .84);
+  /* 导航实色背景：扁平化去毛玻璃 */
+  --nav-bg: #1a1d23;
   --bg-subtle: #22262e;
   --bg-code: #1e2229;
   --border: rgba(255, 255, 255, .09);
@@ -222,9 +222,7 @@ img { max-width: 100%; }
   position: sticky; top: 0; z-index: 100;
   background: var(--nav-bg);
   border-bottom: 1px solid var(--border);
-  /* 毛玻璃：blur 14px + saturate 180% 让滚动内容在 nav 后方柔和透出 */
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  /* 扁平化：去掉毛玻璃，实色底 */
   /* iOS Safari sticky 滚动时上方偶尔漏 1px：顶部画 1px 同色外阴影遮盖（不占盒模型空间） */
   box-shadow: 0 -1px 0 0 var(--nav-bg);
 }
@@ -410,7 +408,7 @@ html.page-enter .tech-main {
   display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); color: var(--text-secondary);
-  cursor: pointer; box-shadow: var(--shadow);
+  cursor: pointer; /* 扁平化：去掉投影，靠描边区分 */
   opacity: 0; visibility: hidden;
   transition: opacity .2s, visibility .2s, width .2s ease, height .2s ease,
               right .2s ease, bottom .2s ease, border-radius .2s ease;
@@ -434,7 +432,7 @@ html.page-enter .tech-main {
 .tech-page-head::after {
   content: ""; position: absolute; left: 0; bottom: -1px;
   width: 64px; height: 3px; border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--hl-title));
+  background: var(--accent) /* 扁平化：装饰条改纯色 */;
 }
 .tech-page-title { font-size: 26px; font-weight: 700; line-height: 1.4; margin: 0 0 8px; }
 .tech-page-desc { font-size: 14px; color: var(--text-secondary); margin: 0; }
@@ -516,9 +514,7 @@ html.page-enter .tech-main {
   display: none;
   padding: 12px 0 14px;
   border-top: 1px solid var(--border);
-  background: var(--nav-bg);
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  background: var(--nav-bg); /* 扁平化：去毛玻璃 */
 }
 .tech-search-layer.open { display: block; animation: tech-search-drop .18s ease; }
 @keyframes tech-search-drop {
@@ -621,12 +617,9 @@ html.page-enter .tech-main {
   .tech-tag:hover {
     border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
     color: var(--text);
-    background: var(--hover-bg);
-    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
-    transform: translateY(-1px);
+    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
   }
 }
-.tech-tag:active { transform: translateY(0); }
 .tech-tag:active { transform: translateY(1px); }
 .tech-tag--more {
   color: var(--text-secondary);
@@ -680,39 +673,32 @@ html.page-enter .tech-main {
 
 /* ── 分页 ── */
 .tech-more-wrap { display: flex; justify-content: center; margin-top: 32px; }
-/* 归档页底部按钮：条形圆角，沿用全站按钮语言 */
+/* 归档页底部按钮：条形圆角，沿用全站按钮语言（扁平化：纯色 + 无投影） */
 .tech-more-wrap .tech-btn-primary {
   height: 38px;
   padding: 0 20px;
   border-radius: 10px;
   border-color: transparent;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff 8%) 0%, var(--accent) 100%);
+  background: var(--accent);
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 1px 1px rgba(15, 23, 42, .08), 0 6px 16px rgba(47, 122, 209, .18);
 }
 [data-theme="dark"] .tech-more-wrap .tech-btn-primary {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 90%, #fff 10%) 0%, var(--accent) 100%);
+  background: var(--accent);
   color: #0f1629;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .25), 0 8px 18px rgba(107, 156, 245, .22);
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-more-wrap .tech-btn-primary:hover {
-    filter: brightness(1.02);
+    filter: brightness(1.06);
     border-color: transparent;
-    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff 8%) 0%, var(--accent) 100%);
+    background: var(--accent);
     color: #fff;
-    box-shadow: 0 2px 2px rgba(15, 23, 42, .1), 0 10px 22px rgba(47, 122, 209, .24);
   }
-  /* 深色 hover 必须重申与常态完全相同的渐变：background 是渐变图，
-     transition 只过渡 background-color，渐变不参与插值 → 一旦被别的规则
-     改成纯色就会瞬间跳变（表现为鼠标划过时「闪」一下）。
-     这里特异性 0,3,1，稳压后面 base 的 [data-theme="dark"] .tech-btn-primary:hover */
+  /* 深色 hover 保持与常态一致，避免背景跳变 */
   [data-theme="dark"] .tech-more-wrap .tech-btn-primary:hover {
-    background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 90%, #fff 10%) 0%, var(--accent) 100%);
+    background: var(--accent);
     color: #0f1629;
-    filter: brightness(1.04);
-    box-shadow: 0 2px 2px rgba(0, 0, 0, .28), 0 10px 22px rgba(107, 156, 245, .26);
+    filter: brightness(1.1);
   }
 }
 .tech-pagination { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 32px; }
@@ -728,21 +714,17 @@ html.page-enter .tech-main {
   .tech-page-btn:hover {
     border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
     color: var(--text);
-    background: var(--hover-bg);
-    box-shadow: 0 4px 14px rgba(16, 27, 43, .06);
-    transform: translateY(-1px);
+    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
   }
 }
 .tech-page-btn.active {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff 8%) 0%, var(--accent) 100%);
+  background: var(--accent);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 1px 1px rgba(15, 23, 42, .08), 0 6px 16px rgba(47, 122, 209, .18);
 }
 [data-theme="dark"] .tech-page-btn.active {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 90%, #fff 10%) 0%, var(--accent) 100%);
+  background: var(--accent);
   color: #0f1629;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .25), 0 8px 18px rgba(107, 156, 245, .22);
 }
 .tech-page-ellipsis { display: flex; align-items: center; color: var(--text-secondary); padding: 0 4px; }
 
@@ -756,14 +738,13 @@ html.page-enter .tech-main {
 .tech-reading-progress {
   position: fixed; top: 0; left: 0; z-index: 200;
   width: 0; height: 3px;
-  background: linear-gradient(90deg, var(--accent), var(--hl-title));
+  background: var(--accent) /* 扁平化：装饰条改纯色 */;
   transition: width .1s linear;
 }
 
 /* ── 文章详情 ── */
-/* 阅读宽度与生产站对齐：正文 920px（1000 壳内宽 960，再收 20px 边距），
-   项目详情页同样使用该宽度；移动端仍占满壳宽，不再二次收窄 */
-.tech-post-wrap { max-width: 920px; margin: 0 auto; }
+/* 站主要求：文章/项目详情内容页正文定宽 780px（原 920），评论区随列同步收窄；移动端仍占满壳宽 */
+.tech-post-wrap { max-width: 780px; margin: 0 auto; }
 .tech-post-layout { display: block; }
 
 /* TOC：窄屏内联折叠框，位于标题下方、正文之前；上下 24px（与相邻块 margin 折叠取较大值）；
@@ -773,8 +754,8 @@ html.page-enter .tech-main {
   .tech-toc-sidebar {
     position: fixed;
     top: 80px;
-    /* 正文容器 920（半宽 460），悬浮目录再留 20px 间距；文章与项目详情一致 */
-    left: min(calc(50% + 480px), calc(100vw - 200px));
+    /* 正文容器 780（半宽 390），悬浮目录再留 20px 间距；文章与项目详情一致 */
+    left: min(calc(50% + 410px), calc(100vw - 200px));
     width: 180px;
     margin: 0;
   }
@@ -802,12 +783,7 @@ html.page-enter .tech-main {
 /* 目录 */
 .tech-toc {
   border: 1px solid var(--border-strong); border-radius: 8px;
-  /* 毛玻璃：窄屏是折叠条、宽屏变成右侧常驻悬浮卡，背后是底图与正文，
-     浅 .74 / 深 .70 + 16px 模糊，既能透出底图又不干扰目录文字。
-     底色统一写在文件末尾「毛玻璃降级」段（默认实色，特性查询命中再升级为玻璃），
-     避免同一属性两处赋值、靠加载顺序决胜。 */
-  -webkit-backdrop-filter: saturate(180%) blur(16px);
-  backdrop-filter: saturate(180%) blur(16px);
+  /* 扁平化：TOC 去毛玻璃，底色在文件末尾统一给实色 */
 }
 .tech-toc-summary {
   padding: 10px 14px; font-size: 14px; font-weight: 600;
@@ -936,14 +912,12 @@ html.page-enter .tech-main {
   border-radius: 8px; padding: 16px; overflow-x: auto;
   margin: 0 0 16px; line-height: 1.5; text-align: left;
 }
-/* 代码块毛玻璃：markdown-body.css 的 .markdown-body pre 与本条同为 (0,1,1) 且后加载，
+/* 代码块底色：markdown-body.css 的 .markdown-body pre 与本条同为 (0,1,1) 且后加载，
    必须用双类 (0,2,1) 才能覆盖（文章页与项目页容器都同时带 markdown-body）。
    只改背景/边框色，不重写 margin/padding，避免打乱项目页 README 的既有节奏。 */
 .tech-post-body.markdown-body pre,
 .tech-proj-readme-body.markdown-body pre {
-  /* 底色同样交给末尾「毛玻璃降级」段统一管理 */
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
-  backdrop-filter: saturate(180%) blur(14px);
+  /* 扁平化：代码块去毛玻璃 */
   border-color: var(--border-strong);
 }
 .tech-post-body pre code { background: none; padding: 0; font-size: 13.5px; }
@@ -980,9 +954,8 @@ html.page-enter .tech-main {
   position: absolute; top: 8px; right: 8px; z-index: 1;
   padding: 3px 10px; font-size: 12px; line-height: 1.5;
   border: 1px solid var(--border-strong); border-radius: 6px;
-  /* 浮在毛玻璃代码块上：半透明 + 轻模糊，避免变成一块实色补丁 */
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  /* 扁平化：实色底，不用半透明 + 模糊 */
+  background: var(--bg);
   color: var(--text-secondary);
   cursor: pointer; opacity: 0; transition: opacity .2s, color .15s, border-color .15s;
 }
@@ -1171,48 +1144,37 @@ html.page-enter .tech-main {
   .tech-btn:not(.tech-btn-primary):hover {
     background: var(--hover-bg);
     border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
-    color: var(--text);
-    box-shadow: 0 4px 14px rgba(16, 27, 43, .06);
-    transform: translateY(-1px);
+    color: var(--text); /* 扁平化：去掉投影与上浮 */
   }
   /* 深色下 --hover-bg 与页面底色只差一档，几乎看不出悬停；叠一层极淡主色 */
   [data-theme="dark"] .tech-btn:not(.tech-btn-primary):hover {
     background: color-mix(in srgb, var(--accent) 10%, var(--bg));
     border-color: color-mix(in srgb, var(--accent) 42%, var(--border-strong));
-    box-shadow: none;
   }
 }
 .tech-btn:active { transform: translateY(0); }
-/* 主按钮三态只在此处定义一次（浅色实心渐变 + 白字；深色实心亮蓝 + 深字），
-   避免此前分散在 4 个区块里互相覆盖、按下时颜色跳变 */
+/* 主按钮三态只在此处定义一次（扁平化：纯色实底 + 无投影） */
 .tech-btn-primary {
-  background: linear-gradient(90deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 88%, var(--hl-title) 12%) 100%);
+  background: var(--accent);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 1px 1px rgba(15, 23, 42, .08), 0 6px 16px rgba(47, 122, 209, .16);
 }
 [data-theme="dark"] .tech-btn-primary {
   background: var(--accent);
   border-color: transparent;
   color: #0f1629;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .25), 0 6px 16px rgba(107, 156, 245, .18);
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-btn-primary:hover {
-    filter: brightness(1.03);
+    filter: brightness(1.06);
     border-color: transparent;
-    color: #fff;
-    box-shadow: 0 2px 2px rgba(15, 23, 42, .1), 0 10px 22px rgba(47, 122, 209, .22);
-    transform: translateY(-1px);
+    color: #fff; /* 扁平化：去掉投影与上浮 */
   }
   [data-theme="dark"] .tech-btn-primary:hover {
-    /* 不重设 background：常态已是实心 --accent，重设会把渐变版主按钮
-       （如「查看全部归档」）的背景硬切成纯色，造成 hover 瞬间跳变 */
+    /* 不重设 background：常态已是实心 --accent，避免 hover 瞬间跳变 */
     border-color: transparent;
     color: #0f1629;
-    filter: brightness(1.06);
-    box-shadow: 0 4px 14px -12px color-mix(in srgb, var(--accent) 80%, transparent);
-    transform: translateY(-1px);
+    filter: brightness(1.1);
   }
 }
 .tech-btn-primary:active {
@@ -1243,7 +1205,7 @@ html.page-enter .tech-main {
   content: "";
   position: absolute; left: 50%; transform: translateX(-50%);
   bottom: -1px; width: 64px; height: 3px; border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--hl-title));
+  background: var(--accent) /* 扁平化：装饰条改纯色 */;
 }
 /* 多栏布局整页左对齐（报头、文章、侧栏都靠左）：精选区的彩条同步移到左端，
    避免同一列里同时出现「左对齐报头 + 居中彩条」两套对齐方式 */
@@ -1346,8 +1308,8 @@ html.page-enter .tech-main {
   background:
     linear-gradient(var(--bg), var(--bg)) padding-box,
     linear-gradient(135deg, var(--ring-a), var(--ring-b)) border-box;
-  /* 柔和光晕：同形底色环（跟随 border-radius）+ 轻微浮起投影 */
-  box-shadow: 0 0 0 3px var(--bg-subtle), 0 6px 24px rgba(0, 0, 0, .10);
+  /* 扁平化：去掉浮起投影，仅保留同形底色环 */
+  box-shadow: 0 0 0 3px var(--bg-subtle);
   transition: transform .3s ease, box-shadow .3s ease;
 }
 .tech-avatar-placeholder {
@@ -1362,8 +1324,8 @@ html.page-enter .tech-main {
   .tech-avatar:hover,
   .tech-avatar-placeholder:hover {
     transform: scale(1.06) rotate(4deg);
-    /* 保留底色光环，避免 hover 时光晕丢失 */
-    box-shadow: 0 0 0 3px var(--bg-subtle), 0 12px 32px rgba(0, 0, 0, .18);
+    /* 保留底色光环，避免 hover 时光晕丢失（扁平化：去掉加深投影） */
+    box-shadow: 0 0 0 3px var(--bg-subtle);
   }
 }
 .tech-about-bio {
@@ -1412,7 +1374,7 @@ html.page-enter .tech-main {
   content: ""; position: absolute; left: 0; top: 50%;
   transform: translateY(-50%);
   width: 4px; height: 18px; border-radius: 2px;
-  background: linear-gradient(180deg, var(--accent), var(--hl-title));
+  background: var(--accent) /* 扁平化：装饰条改纯色 */;
 }
 
 /* 技能 */
@@ -1424,7 +1386,7 @@ html.page-enter .tech-main {
 .tech-skill-bar { height: 6px; background: var(--bg-subtle); border-radius: 3px; overflow: hidden; }
 .tech-skill-fill {
   height: 100%; border-radius: 3px; width: var(--sl, 0);
-  background: linear-gradient(90deg, var(--accent), var(--hl-title));
+  background: var(--accent) /* 扁平化：装饰条改纯色 */;
   transition: width .9s cubic-bezier(.22, .61, .36, 1);
 }
 
@@ -1483,9 +1445,7 @@ html.page-enter .tech-main {
   .tech-lang-link:hover {
     color: var(--text);
     border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
-    background: var(--hover-bg);
-    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
-    transform: translateY(-1px);
+    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
   }
 }
 .tech-lang-link:active { transform: translateY(0); }
@@ -1519,7 +1479,7 @@ html.page-enter .tech-main {
   background: transparent;
   transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
-@media (hover: hover) and (pointer: fine) { .tech-project-card:hover { background: var(--hover-bg); border-color: var(--hover-ring); box-shadow: 0 6px 18px rgba(0, 0, 0, .12); transform: translateY(-2px); } }
+@media (hover: hover) and (pointer: fine) { .tech-project-card:hover { background: var(--hover-bg); border-color: var(--hover-ring); /* 扁平化：去掉投影与上浮 */ } }
 .tech-project-card-head { display: flex; align-items: center; gap: 8px; }
 .tech-project-name {
   font-size: 17px; font-weight: 600; color: var(--text); text-decoration: none;
@@ -1613,8 +1573,8 @@ html.page-enter .tech-main {
 /* 只去掉双击缩放的 300ms 延迟；双指缩放保持可用（WCAG 1.4.4） */
 html { touch-action: manipulation; }
 
-/* 项目详情与文章详情统一 920px 阅读宽度 */
-.tech-proj { max-width: 920px; margin: 0 auto; padding: 0 0 8px; }
+/* 项目详情与文章详情统一 780px 阅读宽度 */
+.tech-proj { max-width: 780px; margin: 0 auto; padding: 0 0 8px; } /* 项目详情与文章页同为 780px */
 /* 项目详情页顶部收紧：无 page-head，GitHub 仓库页 nav 到标题仅约 24px */
 .tech-main:has(.tech-proj) { padding-top: 16px; }
 
@@ -1693,7 +1653,7 @@ html { touch-action: manipulation; }
 }
 .tech-proj-readme-age { font-size: 12px; color: var(--text-secondary); }
 .tech-proj-feedback { font-size: 13px; font-weight: 500; color: var(--text-secondary); background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px; padding: 5px 14px; cursor: pointer; transition: color .18s ease, border-color .18s ease, transform .18s ease; display: inline-flex; align-items: center; gap: 5px; }
-@media (hover: hover) and (pointer: fine) { .tech-proj-feedback:hover { color: var(--accent); border-color: var(--accent); transform: translateY(-1px); } }
+@media (hover: hover) and (pointer: fine) { .tech-proj-feedback:hover { color: var(--accent); border-color: var(--accent); /* 扁平化：去掉上浮 */ } }
 .tech-proj-feedback:active { transform: translateY(0); }
 .tech-proj-feedback:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tech-proj-feedback-icon { display: inline-block; vertical-align: middle; }
@@ -2058,19 +2018,12 @@ html { touch-action: manipulation; }
 }
 .tech-btn:active { transform: translateY(1px); }
 
-/* 项目筛选芯片：可点击语义 + hover/焦点平滑 */
-.tech-lang-link { cursor: pointer; transition: color .15s ease, transform .15s ease, border-color .15s ease; }
-@media (hover: hover) and (pointer: fine) { .tech-lang-link:hover { transform: translateY(-1px); } }
-/* 卡片 / 标签云芯片：hover 平滑微浮起 */
-.tech-project-card,
+/* 项目筛选芯片：可点击语义 + hover 平滑 */
+.tech-lang-link { cursor: pointer; transition: color .15s ease, border-color .15s ease; }
+/* 扁平化：芯片/卡片 hover 不再上浮，仅底色与描边反馈 */
 .tech-link-card,
 .tech-tag-cloud-item {
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .tech-project-card:hover,
-  .tech-link-card:hover { transform: translateY(-3px); }
-  .tech-tag-cloud-item:hover { transform: translateY(-2px); }
+  transition: border-color .18s ease, background-color .18s ease;
 }
 /* 触控热区：小图标/小按钮视觉尺寸不变，用伪元素把可点范围扩大。
    水平方向按相邻 gap 计算（项目按钮 gap 8 → 各扩 4；分页 gap 6 → 各扩 3），避免互相盖住。 */
@@ -2151,40 +2104,16 @@ html { touch-action: manipulation; }
 .tech-form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .tech-form-actions .tech-btn { width: auto; }
 
-/* ═══ 毛玻璃降级 ═══
-   注意：不能用 `@supports not (...)`——csscompressor 会把 `not (` 压成 `not(`，
-   浏览器将其解析为函数 token，条件恒 false，降级规则会静默失效（已实测）。
-   这里改用等价的「默认实色 + 正向特性查询」写法，压缩后仍然有效。
-   1) 不支持 backdrop-filter：退化为实色底，不留「透明无底」的坑；
-   2) 移动端：同时可见的 blur 层更少，把半径降到 8–10px、不透明度提一档，
-      保证代码/目录可读性与滚动流畅度。
-   评论表单的同类降级写在 comments-tech.css 内（该文件后加载，避免被覆盖）。 */
+/* ═══ 实色底统一段（扁平化）═══
+   原「毛玻璃降级」：现在全部去模糊，TOC / 代码块一律实色底，
+   不再需要 @supports 特性查询（也避开了 csscompressor 压缩 `@supports not` 失效的坑）。 */
 .tech-toc,
 .tech-post-body.markdown-body pre,
-.tech-proj-readme-body.markdown-body pre { background: var(--bg); }
-@supports (backdrop-filter: blur(1px)) {
-  .tech-toc,
-  .tech-post-body.markdown-body pre,
-  .tech-proj-readme-body.markdown-body pre { background: var(--glass-bg); }
-}
-/* Safari 17 及更早只认 -webkit- 前缀 */
-@supports (-webkit-backdrop-filter: blur(1px)) {
-  .tech-toc,
-  .tech-post-body.markdown-body pre,
-  .tech-proj-readme-body.markdown-body pre { background: var(--glass-bg); }
-}
+.tech-proj-readme-body.markdown-body pre { background: var(--bg-subtle); }
 @media (max-width: 767px) {
-  .tech-toc {
-    background: var(--glass-bg-mobile);
-    -webkit-backdrop-filter: saturate(150%) blur(10px);
-    backdrop-filter: saturate(150%) blur(10px);
-  }
+  .tech-toc,
   .tech-post-body.markdown-body pre,
-  .tech-proj-readme-body.markdown-body pre {
-    background: var(--glass-bg-mobile);
-    -webkit-backdrop-filter: saturate(150%) blur(8px);
-    backdrop-filter: saturate(150%) blur(8px);
-  }
+  .tech-proj-readme-body.markdown-body pre { background: var(--bg-subtle); }
 }
 
 /* ── 博客圈（友链 RSS 聚合）── */
@@ -2569,7 +2498,7 @@ html { touch-action: manipulation; }
   width: 3px;
   height: 17px;
   border-radius: 2px;
-  background: linear-gradient(180deg, var(--accent), var(--hl-title));
+  background: var(--accent) /* 扁平化：装饰条改纯色 */;
 }
 .tech-miles-head span { font-size: 12px; color: var(--text-secondary); }
 .tech-miles-list { list-style: none; margin: 0; padding: 0; }
@@ -2640,15 +2569,14 @@ html { touch-action: manipulation; }
   .tech-miles-title { font-size: 15px; }
 }
 
-/* ── 全站卡片 hover：统一底色、描边、上浮和轻阴影 ──
+/* ── 全站卡片 hover：统一底色与描边（扁平化：去掉投影与上浮） ──
    .tech-post-item 不在此列：它与侧栏卡片 .tech-side-card 一致，只做底色+描边变化 */
 .tech-link-card,
 .circle-item,
 .circle-stats > div,
 .tech-project-card,
 .tech-miles-item {
-  transition: background-color .18s ease, border-color .18s ease,
-              box-shadow .18s ease, transform .18s ease;
+  transition: background-color .18s ease, border-color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-link-card:hover,
@@ -2658,8 +2586,6 @@ html { touch-action: manipulation; }
   .tech-miles-item:hover {
     background: var(--hover-bg);
     border-color: var(--hover-ring);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
-    transform: translateY(-2px);
   }
 }
 
@@ -2768,17 +2694,14 @@ html { touch-action: manipulation; }
 .tech-reader-source a { color: var(--accent); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-reader-source a:hover { text-decoration: underline; } }
 
-/* 榜单卡片沿用全站 hover */
+/* 榜单卡片沿用全站 hover（扁平化：只换底色与描边） */
 .tech-reader-item {
-  transition: background-color .18s ease, border-color .18s ease,
-              box-shadow .18s ease, transform .18s ease;
+  transition: background-color .18s ease, border-color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-reader-item:hover {
     background: var(--hover-bg);
     border-color: var(--hover-ring);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
-    transform: translateY(-2px);
   }
 }
 
@@ -2844,8 +2767,7 @@ html { touch-action: manipulation; }
   border-radius: 12px;
   background: transparent;
   text-align: left;
-  transition: background-color .18s ease, border-color .18s ease,
-              box-shadow .18s ease, transform .18s ease;
+  transition: background-color .18s ease, border-color .18s ease;
 }
 .tech-podium-item {
   --medal: var(--text-secondary);
@@ -2945,9 +2867,7 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
 @media (hover: hover) and (pointer: fine) {
   .tech-podium-item:hover {
     background: var(--hover-bg);
-    border-color: var(--medal);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
-    transform: translateY(-2px);
+    border-color: var(--medal); /* 扁平化：去掉投影与上浮 */
   }
 }
 
@@ -3072,15 +2992,13 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   font-size: 12px;
   text-decoration: none;
   background: var(--bg);
-  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-side-social a:hover {
     border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
     color: var(--text);
-    background: var(--hover-bg);
-    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
-    transform: translateY(-1px);
+    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
   }
 }
 .tech-side-social a:active { transform: translateY(0); }
@@ -3096,16 +3014,14 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   font-size: 12px;
   text-decoration: none;
   background: var(--bg);
-  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
+  transition: border-color .18s ease, color .18s ease, background-color .18s ease;
 }
 .tech-side-tag span { font-size: 11px; color: var(--text-secondary); }
 @media (hover: hover) and (pointer: fine) {
   .tech-side-tag:hover {
     border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
     color: var(--text);
-    background: var(--hover-bg);
-    box-shadow: 0 4px 12px rgba(16, 27, 43, .05);
-    transform: translateY(-1px);
+    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
   }
 }
 .tech-side-tag:active { transform: translateY(0); }
@@ -3239,9 +3155,7 @@ html.tech-external-open { overflow: hidden; }
 .tech-external-mask {
   position: absolute;
   inset: 0;
-  background: rgba(4, 6, 12, .62);
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
+  background: rgba(4, 6, 12, .62); /* 扁平化：遮罩去模糊 */
 }
 .tech-external-panel {
   position: relative;
@@ -3323,7 +3237,7 @@ html.tech-external-open { overflow: hidden; }
   width: 64px;
   height: 3px;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--hl-title));
+  background: var(--accent) /* 扁平化：装饰条改纯色 */;
 }
 .tech-home-head-main { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .tech-home-kicker {
