@@ -93,7 +93,11 @@ short_location = display_location
 
 
 def migrate_comments(conn) -> int:
-    """启动时把历史评论的 ip_location 统一成「省 · 市」（幂等）。"""
+    """启动时把历史评论的 ip_location 统一成「省 · 市」（幂等）。
+
+    有 ip2region 库时，顺带用 ip_text 重新解析那些被截断过省份的旧值
+    （例如上一版把「四川省 · 成都市」写成了「成都市」）。
+    """
     try:
         rows = conn.execute(
             "SELECT DISTINCT ip_location FROM comments "
@@ -104,13 +108,32 @@ def migrate_comments(conn) -> int:
     changed = 0
     for row in rows:
         old = str(row[0] or "")
-        new = short_location(old)
+        new = display_location(old)
         if new and new != old:
             conn.execute("UPDATE comments SET ip_location = ? WHERE ip_location = ?", (new, old))
             changed += 1
+
+    # 只有本地有 xdb 才重解析，避免在服务器上逐条走网络接口
+    if _searcher("4") is not None or _searcher("6") is not None:
+        try:
+            rows = conn.execute(
+                "SELECT id, ip_text, ip_location FROM comments "
+                "WHERE ip_text IS NOT NULL AND ip_text != '' AND ip_location LIKE '% · %'"
+            ).fetchall()
+        except Exception:
+            rows = []
+        for row in rows:
+            province = str(row[2] or "").split(" · ")[0]
+            if province.endswith(_PROVINCE_SUFFIX):
+                continue
+            resolved = of(str(row[1] or ""))
+            if resolved and resolved != row[2]:
+                conn.execute("UPDATE comments SET ip_location = ? WHERE id = ?", (resolved, row[0]))
+                changed += 1
+
     if changed:
         conn.commit()
-        print(f"[数据修复] IP 归属地统一为城市级：{changed} 种写法")
+        print(f"[数据修复] IP 归属地统一为「省 · 市」：{changed} 处")
     return changed
 
 
