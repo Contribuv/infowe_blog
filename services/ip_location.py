@@ -44,29 +44,60 @@ _ISPS = {
     "移动", "联通", "电信", "铁通", "广电", "广电网", "教育网", "长城宽带",
     "鹏博士", "阿里云", "腾讯云", "华为云", "亚马逊", "微软", "cloudflare", "google",
 }
+_MUNICIPALITIES = {"北京", "上海", "天津", "重庆", "香港", "澳门"}
+_PROVINCE_SUFFIX = (
+    "维吾尔自治区", "壮族自治区", "回族自治区", "特别行政区", "自治区", "省",
+)
 
 
-def short_location(value: str | None) -> str:
-    """把归属地压成「城市」这一级：中国 江西省 九江市 移动 CN -> 九江市。
+def _short_province(name: str) -> str:
+    """江西省 -> 江西；广西壮族自治区 -> 广西。"""
+    for suffix in _PROVINCE_SUFFIX:
+        if name.endswith(suffix) and len(name) > len(suffix):
+            return name[: -len(suffix)]
+    return name
 
-    库里历史数据有「省 市」和「国家 省 市 运营商 代码」两种写法，统一取最后
-    一个有效地名；本地/内网原样保留。
+
+def display_location(value: str | None) -> str:
+    """归属地展示成「省 · 市」：中国 江西省 九江市 移动 CN -> 江西 · 九江市。
+
+    库里历史数据有「省 市」「国家 省 市 运营商 代码」等写法；直辖市只留一条，
+    本地/内网原样保留，已经带「 · 」的直接返回。
     """
     text = str(value or "").strip()
     if not text:
         return ""
     if text in {"本地", "内网"}:
         return text
+    if " · " in text:
+        return text
+
     parts = [p for p in re.split(r"[\s|]+", text) if p]
-    kept = [
-        p for p in parts
-        if p.lower() not in _IGNORED and p not in _ISPS
-    ]
-    return kept[-1] if kept else ""
+    kept = [p for p in parts if p.lower() not in _IGNORED and p not in _ISPS]
+    if not kept:
+        return ""
+    if len(kept) == 1:
+        only = kept[0]
+        return _short_province(only) if only.endswith(_PROVINCE_SUFFIX) else only
+
+    province = kept[0]
+    for token in kept:
+        if token.endswith(_PROVINCE_SUFFIX) or token.endswith("市"):
+            province = token
+            break
+    city = kept[-1]
+    short = _short_province(province)
+    if city == province or short == city or short in _MUNICIPALITIES:
+        return city
+    return f"{short} · {city}"
+
+
+# 兼容旧调用名
+short_location = display_location
 
 
 def migrate_comments(conn) -> int:
-    """启动时把历史评论的 ip_location 压成城市级（幂等）。"""
+    """启动时把历史评论的 ip_location 统一成「省 · 市」（幂等）。"""
     try:
         rows = conn.execute(
             "SELECT DISTINCT ip_location FROM comments "
@@ -118,9 +149,7 @@ def _online(ip: str) -> str:
         data = json.loads(text)
         city = str(data.get("city") or "").strip()
         province = str(data.get("pro") or "").strip()
-        location = city if city and city not in {"0", "中国"} else (
-            province if province and province not in {"0", "中国"} else ""
-        )
+        location = display_location(f"{province} {city}") if (city or province) else ""
     except Exception:
         location = ""
     if location:
@@ -150,12 +179,12 @@ def of(ip: str | None) -> str:
             return _online(ip)
         text = result if isinstance(result, str) else getattr(result, "region", "")
         parts = [p for p in str(text).split("|") if p and p != "0"]
-        return short_location(" ".join(_dedupe(parts))) or _online(ip)
+        return display_location(" ".join(_dedupe(parts))) or _online(ip)
     except Exception:
         return _online(ip)
 
 
 def normalize_display(location: str | None) -> str:
-    """展示兜底：历史数据里的「中国 江西省 九江市 移动 CN」压成「九江市」。"""
-    return short_location(location)
+    """展示兜底：历史数据里的「中国 江西省 九江市 移动 CN」格式化成「江西 · 九江市」。"""
+    return display_location(location)
 

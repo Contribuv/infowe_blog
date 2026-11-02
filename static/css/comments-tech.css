@@ -60,7 +60,7 @@
 /* ── 楼层组 ── */
 .cmt-thread{padding:18px 20px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-hairline);transition:border-color .18s}
 /* 楼层间 18px > 卡内回复间距 14px：靠间距层级把「楼层边界」立起来，淡描边只做兜底提示 */
-.cmt-thread+.cmt-thread{margin-top:18px}
+.cmt-thread+.cmt-thread{margin-top:22px}
 @media (hover:hover) and (pointer:fine){.cmt-thread:hover{border-color:var(--c-border-h)}}
 /* 表单卡与独立 details 卡同享描边提亮反馈；.cmt-form.is-inline 无描边故无变化 */
 @media (hover:hover) and (pointer:fine){.cmt-form:hover,.cmt-box:hover{border-color:var(--c-border-h)}}
@@ -428,15 +428,15 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-act { color: var(--c-accent); }
 }
 
-/* 楼中楼：每条回复统一节奏——上下各 7px + 一条细分隔线。
-   首条也带线，避免「第一条回复比后面紧」的断层；
-   有没有 UA 行都是同一间距，不会因为缺 UA 显得忽宽忽窄 */
-.cmt-replies { margin-top: 7px; }
+/* 楼中楼：每条回复上下各 9px + 一条细分隔线（合计 18px），
+   首条也带线；有 UA / 没 UA 都是同一间距，不会再出现忽紧忽松 */
+.cmt-replies { margin-top: 9px; }
 .cmt-replies > .cmt-item {
-  padding-top: 7px;
+  padding-top: 9px;
+  padding-bottom: 9px;
   border-top: 1px solid var(--c-hairline);
 }
-.cmt-replies > .cmt-item + .cmt-item { margin-top: 7px; }
+.cmt-replies > .cmt-item + .cmt-item { margin-top: 0; }
 .cmt-text { margin-bottom: 0; }
 .cmt-byline { margin-top: 6px; }
 .cmt-byline + .cmt-actions { margin-top: 6px; }

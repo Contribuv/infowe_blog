@@ -116,8 +116,8 @@ def load(
             else:
                 c["author_level"] = "regular"
         c["ua_label"] = ua.describe(str(c.get("user_agent") or ""))
-        # 归属地只展示到城市级：历史数据里可能还带着国家/省份/运营商
-        c["ip_location"] = ip_location.short_location(c.get("ip_location"))
+        # 归属地展示成「省 · 市」：历史数据里可能还带着国家/省份/运营商
+        c["ip_location"] = ip_location.display_location(c.get("ip_location"))
         c["time_text"] = _relative_time(str(c.get("created_at") or ""))
         c["ua_system"] = ua.system(str(c.get("user_agent") or ""))
         c["ua_client"] = ua.client(str(c.get("user_agent") or ""))
