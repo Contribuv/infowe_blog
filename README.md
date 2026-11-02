@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.5.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.5.5)
+[![version](https://img.shields.io/badge/version-3.6.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,23 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.5.5**
+当前版本：**v3.6.0**
+
+### v3.6.0
+
+- 友链审核重写：申请页新增「友链页地址」（`links.backlink_url`，启动自动补列）；审核链改为「可访问性 → 敏感词 → AI 内容审核 → 回链检测」，AI 抓取首页标题与正文判断色情、赌博、诈骗、采集等内容风险，未配置模型时自动跳过不阻断；回链优先查申请页，未填则自动发现 `/links`、`/friends`、`/blogroll`、`/about` 及首页含「友链 / link / friend」的锚点，并改为解析 `<a href>` 精确匹配域名（忽略 `www`），不再用字符串包含；后台待审列表新增「验证页 / AI 审核」两列与未通过原因，插件设置新增「友链 AI 内容审核」开关
+- AI 对话流式输出：新增 SSE 接口，发消息后实时显示推理过程（逐字、带计时），推理结束正文逐字输出；工具调用期间显示执行状态，回复外层 JSON 自动剥离，浏览器不支持流式时回退到原请求方式
+- 评论时间改为相对时间：刚刚 / N 分钟前 / N 小时前 / 昨天 / N 天前，超过 15 天显示完整时间，后台保持完整时间
+- 评论设备信息：正文下方显示「系统 + 浏览器」图标文字（不含版本号）；旧评论没有 UA 时整行不渲染，不留空、不塌陷
+- 评论回复数修正：根评论显示整条楼中楼的回复总数（此前只统计直接子评论，三层套娃时 3 条只显示 1）；楼中楼回复不再显示数字
+- 楼中楼间距修复：分隔线引用了不存在的 `--c-divider` 变量导致线不显示，且首条回复 14px、后续 28px 的断层；改为统一 14px + 细分隔线，有无 UA 行节奏一致
+- 评论区布局：左侧内容 + 右侧垂直居中的回复图标，长评论不再把回复入口挤到底部
+- 博客圈改版：文章卡片改为单栏，头部头像 + 站点名 + 日期、标题、两行摘要、相对时间 +「阅读全文」；列表底部新增「已经看了 N 篇」，最后一页显示收尾文案；四个统计卡片顺序改为「今日 / 本周 / 本月 / 订阅站点」并把内部改为标签在上的单栏；摘要自动清理短代码与 Markdown 语法；区块间距统一 20px、卡片间距 12px，卡片高度压缩约 20%
+- 读者页：规则说明独立成卡片（标题居中、正文左对齐）；领奖台改为亚军 · 冠军 · 季军（冠军居中），移动端仍按 1-2-3 排列；移动端序号从独立一列改为头像左上角标，内容区宽度增加约 44px
+- 侧栏与站点细节：博主行改为「博主：名字」，社交链接改为 SVG + 文字；简介保留换行；全站按钮统一黑白配色；文章页删除底部重复标签，「复制链接」改为「复制」
+
+<details>
+<summary><b>历史版本（v3.5.5 及更早）</b></summary>
 
 ### v3.5.5
 
@@ -927,9 +943,6 @@ chown -R www:www var
 - 修复 Gitee 源在线升级失败：`pull` 未指定分支，remote 非当前分支的默认上游时报 `did not specify a branch`；改为显式拉取当前分支，detached HEAD 时给出明确提示
 - 后台页头「回收站」按钮修复：计数徽章自带 margin/边框把按钮撑高约 10px 且边框内套边框，与「新建文章」一高一低、观感割裂；新增 `.btn .badge` 压平为按钮内扁平胶囊，两按钮等高对齐
 - 文章标签禁止重复：前端失焦与提交时大小写不敏感去重（保留首次出现、规范化逗号分隔），后端 `save()` 解析时同步去重兜底，防绕过直接 POST
-
-<details>
-<summary><b>历史版本（v3.5.4 及更早）</b></summary>
 
 ### v3.5.4
 
