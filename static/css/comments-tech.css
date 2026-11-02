@@ -406,9 +406,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* UA 行：系统 + 浏览器 */
 .cmt-byline{
   display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;
-  margin-top:6px;font-size:11px;color:var(--c-text3);
+  margin-top:6px;font-size:11px;line-height:1;color:var(--c-text3);
 }
-.cmt-byline .cmt-ua{display:inline-flex;align-items:center;gap:4px}
+.cmt-byline .cmt-ua{display:inline-flex;align-items:center;gap:4px;line-height:1}
 .cmt-byline .cmt-ua::before{content:none}
 .cmt-byline .cmt-ua+.cmt-ua::before{content:"·";margin-right:6px;opacity:.5}
 .cmt-ua-icon{width:13px;height:13px;flex:none}
