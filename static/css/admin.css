@@ -374,6 +374,18 @@ svg { vertical-align: -3px; flex: none; }
   white-space: nowrap;
 }
 .badge svg { width: 12px; height: 12px; }
+/* 按钮内计数徽章：默认 .badge 的 margin/border 会把 btn 撑高 ~10px，
+   且按钮边框内再套一层边框，页头并排按钮一高一低、观感割裂——压平成按钮内的胶囊 */
+.btn .badge {
+  margin: 0;
+  padding: 0 7px;
+  min-width: 18px;
+  height: 18px;
+  justify-content: center;
+  background: var(--bg-input);
+  border: none;
+  color: var(--text-secondary);
+}
 .badge-success { background: var(--success-soft); border-color: transparent; color: var(--success); }
 .badge-warning, .badge-draft, .badge-warn { background: var(--warning-soft); border-color: transparent; color: var(--warning); }
 .badge-danger  { background: var(--danger-soft);  border-color: transparent; color: var(--danger); }
