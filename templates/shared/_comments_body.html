@@ -6,14 +6,16 @@
      focus_id —— 可选，浮窗深链定位（#comment-N 的 N），片段端点传入；inline 模式不传 #}
     
 {% macro os_svg(name) %}
-{%- if name == 'Windows' -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10.2 4.6v6.7H3zM11.2 4.4 21 3v8.3h-9.8zM3 12.3h7.2v6.7L3 18zM11.2 12.3H21V21l-9.8-1.3z"/></svg>
+{%- if name.startswith('Windows') -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.6" y="3.8" width="8.5" height="8.2" fill="#F25022"/><rect x="12.3" y="3.8" width="9.1" height="8.2" fill="#7FBA00"/><rect x="2.6" y="13.4" width="8.5" height="8.2" fill="#00A4EF"/><rect x="12.3" y="13.4" width="9.1" height="8.2" fill="#FFB900"/></svg>
 {%- elif name in ('macOS', 'iOS', 'iPadOS') -%}
 <svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 12.9c0-2 1.6-3 1.7-3.1-.9-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.3 2-1.4 2.4-.4 6 1 8 .6 1 1.4 2.1 2.4 2 1-.1 1.3-.6 2.5-.6s1.5.6 2.6.6c1.1 0 1.8-1 2.4-2 .8-1.1 1.1-2.2 1.1-2.3 0 0-2-.8-2-3z"/><path d="M14.5 6.4c.5-.6.8-1.4.7-2.2-.7 0-1.5.5-2 1.1-.4.5-.8 1.3-.7 2.1.8.1 1.5-.4 2-1z"/></svg>
 {%- elif name == 'Android' -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 9h10v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2z"/><path d="m8 9-1.5-3M16 9l1.5-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="9.5" cy="7" r=".8"/><circle cx="14.5" cy="7" r=".8"/><path d="M9 19v2M15 19v2" stroke="currentColor" stroke-width="1.5"/></svg>
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7.6 9.6-1.5-2.7M16.4 9.6l1.5-2.7" stroke="#3DDC84" stroke-width="1.4" stroke-linecap="round" fill="none"/><path d="M6.2 9.6h11.6v6.6a2.4 2.4 0 0 1-2.4 2.4H8.6a2.4 2.4 0 0 1-2.4-2.4z" fill="#3DDC84"/><circle cx="9.6" cy="7.3" r=".85" fill="#3DDC84"/><circle cx="14.4" cy="7.3" r=".85" fill="#3DDC84"/><circle cx="9.6" cy="12.6" r=".9" fill="#fff"/><circle cx="14.4" cy="12.6" r=".9" fill="#fff"/><path d="M9 21v1.4M15 21v1.4" stroke="#3DDC84" stroke-width="1.4" stroke-linecap="round"/></svg>
 {%- elif name == 'Linux' -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3c-2 0-3 2-3 4 0 1.5-.5 2.5-1.2 3.6C7 12 6 13.8 6 16c0 2.5 2.7 4 6 4s6-1.5 6-4c0-2.2-1-4-1.8-5.4C15.5 9.5 15 8.5 15 7c0-2-1-4-3-4z"/><circle cx="10.5" cy="8" r=".6" fill="#fff"/><circle cx="13.5" cy="8" r=".6" fill="#fff"/><path d="M10.5 10.5c.5.5 2.5.5 3 0" stroke="#fff" fill="none"/></svg>
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="14" rx="6.1" ry="7.2" fill="#1F1F1F"/><ellipse cx="12" cy="16" rx="3.4" ry="4" fill="#F4F4F4"/><circle cx="12" cy="6.6" r="3.3" fill="#1F1F1F"/><circle cx="10.8" cy="6.4" r=".75" fill="#fff"/><circle cx="13.2" cy="6.4" r=".75" fill="#fff"/><path d="m10.9 8.1 1.1.9 1.1-.9z" fill="#F5A623"/><ellipse cx="8.6" cy="20.4" rx="2" ry="1.1" fill="#F5A623"/><ellipse cx="15.4" cy="20.4" rx="2" ry="1.1" fill="#F5A623"/></svg>
+{%- elif name == 'ChromeOS' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.4" fill="#1A73E8"/><circle cx="12" cy="12" r="4" fill="#fff"/><circle cx="12" cy="12" r="2.2" fill="#1A73E8"/><path d="M12 2.6a9.4 9.4 0 0 1 8.1 4.7h-8.1z" fill="#34A853"/><path d="M20.1 7.3a9.4 9.4 0 0 1-4 12.9l-4-7z" fill="#FBBC05"/><path d="M8 20.2a9.4 9.4 0 0 1-4-12.9l4 7z" fill="#EA4335"/></svg>
 {%- else -%}
 <svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
 {%- endif -%}
@@ -21,15 +23,31 @@
 
 {% macro browser_svg(name) %}
 {%- if name == 'Chrome' -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path d="M12 3v5.2M4.2 16.5l4.5-2.6M19.8 16.5l-4.5-2.6"/></svg>
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12 2.5 6.5A11 11 0 0 1 21.5 6.5z" fill="#EA4335"/><path d="M12 12 2.5 6.5a11 11 0 0 0 3.9 13.7z" fill="#34A853"/><path d="M12 12 6.4 20.2A11 11 0 0 0 21.5 6.5z" fill="#FBBC05"/><circle cx="12" cy="12" r="4.9" fill="#fff"/><circle cx="12" cy="12" r="4" fill="#4285F4"/></svg>
 {%- elif name == 'Safari' -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.2 5.3-5.3 2.2 2.2-5.3z"/></svg>
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.6" fill="#1B9CFC"/><circle cx="12" cy="12" r="9.1" fill="#0A84FF"/><path d="M12 12 16.9 7.1 13.6 13.6z" fill="#FF3B30"/><path d="M12 12 7.1 16.9 10.4 10.4z" fill="#F2F2F7"/></svg>
 {%- elif name == 'Firefox' -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M18.5 8.5c-1.2-2.2-3.6-3.5-6.2-3.5-4.4 0-8 3.6-8 8 0 4.4 3.6 8 8 8 2.4 0 4.6-1.1 6-2.8"/></svg>
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.6" fill="#FF9500"/><path d="M12 2.2c3.1 0 5.9 1.5 7.6 3.9-2.3-1.4-5.1-1.6-7.4-.5 3.4.7 5.9 3.7 5.9 7.3a6.1 6.1 0 0 1-9.9 4.8c-.8-.7-1.3-1.6-1.5-2.6 1.2 1.3 3 2 4.8 1.7-2.4-1.1-3.9-3.5-3.7-6.1.1-2.5 1.6-4.7 3.8-5.8-1 .9-1.7 2.2-1.8 3.6 1-2.1 3.1-3.4 5.3-3.4z" fill="#FF4F00"/><circle cx="12" cy="12" r="3.9" fill="#FFD200"/></svg>
 {%- elif name == 'Edge' -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 12c0-4.4 3.6-8 8-8 2.8 0 5.2 1.4 6.6 3.6-1.4-.7-2.9-1.1-4.4-1.1-3.9 0-7 3.1-7 7 0 1.2.3 2.3.9 3.2"/><path d="M20 12c0 4.4-3.6 8-8 8-2.8 0-5.2-1.4-6.6-3.6 1.4.7 2.9 1.1 4.4 1.1 3.9 0 7-3.1 7-7 0-1.2-.3-2.3-.9-3.2"/></svg>
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.4 12A9.4 9.4 0 0 0 3 7.6a8 8 0 0 1 6.6-2.3c3.6.4 6.2 3.3 6.4 6.7-2.2-2.1-5.7-2.2-8-.1a4.8 4.8 0 0 0-1.6 3.6c0 3.1 2.5 5.6 5.6 5.6 4.3 0 7.8-3.5 7.8-7.8z" fill="#0C59A4"/><path d="M3 7.6A9.4 9.4 0 0 0 12 21.4c1.8 0 3.5-.5 4.9-1.4-4 .6-7.6-1.4-9-4.5-.8-1.8-.6-3.9.4-5.5-1.9.7-3.2 2.4-3.5 4.4A9.4 9.4 0 0 1 3 7.6z" fill="#35C1F1"/></svg>
+{%- elif name == 'Opera' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.6" fill="#FF1B2D"/><ellipse cx="12" cy="12" rx="4.7" ry="6.6" fill="#fff"/><ellipse cx="12" cy="12" rx="3.1" ry="5.2" fill="#FF1B2D"/></svg>
+{%- elif name == '微信' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="9.2" cy="9.2" rx="7.2" ry="6.2" fill="#07C160"/><ellipse cx="15.6" cy="15.2" rx="6" ry="5.2" fill="#07C160"/><circle cx="6.6" cy="8" r=".95" fill="#fff"/><circle cx="11.6" cy="8" r=".95" fill="#fff"/><circle cx="13.6" cy="14.4" r=".85" fill="#fff"/><circle cx="17.8" cy="14.4" r=".85" fill="#fff"/></svg>
+{%- elif name in ('QQ浏览器', 'QQ') -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.6" fill="#12B7F5"/><ellipse cx="12" cy="14" rx="5.4" ry="5.8" fill="#fff"/><circle cx="9.9" cy="10.6" r=".95" fill="#fff"/><circle cx="14.1" cy="10.6" r=".95" fill="#fff"/><path d="m10.4 13.4 1.6 1.3 1.6-1.3z" fill="#F5A623"/></svg>
+{%- elif name == '钉钉' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.6" fill="#0089FF"/><path d="M6.4 7.2h11.2l-6.9 3.6 4 .9-6.4 5.1 1.9-4.5-3.8-1z" fill="#fff"/></svg>
+{%- elif name == '支付宝' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.6" fill="#1677FF"/><path d="M5.4 13.9c3.9 1.6 9.4 1.7 12.8-.2-1.5-1.9-3.6-2.9-5.6-3.2v2.6h-1.9v-2.6H7.2v-1.6h3.5V7.6H6.4V6.1h11.2v1.5h-4.9v1.3h3.2v1.5h-3.2v.8c2.4.4 4.9 1.6 6.6 3.6-3.3 3-8.9 4-13-1z" fill="#fff"/></svg>
+{%- elif name == '微博' -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.6" fill="#E6162D"/><ellipse cx="10.6" cy="13.4" rx="5.6" ry="4.2" fill="#fff"/><ellipse cx="10.6" cy="13.4" rx="2.6" ry="2" fill="#E6162D"/><circle cx="10.6" cy="13.4" r=".9" fill="#fff"/><path d="M16.6 6.2a4.6 4.6 0 0 1 3.4 4.6" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+{%- elif name in ('curl', 'requests') -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4.5" width="20" height="15" rx="2.6" fill="#2F3B4A"/><path d="m6.6 9.4 2.7 2.6-2.7 2.6M11.4 14.6h5" stroke="#3DDC84" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+{%- elif name in ('Bot', 'Spider') -%}
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7.5" width="16" height="11" rx="3" fill="#8A93A6"/><circle cx="9.4" cy="12.6" r="1.3" fill="#fff"/><circle cx="14.6" cy="12.6" r="1.3" fill="#fff"/><path d="M12 7.5V4.4M9.6 18.8v1.6M14.4 18.8v1.6" stroke="#8A93A6" stroke-width="1.4" stroke-linecap="round"/></svg>
 {%- else -%}
-<svg class="cmt-ua-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18"/></svg>
+<svg class="cmt-ua-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.6" fill="#9AA4B2"/><path d="M3.2 10.4h17.6M3.2 13.6h17.6" stroke="#fff" stroke-width="1.3" fill="none"/></svg>
 {%- endif -%}
 {% endmacro %}
 

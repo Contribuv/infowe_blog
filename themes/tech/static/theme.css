@@ -1090,7 +1090,7 @@ html.page-enter .tech-main {
 
 /* ── 上一篇 / 下一篇 ── */
 .tech-post-pager {
-  margin: 26px 0 0;
+  margin: 24px 0 0;
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
 .tech-pager-link {
