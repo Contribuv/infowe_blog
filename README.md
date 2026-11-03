@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.5)
+[![version](https://img.shields.io/badge/version-3.6.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,14 +919,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.5**
+当前版本：**v3.6.6**
+
+### v3.6.6
+
+- 移动端非首页正文再放宽 8px：`≤480px` 左右留白由 20px 收到 16px，390 屏内容宽 343px、430 屏 348px，约 23–24 个汉字/行；首页列表仍保持 12px 边距和满宽，320 小屏保持 273px
+
+<details>
+<summary><b>历史版本（v3.6.5 及更早）</b></summary>
 
 ### v3.6.5
 
 - 移动端正文列宽优化：`≤480px` 时除首页外的页面正文最大宽度收到 380px（实际内容宽 335–340px），左右留白 20px；`≤360px` 小屏左右 16px（内容宽 273px）。首页列表保持原来的 12px 边距和满宽，不参与收窄
-
-<details>
-<summary><b>历史版本（v3.6.4 及更早）</b></summary>
 
 ### v3.6.4
 

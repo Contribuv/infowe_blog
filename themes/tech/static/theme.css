@@ -213,16 +213,16 @@ img { max-width: 100%; }
    但首页卡片自带内边距，两层留白叠加后 390px 屏文字宽只剩 ~309px，明显偏窄；
    12px 边距 + 卡片 12px 内边距把正文提到 ~327px，又不至于贴边 */
 @media (max-width: 480px) {
-  /* 除首页外，正文列最大 380px（内宽 335–340）：比满宽收窄，
-     但不至于像 360px 那样在 390/430 屏上显得挤；首页列表保持满宽 12px */
+  /* 除首页外：最大 380px + 左右 16px，内容宽 343–348px；
+     比 20px 边距略宽一点，仍明显窄于首页满宽列表 */
   .tech-main:not(:has(.tech-home-head)) .tech-shell {
     max-width: 380px;
-    padding: 0 20px;
+    padding: 0 16px;
   }
   .tech-main:has(.tech-home-head) .tech-shell { padding: 0 12px; }
 }
 @media (max-width: 360px) {
-  /* 320 级小屏：上限不生效，靠 16px 边距把正文提到约 273px */
+  /* 320 级小屏：上限不生效，16px 边距保持约 273px */
   .tech-main:not(:has(.tech-home-head)) .tech-shell { padding: 0 16px; }
   .tech-main:has(.tech-home-head) .tech-shell { padding: 0 12px; }
 }
