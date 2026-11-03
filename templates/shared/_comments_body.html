@@ -135,7 +135,8 @@
     </div><!-- /#cmt-region -->
 
     <!-- 评论表单（回复时由 comments.js 挂到对应楼层组的回复区末尾） -->
-    <form class="cmt-form" id="comment-form" method="POST" action="{{ comment_form_action }}" data-sensitive-words="{{ sensitive_words_json | default('') }}">
+    <form class="cmt-form" id="comment-form" method="POST" action="{{ comment_form_action }}">
+        {# 敏感词库改放表单后的 #cmt-sw JSON script：避免长串撑大标签、与 JS 读取解耦 #}
         <input type="hidden" name="parent_id" id="comment-parent-id" value="">
         {# 已上传图片：由 comments.js 维护（每行一个 URL），提交时后端合并进正文并做站内白名单校验 #}
         <input type="hidden" name="images" id="comment-images" value="">
@@ -151,7 +152,7 @@
             <div class="cmt-box-body">
             {# 邮件通知总开关（后台设置）：决定「邮箱通知」勾选项是否渲染，下方字段与底部选项区共用这一判定 #}
             {% set notify_ui = comment_notify|default('0') in ('1','on','true','yes') %}
-            <textarea name="content" placeholder="写下你的想法..." maxlength="2000" required></textarea>
+            <textarea name="content" placeholder="写下你的想法..." maxlength="2000" aria-label="评论内容"></textarea>
             {# 身份信息后置：展开评论框第一眼是内容输入框，先写后填降低评论门槛；
                老访客仍显示「已记住」条并隐藏字段，行为不变；admin 身份条同步下移保持结构一致 #}
             {% if is_admin %}
@@ -226,9 +227,13 @@
                     <span>私密评论</span>
                 </label>
                 <span class="count">0 / 2000</span>
+                {# 快捷提交提示：Ctrl/Cmd+Enter 由 comments.js 绑定，macOS 下 JS 改为 ⌘↵ #}
+                <span class="kbd-hint" id="cmt-kbd-hint" aria-hidden="true">Ctrl↵ 提交</span>
                 <button type="submit" class="submit">提交评论</button>
             </div>
             </div>
         </details>
     </form>
+    {# 敏感词库（JSON）：由 comments.js 读取做前端实时拦截；后端提交时另有兜底过滤 #}
+    <script type="application/json" id="cmt-sw">{{ sensitive_words_json | default('') | safe }}</script>
     <div id="comment-form-anchor"></div>

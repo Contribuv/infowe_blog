@@ -58,7 +58,9 @@
 .cmt-notice b{color:var(--c-accent);font-weight:600}
 
 /* ── 楼层组 ── */
-.cmt-thread{padding:18px 20px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-hairline);transition:border-color .18s}
+/* padding-bottom 比 top 少 3px：补偿 .cmt-text 行高 1.75 末行半行距（~5px）
+   与 .cmt-head 行高 1.4 首行半行距（~2.8px）的差值，让文字墨迹到卡片边的视觉上下留白一致 */
+.cmt-thread{padding:18px 20px 15px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-hairline);transition:border-color .18s}
 /* 楼层间 18px > 卡内回复间距 14px：靠间距层级把「楼层边界」立起来，淡描边只做兜底提示 */
 .cmt-thread+.cmt-thread{margin-top:22px}
 @media (hover:hover) and (pointer:fine){.cmt-thread:hover{border-color:var(--c-border-h)}}
@@ -114,7 +116,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-badge--author{background:rgba(107,156,245,.11);color:#8fb0e8;border-color:rgba(107,156,245,.20)}
 .cmt-badge--private{background:rgba(224,179,62,.16);color:var(--warning,#8a5a00)}
 .cmt-badge--pending{background:var(--c-reply);color:var(--c-text3);border-color:var(--c-border);border-style:dashed}
-.cmt-text{margin-top:9px;font-size:14px;line-height:1.75;color:var(--c-text2);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
+/* 正文用一级色 --c-text：与三级灰的 time/属地/UA 拉开层级，提升可读性 */
+.cmt-text{margin-top:9px;font-size:14px;line-height:1.75;color:var(--c-text);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
 .cmt-item[data-lv="reply"] .cmt-text{font-size:13.5px;margin-top:7px}
 .cmt-at{color:var(--c-accent);text-decoration:none;font-weight:500;margin-right:2px}
 @media (hover:hover) and (pointer:fine){ .cmt-at:hover{text-decoration:underline} }
@@ -136,7 +139,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
 /* 毛玻璃：底色在文件末尾「毛玻璃降级」段统一给出（默认实色 + 特性查询升级） */
 /* 扁平化：去掉毛玻璃，仅保留描边卡 */
-.cmt-form{margin-top:20px;border:1px solid var(--c-hairline);border-radius:var(--c-radius);padding:14px 16px}
+.cmt-form{margin-top:20px;border:1px solid var(--c-hairline);border-radius:var(--c-radius);padding:14px 16px;scroll-margin:50px 0}
 .cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
@@ -203,6 +206,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form input.is-invalid,.cmt-form textarea.is-invalid{border-color:var(--danger,#b4232f);box-shadow:0 0 0 3px rgba(180,35,47,.14)}
 .cmt-form .count{margin-left:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
+/* 改动点：Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
+.cmt-form .kbd-hint{margin-left:8px;font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
 .cmt-form .submit{padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
 /* 深色 accent 实底改深字：白字仅 2.52:1，深字 7.05:1（与 .tech-btn-primary 同款） */
 [data-theme="dark"] .cmt-form .submit{color:#16181d}
@@ -217,9 +222,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (hover:hover) and (pointer:fine){ .cmt-hint button:hover{color:var(--c-text2)} }
 .cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--c-hairline);font-size:12.5px;color:var(--c-text3)}
 .cmt-remember button{flex:none;font-size:11.5px;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
-/* 博主身份条：登录后替代昵称/邮箱/网址输入行（与 .cmt-remember 同为卡内 tint 块，不加描边） */
-.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--c-hairline);font-size:13px;color:var(--c-text)}
-.cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none}
+/* 博主身份条用徽章同款蓝色左边框+头像描边：语义是「将以博主身份发言」的状态警示，与普通信息条区分 */
+.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--c-hairline);font-size:13px;color:var(--c-text);border-left:3px solid rgba(107,156,245,.55)}
+.cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px rgba(107,156,245,.35)}
+/* 私密评论勾选后直接显示提示：移动端无 hover，title 提示不可见 */
+.cmt-form .chk:has(#comment-private:checked)::after{content:"仅博主可见";font-size:11px;color:var(--c-text3)}
 
 /* ── 空态 ── */
 .cmt-empty{padding:26px 0;text-align:center;font-size:13.5px;color:var(--c-text3)}
@@ -251,7 +258,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 移动端：收紧尺度，回复区缩进对齐根评论正文左缘（36+10=46） ── */
 @media (max-width:767px){
   .cmt{--av-root:36px;--av-reply:26px;--gap:10px;--indent:46px}
-  .cmt-thread{padding:16px 14px}
+  .cmt-thread{padding:16px 14px 13px}
   .cmt-replies{margin-top:12px;padding:0}
   .cmt-replies .cmt-item+.cmt-item{margin-top:12px}
   .cmt-form .row{flex-direction:column;gap:7px;margin-bottom:8px}
@@ -269,6 +276,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{-webkit-appearance:none;appearance:none}
   /* 焦点态只保留细一圈的光环：3px 在深色下像铺了一块底，移动端收窄到 2px */
   .cmt-form input:focus,.cmt-form textarea:focus{box-shadow:0 0 0 2px var(--c-accent-weak)}
+  /* 字数统计在窄屏独占一行并右对齐排在工具行上方：避免与提交按钮挤在一起 */
+  .cmt-form .count{order:-1;flex-basis:100%;margin-left:0;text-align:right}
+  /* 改动点：触屏无 Ctrl 键，窄屏隐藏快捷提交提示，避免独占行只剩它一个 */
+  .cmt-form .kbd-hint{display:none}
 }
 
 /* ── 邮箱字段：纯数字 QQ 号下拉补全 @qq.com + 头像预览 ── */

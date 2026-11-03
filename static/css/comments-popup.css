@@ -188,6 +188,21 @@ body:has(.cmt-pop[open]) .cmt-fab,
 /* 回复态：表单被 comments.js 挪进楼层回复区时，底部留出的 foot 空壳不再占位 */
 .cmt-pop-foot:empty { display: none; }
 
+/* ── 浮窗表单紧凑化（仅浮窗，内嵌不受影响）── */
+/* 1. 展开态隐藏「收起评论框」整行：右上角 × 已是关闭入口，避免双份退出 + 撑高表单；
+      收起态入口条（写评论）保留，重开浮窗保持展开态 */
+.cmt-pop-foot .cmt-box[open] > .cmt-toggle { display: none; }
+/* 2. 博主身份条改紧凑 chip：靠左自适应宽度，视觉权重让位给输入框 */
+.cmt-pop-foot .cmt-admin {
+  display: inline-flex; width: fit-content;
+  padding: 4px 10px; gap: 7px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+}
+.cmt-pop-foot .cmt-admin-avatar { width: 20px; height: 20px; }
+/* 3. 输入框限高：展开态压缩首屏高度，多露出下方楼层（超出内部滚动） */
+.cmt-pop-foot .cmt-form textarea { min-height: 64px; max-height: 96px; }
+
 /* 片段注入后复用 .cmt 体系配色（变量定义在 comments-tech.css 的 .cmt 块） */
 .cmt-pop-body .cmt { margin-top: 0; }
 /* 弹窗头部已有「评论 N」标题：隐藏片段自带的大标题，避免同一标题出现两次；

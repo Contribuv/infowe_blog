@@ -103,7 +103,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 [data-theme="light"] .cmt-badge--author{background:rgba(59,110,235,.08);color:#48699e;border-color:rgba(59,110,235,.16)}
 .cmt-badge--private{background:rgba(224,179,62,.16);color:#9a6700}
 .cmt-badge--pending{background:var(--c-reply);color:var(--c-text3);border-color:var(--c-border);border-style:dashed}
-.cmt-text{margin-top:9px;font-size:14px;line-height:1.75;color:var(--c-text2);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
+/* 正文用一级色 --c-text：与三级灰的 time/属地/UA 拉开层级，提升可读性 */
+.cmt-text{margin-top:9px;font-size:14px;line-height:1.75;color:var(--c-text);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
 .cmt-item[data-lv="reply"] .cmt-text{font-size:13.5px;margin-top:7px}
 .cmt-at{color:var(--c-accent);text-decoration:none;font-weight:500;margin-right:2px}
 @media (hover:hover) and (pointer:fine){ .cmt-at:hover{text-decoration:underline} }
@@ -123,7 +124,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (hover:hover) and (pointer:fine){ .cmt-fold:hover{text-decoration:underline} }
 
 /* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
-.cmt-form{margin-top:22px;background:var(--c-card);border:1px solid var(--c-border);border-radius:var(--c-radius);padding:14px 16px}
+.cmt-form{margin-top:22px;background:var(--c-card);border:1px solid var(--c-border);border-radius:var(--c-radius);padding:14px 16px;scroll-margin:50px 0}
 .cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
@@ -158,9 +159,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (hover:hover) and (pointer:fine){ .cmt-hint button:hover{color:var(--c-text2)} }
 .cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:12.5px;color:var(--c-text3)}
 .cmt-remember button{flex:none;font-size:11.5px;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
-/* 博主身份条：登录后替代昵称/邮箱/网址输入行（与 .cmt-remember 同为卡内 tint 块，不加描边） */
-.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:13px;color:var(--c-text)}
-.cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none}
+/* 博主身份条用徽章同款蓝色左边框+头像描边：语义是「将以博主身份发言」的状态警示，与普通信息条区分 */
+.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:13px;color:var(--c-text);border-left:3px solid rgba(107,156,245,.55)}
+.cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px rgba(107,156,245,.35)}
+/* 私密评论勾选后直接显示提示：移动端无 hover，title 提示不可见 */
+.cmt-form .chk:has(#comment-private:checked)::after{content:"仅博主可见";font-size:11px;color:var(--c-text3)}
 
 /* ── 空态 ── */
 .cmt-empty{padding:26px 0;text-align:center;font-size:13.5px;color:var(--c-text3)}
@@ -197,6 +200,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{-webkit-appearance:none;appearance:none}
   /* 焦点态只保留细一圈的光环：3px 在深色下像铺了一块底，移动端收窄到 2px */
   .cmt-form input:focus,.cmt-form textarea:focus{box-shadow:0 0 0 2px var(--c-accent-weak)}
+  /* 字数统计在窄屏独占一行并右对齐排在工具行上方：避免与提交按钮挤在一起 */
+  .cmt-form .count{order:-1;flex-basis:100%;margin-left:0;text-align:right}
 }
 
 /* ── 邮箱字段：纯数字 QQ 号下拉补全 @qq.com + 头像预览 ── */

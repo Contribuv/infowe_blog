@@ -96,9 +96,7 @@ window.initComments = function (root) {
     }
   }
 
-  /* 滚动定位时给表单留出上下边距，避免贴住视口边缘 */
-  form.style.scrollMarginTop = '50px';
-  form.style.scrollMarginBottom = '50px';
+  /* 滚动定位留白由 CSS 的 .cmt-form{scroll-margin:50px 0} 负责，不再内联注入 */
 
   /* 点「写评论」展开 <details> 后：表单被截断才滚动到可见 */
   var cmtBox = form.querySelector('.cmt-box');
@@ -412,7 +410,8 @@ window.initComments = function (root) {
     var sync = function () {
       var n = textarea.value.length;
       counter.textContent = n + ' / ' + MAX_LEN;
-      counter.classList.toggle('is-over', n > MAX_LEN);
+      // 改动点：接近上限即标红预警（maxlength 挡住超限，n > MAX_LEN 永不成立，原条件是死状态）
+      counter.classList.toggle('is-over', n >= MAX_LEN - 200);
     };
     textarea.addEventListener('input', sync);
     sync();
@@ -493,7 +492,7 @@ window.initComments = function (root) {
         } else if (/^(?:https?:\/\/|www\.)/i.test(author)) {
           authorError = '昵称不能以 http://、https:// 或 www. 开头';
         } else if (author) {
-          var raw = form.getAttribute('data-sensitive-words') || '';
+          var raw = sensitiveWordsRaw();
           if (raw) {
             try {
               var list = JSON.parse(raw);
@@ -546,6 +545,20 @@ window.initComments = function (root) {
         submitBtn.disabled = false;
         submitBtn.textContent = '提交评论';
       }, 10000);
+    });
+
+    /* ── 4.5 Ctrl/Cmd+Enter 快捷提交 ──
+       走 submit 按钮的原生提交链，复用上面 submit 事件里的全部校验；
+       按钮 disabled（提交中）时 click 无效，天然防重复 */
+    var kbdHint = byId('cmt-kbd-hint');
+    if (kbdHint && /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)) {
+      kbdHint.textContent = '⌘↵ 提交';   // macOS 显示对应符号
+    }
+    if (textarea) textarea.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        submitBtn.click();
+      }
     });
   }
 
@@ -663,7 +676,50 @@ window.initComments = function (root) {
   var emojiBtn = byId('cmt-emoji-btn');
   var emojiPanel = byId('cmt-emoji-panel');
   if (emojiBtn && emojiPanel && textarea) {
+    /* 改动点：表情项创建提为函数，常规分组与「最近使用」共用 */
+    var makeEmojiItem = function (ch) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cmt-emoji-item';
+      b.textContent = ch;
+      b.setAttribute('aria-label', '插入表情 ' + ch);   // 屏幕阅读器可读，不只读到符号本身
+      return b;
+    };
+
+    /* 改动点：「最近使用」分组——localStorage 记忆最近点过的 12 个，置顶展示 */
+    var RECENT_KEY = 'cmt-emoji-recent';
+    var recentList = [];
+    try { recentList = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') || []; } catch (e) {}
+    if (Object.prototype.toString.call(recentList) !== '[object Array]') recentList = [];
+    recentList = recentList.filter(function (c) { return typeof c === 'string' && c; }).slice(0, 12);
+
+    var recentBox = document.createElement('div');
+    recentBox.className = 'cmt-emoji-group';
+    var recentTitle = document.createElement('div');
+    recentTitle.className = 'cmt-emoji-title';
+    recentTitle.textContent = '最近使用';
+    var recentGrid = document.createElement('div');
+    recentGrid.className = 'cmt-emoji-grid';
+    recentBox.appendChild(recentTitle);
+    recentBox.appendChild(recentGrid);
+
+    var renderRecent = function () {
+      recentGrid.textContent = '';
+      recentBox.hidden = recentList.length === 0;   // 无记录时整组隐藏
+      recentList.forEach(function (ch) { recentGrid.appendChild(makeEmojiItem(ch)); });
+    };
+    var pushRecent = function (ch) {
+      var i = recentList.indexOf(ch);
+      if (i > -1) recentList.splice(i, 1);
+      recentList.unshift(ch);
+      if (recentList.length > 12) recentList.length = 12;
+      renderRecent();
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(recentList)); } catch (e) {}
+    };
+    renderRecent();
+
     var frag = document.createDocumentFragment();
+    frag.appendChild(recentBox);   // 最近使用置顶
     EMOJI_GROUPS.forEach(function (g) {
       var box = document.createElement('div');
       box.className = 'cmt-emoji-group';
@@ -673,13 +729,7 @@ window.initComments = function (root) {
       box.appendChild(title);
       var grid = document.createElement('div');
       grid.className = 'cmt-emoji-grid';
-      g.list.forEach(function (ch) {
-        var b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'cmt-emoji-item';
-        b.textContent = ch;
-        grid.appendChild(b);
-      });
+      g.list.forEach(function (ch) { grid.appendChild(makeEmojiItem(ch)); });
       box.appendChild(grid);
       frag.appendChild(box);
     });
@@ -738,6 +788,7 @@ window.initComments = function (root) {
       }
       textarea.focus();
       textarea.dispatchEvent(new Event('input'));   // 同步字数统计
+      pushRecent(ch);   // 改动点：记入「最近使用」并置顶刷新
       closeEmoji();   // 选毕即收起
     });
     document.addEventListener('click', function (e) {
@@ -895,10 +946,14 @@ window.initComments = function (root) {
   }
 
   /* ── 11. 敏感词过滤：命中即就地替换为等长星号（词库由后端注入） ──
-     词库挂在表单 data-sensitive-words（JSON）。前端实时拦截只是体验优化、天然可绕过，
-     后端提交时另有兜底过滤（Sensitive::filter），两者共用同一份词库。 */
+     词库放在表单后的 <script type="application/json" id="cmt-sw">。
+     前端实时拦截只是体验优化、天然可绕过，后端提交时另有兜底过滤（Sensitive::filter），两者共用同一份词库。 */
+  function sensitiveWordsRaw() {
+    var el = document.getElementById('cmt-sw');
+    return el ? (el.textContent || '').trim() : '';
+  }
   if (textarea && form) {
-    var rawWords = form.getAttribute('data-sensitive-words') || '';
+    var rawWords = sensitiveWordsRaw();
     var wordRe = null;
     if (rawWords) {
       try {
