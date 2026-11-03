@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.6)
+[![version](https://img.shields.io/badge/version-3.6.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.7)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,14 +919,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.6**
+当前版本：**v3.6.7**
+
+### v3.6.7
+
+- 移动端友链申请表单：底部内边距由 4px 收到 16px，提交 / 返回按钮到卡片底部的间距由 5px 提升到 17px，与按钮上方 17px 对称
+- 圈子分页间距：分页与「已经看了 N 篇」之间由 12px 调到 24px，分页上下间距统一为 24px
+
+<details>
+<summary><b>历史版本（v3.6.6 及更早）</b></summary>
 
 ### v3.6.6
 
 - 移动端非首页正文再放宽 8px：`≤480px` 左右留白由 20px 收到 16px，390 屏内容宽 343px、430 屏 348px，约 23–24 个汉字/行；首页列表仍保持 12px 边距和满宽，320 小屏保持 273px
-
-<details>
-<summary><b>历史版本（v3.6.5 及更早）</b></summary>
 
 ### v3.6.5
 

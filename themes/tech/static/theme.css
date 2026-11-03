@@ -2036,7 +2036,7 @@ html { touch-action: manipulation; }
   .tech-pager-next { text-align: left; }
   .tech-form-row { flex-direction: column; gap: 0; }
   /* 移动端：卡片内距收紧；输入框抬到 16px —— iOS Safari 对 <16px 的控件会自动放大页面 */
-  .tech-form { padding: 14px 14px 4px; }
+  .tech-form { padding: 14px 14px 16px; }
   .tech-input, .tech-textarea { font-size: 16px; }
   .tech-skill-list { grid-template-columns: 1fr; }
   /* 许可文字折行后不再推右，避免单独悬于右侧 */
@@ -2428,7 +2428,7 @@ html { touch-action: manipulation; }
 
 /* 列表末尾：已经看了 N 篇 */
 .circle-end {
-  margin: 12px 0 0;
+  margin: 24px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--border);
   text-align: center;
