@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.2)
+[![version](https://img.shields.io/badge/version-3.6.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.3)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.2**
+当前版本：**v3.6.3**
+
+### v3.6.3
+
+- 移动端首页与列表加宽：`≤480px` 时容器与列表卡片水平内边距由 16px 收到 12px，390px 屏幕文字可用宽度增加约 16px，列表不再显得过窄
+- 文章相关推荐收敛：默认由 4 条改为 2 条；板块标题 18px → 15px 并降为次要文字色，行内边距与标题字号同步收紧，移除左侧 2px 主色竖条，让文末回归「收尾」而不是第二个内容区
+- 移动端页脚居中：`≤768px` 时版权、导航链接、备案号三行纵向排列并整体居中
+- 修复正文表格上下空隙翻倍：内层 `<table>` 被正文块级统一间距规则额外加了 14px 外边距（与 `.table-wrap` 叠加成 28px），清零后恢复单倍间距，表格上下不再发空
+
+<details>
+<summary><b>历史版本（v3.6.2 及更早）</b></summary>
 
 ### v3.6.2
 
@@ -928,9 +938,6 @@ chown -R www:www var
 - 浮窗表单紧凑化：展开态隐藏「收起评论框」行、博主身份条改紧凑 chip、输入框限高 64-96px，首屏多露出下方楼层
 - 正文排版：文章块级元素（引用 / 代码 / 列表 / 表格 / 图片 / 分割线等）上下间距统一 14px（移动端 12px），段落保持原间距；h2 上下总距对齐统一值；代码块间距由外层 wrap 承担，内层 pre 归零不叠加
 - 灯箱大图下方居中显示图片备注，正文不再注入备注
-
-<details>
-<summary><b>历史版本（v3.6.1 及更早）</b></summary>
 
 ### v3.6.1
 

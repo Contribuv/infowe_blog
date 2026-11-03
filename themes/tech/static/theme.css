@@ -209,11 +209,11 @@ img { max-width: 100%; }
 @media (max-width: 1000px) {
   .tech-main .tech-shell { padding: 0 30px; }
 }
-/* ≤480px 导航/页脚/正文统一 16px：正文原为 24px，刻意比页头窄 8px/侧，
-   但首页卡片自带 16px 内边距，两层留白叠加后 390px 屏只剩 293px 文字宽，
-   小屏不值得再为「版心层级」牺牲内容宽度，改为三处对齐导航 */
+/* ≤480px 导航/页脚/正文统一 12px：正文原为 24px，刻意比页头窄 8px/侧，
+   但首页卡片自带内边距，两层留白叠加后 390px 屏文字宽只剩 ~309px，明显偏窄；
+   12px 边距 + 卡片 12px 内边距把正文提到 ~327px，又不至于贴边 */
 @media (max-width: 480px) {
-  .tech-main .tech-shell { padding: 0 16px; }
+  .tech-main .tech-shell { padding: 0 12px; }
 }
 /* 项目列表页与其它内容页同宽 1000px（内宽 960）；
    语言筛选 chip 可自然换行，不再单独放宽到导航宽度，避免与全站版心不一致 */
@@ -1033,6 +1033,10 @@ html.page-enter .tech-main {
 }
 .tech-post-body.markdown-body img { margin: 14px auto; }
 .tech-post-body.markdown-body .table-wrap { margin: 14px 0; }
+/* 表格自身也要清零：上面的 :is(...) 规则把 table 也设成了 margin:14px 0，
+   特异性高于 markdown-body.css 的 .table-wrap table{margin:0}，
+   结果表格在滚动容器里又上下各多出 14px，视觉上成了 28px 的空隙 */
+.tech-post-body.markdown-body .table-wrap table { margin: 0; }
 /* 代码块由 JS 包进 .code-wrap：间距由 wrap 承担，wrap 内 pre 保持 0 不叠加 */
 .tech-post-body.markdown-body .code-wrap { margin: 14px 0; }
 .tech-post-body.markdown-body .code-wrap pre { margin: 0; }
@@ -1212,9 +1216,15 @@ html.page-enter .tech-main {
 /* ── 相关文章 ── */
 /* 文末收束：文本列表（标题 + 日期/时长），不套卡片边框。
    与上方上下篇的描边卡片拉开层级，视线自然滑向评论区；
-   一条一行，标题宽度足够，所以可以放心放 4 条 */
-.tech-related { margin: 26px 0 0; }
-.tech-related-title { font-size: 18px; font-weight: 600; margin: 0 0 6px; }
+   只放 2 条，作为正文的收尾而不是第二个内容区 */
+.tech-related { margin: 22px 0 0; }
+/* 标题只作用于文章页相关推荐：首页「精选推荐」复用 .tech-related-title 类，
+   不能跟着一起缩小 */
+.tech-related .tech-related-title {
+  font-size: 15px; font-weight: 600;
+  margin: 0 0 2px;
+  color: var(--text-secondary);
+}
 /* 精选推荐区：底部对齐页头 --center 的分隔线（细 border + 居中渐变彩条） */
 .tech-featured {
   position: relative;
@@ -1234,31 +1244,27 @@ html.page-enter .tech-main {
 .tech-related-grid { display: flex; flex-direction: column; }
 .tech-related-card {
   position: relative;
-  display: flex; align-items: baseline; gap: 16px;
-  padding: 12px 0 12px 14px;
+  display: flex; align-items: baseline; gap: 14px;
+  padding: 9px 0;
   border-bottom: 1px solid var(--border);
   text-decoration: none; color: var(--text);
   -webkit-tap-highlight-color: transparent;
 }
 .tech-related-card:first-child { border-top: 1px solid var(--border); }
-/* 左侧竖条：替代卡片边框作为视觉锚点，保持可点行的高度感 */
-.tech-related-card::before {
-  content: ""; position: absolute; left: 0; top: 50%;
-  width: 2px; height: 14px; margin-top: -7px;
-  border-radius: 1px; background: var(--accent);
-}
+/* 原先左侧还有一根 2px 主色竖条；只留 2 条时它反而成了视觉主角，
+   去掉后让标题自己承担入口，和正文的收尾语气一致 */
 @media (hover: hover) and (pointer: fine) {
   .tech-related-card:hover .tech-related-card-title { color: var(--accent); }
 }
 .tech-related-card-title {
   flex: 1 1 auto; min-width: 0;
-  font-size: 15px; font-weight: 600; line-height: 1.55;
+  font-size: 14px; font-weight: 600; line-height: 1.55;
   overflow: hidden; text-overflow: ellipsis;
   display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
   transition: color .15s;
 }
 .tech-related-card-meta {
-  flex: none; font-size: 12px; color: var(--text-secondary);
+  flex: none; font-size: 11.5px; color: var(--text-secondary);
   white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 
@@ -2009,24 +2015,37 @@ html { touch-action: manipulation; }
   /* 不使用两端对齐：justify 会拉伸含短行的段落字距，移动端观感发「散」（用户反馈，justify 移除） */
 }
 
+@media (max-width: 768px) {
+  /* 移动端页脚整块居中：版权、链接、备案号三行纵向排列并居中对齐，
+     不再让版权在左、链接在右，窄屏看起来更稳 */
+  .tech-footer-inner {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+  .tech-footer-links { justify-content: center; }
+  .tech-footer-beian {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .tech-footer-beian a { margin-right: 0; }
+}
+
 @media (max-width: 480px) {
-  .tech-shell { padding: 0 16px; }
+  /* 导航/页脚同步收到 12px，避免正文比页头还宽造成错位 */
+  .tech-shell { padding: 0 12px; }
   .tech-post-body pre { padding: 12px; }
+  /* 首页/列表卡片：水平内边距同步压到 12px，把宽度让给正文 */
+  .tech-post-item { padding: 14px 12px; }
   /* ≤480px：标签/年份占半行并排，排序独占第二行并与第一排等宽对齐 */
   .tech-cs { flex: 1 1 calc(50% - 4px); max-width: calc(50% - 4px); }
   .tech-cs:last-child { flex: 1 1 100%; max-width: 100%; }
   .tech-links-grid { grid-template-columns: 1fr; }
   .tech-project-grid { grid-template-columns: 1fr; }
 
-  /* 页脚：窄屏 inner 转纵向、链接行（含成员标识）左对齐自然换行；
-     标识缩到 18px，跟在 RSS 后面或换到下一行，都不会溢出 */
-  .tech-footer-inner {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  .tech-footer-links { justify-content: flex-start; }
-  .tech-footer-beian a { margin-right: 0; }
+  /* 页脚：居中规则已由 ≤768 统一处理，这里只收标识高度 */
   .tech-footer-member-logo { height: 16px; }
 }
 
