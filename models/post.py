@@ -114,7 +114,11 @@ def get_by_slug(slug: str) -> dict | None:
 
 
 def related(current_id: int, tags: list[str], limit: int = 4) -> list[dict]:
-    """一条 SQL 取相关文章：所有 tag 用 OR 拼起来，避免每个 tag 查一次。"""
+    """一条 SQL 取相关文章：所有 tag 用 OR 拼起来，避免每个 tag 查一次。
+
+    文本列表可以放下 4 条，先按命中 tag 数降序，再按发布时间降序，
+    避免时间最新但只沾一个冷门 tag 的文章挤掉真正高相关的。
+    """
     tags = [str(t).strip() for t in (tags or []) if str(t).strip()][:6]
     if not tags:
         return []
@@ -123,10 +127,14 @@ def related(current_id: int, tags: list[str], limit: int = 4) -> list[dict]:
         for t in tags
     ]
     conds = " OR ".join(["tags LIKE ? ESCAPE '\\'"] * len(escaped))
-    params = [int(current_id), *[f'%"{e}"%' for e in escaped], int(limit)]
+    hits = " + ".join(
+        ["CASE WHEN tags LIKE ? ESCAPE '\\' THEN 1 ELSE 0 END"] * len(escaped)
+    )
+    patterns = [f'%"{e}"%' for e in escaped]
+    params = [int(current_id), *patterns, *patterns, int(limit)]
     rows = db.query(
         f"SELECT * FROM posts WHERE status = 'published' AND deleted_at IS NULL AND id != ? AND ({conds}) "
-        "ORDER BY created_at DESC LIMIT ?",
+        f"ORDER BY ({hits}) DESC, created_at DESC LIMIT ?",
         tuple(params),
     )
     return [hydrate(r) for r in rows]

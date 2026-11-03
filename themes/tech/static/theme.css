@@ -209,10 +209,11 @@ img { max-width: 100%; }
 @media (max-width: 1000px) {
   .tech-main .tech-shell { padding: 0 30px; }
 }
-/* ≤480px 导航/页脚收到 16px，正文同步回收到 24px：
-   仍比页头页脚窄 8px/侧，但避免小屏正文被压到 280px 以下（每行不足 16 字） */
+/* ≤480px 导航/页脚/正文统一 16px：正文原为 24px，刻意比页头窄 8px/侧，
+   但首页卡片自带 16px 内边距，两层留白叠加后 390px 屏只剩 293px 文字宽，
+   小屏不值得再为「版心层级」牺牲内容宽度，改为三处对齐导航 */
 @media (max-width: 480px) {
-  .tech-main .tech-shell { padding: 0 24px; }
+  .tech-main .tech-shell { padding: 0 16px; }
 }
 /* 项目列表页与其它内容页同宽 1000px（内宽 960）；
    语言筛选 chip 可自然换行，不再单独放宽到导航宽度，避免与全站版心不一致 */
@@ -1209,8 +1210,11 @@ html.page-enter .tech-main {
    原样式是死代码，2026-10 清理，避免与全局 .toast 维护两份毛玻璃。 */
 
 /* ── 相关文章 ── */
+/* 文末收束：文本列表（标题 + 日期/时长），不套卡片边框。
+   与上方上下篇的描边卡片拉开层级，视线自然滑向评论区；
+   一条一行，标题宽度足够，所以可以放心放 4 条 */
 .tech-related { margin: 26px 0 0; }
-.tech-related-title { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
+.tech-related-title { font-size: 18px; font-weight: 600; margin: 0 0 6px; }
 /* 精选推荐区：底部对齐页头 --center 的分隔线（细 border + 居中渐变彩条） */
 .tech-featured {
   position: relative;
@@ -1226,25 +1230,37 @@ html.page-enter .tech-main {
 /* 多栏布局整页左对齐（报头、文章、侧栏都靠左）：精选区的彩条同步移到左端，
    避免同一列里同时出现「左对齐报头 + 居中彩条」两套对齐方式 */
 .tech-home-grid .tech-featured::after { left: 0; transform: none; }
-/* 卡片网格 */
-.tech-related-grid {
-    /* 4 篇横排铺满；minmax(0,1fr) 令长标题不可撑破轨道（防溢出容器） */
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
-  }
+/* 文本列表 */
+.tech-related-grid { display: flex; flex-direction: column; }
 .tech-related-card {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 14px 16px;
-  border: 1px solid var(--border); border-radius: 8px;
+  position: relative;
+  display: flex; align-items: baseline; gap: 16px;
+  padding: 12px 0 12px 14px;
+  border-bottom: 1px solid var(--border);
   text-decoration: none; color: var(--text);
-  transition: border-color .15s, background .15s;
+  -webkit-tap-highlight-color: transparent;
 }
-@media (hover: hover) and (pointer: fine) { .tech-related-card:hover { border-color: var(--accent); background: var(--hover-bg); } }
+.tech-related-card:first-child { border-top: 1px solid var(--border); }
+/* 左侧竖条：替代卡片边框作为视觉锚点，保持可点行的高度感 */
+.tech-related-card::before {
+  content: ""; position: absolute; left: 0; top: 50%;
+  width: 2px; height: 14px; margin-top: -7px;
+  border-radius: 1px; background: var(--accent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-related-card:hover .tech-related-card-title { color: var(--accent); }
+}
 .tech-related-card-title {
-  font-size: 14px; font-weight: 600; line-height: 1.5;
+  flex: 1 1 auto; min-width: 0;
+  font-size: 15px; font-weight: 600; line-height: 1.55;
   overflow: hidden; text-overflow: ellipsis;
   display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
+  transition: color .15s;
 }
-.tech-related-card-meta { font-size: 12px; color: var(--text-secondary); }
+.tech-related-card-meta {
+  flex: none; font-size: 12px; color: var(--text-secondary);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
 
 /* 视觉隐藏但保留给读屏：补全 heading 层级用（列表前 h2） */
 .sr-only {
@@ -1942,8 +1958,8 @@ html { touch-action: manipulation; }
   .tech-timeline-item { flex-direction: column; align-items: flex-start; gap: 2px; }
   .tech-timeline-date { flex: none; }
   .tech-post-pager { grid-template-columns: 1fr; }
-  /* 相关推荐：窄屏 4 列过挤，降为 2 列两行 */
-  .tech-related-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 相关推荐：文本列表本身已单列，窄屏只需让标题与元信息上下排 */
+  .tech-related-card { flex-direction: column; align-items: flex-start; gap: 2px; }
   .tech-pager-next { text-align: left; }
   .tech-form-row { flex-direction: column; gap: 0; }
   /* 移动端：卡片内距收紧；输入框抬到 16px —— iOS Safari 对 <16px 的控件会自动放大页面 */

@@ -365,11 +365,15 @@ def post_comment(post_id: int):
 def comment_upload():
     if not comments_service.open_comments() or not comments_service.image_upload_on():
         return jsonify({"error": "评论图片上传已关闭"}), 403
-    from services import ratelimit
+    from services import auth, ratelimit
 
     ip = comments_service.request_ip()
-    # 匿名接口：限频 15 秒 1 张、单 IP 每天 30 张，避免被拿来刷磁盘
-    if not ratelimit.allow("upload_burst", ip, 15, 1) or not ratelimit.allow("upload_day", ip, 86400, 30):
+    # 匿名接口：限频 15 秒 1 张、单 IP 每天 30 张，避免被拿来刷磁盘；博主不受限
+    is_admin = auth.is_admin()
+    if not is_admin and (
+        not ratelimit.allow("upload_burst", ip, 15, 1)
+        or not ratelimit.allow("upload_day", ip, 86400, 30)
+    ):
         return jsonify({"error": "上传太频繁，请稍后再试"}), 429
     file = request.files.get("image")
     url, error = upload.save(
@@ -381,8 +385,9 @@ def comment_upload():
     )
     if error:
         return jsonify({"error": error}), 400
-    ratelimit.touch("upload_burst", ip)
-    ratelimit.touch("upload_day", ip)
+    if not is_admin:
+        ratelimit.touch("upload_burst", ip)
+        ratelimit.touch("upload_day", ip)
     return jsonify({"url": url})
 
 

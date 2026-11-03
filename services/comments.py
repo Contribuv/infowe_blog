@@ -221,12 +221,12 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     back = f"/projects/{target_id}" if is_project else f"/post/{target_id}"
     ip = request_ip()
 
-    if not _cooldown_allowed("comment", ip, COOLDOWN):
-        return {"url": back, "error": "评论太频繁，请稍后再试"}
-
     from services import auth
 
+    # 博主回复不受 30 秒冷却限制：审核/答疑时经常连续回多条
     is_admin = auth.is_admin()
+    if not is_admin and not _cooldown_allowed("comment", ip, COOLDOWN):
+        return {"url": back, "error": "评论太频繁，请稍后再试"}
     author = (form.get("author") or "").strip()
     content = (form.get("content") or "").strip()
     email = (form.get("email") or "").strip()
@@ -301,7 +301,8 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         notify=notify_on,
         user_agent=request.headers.get("User-Agent", ""),
     )
-    _touch_cooldown("comment", ip)
+    if not is_admin:
+        _touch_cooldown("comment", ip)
 
     # 记住评论者信息（30 天）
     old = commenter()
