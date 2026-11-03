@@ -503,7 +503,8 @@ def _sensitive_json() -> str:
         for w in settings_service.get_str("sensitive_words", "").replace("\r", "\n").split("\n")
         if w.strip()
     ]
-    return json.dumps(words, ensure_ascii=False) if words else ""
+    # 防 </script> 闭合注入：词库将内嵌进 <script type="application/json">，"</" 转义为 "<\/"（JSON 合法）
+    return json.dumps(words, ensure_ascii=False).replace("</", "<\\/") if words else ""
 
 
 def _sanitize_stats(html: str) -> str:
