@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.4)
+[![version](https://img.shields.io/badge/version-3.6.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.5)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,14 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.4**
+当前版本：**v3.6.5**
+
+### v3.6.5
+
+- 移动端正文列宽优化：`≤480px` 时除首页外的页面正文最大宽度收到 380px（实际内容宽 335–340px），左右留白 20px；`≤360px` 小屏左右 16px（内容宽 273px）。首页列表保持原来的 12px 边距和满宽，不参与收窄
+
+<details>
+<summary><b>历史版本（v3.6.4 及更早）</b></summary>
 
 ### v3.6.4
 
@@ -927,9 +934,6 @@ chown -R www:www var
 - 关于页站点状态改版：移到人物卡后的第一张内容卡，改用「域名 / 服务器 / 证书 / 延迟 / 连通率」文本 + 动态数据；右上角运行状态徽标（正常 / 需关注 / 有异常 / 待探测），原来的两张明细表折叠为「监控明细」，接口每分钟刷新
 - 文章图片备注：`![demo.jpg](...)` 会在正文图片下方和灯箱中居中显示弱化备注；空 alt、`null`、`为空null` 等占位值不显示；连续图片画廊中保留单行备注；后台上传自动用原始文件名作为 alt，Vditor 预览实时同步
 - 间距统一：主内容底部留白 40px / 移动端 32px 统一收到 24px；分页上下间距统一 24px，并移除项目列表底部多余的 20px；圈子分页与「已经看了 N 篇」收尾块收紧
-
-<details>
-<summary><b>历史版本（v3.6.3 及更早）</b></summary>
 
 ### v3.6.3
 
