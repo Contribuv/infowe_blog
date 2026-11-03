@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    评论交互（default / tech 两套主题共用）
    依赖：static/js/toast.js（window.toast）
    结构约定：一个 .cmt-thread = 一条根评论 + 它下面全部回复（.cmt-replies 内平铺）
@@ -410,7 +410,7 @@ window.initComments = function (root) {
     var sync = function () {
       var n = textarea.value.length;
       counter.textContent = n + ' / ' + MAX_LEN;
-      // 改动点：接近上限即标红预警（maxlength 挡住超限，n > MAX_LEN 永不成立，原条件是死状态）
+      // 接近上限即标红预警（maxlength 挡住超限，n > MAX_LEN 永不成立，原条件是死状态）
       counter.classList.toggle('is-over', n >= MAX_LEN - 200);
     };
     textarea.addEventListener('input', sync);
@@ -676,7 +676,7 @@ window.initComments = function (root) {
   var emojiBtn = byId('cmt-emoji-btn');
   var emojiPanel = byId('cmt-emoji-panel');
   if (emojiBtn && emojiPanel && textarea) {
-    /* 改动点：表情项创建提为函数，常规分组与「最近使用」共用 */
+    /* 表情项创建提为函数，常规分组与「最近使用」共用 */
     var makeEmojiItem = function (ch) {
       var b = document.createElement('button');
       b.type = 'button';
@@ -686,7 +686,7 @@ window.initComments = function (root) {
       return b;
     };
 
-    /* 改动点：「最近使用」分组——localStorage 记忆最近点过的 12 个，置顶展示 */
+    /* 「最近使用」分组——localStorage 记忆最近点过的 12 个，置顶展示 */
     var RECENT_KEY = 'cmt-emoji-recent';
     var recentList = [];
     try { recentList = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') || []; } catch (e) {}
@@ -788,7 +788,7 @@ window.initComments = function (root) {
       }
       textarea.focus();
       textarea.dispatchEvent(new Event('input'));   // 同步字数统计
-      pushRecent(ch);   // 改动点：记入「最近使用」并置顶刷新
+      pushRecent(ch);   // 记入「最近使用」并置顶刷新
       closeEmoji();   // 选毕即收起
     });
     document.addEventListener('click', function (e) {

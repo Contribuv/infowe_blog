@@ -100,28 +100,71 @@
   /* ── 回到顶部 ── */
   var topBtn = document.getElementById('tech-top');
   if (topBtn) {
+    var _cmtJump = document.getElementById('tech-comments-jump');
+    var _cmtSection = document.getElementById('comments');
     var _scrollTick = false;
+    var _lastY = window.scrollY || document.documentElement.scrollTop;
+    var _dir = 'down';
+
+    function syncFloating() {
+      var y = window.scrollY || document.documentElement.scrollTop;
+      var mobile = window.matchMedia('(max-width: 768px)').matches;
+      // 移动端方向以手指为准（见下面的 touchmove），桌面端才用滚动增量
+      if (!mobile) {
+        var delta = y - _lastY;
+        if (Math.abs(delta) >= 4) _dir = delta > 0 ? 'down' : 'up';
+      }
+      _lastY = y;
+      var cmtReached = !!_cmtSection &&
+        _cmtSection.getBoundingClientRect().top < window.innerHeight * 0.6;
+      if (mobile && !(_cmtJump && _cmtSection)) {
+        // 没有评论区可跳（首页、列表页等）：只保留回到顶部，按常规时机出现
+        topBtn.classList.toggle('show', y > 320);
+      } else if (mobile) {
+        if (y < 160) {
+          topBtn.classList.remove('show');
+          if (_cmtJump) _cmtJump.classList.remove('show');
+        } else if (cmtReached || _dir === 'up') {
+          // 向上滑或已到评论区：显示回顶部
+          topBtn.classList.add('show');
+          if (_cmtJump) _cmtJump.classList.remove('show');
+        } else {
+          // 向下滑且评论还在下方：显示跳到评论
+          topBtn.classList.remove('show');
+          if (_cmtJump) _cmtJump.classList.add('show');
+        }
+      } else {
+        // 桌面空间足够，评论到达前保持两个
+        topBtn.classList.toggle('show', y > 320);
+        if (_cmtJump) _cmtJump.classList.toggle('show', !cmtReached);
+      }
+      _scrollTick = false;
+    }
+
     window.addEventListener('scroll', function () {
       if (_scrollTick) return;
       _scrollTick = true;
-      requestAnimationFrame(function () {
-        var y = window.scrollY || document.documentElement.scrollTop;
-        topBtn.classList.toggle('show', y > 320);
-        topBtn.classList.toggle('scrolled', y > 400);
-        _scrollTick = false;
-      });
+      requestAnimationFrame(syncFloating);
+    }, { passive: true });
+
+    /* 移动端用手指方向判断，避免懒加载图片撑高页面时 scrollY 跳动把方向判反 */
+    var _touchStartY = 0;
+    window.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) _touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    window.addEventListener('touchmove', function (e) {
+      if (e.touches.length !== 1) return;
+      var dy = e.touches[0].clientY - _touchStartY;
+      if (Math.abs(dy) < 12) return;
+      // 手指上移 = 页面往下走 = 显示跳到评论；手指下移 = 显示回到顶部
+      _dir = dy < 0 ? 'down' : 'up';
+      _touchStartY = e.touches[0].clientY;
+      syncFloating();
     }, { passive: true });
     topBtn.addEventListener('click', function () {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
-    /* 移动端：评论表单进入视口时隐藏悬浮按钮，避免遮住「提交评论」（按钮靠右，恰在悬浮球右下位置） */
-    var _cmtForm = document.getElementById('comment-form');
-    if (_cmtForm && window.matchMedia('(max-width: 768px)').matches && 'IntersectionObserver' in window) {
-      var _cmtIO = new IntersectionObserver(function (entries) {
-        topBtn.classList.toggle('hide', entries[0].isIntersecting);
-      }, { threshold: 0.02 });
-      _cmtIO.observe(_cmtForm);
-    }
+    window.dispatchEvent(new Event('scroll'));
   }
 })();
 

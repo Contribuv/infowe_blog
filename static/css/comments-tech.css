@@ -206,7 +206,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form input.is-invalid,.cmt-form textarea.is-invalid{border-color:var(--danger,#b4232f);box-shadow:0 0 0 3px rgba(180,35,47,.14)}
 .cmt-form .count{margin-left:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
-/* 改动点：Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
+/* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
 .cmt-form .kbd-hint{margin-left:8px;font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
 .cmt-form .submit{padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
 /* 深色 accent 实底改深字：白字仅 2.52:1，深字 7.05:1（与 .tech-btn-primary 同款） */
@@ -246,7 +246,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 #cmt-region{transition:opacity .15s ease}
 #cmt-region[aria-busy="true"]{opacity:.6}
 
-/* 站主要求：表单在上、评论内容在下。DOM 不动（回复挂回/分页逻辑不受影响），用 flex order 调视觉顺序 */
+/* 博主自定义：表单在上、评论内容在下。DOM 不动（回复挂回/分页逻辑不受影响），用 flex order 调视觉顺序 */
 .cmt{display:flex;flex-direction:column}
 .cmt>.cmt-notice{order:1}
 .cmt>.cmt-title{order:2}
@@ -278,7 +278,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-form input:focus,.cmt-form textarea:focus{box-shadow:0 0 0 2px var(--c-accent-weak)}
   /* 字数统计在窄屏独占一行并右对齐排在工具行上方：避免与提交按钮挤在一起 */
   .cmt-form .count{order:-1;flex-basis:100%;margin-left:0;text-align:right}
-  /* 改动点：触屏无 Ctrl 键，窄屏隐藏快捷提交提示，避免独占行只剩它一个 */
+  /* 触屏无 Ctrl 键，窄屏隐藏快捷提交提示，避免独占行只剩它一个 */
   .cmt-form .kbd-hint{display:none}
 }
 

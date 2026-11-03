@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.8)
+[![version](https://img.shields.io/badge/version-3.6.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.9)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,13 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.8**
+当前版本：**v3.6.9**
+
+### v3.6.9
+
+- 移动端悬浮按钮合并为一个：向下滑显示「跳到评论」，向上滑显示「回到顶部」，到评论区后固定为「回到顶部」；两个状态共用同一位置，来回切换不会上下跳，长文任意位置都能回顶部
+- 评论说明浮窗：后台评论状态列的 AI 审核、AI 回复、人工审核说明改为可点击，点「详情」弹窗查看全文，长理由不再被单行省略截断
+- 私密评论审核修复：私密评论不再无条件绕过审核，只有已通过或待审核的私密评论对管理员可见，被拒绝后仅保留在后台
 
 ### v3.6.8
 

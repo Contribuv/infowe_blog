@@ -131,7 +131,7 @@ body:has(.cmt-pop[open]) .cmt-fab,
 /* 内容区：唯一滚动容器（分页/定位都只滚这里，背后页面不动） */
 .cmt-pop-body {
   flex: 1 1 auto;
-  /* 站主要求：浮窗内同样表单在上、评论内容在下——foot(表单) 提到 body(列表) 之前 */
+  /* 博主自定义：浮窗内同样表单在上、评论内容在下——foot(表单) 提到 body(列表) 之前 */
   order: 2;
   overflow-y: auto;
   overscroll-behavior: contain;

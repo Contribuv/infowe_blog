@@ -57,7 +57,9 @@ def load(
     my_comments = my_comments or {}
 
     if include_private:
-        sql = f"SELECT * FROM comments WHERE {column} = ? AND (status='approved' OR is_private=1) AND deleted_at IS NULL"
+        # 管理员可见：已通过评论 + 待审核的私密评论；
+        # 私密不再无条件绕过审核，rejected 的私密评论只留在后台
+        sql = f"SELECT * FROM comments WHERE {column} = ? AND (status='approved' OR (is_private=1 AND status='pending')) AND deleted_at IS NULL"
         params: list[Any] = [value]
     else:
         sql = f"SELECT * FROM comments WHERE {column} = ? AND status='approved' AND is_private=0 AND deleted_at IS NULL"
@@ -218,7 +220,7 @@ def page_of(comment_id: int, per_page: int, include_private: bool = False) -> in
     column = "project_id" if is_project else "post_id"
     value = root.get("project_id") if is_project else root.get("post_id")
     visible = (
-        "(status = 'approved' OR is_private = 1)"
+        "(status = 'approved' OR (is_private = 1 AND status = 'pending'))"
         if include_private
         else "(status = 'approved' AND is_private = 0)"
     )

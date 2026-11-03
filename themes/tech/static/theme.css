@@ -405,7 +405,7 @@ html.page-enter .tech-main {
   position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom));
   width: 44px; height: 44px; z-index: 150;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border); border-radius: 8px;
+  border: 1px solid var(--border); border-radius: 50%;
   background: var(--bg); color: var(--text-secondary);
   cursor: pointer; /* 扁平化：去掉投影，靠描边区分 */
   opacity: 0; visibility: hidden;
@@ -416,11 +416,13 @@ html.page-enter .tech-main {
 @media (hover: hover) and (pointer: fine) { .tech-top:hover { color: var(--accent); border-color: var(--accent); } }
 /* JS 动态隐藏：移动端评论表单进视口时调用（遮「提交评论」），带 !important 压过 .show */
 .tech-top.hide { opacity: 0 !important; visibility: hidden !important; }
-/* 滚动后缩小成 56px 圆形，避免遮挡右侧阅读 */
-.tech-top.scrolled {
-  width: 36px; height: 36px; right: 28px; bottom: calc(28px + env(safe-area-inset-bottom));
-  border-radius: 50%;
+/* 跳到评论：与回到顶部同形 */
+.tech-top.tech-top--comments {
+  bottom: calc(76px + env(safe-area-inset-bottom));
 }
+#comments { scroll-margin-top: 80px; }
+/* 浮窗评论模式已有右下角「评论」FAB，不再重复显示跳转按钮 */
+body:has(.cmt-fab) .tech-top--comments { display: none; }
 
 /* ── 页面头部（子页：列表 / 标签 / 关于等，左对齐） ── */
 .tech-page-head {
@@ -742,7 +744,7 @@ html.page-enter .tech-main {
 }
 
 /* ── 文章详情 ── */
-/* 站主要求：文章/项目详情内容页正文定宽 780px（原 920），评论区随列同步收窄；移动端仍占满壳宽 */
+/* 博主自定义：文章/项目详情内容页正文定宽 780px（原 920），评论区随列同步收窄；移动端仍占满壳宽 */
 .tech-post-wrap { max-width: 780px; margin: 0 auto; }
 .tech-post-layout { display: block; }
 
@@ -874,7 +876,7 @@ html.page-enter .tech-main {
 /* 锚点定位留出 sticky nav（56px）+ 呼吸空间，防止点 TOC 后标题被导航遮住 */
 .tech-post-body :is(h1, h2, h3, h4, h5, h6) { scroll-margin-top: 72px; }
 
-/* 正文排版修复：16px / 1.8 行高；中文不加字间距（等宽字符加间距反显松散，用户反馈） */
+/* 正文排版修复：16px / 1.8 行高；中文不加字间距（等宽字符加间距反显松散，博主实测后去掉） */
 .tech-post-body,
 .tech-post-body.markdown-body {
   font-size: 16px; line-height: 1.8; word-wrap: break-word;
@@ -884,12 +886,12 @@ html.page-enter .tech-main {
 .tech-post-body.markdown-body h1, .tech-post-body.markdown-body h2,
 .tech-post-body.markdown-body h3, .tech-post-body.markdown-body h4,
 .tech-post-body.markdown-body h5, .tech-post-body.markdown-body h6 {
-  /* 改动点：标题上下距统一 14px（与下方块级统一值一致），只留少量分节留白 */
+  /* 标题上下距统一 14px（与下方块级统一值一致），只留少量分节留白 */
   font-weight: 700; line-height: 1.35; margin: 14px 0;
 }
 /* 桌面标题梯度：22/20/18/16.5/16/15.5，明显低于页面标题 26px
    —— 页面标题本身就是文章 h1，正文里若再出现一个 24px 的 # 大标题，
-   两个大标题紧挨着会「打架」（用户反馈双标题丑），故整体下调一级；
+   两个大标题紧挨着会「打架」（博主觉得双标题丑），故整体下调一级；
    h1 显式清掉 markdown-body 默认的下边框，只留 h2 带分隔线，层级更清爽 */
 .tech-post-body h1, .tech-post-body.markdown-body h1 {
   font-size: 20px; padding-bottom: 0; border-bottom: 0;
@@ -897,7 +899,7 @@ html.page-enter .tech-main {
 /* 正文排版修复：h2 19px，上距分节、下距贴近换行间距 */
 .tech-post-body h2, .tech-post-body.markdown-body h2 {
   font-size: 19px; padding-bottom: 8px;
-  /* 改动点：上距 14；下距 5 + padding 8 + border 1 = 14，h2 上下总距与其它块级一致 */
+  /* 上距 14；下距 5 + padding 8 + border 1 = 14，h2 上下总距与其它块级一致 */
   margin: 14px 0 5px;
   border-bottom: 1px solid var(--border);
 }
@@ -908,7 +910,7 @@ html.page-enter .tech-main {
 .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 16.5px; color: var(--text-secondary); }
 .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 16.5px; color: var(--text-secondary); }
 /* 段距与段内换行一致，段落间不留额外空隙 */
-.tech-post-body p, .tech-post-body.markdown-body p { margin: 0; /* 改动点：段落上下间距归零 */ }
+.tech-post-body p, .tech-post-body.markdown-body p { margin: 0; /* 段落上下间距归零 */ }
 .tech-post-body strong, .tech-post-body.markdown-body strong { font-weight: 600; }
 .tech-post-body em { font-style: italic; }
 .tech-post-body s, .tech-post-body del { color: var(--text-secondary); }
@@ -1065,7 +1067,7 @@ html.page-enter .tech-main {
 .tech-post-body dt { font-weight: 600; margin-top: 6px; }
 .tech-post-body dd { margin: 0 0 4px 24px; color: var(--text-secondary); }
 
-/* ── 改动点：正文块级上下间距统一 14px（p 保持归零不动）──
+/* ── 正文块级上下间距统一 14px（p 保持归零不动）──
    上下同值后，任意两个块级标签相邻时折叠间距恒为 14px，
    消除卡片类元素（引用/代码块/表格/列表/分隔线）上 0 下 16 的不均匀；
    双类特异性 (0,2,1)/(0,3,1) 压过 markdown-body.css 的同名规则（该文件后加载） */
@@ -2007,8 +2009,8 @@ html { touch-action: manipulation; }
   .tech-main:has(.tech-home-head) { padding-top: 0; }
   .tech-main:has(.tech-about-hero) { padding-top: 24px; }
   .tech-main:has(.tech-proj) { padding-top: 16px; }
-  /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（scrolled 压缩态同样覆盖） */
-  .tech-top, .tech-top.scrolled { bottom: calc(72px + env(safe-area-inset-bottom)); }
+  /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（缩小态同样覆盖） */
+  .tech-top { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .tech-post-title-lg { font-size: 20px; }
   /* 移动端文章头部收紧：标题下留白与分隔线间距缩小，避免顶部一大片空白 */
   .tech-post-header { margin-bottom: 14px; padding-bottom: 10px; }
@@ -2052,7 +2054,7 @@ html { touch-action: manipulation; }
   .tech-post-title { font-size: 16px; }
   .tech-post-excerpt { font-size: 14px; }
   .tech-post-body, .tech-post-body.markdown-body {
-    /* 中文正文不加字间距：0.03em 在 14px 下约 0.4px/字，移动端视觉明显发「散」（用户反馈） */
+    /* 中文正文不加字间距：0.03em 在 14px 下约 0.4px/字，移动端视觉明显发「散」（博主实测） */
     font-size: 14px; line-height: 1.6; letter-spacing: normal;
   }
   /* 移动标题梯度：18/16/15/14/13.5/13，与页面标题 20px 拉开，避免双标题打架 */
@@ -2065,15 +2067,15 @@ html { touch-action: manipulation; }
   .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 13.5px; }
   .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 13px; }
   /* 段距与段内换行一致：移动端同步归零 */
-  .tech-post-body p, .tech-post-body.markdown-body p { margin: 0; /* 改动点：移动端同步归零 */ }
-  /* 改动点：移动端标题同步收紧，与归零的段距匹配 */
+  .tech-post-body p, .tech-post-body.markdown-body p { margin: 0; /* 移动端同步归零 */ }
+  /* 移动端标题同步收紧，与归零的段距匹配 */
   .tech-post-body h1, .tech-post-body.markdown-body h1,
   .tech-post-body h2, .tech-post-body.markdown-body h2,
   .tech-post-body h3, .tech-post-body.markdown-body h3,
   .tech-post-body h4, .tech-post-body.markdown-body h4,
   .tech-post-body h5, .tech-post-body.markdown-body h5,
   .tech-post-body h6, .tech-post-body.markdown-body h6 { margin: 12px 0; }
-  /* 改动点：移动端块级同步统一 12px（p 保持归零），h2 下距 4 + padding 7 + border 1 = 12 */
+  /* 移动端块级同步统一 12px（p 保持归零），h2 下距 4 + padding 7 + border 1 = 12 */
   .tech-post-body h2, .tech-post-body.markdown-body h2 { margin-bottom: 4px; }
   .tech-post-body.markdown-body :is(blockquote, pre, table, ul, ol, hr, dl, details, .admonition, .img-gallery) {
     margin: 12px 0;
@@ -2084,7 +2086,7 @@ html { touch-action: manipulation; }
   .tech-post-body.markdown-body .table-wrap { margin: 12px 0; }
   .tech-post-body.markdown-body .code-wrap { margin: 12px 0; }
   .tech-post-body.markdown-body .code-wrap pre { margin: 0; }
-  /* 不使用两端对齐：justify 会拉伸含短行的段落字距，移动端观感发「散」（用户反馈，justify 移除） */
+  /* 不使用两端对齐：justify 会拉伸含短行的段落字距，移动端观感发「散」（博主实测后移除 justify） */
 }
 
 @media (max-width: 768px) {
@@ -2213,7 +2215,7 @@ html { touch-action: manipulation; }
   will-change: transform;
 }
 .lightbox-media img.is-zoomed { cursor: grab; }
-/* 改动点：灯箱大图下方备注小字（含缩略图网格点开后查看 alt） */
+/* 灯箱大图下方备注小字（含缩略图网格点开后查看 alt） */
 .lightbox-caption {
   max-width: 92vw; text-align: center;
   color: rgba(255, 255, 255, .72); font-size: 13px; line-height: 1.5;
@@ -4043,5 +4045,20 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
     background: transparent;
     border-color: transparent;
     color: var(--accent);
+  }
+}
+
+/* ── 移动端悬浮按钮瘦身：视觉 34，透明热区 44 ── */
+@media (max-width: 768px) {
+  .tech-top {
+    width: 34px; height: 34px; right: 10px;
+  }
+  .tech-top::after {
+    content: ""; position: absolute; inset: -5px;
+  }
+  .tech-top svg { width: 16px; height: 16px; }
+  .tech-top.tech-top--comments {
+    /* 与回到顶部同一位置：同一时刻只显示一个，切换时不上下跳 */
+    bottom: calc(72px + env(safe-area-inset-bottom));
   }
 }

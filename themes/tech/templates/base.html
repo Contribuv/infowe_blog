@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 站主要求限制移动端缩放：maximum-scale=1 禁双指/双击整页缩放，user-scalable=no 兼容旧内核；
+    <!-- 博主自定义：限制移动端缩放，maximum-scale=1 禁双指/双击整页缩放，user-scalable=no 兼容旧内核；
          iOS 对 <16px 输入框聚焦仍会强制放大，与缩放开关无关，由移动端 16px 输入框字号兜底；
          interactive-widget=resizes-content：Android Chrome 108+ 软键盘弹出时收缩
          布局视口，评论浮窗（dvh 定高）随之变矮，底部输入区不被键盘遮住；
@@ -193,6 +193,12 @@
     <button class="tech-top" id="tech-top" aria-label="回到顶部">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
+    {% if (request.path.startswith('/post/') or request.path.startswith('/projects/')) and comments_enabled|default(true) %}
+    <!-- 跳到评论：文章页 / 项目详情页 -->
+    <a class="tech-top tech-top--comments" id="tech-comments-jump" href="#comments" aria-label="跳到评论">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </a>
+    {% endif %}
 
     <script src="{{ url_for('theme_static', filename=active_theme ~ '/static/theme.js', t=theme_asset_ver) }}" defer></script>
     <script>
