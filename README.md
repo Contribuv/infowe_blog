@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.1)
+[![version](https://img.shields.io/badge/version-3.6.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.2)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.1**
+当前版本：**v3.6.2**
+
+### v3.6.2
+
+- 敏感词词库内嵌进页面前把 `</` 转义为 `<\/`，防止词库内容闭合 `<script>` 标签注入
+- 评论表单：字数计数临近上限（差 200 字）即标红；支持 `Ctrl/Cmd + Enter` 快捷提交（走原生提交链复用全部校验，提交中防重复）；表情面板新增「最近使用」分组（最多 12 个，本地持久化）；输入框补充 `aria-label`，提交按钮旁显示快捷键提示（macOS 显示 `⌘↵`，移动端隐藏）
+- 浮窗表单紧凑化：展开态隐藏「收起评论框」行、博主身份条改紧凑 chip、输入框限高 64-96px，首屏多露出下方楼层
+- 正文排版：文章块级元素（引用 / 代码 / 列表 / 表格 / 图片 / 分割线等）上下间距统一 14px（移动端 12px），段落保持原间距；h2 上下总距对齐统一值；代码块间距由外层 wrap 承担，内层 pre 归零不叠加
+- 灯箱大图下方居中显示图片备注，正文不再注入备注
+
+<details>
+<summary><b>历史版本（v3.6.1 及更早）</b></summary>
 
 ### v3.6.1
 
@@ -927,9 +938,6 @@ chown -R www:www var
 - 设备 / 浏览器信息移到作者行末尾，跟在地名后面；图标保持纯色描边，并修正了图标与文字的基线对齐
 - 楼中楼间距：每条回复上下各 9px + 细分隔线，最后一条不再额外留底部内边距，卡片顶部与底部留白一致（底部不再多空 9px）；有 UA / 没 UA 的回复间距完全相同
 - 评论区垂直节奏与整页对齐：标题 → 表单、表单 → 列表、列表 → 分页统一 20px；文章 → 上下篇、上下篇 → 评论区统一 24px
-
-<details>
-<summary><b>历史版本（v3.6.0 及更早）</b></summary>
 
 ### v3.6.0
 
