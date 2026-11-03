@@ -1,4 +1,4 @@
-﻿@charset "UTF-8";
+@charset "UTF-8";
 /* ═══════════════════════════════════════════════
    tech 主题 · 极简单栏 · 移动端优先 · GitHub 风格
    导航/页脚容器 .tech-shell（max-width 1000px）
@@ -348,7 +348,7 @@ html[data-theme-mode="dark"] .icon-auto { display: none; }
 .tech-drawer-link.active { color: var(--accent); font-weight: 600; }
 
 /* ── 主内容 ── */
-.tech-main { flex: 1; padding: 24px 0 40px; }
+.tech-main { flex: 1; padding: 24px 0 24px; }
 /* 不支持跨文档 View Transition 的浏览器：站内跳转时主内容淡入（不回退到白屏） */
 @keyframes tech-page-enter {
   from { opacity: 0; }
@@ -363,8 +363,8 @@ html.page-enter .tech-main {
 /* 关于页：顶部是左对齐「关于」页头 + 下方人物卡 Hero，需与其他子页一致的顶部留白 */
 /* 关于页顶部与其它页面统一：主内容区 24px 上边距 */
 .tech-main:has(.tech-about-hero) { padding-top: 24px; }
-/* 关于页内容较短，收紧底部留白，避免页尾空荡 */
-.tech-main:has(.tech-about-hero) { padding-bottom: 40px; }
+/* 关于页内容较短，底部留白收紧到与顶部（24px）一致，避免页尾空出一大截 */
+.tech-main:has(.tech-about-hero) { padding-bottom: 24px; }
 
 /* ── 页脚 ── */
 .tech-footer {
@@ -702,7 +702,7 @@ html.page-enter .tech-main {
     filter: brightness(1.1);
   }
 }
-.tech-pagination { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 32px; }
+.tech-pagination { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 24px 0 0; }
 .tech-page-btn {
   min-width: 38px; height: 38px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center;
@@ -748,26 +748,121 @@ html.page-enter .tech-main {
 .tech-post-wrap { max-width: 780px; margin: 0 auto; }
 .tech-post-layout { display: block; }
 
-/* TOC：窄屏内联折叠框，位于标题下方、正文之前；上下 24px（与相邻块 margin 折叠取较大值）；
-   ≥1400px 改为 fixed 悬浮在容器右侧，margin 归零且脱离文档流 */
+/* TOC：窄屏内联折叠，≥1400px 变成右侧固定文字索引。
+   视觉参考「左侧高亮线」式目录：目录本身不画卡片，只靠字色与 2px 左边线
+   区分当前章节；窄屏才保留折叠，并用上下两条 hairline 作为可点区域边界。 */
 .tech-toc-sidebar { margin: 16px 0; }
+
+.tech-toc {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.tech-toc-summary {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 44px; padding: 11px 0;
+  font-size: 12px; font-weight: 500; letter-spacing: .08em;
+  color: var(--text-secondary);
+  cursor: pointer; user-select: none; list-style: none;
+}
+.tech-toc-summary::-webkit-details-marker { display: none; }
+.tech-toc-summary::after {
+  content: ""; width: 6px; height: 6px; flex-shrink: 0;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg); transition: transform .2s; margin-top: -3px;
+}
+.tech-toc[open] .tech-toc-summary::after { transform: rotate(-135deg); margin-top: 3px; }
+
+/* 目录面板：窄屏最多占 46vh，宽屏在下方单独放宽 */
+.tech-toc-body {
+  padding: 0 0 12px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+/* 目录滚动条：系统默认粗条（Windows 约 15px）会把 220px 宽的目录撑得很难看
+   注意 Chromium 121+ 只要设了标准属性 scrollbar-width，就会忽略 ::-webkit-scrollbar，故两者分开写 */
+.tech-toc-body::-webkit-scrollbar { width: 6px; }
+.tech-toc-body::-webkit-scrollbar-track { background: transparent; }
+.tech-toc-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+@media (hover: hover) and (pointer: fine) { .tech-toc-body::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); } }
+/* Firefox 不支持 ::-webkit-scrollbar，改用标准属性兜底（thin 细条 + 同色） */
+@supports (-moz-appearance: none) {
+  .tech-toc-body { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+}
+.tech-toc-body .toc { margin: 0; }
+.tech-toc-body ul { list-style: none; margin: 0; padding: 0; }
+
+/* 条目：透明左边线常驻，选中时只换颜色，避免状态切换时文字左右跳动；
+   窄屏 40px 行高保证可点面积，层级靠缩进而不是再套一层 padding */
+.tech-toc-body a {
+  display: flex; align-items: center;
+  min-height: 40px;
+  padding: 6px 0 6px 12px;
+  border-left: 2px solid transparent;
+  font-size: 13px; line-height: 1.5;
+  color: var(--text-secondary); text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color .15s ease, border-color .15s ease;
+}
+.tech-toc-body ul ul a { padding-left: 24px; font-size: 12.5px; }
+.tech-toc-body ul ul ul a { padding-left: 34px; font-size: 12px; }
+.tech-toc-body ul ul ul ul a { padding-left: 42px; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-toc-body a:hover { color: var(--text); }
+}
+.tech-toc-body a.is-active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 500;
+}
+
 @media (min-width: 1400px) {
   .tech-toc-sidebar {
     position: fixed;
     top: 80px;
-    /* 正文容器 780（半宽 390），悬浮目录再留 20px 间距；文章与项目详情一致 */
-    left: min(calc(50% + 410px), calc(100vw - 200px));
-    width: 180px;
+    /* 正文 780（半宽 390），留 16px 间隙；220px 面板在 1400 视口下仍有余量 */
+    left: min(calc(50% + 406px), calc(100vw - 232px));
+    width: 220px;
     margin: 0;
   }
-  /* 宽屏：summary 退化为标题，去掉折叠箭头和可点击感 */
-  .tech-toc-summary { cursor: default; }
+  /* 宽屏没有折叠需求：summary 退化成小标题 */
+  .tech-toc {
+    border: 0;
+    /* 与页面同色，平时不可见；仅用于在极矮视口下遮住滚到目录背后的页脚文字 */
+    background: var(--bg);
+    padding: 4px 0 8px;
+  }
+  .tech-toc-summary {
+    min-height: 0;
+    padding: 0 0 8px;
+    font-size: 11.5px;
+    letter-spacing: .12em;
+    cursor: default;
+  }
   .tech-toc-summary::after { display: none; }
+  .tech-toc-body {
+    padding: 0;
+    max-height: min(calc(100vh - 180px), 72vh);
+  }
+  /* 宽屏单行 + 省略号；完整标题在 title 属性里，悬停可看 */
+  .tech-toc-body a {
+    display: block;
+    min-height: 0;
+    padding: 5px 0 5px 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tech-toc-body ul ul a { padding-left: 22px; font-size: 12.5px; }
+  .tech-toc-body ul ul ul a { padding-left: 34px; font-size: 12px; }
+  .tech-toc-body ul ul ul ul a { padding-left: 44px; }
 }
 
 .tech-post-header { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .tech-post-title-lg { font-size: 24px; font-weight: 700; line-height: 1.35; margin: 0 0 10px; }
-/* PC 宽屏：文章标题提到 28px，与 920px 版心、16px 正文拉开层级（24px 对比仅 1.5×，存在感不足）；
+/* PC 宽屏：文章标题提到 28px，与 780px 版心、16px 正文拉开层级；
    正文 h1 已压到 20px，不会重现「双标题打架」；移动端维持 24px，避免小屏换行过多 */
 @media (min-width: 769px) {
   .tech-post-title-lg { font-size: 28px; }
@@ -780,58 +875,6 @@ html.page-enter .tech-main {
 
 /* 锚点定位留出 sticky nav（56px）+ 呼吸空间，防止点 TOC 后标题被导航遮住 */
 .tech-post-body :is(h1, h2, h3, h4, h5, h6) { scroll-margin-top: 72px; }
-
-/* 目录 */
-.tech-toc {
-  border: 1px solid var(--border-strong); border-radius: 8px;
-  /* 扁平化：TOC 去毛玻璃，底色在文件末尾统一给实色 */
-}
-.tech-toc-summary {
-  padding: 10px 14px; font-size: 14px; font-weight: 600;
-  cursor: pointer; user-select: none; list-style: none;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.tech-toc-summary::-webkit-details-marker { display: none; }
-.tech-toc-summary::after {
-  content: ""; width: 8px; height: 8px; flex-shrink: 0;
-  border-right: 2px solid var(--text-secondary); border-bottom: 2px solid var(--text-secondary);
-  transform: rotate(45deg); transition: transform .2s; margin-top: -4px;
-}
-.tech-toc[open] .tech-toc-summary::after { transform: rotate(-135deg); margin-top: 4px; }
-/* 目录面板最高只占视口 60%：面板自 top:80 起，用视口比例封顶能保证任何视口高度下
-   底边都留出充足余量，滚动到页脚时不会贴住页脚（此前按 calc(100vh - Npx) 拉长，
-   矮视口下减掉的那点余量根本不够，面板几乎顶到视口底部） */
-.tech-toc-body {
-  padding: 0 14px 12px; max-height: 60vh; overflow-y: auto;
-}
-/* 目录滚动条：系统默认粗条（Windows 约 15px）会把 180px 宽的目录面板撑得很难看
-   注意 Chromium 121+ 只要设了标准属性 scrollbar-width，就会忽略 ::-webkit-scrollbar，故两者分开写 */
-.tech-toc-body::-webkit-scrollbar { width: 6px; }
-.tech-toc-body::-webkit-scrollbar-track { background: transparent; }
-.tech-toc-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-@media (hover: hover) and (pointer: fine) { .tech-toc-body::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); } }
-/* Firefox 不支持 ::-webkit-scrollbar，改用标准属性兜底（thin 细条 + 同色） */
-@supports (-moz-appearance: none) {
-  .tech-toc-body { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-}
-.tech-toc-body .toc { margin: 0; }
-.tech-toc-body ul { list-style: none; margin: 0; padding: 0; }
-.tech-toc-body ul ul { padding-left: 16px; }
-.tech-toc-body a {
-  display: block; padding: 3px 0; font-size: 13px; line-height: 1.6;
-  color: var(--text-secondary); text-decoration: none;
-  /* 折叠态宽度充足，允许长标题换行；只有宽屏 180px 悬浮栏才截断
-     （见下方 min-width:1400px），避免窄栏里 23 条目录每条都变「…」 */
-  overflow-wrap: anywhere;
-}
-@media (min-width: 1400px) {
-  .tech-toc-body a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-@media (hover: hover) and (pointer: fine) { .tech-toc-body a:hover { color: var(--accent); } }
-.tech-toc-body a.is-active {
-  color: var(--accent); font-weight: 600;
-  border-left: 2px solid var(--accent); padding-left: 8px; margin-left: -10px;
-}
 
 /* 正文排版修复：16px / 1.8 行高；中文不加字间距（等宽字符加间距反显松散，用户反馈） */
 .tech-post-body,
@@ -1032,6 +1075,17 @@ html.page-enter .tech-main {
   margin: 14px 0;
 }
 .tech-post-body.markdown-body img { margin: 14px auto; }
+/* 图片备注：独立图片被服务端包成 figure，图注在图片下方居中、弱化 */
+.tech-post-body.markdown-body .md-figure { margin: 14px 0; text-align: center; }
+.tech-post-body.markdown-body .md-figure img { margin: 0 auto; }
+.tech-post-body.markdown-body .md-figure-caption {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  opacity: .85;
+  text-align: center;
+}
 .tech-post-body.markdown-body .table-wrap { margin: 14px 0; }
 /* 表格自身也要清零：上面的 :is(...) 规则把 table 也设成了 margin:14px 0，
    特异性高于 markdown-body.css 的 .table-wrap table{margin:0}，
@@ -1497,7 +1551,9 @@ html.page-enter .tech-main {
   display: grid;
   gap: 14px;
   padding-top: 16px;
-  padding-bottom: 20px;
+  /* 底部留白交给分页 margin 或主内容 padding：这里再垫 20px，
+     会让最后一张卡到分页的视觉间距变成 20 + 24 = 44px */
+  padding-bottom: 0;
 }
 .tech-project-grid--one { grid-template-columns: 1fr; }
 .tech-project-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1932,7 +1988,7 @@ html { touch-action: manipulation; }
   /* 移动端字号收敛：导航字号同步下调，避免小屏上「品牌名比正文还大」 */
   .tech-logo { font-size: 17px; }
   .tech-drawer-link { font-size: 15px; }
-  .tech-main { padding: 18px 0 32px; }
+  .tech-main { padding: 18px 0 24px; }
   .tech-main:has(.tech-page-head--center),
   .tech-main:has(.tech-home-head) { padding-top: 0; }
   .tech-main:has(.tech-about-hero) { padding-top: 24px; }
@@ -2009,6 +2065,8 @@ html { touch-action: manipulation; }
     margin: 12px 0;
   }
   .tech-post-body.markdown-body img { margin: 12px auto; }
+  .tech-post-body.markdown-body .md-figure { margin: 12px 0; }
+  .tech-post-body.markdown-body .md-figure-caption { font-size: 12px; }
   .tech-post-body.markdown-body .table-wrap { margin: 12px 0; }
   .tech-post-body.markdown-body .code-wrap { margin: 12px 0; }
   .tech-post-body.markdown-body .code-wrap pre { margin: 0; }
@@ -2095,6 +2153,15 @@ html { touch-action: manipulation; }
   display: grid; grid-template-columns: repeat(2, 1fr);
   gap: 8px; margin: 0 0 16px;
 }
+/* 画廊里的图片也带 figure；保留图注但压成一行，避免把网格行高撑乱 */
+.tech-post-body.markdown-body .img-gallery .md-figure { margin: 0; min-width: 0; }
+.tech-post-body.markdown-body .img-gallery .md-figure-caption {
+  margin-top: 4px;
+  font-size: 11px; line-height: 1.4;
+  color: var(--text-secondary); opacity: .8;
+  text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .img-gallery img {
   width: 100%; margin: 0; display: block;
   aspect-ratio: 4 / 3; object-fit: cover;
@@ -2172,13 +2239,12 @@ html { touch-action: manipulation; }
 .tech-form-actions .tech-btn { width: auto; }
 
 /* ═══ 实色底统一段（扁平化）═══
-   原「毛玻璃降级」：现在全部去模糊，TOC / 代码块一律实色底，
-   不再需要 @supports 特性查询（也避开了 csscompressor 压缩 `@supports not` 失效的坑）。 */
-.tech-toc,
+   原「毛玻璃降级」：现在全部去模糊，代码块一律实色底，
+   不再需要 @supports 特性查询（也避开了 csscompressor 压缩 `@supports not` 失效的坑）。
+   TOC 已改为无底色文字索引，不再参与这一组。 */
 .tech-post-body.markdown-body pre,
 .tech-proj-readme-body.markdown-body pre { background: var(--bg-subtle); }
 @media (max-width: 767px) {
-  .tech-toc,
   .tech-post-body.markdown-body pre,
   .tech-proj-readme-body.markdown-body pre { background: var(--bg-subtle); }
 }
@@ -2351,8 +2417,8 @@ html { touch-action: manipulation; }
 
 /* 列表末尾：已经看了 N 篇 */
 .circle-end {
-  margin: 20px 0 8px;
-  padding-top: 20px;
+  margin: 12px 0 0;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
   text-align: center;
 }
@@ -2382,7 +2448,7 @@ html { touch-action: manipulation; }
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  margin: 20px 0 0;
+  margin: 24px 0 0;
   font-size: 13px;
 }
 .circle-pager a,
@@ -2430,6 +2496,110 @@ html { touch-action: manipulation; }
 }
 .tech-about-section .tech-status-section { margin-bottom: 0; }
 .tech-about-section .tech-status-section + .tech-status-section { margin-top: 16px; }
+
+/* ── 站点状态卡：文本优先，明细折叠 ──
+   第一屏只读日期/延迟/连通率；原来的两张表收进 <details>，
+   需要逐项核对时再展开，避免一上来就是监控面板。 */
+.tech-status-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  scroll-margin-top: 80px;
+}
+.tech-status-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.tech-status-head > h2 { margin: 0; }
+.tech-status-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 500;
+  color: var(--success);
+  white-space: nowrap;
+}
+.tech-status-badge i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
+}
+.tech-status-badge.is-warn { color: var(--warning); }
+.tech-status-badge.is-danger { color: var(--danger); }
+.tech-status-badge.is-none { color: var(--text-secondary); }
+
+.tech-status-sentence {
+  max-width: 72ch;
+  margin: 0 0 8px;
+  font-size: 15px; line-height: 1.85;
+  color: var(--text-secondary);
+}
+.tech-status-sentence b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  /* 日期 / 延迟数字整体不折行，避免 2028-02-23 被拆成两行 */
+  white-space: nowrap;
+}
+.tech-status-sentence:last-of-type { margin-bottom: 0; }
+.tech-status-meta {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: .8;
+}
+.tech-status-meta span { font-variant-numeric: tabular-nums; }
+
+.tech-status-detail {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 2px;
+}
+.tech-status-detail > summary {
+  min-height: 40px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  cursor: pointer; user-select: none; list-style: none;
+}
+.tech-status-detail > summary::-webkit-details-marker { display: none; }
+.tech-status-detail > summary::after {
+  content: ""; width: 6px; height: 6px; flex-shrink: 0;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg); transition: transform .2s; margin-top: -3px;
+}
+.tech-status-detail[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
+
+/* 折叠内沿用原来的行式明细，只把标题降级、行距收紧 */
+.tech-status-detail .tech-status { gap: 0; }
+.tech-status-detail .tech-status-section {
+  border: 0; padding: 0; margin: 0;
+}
+.tech-status-detail .tech-status-section + .tech-status-section {
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.tech-status-detail .tech-status-section > h2 {
+  position: static;
+  margin: 0 0 4px;
+  padding: 0;
+  font-size: 11.5px; font-weight: 600; letter-spacing: .08em;
+  color: var(--text-secondary);
+}
+.tech-status-detail .tech-status-section > h2::before { display: none; }
+.tech-status-detail .svc-row { padding: 8px 0; }
+.tech-status-detail .svc-name { font-size: 13px; }
+.tech-status-detail .svc-metric { font-size: 11.5px; }
+.tech-status-detail .svc-dot { width: 6px; height: 6px; box-shadow: none; }
+.tech-status-detail .svc-count { font-size: 10.5px; }
+
+@media (max-width: 640px) {
+  .tech-status-card { padding: 16px; }
+  .tech-status-head { align-items: flex-start; }
+  .tech-status-sentence { font-size: 14.5px; line-height: 1.75; }
+  .tech-status-meta { font-size: 11.5px; }
+  .tech-status-detail > summary { min-height: 44px; }
+  .tech-status-detail .svc-row { padding: 9px 0; }
+}
 
 /* ── 关于页：状态更新浮动提示 / 网站历程卡片化 ── */
 .tech-about-section#status { position: relative; }

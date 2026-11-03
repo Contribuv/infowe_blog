@@ -70,6 +70,45 @@ _DANGEROUS_TAGS = re.compile(
     re.I | re.S,
 )
 
+# 图片备注：alt 为空或用户常用的占位词时不显示
+_IMG_ALT_RE = re.compile(r"""(?<![-\w])alt\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.I)
+_CAPTION_EMPTY = {"", "null", "none", "undefined", "false", "为空", "为空null", "空"}
+# 只处理「整段就是一张图（可带链接）」的段落，连续多图仍交给前端的画廊逻辑
+_FIGURE_BLOCK_RE = re.compile(
+    r"<p>\s*(?P<open><a\b[^>]*>\s*)?(?P<img><img\b[^>]*>)\s*(?P<close></a>)?\s*</p>",
+    re.I | re.S,
+)
+
+
+def _image_caption(img_tag: str) -> str:
+    """从 <img> 的 alt 里取备注；空值 / 占位词返回空字符串。"""
+    match = _IMG_ALT_RE.search(img_tag or "")
+    if not match:
+        return ""
+    raw = match.group(1) if match.group(1) is not None else match.group(2)
+    text = html_lib.unescape(raw or "")
+    text = re.sub(r"<[^>]+>", "", text).strip()
+    if text.lower() in _CAPTION_EMPTY:
+        return ""
+    return text
+
+
+def _decorate_figures(html: str) -> str:
+    """把独立图片段落包成 figure，并在下方输出居中的图注（alt）。"""
+    def repl(match: re.Match) -> str:
+        img_tag = match.group("img")
+        caption = _image_caption(img_tag)
+        if not caption:
+            return match.group(0)
+        media = (match.group("open") or "") + img_tag + (match.group("close") or "")
+        return (
+            f'<figure class="md-figure">{media}'
+            f'<figcaption class="md-figure-caption">{html_lib.escape(caption)}</figcaption>'
+            "</figure>"
+        )
+
+    return _FIGURE_BLOCK_RE.sub(repl, html)
+
 
 def _sanitize_post_html(html: str) -> str:
     """文章正文的危险标签兜底。
@@ -105,6 +144,7 @@ def render_post(content: str) -> tuple[str, str]:
     html = _optimize_images(html)
     html = _harden_links(html)
     html = _sanitize_post_html(html)
+    html = _decorate_figures(html)
     toc = _nest_toc(_filter_toc(getattr(parser, "toc_tokens", [])))
     return html, toc
 
@@ -176,6 +216,9 @@ def _optimize_images(html: str) -> str:
         tag = match.group(0)
         if "loading=" not in tag:
             tag = tag.replace("<img", '<img loading="lazy"', 1)
+        # 占位 alt（null / 为空null 等）清成空，灯箱与正文都不会把它当备注
+        if _IMG_ALT_RE.search(tag) and not _image_caption(tag):
+            tag = _IMG_ALT_RE.sub('alt=""', tag, count=1)
         return tag
 
     return re.sub(r"<img\b[^>]*>", repl, html, flags=re.I)

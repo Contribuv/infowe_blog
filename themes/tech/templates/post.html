@@ -33,7 +33,7 @@
 
     <!-- 目录：≥1400px fixed 悬浮右侧；窄屏内联折叠框，显示在标题下方、正文之前 -->
     {% if toc %}
-    <aside class="tech-toc-sidebar">
+    <aside class="tech-toc-sidebar" aria-label="目录">
         <details class="tech-toc" open>
             <summary class="tech-toc-summary">目录</summary>
             <div class="tech-toc-body">{{ toc | safe }}</div>
@@ -251,6 +251,9 @@
            段落里有文字立即断组，单张图保持原样（图片穿插文字的场景天然不干扰） */
         function isImageBlock(node) {
             if (node.tagName === 'IMG') return true;
+            if (node.tagName === 'FIGURE') {
+                return node.classList.contains('md-figure') && !!node.querySelector('img');
+            }
             if (node.tagName !== 'P') return false;
             if (!node.querySelector('img')) return false;
             if ((node.innerText || '').trim()) return false;
@@ -274,6 +277,8 @@
                     seg[0].parentNode.insertBefore(gallery, seg[0]);
                     seg.forEach(function (el) {
                         if (el.tagName === 'IMG') {
+                            gallery.appendChild(el);
+                        } else if (el.tagName === 'FIGURE') {
                             gallery.appendChild(el);
                         } else {
                             while (el.firstChild) {

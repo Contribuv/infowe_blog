@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.3)
+[![version](https://img.shields.io/badge/version-3.6.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,7 +919,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.3**
+当前版本：**v3.6.4**
+
+### v3.6.4
+
+- 文章页 / 项目页目录改版：180px 描边卡片改为 220px 无框文字索引；标题 11.5px 加字距，条目用 2px 左轨道标记当前章节，h3/h4 分级缩进；窄屏保留 `<details>` 折叠，改为上下细线、44px 触控行高，长目录在面板内滚动
+- 关于页站点状态改版：移到人物卡后的第一张内容卡，改用「域名 / 服务器 / 证书 / 延迟 / 连通率」文本 + 动态数据；右上角运行状态徽标（正常 / 需关注 / 有异常 / 待探测），原来的两张明细表折叠为「监控明细」，接口每分钟刷新
+- 文章图片备注：`![demo.jpg](...)` 会在正文图片下方和灯箱中居中显示弱化备注；空 alt、`null`、`为空null` 等占位值不显示；连续图片画廊中保留单行备注；后台上传自动用原始文件名作为 alt，Vditor 预览实时同步
+- 间距统一：主内容底部留白 40px / 移动端 32px 统一收到 24px；分页上下间距统一 24px，并移除项目列表底部多余的 20px；圈子分页与「已经看了 N 篇」收尾块收紧
+
+<details>
+<summary><b>历史版本（v3.6.3 及更早）</b></summary>
 
 ### v3.6.3
 
@@ -927,9 +937,6 @@ chown -R www:www var
 - 文章相关推荐收敛：默认由 4 条改为 2 条；板块标题 18px → 15px 并降为次要文字色，行内边距与标题字号同步收紧，移除左侧 2px 主色竖条，让文末回归「收尾」而不是第二个内容区
 - 移动端页脚居中：`≤768px` 时版权、导航链接、备案号三行纵向排列并整体居中
 - 修复正文表格上下空隙翻倍：内层 `<table>` 被正文块级统一间距规则额外加了 14px 外边距（与 `.table-wrap` 叠加成 28px），清零后恢复单倍间距，表格上下不再发空
-
-<details>
-<summary><b>历史版本（v3.6.2 及更早）</b></summary>
 
 ### v3.6.2
 

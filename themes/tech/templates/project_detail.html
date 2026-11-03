@@ -58,7 +58,7 @@
 
     <!-- 目录：≥1400px fixed 悬浮右侧；窄屏为折叠框，显示在标题/简介下方、项目文档之前 -->
     {% if toc %}
-    <aside class="tech-toc-sidebar">
+    <aside class="tech-toc-sidebar" aria-label="目录">
         <details class="tech-toc" open>
             <summary class="tech-toc-summary">目录</summary>
             <div class="tech-toc-body">{{ toc | safe }}</div>

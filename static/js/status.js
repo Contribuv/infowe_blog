@@ -24,6 +24,71 @@
       ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
+  /** 写入摘要卡里的单个动态字段 */
+  function setStatusField(field, text) {
+    var el = document.querySelector('[data-status-field="' + field + '"]');
+    if (el) el.textContent = text;
+  }
+
+  /** 摘要徽标状态：expired/down > warn/cert<=15 > ok > 待探测 */
+  function summaryState(expiry, services) {
+    var tencent = expiry.tencent || {};
+    var aliyun = expiry.aliyun || {};
+    var noExpiry = !tencent.expiry && !aliyun.expiry;
+    if (!services.length && noExpiry) return { state: 'none', label: '待探测' };
+    if (tencent.status === 'expired' || aliyun.status === 'expired') {
+      return { state: 'danger', label: '有异常' };
+    }
+    for (var i = 0; i < services.length; i++) {
+      if (services[i].ok === false) return { state: 'danger', label: '有异常' };
+    }
+    var known = services.filter(function (s) { return s.ok === true || s.ok === false; });
+    if (!services.length || !known.length) return { state: 'none', label: '待探测' };
+
+    var warn = tencent.status === 'warn' || aliyun.status === 'warn';
+    var svc = services[0];
+    if (svc && svc.cert_days !== null && svc.cert_days !== undefined &&
+        svc.cert_days >= 0 && svc.cert_days <= 15) {
+      warn = true;
+    }
+    return warn ? { state: 'warn', label: '需关注' } : { state: 'ok', label: '运行正常' };
+  }
+
+  /** 文本摘要（首屏 SSR，轮询时只改数字与徽标） */
+  function updateSummary(expiry, services, generatedAt) {
+    var svc = services.length ? services[0] : null;
+
+    if (expiry.tencent && expiry.tencent.expiry) {
+      setStatusField('domain-date', expiry.tencent.expiry);
+    }
+    if (expiry.aliyun && expiry.aliyun.expiry) {
+      setStatusField('server-date', expiry.aliyun.expiry);
+    }
+
+    var certWrap = document.querySelector('[data-status="cert"]');
+    if (certWrap) {
+      if (svc && svc.cert_days !== null && svc.cert_days !== undefined && svc.cert_days >= 0) {
+        certWrap.innerHTML = '还剩 <b data-status-field="cert-days">' + svc.cert_days + ' 天</b>';
+      } else {
+        certWrap.textContent = '信息暂不可用';
+      }
+    }
+
+    if (svc) {
+      setStatusField('latency', svc.ok !== false && svc.latency_ms !== null && svc.latency_ms !== undefined ? svc.latency_ms + ' ms' : '—');
+      setStatusField('uptime', svc.uptime !== null && svc.uptime !== undefined ? svc.uptime + '%' : '—');
+    }
+    setStatusField('checked', generatedAt ? fmtTime(generatedAt) : '待探测');
+
+    var badge = document.getElementById('status-badge');
+    var badgeText = document.getElementById('status-badge-text');
+    if (badge && badgeText) {
+      var state = summaryState(expiry, services);
+      badge.className = 'tech-status-badge is-' + state.state;
+      badgeText.textContent = state.label;
+    }
+  }
+
   /** 用最新数据渲染服务行 / 云资源卡片（SSR 与轮询共用） */
   function render(expiry, services, generatedAt) {
     // ── 在线服务列表 ──
@@ -82,6 +147,9 @@
         }
       });
     }
+
+    // ── 文本摘要卡 ──
+    updateSummary(expiry || {}, services || [], generatedAt);
 
     // 只有数据真的更新时才短暂提示；首次访问 / 缓存未过期不显示
     var hint = document.getElementById('status-hint');

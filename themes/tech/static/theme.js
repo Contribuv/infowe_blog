@@ -424,10 +424,15 @@ window.techHighlightCode = techHighlightCode;
   if (!headings.length) return;
 
   function setActive(id) {
-    links.forEach(function (a) { a.classList.remove('is-active'); });
+    links.forEach(function (a) {
+      a.classList.remove('is-active');
+      a.removeAttribute('aria-current');
+    });
     var a = map[id];
     if (!a) return;
     a.classList.add('is-active');
+    // 读屏用户也需要知道当前章节；location 比 true 更贴合目录的语义
+    a.setAttribute('aria-current', 'location');
     // 长目录（20+ 条）在 60vh 容器里滚动，当前项可能不在视野内：
     // 只调整容器 scrollTop，不能用 scrollIntoView（会带动整页跳动）
     var box = a.closest('.tech-toc-body');

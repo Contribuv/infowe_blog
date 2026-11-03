@@ -451,12 +451,14 @@ def about():
         abort(404)
     skills = settings.json_list("skills", [])
     _, post_total = Post.load("published", None, None, None, 1, 1)
-    expiry, services, _ = status.snapshot()
+    expiry, services, generated = status.snapshot()
+    from services import feeds
     return render_template(
         "about.html",
         skills=skills,
         expiry=expiry,
         services=services,
+        status_checked=feeds.rel_time(generated) if generated else "待探测",
         about_intro=settings.get_str("about_intro", ""),
         author=settings.get_str("author", ""),
         avatar=avatar.admin_url(200),

@@ -2079,3 +2079,14 @@ html[data-theme=light] .badge-picked {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ── 编辑器预览：图片备注（与前台一致的 figure 结构）── */
+.vditor-preview .md-figure { margin: 14px 0; text-align: center; }
+.vditor-preview .md-figure img { margin: 0 auto 6px; max-width: 100%; }
+.vditor-preview .md-figure-caption {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  opacity: .85;
+  text-align: center;
+}

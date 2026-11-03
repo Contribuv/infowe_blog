@@ -488,12 +488,59 @@
 
     // 构造插入内容（wysiwyg 模式接受 HTML）
     function buildContent(r) {
-        if (r.type === 'image') return '![](' + r.url + ')';
+        // 图片用文件名做 alt：正文与灯箱都会把它当图注；空 alt 则不显示图注
+        if (r.type === 'image') return '![' + String(r.name || '').replace(/[\[\]]/g, '') + '](' + r.url + ')';
         if (r.type === 'media') {
             if (/\.(mp3|wav|m4a|aac|ogg)$/i.test(r.url)) return '<audio src="' + r.url + '" controls></audio>';
             return '<video src="' + r.url + '" controls style="max-width:100%"></video>';
         }
         return '[' + r.name + '](' + r.url + ')';
+    }
+
+    // -- 编辑器预览里的图片备注：Vditor 每次重渲染后重新包 figure --
+    function setupPreviewCaptions(root) {
+        var EMPTY = /^(?:|null|none|undefined|false|为空|为空null|空)$/i;
+        function captionOf(img) {
+            var alt = (img.getAttribute('alt') || '').trim();
+            return alt && !EMPTY.test(alt) ? alt : '';
+        }
+        function decorate(scope) {
+            var imgs = scope.querySelectorAll('img');
+            for (var i = 0; i < imgs.length; i++) {
+                var img = imgs[i];
+                if (img.closest('.md-figure')) continue;
+                var caption = captionOf(img);
+                if (!caption) continue;
+                var p = img.closest('p');
+                if (!p || p.querySelectorAll('img').length !== 1) continue; // 连续图 / 图文混排不拆
+                if ((p.textContent || '').trim()) continue;
+                var media = img;
+                if (p.children.length === 1 && p.firstElementChild &&
+                    p.firstElementChild.tagName === 'A' && p.firstElementChild.querySelector('img')) {
+                    media = p.firstElementChild;
+                }
+                var fig = document.createElement('figure');
+                fig.className = 'md-figure';
+                p.parentNode.replaceChild(fig, p);
+                fig.appendChild(media);
+                var cap = document.createElement('figcaption');
+                cap.className = 'md-figure-caption';
+                cap.textContent = caption;
+                fig.appendChild(cap);
+            }
+        }
+        var timer = null;
+        var observer = new MutationObserver(function () {
+            if (timer) return;
+            timer = setTimeout(function () {
+                timer = null;
+                var previews = root.querySelectorAll('.vditor-preview');
+                for (var i = 0; i < previews.length; i++) decorate(previews[i]);
+            }, 80);
+        });
+        observer.observe(root, { childList: true, subtree: true });
+        var previews = root.querySelectorAll('.vditor-preview');
+        for (var i = 0; i < previews.length; i++) decorate(previews[i]);
     }
 
     var vditor = new Vditor('editor', {
@@ -572,6 +619,8 @@
             // 初始同步内容区/代码高亮主题（setTheme 幂等：href 相同则不重复加载）
             vditor.setTheme(currentTheme(), currentContentTheme(), currentCodeTheme());
             renderChips();  // 编辑器就绪后初始化标签建议
+            // 预览区图片备注：Vditor 重渲染后重新包 figure
+            setupPreviewCaptions(document.body);
             // 标题、标签输入变化时同步更新建议
             if (titleInput) titleInput.addEventListener('input', renderChips);
             if (tagsInput) tagsInput.addEventListener('input', renderChips);
