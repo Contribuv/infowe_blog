@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.7)
+[![version](https://img.shields.io/badge/version-3.6.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.8)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,15 +919,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.7**
+当前版本：**v3.6.8**
+
+### v3.6.8
+
+- 文章灯箱移动端手势：支持双指捏合 1×–4× 缩放、放大后单指拖动、双击 2.2× 放大 / 复位；缩放状态下横滑是拖动，不再误切上一张/下一张
+- 移动端按钮瘦身与圆角统一：主按钮高 36px、左右 14px，分页 34×34，统一 8px 圆角；透明热区补到约 44px；圈子页「我要申请」改为描述下方的文字链接
+- 关闭全站原生跨文档 View Transition：删除 `@view-transition` 相关规则，统一使用 `page-enter` 淡入，修复 Chrome 在表单 POST / 302 后抛出的 `InvalidStateError: ViewTransition opt-in disabled`
+
+<details>
+<summary><b>历史版本（v3.6.7 及更早）</b></summary>
 
 ### v3.6.7
 
 - 移动端友链申请表单：底部内边距由 4px 收到 16px，提交 / 返回按钮到卡片底部的间距由 5px 提升到 17px，与按钮上方 17px 对称
 - 圈子分页间距：分页与「已经看了 N 篇」之间由 12px 调到 24px，分页上下间距统一为 24px
-
-<details>
-<summary><b>历史版本（v3.6.6 及更早）</b></summary>
 
 ### v3.6.6
 

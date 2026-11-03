@@ -314,8 +314,58 @@
         var lbPrev = document.getElementById('lbPrev');
         var lbNext = document.getElementById('lbNext');
         var lbActive = false, cur = 0, group = [];
+        /* 灯箱缩放：移动端双指捏合 / 单指拖动 / 双击复位，单指横滑仍切换图片 */
+        var lbScale = 1, lbX = 0, lbY = 0;
+        var tPinch = false, tPan = false;
+        var tStartX = 0, tStartY = 0, tBaseX = 0, tBaseY = 0;
+        var tPinchDist = 0, tPinchScale = 1, tPinchCX = 0, tPinchCY = 0;
+        var tPinchBaseX = 0, tPinchBaseY = 0;
+        var lastTap = 0;
+
+        function lbImg() { return lbMedia.querySelector('img'); }
+        function lbApply() {
+            var img = lbImg();
+            if (!img) return;
+            if (lbScale <= 1.001 && !lbX && !lbY) {
+                img.style.transform = '';
+                img.classList.remove('is-zoomed');
+            } else {
+                img.style.transform = 'translate3d(' + lbX + 'px,' + lbY + 'px,0) scale(' + lbScale + ')';
+                img.classList.add('is-zoomed');
+            }
+        }
+        function lbClampPan() {
+            var img = lbImg();
+            if (!img) return;
+            var maxX = Math.max(0, img.clientWidth * (lbScale - 1) / 2);
+            var maxY = Math.max(0, img.clientHeight * (lbScale - 1) / 2);
+            lbX = Math.min(maxX, Math.max(-maxX, lbX));
+            lbY = Math.min(maxY, Math.max(-maxY, lbY));
+        }
+        function lbResetZoom() {
+            lbScale = 1; lbX = 0; lbY = 0; tPinch = false; tPan = false;
+            lbApply();
+        }
+        function lbImgCenter() {
+            var img = lbImg();
+            if (!img) return null;
+            var r = img.getBoundingClientRect();
+            return { x: r.left + r.width / 2 - lbX, y: r.top + r.height / 2 - lbY };
+        }
+        function lbZoomAt(scale, x, y) {
+            var center = lbImgCenter();
+            if (!center) return;
+            lbScale = scale;
+            lbX = (1 - scale) * (x - center.x);
+            lbY = (1 - scale) * (y - center.y);
+            lbClampPan();
+            lbApply();
+        }
         function lbShow(i) {
             if (!group.length) return;
+            /* 切图时复位缩放与手势状态 */
+            lbScale = 1; lbX = 0; lbY = 0;
+            tPinch = false; tPan = false; lastTap = 0;
             // 切换媒体前先暂停上一个灯箱内媒体
             try {
                 lbMedia.querySelectorAll('video, audio').forEach(function (m) {
@@ -338,6 +388,7 @@
                 node.playsInline = true;
             }
             lbMedia.appendChild(node);
+            if (el.tagName === 'IMG') lbApply();
             /* 方案A：灯箱大图下方居中显示备注（alt），缩略图网格点开灯箱也能看到 */
             var capText = el.tagName === 'IMG' ? (el.alt || '').trim() : '';
             if (capText) {
@@ -404,14 +455,106 @@
             else if (e.key === 'ArrowLeft') lbShow(cur - 1);
             else if (e.key === 'ArrowRight') lbShow(cur + 1);
         });
-        var touchX = 0;
+        // 移动端：双指捏合缩放、放大后单指拖动、双击放大/复位；单指横滑切换图片
         lb.addEventListener('touchstart', function (e) {
-            touchX = e.changedTouches[0].clientX;
-        }, { passive: true });
+            if (!lbImg()) return;
+            if (e.touches.length === 2) {
+                tPinch = true;
+                tPan = false;
+                var a = e.touches[0], b = e.touches[1];
+                tPinchDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+                tPinchScale = lbScale;
+                tPinchBaseX = lbX; tPinchBaseY = lbY;
+                var c = lbImgCenter();
+                tPinchCX = c ? c.x : innerWidth / 2;
+                tPinchCY = c ? c.y : innerHeight / 2;
+                e.preventDefault();
+                return;
+            }
+            if (e.touches.length === 1) {
+                tStartX = e.touches[0].clientX;
+                tStartY = e.touches[0].clientY;
+            }
+        }, { passive: false });
+        lb.addEventListener('touchmove', function (e) {
+            if (tPinch && e.touches.length === 2) {
+                var a = e.touches[0], b = e.touches[1];
+                var dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+                var ratio = dist / tPinchDist;
+                var scale = Math.min(4, Math.max(1, tPinchScale * ratio));
+                var k = scale / tPinchScale;
+                var mx = (a.clientX + b.clientX) / 2;
+                var my = (a.clientY + b.clientY) / 2;
+                lbScale = scale;
+                lbX = tPinchBaseX + (1 - k) * (mx - tPinchCX - tPinchBaseX);
+                lbY = tPinchBaseY + (1 - k) * (my - tPinchCY - tPinchBaseY);
+                lbClampPan();
+                lbApply();
+                e.preventDefault();
+                return;
+            }
+            if (tPan && e.touches.length === 1) {
+                lbX = tBaseX + (e.touches[0].clientX - tStartX);
+                lbY = tBaseY + (e.touches[0].clientY - tStartY);
+                lbClampPan();
+                lbApply();
+                e.preventDefault();
+                return;
+            }
+            if (e.touches.length === 1 && lbScale > 1.001) {
+                if (!tPan) {
+                    // 轻微抖动仍算点击，避免双击复位被 1px 位移吃掉
+                    if (Math.abs(e.touches[0].clientX - tStartX) < 4 &&
+                        Math.abs(e.touches[0].clientY - tStartY) < 4) return;
+                    tPan = true;
+                    tBaseX = lbX; tBaseY = lbY;
+                }
+                lbX = tBaseX + (e.touches[0].clientX - tStartX);
+                lbY = tBaseY + (e.touches[0].clientY - tStartY);
+                lbClampPan();
+                lbApply();
+                e.preventDefault();
+            }
+        }, { passive: false });
         lb.addEventListener('touchend', function (e) {
-            var dx = e.changedTouches[0].clientX - touchX;
-            if (Math.abs(dx) > 50) lbShow(dx < 0 ? cur + 1 : cur - 1);
-        }, { passive: true });
+            if (tPinch) {
+                if (e.touches.length < 2) {
+                    tPinch = false;
+                    if (e.touches.length === 1) {
+                        tStartX = e.touches[0].clientX;
+                        tStartY = e.touches[0].clientY;
+                        tPan = false;
+                    }
+                    if (lbScale < 1.05) lbResetZoom();
+                    else { lbClampPan(); lbApply(); }
+                }
+                return;
+            }
+            if (tPan) {
+                if (!e.touches.length) tPan = false;
+                return;
+            }
+            if (!e.touches.length && e.changedTouches.length) {
+                var dx = e.changedTouches[0].clientX - tStartX;
+                var dy = e.changedTouches[0].clientY - tStartY;
+                // 未放大时，单指横滑切换上一张 / 下一张
+                if (lbScale <= 1.001 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+                    lbShow(dx < 0 ? cur + 1 : cur - 1);
+                    return;
+                }
+                // 双击：放大到 2.2 倍 / 复位
+                if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+                    var now = Date.now();
+                    if (now - lastTap < 320) {
+                        lastTap = 0;
+                        if (lbScale > 1.001) lbResetZoom();
+                        else lbZoomAt(2.2, e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                    } else {
+                        lastTap = now;
+                    }
+                }
+            }
+        });
     });
 })();
 

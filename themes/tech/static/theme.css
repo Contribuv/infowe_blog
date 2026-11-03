@@ -7,21 +7,10 @@
    联系邮箱：site023@qq.com | 开源项目 商业请联系
    ═══════════════════════════════════════════════ */
 
-/* ── 页面切换过渡（跨文档 View Transition，渐进增强） ──
-   支持的浏览器在站内跳转时淡出旧页、淡入新页；
-   不支持时由 base.html 的 page-enter 兜底，仅做新页淡入。 */
-@view-transition { navigation: auto; }
-::view-transition { background: var(--bg, #fbfcfd); }
-::view-transition-group(root) { animation-duration: 140ms; }
-::view-transition-old(root) { animation: tech-vt-out 100ms ease-out both; }
-::view-transition-new(root) { animation: tech-vt-in 140ms ease-out both; }
-@keyframes tech-vt-out {
-  to { opacity: 0; }
-}
-@keyframes tech-vt-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+/* ── 页面切换过渡 ──
+   统一使用 base.html 的 page-enter 淡入，不再启用跨文档 View Transition。
+   Chrome 在表单 POST / 302 重定向时会中止过渡并抛出
+   "ViewTransition opt-in disabled" 的未处理 Promise，控制台噪音大于收益。 */
 
 /* ── 设计令牌 ── */
 :root,
@@ -275,9 +264,7 @@ img { max-width: 100%; }
     scroll-behavior: auto !important;
   }
   /* 一言不再有打字光标，无需单独关闭动画 */
-  /* 页面切换也不做淡出/位移动画 */
-  @view-transition { navigation: none; }
-  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+  /* 页面切换也不做淡入动画 */
   html.page-enter .tech-main { animation: none !important; }
 }
 .tech-nav-links { display: flex; gap: 2px; margin: 0 auto; }
@@ -689,7 +676,7 @@ html.page-enter .tech-main {
 .tech-more-wrap .tech-btn-primary {
   height: 38px;
   padding: 0 20px;
-  border-radius: 10px;
+  border-radius: 8px;
   border-color: transparent;
   background: var(--accent);
   color: #fff;
@@ -717,7 +704,7 @@ html.page-enter .tech-main {
 .tech-page-btn {
   min-width: 38px; height: 38px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border-strong); border-radius: 10px;
+  border: 1px solid var(--border-strong); border-radius: 8px;
   color: var(--text-secondary); text-decoration: none; font-size: 14px;
   background: var(--bg);
   transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
@@ -1218,7 +1205,7 @@ html.page-enter .tech-main {
   display: inline-flex; align-items: center; gap: 6px;
   height: 38px; padding: 0 18px;
   font-size: 14px; font-weight: 600;
-  border: 1px solid var(--border-strong); border-radius: 10px;
+  border: 1px solid var(--border-strong); border-radius: 8px;
   background: var(--bg); color: var(--text);
   cursor: pointer; text-decoration: none;
   transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
@@ -1239,6 +1226,22 @@ html.page-enter .tech-main {
   }
 }
 .tech-btn:active { transform: translateY(0); }
+
+/* 移动端按钮瘦身：视觉高度 36 / 分页 34，伪元素补回 44px 点击热区 */
+@media (max-width: 768px) {
+  .tech-btn {
+    position: relative;
+    height: 36px; padding: 0 14px; font-size: 13.5px;
+  }
+  .tech-btn::after { content: ""; position: absolute; inset: -4px; }
+  .tech-more-wrap .tech-btn-primary { height: 36px; padding: 0 14px; }
+  .tech-page-btn {
+    position: relative;
+    min-width: 34px; height: 34px; padding: 0 10px; font-size: 13px;
+  }
+  .tech-page-btn::after { content: ""; position: absolute; inset: -5px; }
+  .tech-pagination { gap: 10px; }
+}
 /* 主按钮三态只在此处定义一次（扁平化：纯色实底 + 无投影） */
 .tech-btn-primary {
   background: var(--accent);
@@ -1899,7 +1902,7 @@ html { touch-action: manipulation; }
 .tech-links-copyrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .tech-copy {
   appearance: none; margin: 0; padding: 5px 12px;
-  background: transparent; border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
   font: inherit; font-size: 13px; color: var(--text-secondary); cursor: pointer;
   transition: color .15s ease, border-color .15s ease;
 }
@@ -2203,6 +2206,13 @@ html { touch-action: manipulation; }
   box-shadow: 0 20px 60px rgba(0, 0, 0, .5); object-fit: contain;
   background: #000;
 }
+/* 图片支持双指缩放/拖动：交给触控脚本处理，禁用浏览器默认手势 */
+.lightbox-media img {
+  touch-action: none;
+  transform-origin: center center;
+  will-change: transform;
+}
+.lightbox-media img.is-zoomed { cursor: grab; }
 /* 改动点：灯箱大图下方备注小字（含缩略图网格点开后查看 alt） */
 .lightbox-caption {
   max-width: 92vw; text-align: center;
@@ -3997,4 +4007,41 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 .tech-side-social a svg { flex: none; opacity: .85; }
 @media (hover: hover) and (pointer: fine) {
   .tech-side-social a:hover { color: var(--accent); background: none; border-color: transparent; }
+}
+
+/* 圈子页移动端：申请入口从实心按钮降为文字链接，
+   避免一个 36px 高的主按钮单独占一行、和整页的文本行不搭 */
+@media (max-width: 640px) {
+  .tech-page-head--with-action {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .tech-page-head--with-action .tech-btn {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.6;
+  }
+  /* 文字链接视觉很小，透明热区仍扩到约 44px */
+  .tech-page-head--with-action .tech-btn::after {
+    content: "";
+    position: absolute;
+    inset: -10px -8px;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-page-head--with-action .tech-btn:hover,
+  .tech-page-head--with-action .tech-btn:focus-visible {
+    background: transparent;
+    border-color: transparent;
+    color: var(--accent);
+  }
 }

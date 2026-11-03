@@ -26,15 +26,11 @@
         document.documentElement.setAttribute('data-theme', mode === 'auto' ? (dark ? 'dark' : 'light') : mode);
       })();
     </script>
-    <!-- 页面切换：不支持跨文档 View Transition 的浏览器，站内跳转时让主内容淡入 -->
+    <!-- 页面切换：站内跳转时让主内容淡入。
+         不再使用跨文档 View Transition，统一走这条 JS 兜底，避免 Chrome 在
+         表单 POST / 302 时抛 ViewTransition opt-in disabled。 -->
     <script>
       (function () {
-        var nativeVT = false;
-        try {
-          nativeVT = !!(window.CSS && CSS.supports && CSS.supports('at-rule(@view-transition)'))
-            || (('onpageswap' in window) && ('onpagereveal' in window));
-        } catch (e) {}
-        if (nativeVT) return;
         try {
           var ref = document.referrer || '';
           if (!ref) return;
