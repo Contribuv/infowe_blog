@@ -300,6 +300,8 @@
         });
         flushGallery();
 
+        /* 改动点：正文不注入图片备注，备注仅在灯箱大图下方显示 */
+
         /* 4. 图片灯箱：点击打开；同组连续图左右轮转（文字段落打断分组），Esc 或点遮罩关闭 */
         var lb = document.getElementById('lightbox');
         var lbMedia = document.getElementById('lbMedia');
@@ -331,6 +333,14 @@
                 node.playsInline = true;
             }
             lbMedia.appendChild(node);
+            /* 方案A：灯箱大图下方居中显示备注（alt），缩略图网格点开灯箱也能看到 */
+            var capText = el.tagName === 'IMG' ? (el.alt || '').trim() : '';
+            if (capText) {
+                var cap = document.createElement('div');
+                cap.className = 'lightbox-caption';
+                cap.textContent = capText;
+                lbMedia.appendChild(cap);
+            }
             var multi = group.length > 1;
             lbCount.textContent = multi ? (cur + 1) + ' / ' + group.length : '';
             lbPrev.hidden = lbNext.hidden = !multi;

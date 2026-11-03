@@ -102,6 +102,7 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- 改动点：项目内页移除图片灯箱，不再加载 lightbox.js -->
 <script>
 /* TOC：≥1400px fixed 悬浮右侧强制常驻；窄屏折叠框由用户手动开合；
    监听断点变化，拖动窗口跨过 1400px 时自动同步开合与拦截状态 */
@@ -175,6 +176,7 @@
     }
     /* 语法高亮交给 theme.js 的 techHighlightCode：
        highlight.min.js 为 defer，资源就绪时机晚于本内联脚本，不能在这里直接调用 */
+
 })();
 </script>
 {% if comments_enabled %}
