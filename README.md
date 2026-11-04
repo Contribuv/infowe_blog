@@ -360,24 +360,16 @@ curl -I http://127.0.0.1:5000/
 
 应返回 `200 OK`。
 
-### 6. 网站与反向代理
+### 6. 域名与反向代理
 
-宝塔 → 网站 → 添加站点：
+宝塔「Python 项目」添加后，通常会自动创建站点和反向代理，把域名转到 `127.0.0.1:5000`。新装环境一般不需要再手工改 Nginx。
 
-- 域名：`www.infowe.site`、`infowe.site`
-- 根目录：`/www/wwwroot/infowe.site`
-- PHP：纯静态
-- 不要创建 FTP/数据库
+- **伪静态保持为空**，不要选 WordPress / ThinkPHP 模板，也不要在里面写 `location /`、`proxy_pass`、`try_files`
+- 不需要 `rewrite`，文章、标签、搜索、归档、后台入口都由 Flask 自己处理
+- 80 和 443 都要能访问；宝塔会自动给 443 配反代
+- 访问出现 403 时，先检查站点的反向代理是不是指向 `http://127.0.0.1:5000`，不要先去改伪静态
 
-站点设置 → **反向代理 → 添加**：
-
-| 项 | 值 |
-| --- | --- |
-| 代理名称 | python |
-| 目标 URL | `http://127.0.0.1:5000` |
-| 发送域名 | `$host` |
-
-保存后，确认 **80 和 443 的 server 块都包含**：
+如果宝塔没有自动生成反代，或者你是手动部署，只需要这一段：
 
 ```nginx
 location / {
@@ -388,205 +380,15 @@ location / {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Port $server_port;
     proxy_read_timeout 120s;
     client_max_body_size 64m;
 }
 ```
 
-> 宝塔的反向代理有时只写入 80，443 仍是静态配置，会导致 **403**。
-> 遇到 403 时，检查 443 的 `server {}` 是否也有 `location /`。
+> 静态资源交给 Flask 也能正常访问；访问量上来后再考虑让 Nginx 直接托管 `static/`、`themes/`、`uploads/`。
 
-### 6.1 静态资源交给 Nginx（推荐）
-
-如果所有请求都 `proxy_pass`，CSS/JS/图片也会经过 Flask。把静态目录交给 Nginx：
-
-```nginx
-# 静态资源直出也必须声明 UTF-8，否则 CSS/JS 里的中文会乱码。
-# 注意：Nginx 默认 charset_types 不包含 text/css，必须显式补上。
-# 这两行放在 server {} 内、所有 location 之前。
-charset utf-8;
-charset_types text/html text/css text/plain text/xml text/javascript application/javascript application/json application/rss+xml image/svg+xml;
-
-# 必须放在 location / 之前
-location ^~ /static/ {
-    alias /www/wwwroot/infowe.site/static/;
-    expires 7d;
-    access_log off;
-}
-
-# 注意：这里不能写 ^~，否则下面的模板目录 deny 不会执行
-location /themes/ {
-    alias /www/wwwroot/infowe.site/themes/;
-    expires 7d;
-    access_log off;
-}
-
-# 主题模板源码不对外（/themes/<key>/templates/）
-location ~ ^/themes/[^/]+/templates/ {
-    deny all;
-    return 404;
-}
-
-location /uploads/ {
-    alias /www/wwwroot/infowe.site/var/uploads/;
-    expires 7d;
-    access_log off;
-}
-
-# 禁止访问上传目录里的隐藏文件（.originals 等）
-location ~ ^/uploads/\. {
-    deny all;
-}
-gzip on;
-gzip_min_length 1k;
-gzip_types text/plain text/css application/javascript application/json application/rss+xml image/svg+xml;
-```
-
-> `alias` 末尾斜杠要与 `location` 一致；`/share-thumb`、`/avatar`、`/readme-img` 是动态生成，不要 alias。
-> `/uploads/` **不要写 `^~`**，否则下面的 `location ~ ^/uploads/\.` 不会执行，`.originals` 无痕原图可能被直接下载。
-> 静态资源直出后不再经过 Flask 的白名单校验，因此必须保留 `deny` 规则，且不要放开脚本扩展名上传。
-
-> **CSS/JS 中文乱码**：如果静态文件由 Nginx 直出，必须确认响应头带 `charset=utf-8`：
-> ```bash
-> curl -I https://www.infowe.site/static/css/admin.css
-> curl -I https://www.infowe.site/static/js/admin.js
-> ```
-> 期望分别是 `text/css; charset=utf-8` 和 `application/javascript; charset=utf-8`（部分 Nginx 返回 `text/javascript; charset=utf-8`，也正常）。
-> 只返回 `text/css` 说明 `charset_types` 少了 `text/css`，即使已经写了 `charset utf-8;` 也不会生效。
-> 项目内 CSS 首行已内置 `@charset "UTF-8";`，自有 JS 已带 UTF-8 BOM；但 Nginx 仍建议按上面的配置声明，避免其他静态资源出现同类问题。
-
-### 6.2 完整 Nginx 配置示例
-
-下面这份配置可以直接对照宝塔生成的站点文件改。**证书路径、日志路径和 `include` 以宝塔实际生成的为准，不要整段覆盖。**
-
-```nginx
-# HTTP：统一跳 HTTPS。
-# 如果宝塔使用文件方式续签证书，保留它生成的 .well-known 配置。
-server {
-    listen 80;
-    listen [::]:80;
-    server_name infowe.site www.infowe.site;
-
-    return 301 https://www.infowe.site$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name infowe.site www.infowe.site;
-
-    # 按宝塔「SSL」页面实际路径填写
-    ssl_certificate     /www/server/panel/vhost/cert/infowe.site/fullchain.pem;
-    ssl_certificate_key /www/server/panel/vhost/cert/infowe.site/privkey.pem;
-    # 其余 ssl_* 配置保持宝塔生成的内容
-
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    # HSTS 只保留一条；如果宝塔 SSL 配置里已有，不要重复添加
-
-    charset utf-8;
-    charset_types text/html text/css text/plain text/xml text/javascript application/javascript application/json application/rss+xml image/svg+xml;
-
-    client_max_body_size 64m;
-
-    gzip on;
-    gzip_min_length 1k;
-    gzip_types text/plain text/css application/javascript application/json application/rss+xml image/svg+xml;
-
-    # 静态资源直出
-    location ^~ /static/ {
-        alias /www/wwwroot/infowe.site/static/;
-        expires 7d;
-        access_log off;
-    }
-
-    # 注意：这里不能写 ^~，否则下面的模板目录 deny 不会执行
-    location /themes/ {
-        alias /www/wwwroot/infowe.site/themes/;
-        expires 7d;
-        access_log off;
-    }
-
-    # 主题模板源码不对外（/themes/<key>/templates/）
-    location ~ ^/themes/[^/]+/templates/ {
-        deny all;
-        return 404;
-    }
-
-    # 注意：这里不能写 ^~，否则下面的隐藏文件 deny 不会执行
-    location /uploads/ {
-        alias /www/wwwroot/infowe.site/var/uploads/;
-        expires 7d;
-        access_log off;
-    }
-
-    # 禁止下载 .originals 无痕原图
-    location ~ ^/uploads/\. {
-        deny all;
-    }
-
-    # 其余请求全部交给 Flask，不需要 rewrite / try_files
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_read_timeout 120s;
-    }
-}
-```
-
-> 如果 Nginx 版本较新，`listen 443 ssl http2;` 可以改成 `listen 443 ssl;` 加 `http2 on;`。
-> 宝塔站点配置里通常还有 `include enable-php-xx.conf`、`access_log` 等，保留即可；我们只改反代、静态资源和上面的几项。
-> 80 和 443 都要有 `location /`。只在 443 配反代、80 落到静态目录，是宝塔部署里很常见的 403 原因。
-
-### 6.3 伪静态 / Rewrite（重要）
-
-宝塔「网站 → 设置 → 伪静态」**保持为空**，不要选择 WordPress、ThinkPHP 等模板。
-
-对应的伪静态文件正确写法就是**空文件**：
-
-```nginx
-# /www/server/panel/vhost/rewrite/python_infowe_site.conf
-# 保持为空即可。不要写：
-# location / { ... }
-# proxy_pass ...
-# try_files ...
-```
-
-Flask 已经处理了这些路由：
-
-- `/post/<id>`
-- `/tag/<tag>`
-- `/search/<q>`
-- `/archive/<year>`
-- 旧参数 URL 的 301 跳转
-- 后台自定义入口 `admin_path`
-
-因此**不需要** Nginx `rewrite`、`try_files` 或 `index.php` 规则。
-
-检查宝塔自动生成的伪静态文件：
-
-```bash
-ls /www/server/panel/vhost/rewrite/
-grep -RE "location /|proxy_pass" /www/server/panel/vhost/rewrite/python_*.conf
-```
-
-如果 `rewrite/python_xxx.conf` 里出现 `location /` 或 `proxy_pass`，请清空该文件，或删除站点配置里对应的 `include`。否则会和 6.1 里的 `location /` 重复，可能出现 403 / 502 / 代理规则冲突。
-
-验证应用路由：
-
-```bash
-curl -I https://www.infowe.site/tag/Python
-curl -I https://www.infowe.site/search/Flask
-curl -I https://www.infowe.site/archive/2026
-```
-
-应返回 `200` 或正常的 `301`，不是 `404`。80 和 443 的 `server {}` 都要有同样的 `location /` 反代。
-
-### 6.4 页面缓存（已内置）
+### 6.1 页面缓存（已内置）
 
 项目已内置应用层页面缓存，不需要额外 Nginx 模块：
 
@@ -603,8 +405,7 @@ curl -I https://www.infowe.site/archive/2026
 - 访客提交评论只清除对应文章页/项目页，审核通过后再次清除
 - 后台「数据管理 → 清除页面缓存」可手动清空
 
-伪静态本身不需要额外 rewrite：`location /` 反代到 5000 即可。
-自定义后台入口 `admin_path` 也不需要改 Nginx，项目内部路由会自动生成。
+后台自定义入口 `admin_path` 不需要改 Nginx，项目内部路由会自动生成。
 
 > 如果以后访问量更大，可以再加 Nginx `proxy_cache` 或 CDN 作为一级缓存；
 > 记得对带 Cookie 的请求 bypass，并在发布/评论后 purge。
@@ -653,19 +454,18 @@ kill -HUP <master_pid>
 
 只对 master 发信号，不要对 worker 发。升级包含模板、CSS、JS 变更时，重启后到后台「数据管理 → 清除页面缓存」，否则旧页面缓存可能还会保留 5～30 分钟。
 
-#### 10.2 Gunicorn 自动重启（可选）
+#### 10.2 更新后自动重启（宝塔）
 
-宝塔默认不会因为 `git pull` 自动重启。项目里的在线升级只更新代码和依赖，最后把 `var/upgrade_state.json` 写成 `done`，然后等人工重启。
+宝塔的 Python 项目不会因为 `git pull` 自动重启。仓库里的 `tools/infowe-auto-restart.sh` 配合宝塔「计划任务」可以做到：
 
-如果希望升级完成后自动重启，用仓库里的脚本就够了：它负责等待安装完成、补装依赖、必要时停机迁移数据目录、清页面缓存，再平滑重载或完整启动；`post-merge` hook 负责即时触发，宝塔计划任务负责兜底。
+- 比较 Git HEAD，没有新提交直接退出
+- 后台在线升级还在跑时先等待，失败或超时就不重启
+- `requirements.txt` 有变化才补装依赖
+- 首次从旧目录升级时停机迁移到 `var/`
+- 清页面缓存，再对 gunicorn master 发 `HUP` 平滑重载
+- 进程找不到或依赖装失败时保留旧进程，不会带着坏环境上线
 
-脚本不再依赖 `upgrade_state.json` 的修改时间，而是记录**上次重启时的 Git commit**。只要 HEAD 变了（不管是后台在线升级还是手动 `git pull`），就会在安装完成后重启一次；没有新提交时直接退出。
-
-> 脚本随仓库提供（`tools/infowe-auto-restart.sh`）；hook 与计划任务在服务器上配置，`git pull` 不会覆盖。
-
-**第一步：安装脚本**
-
-完整脚本已随仓库提供：`tools/infowe-auto-restart.sh`。它负责比较 Git HEAD、等待在线升级、补装依赖、停机迁移数据目录、清页面缓存、平滑重载和健康检查。
+**第一步：把脚本放到 `/root`**
 
 ```bash
 cp /www/wwwroot/infowe.site/tools/infowe-auto-restart.sh /root/infowe-auto-restart.sh
@@ -674,102 +474,113 @@ chmod 755 /root/infowe-auto-restart.sh
 sh -n /root/infowe-auto-restart.sh
 ```
 
-脚本顶部可改的变量（也可用同名环境变量传入）：
+`/root` 下是独立副本，仓库里脚本更新后要重新复制一次。
 
-| 变量 | 默认值 | 说明 |
+**第二步：让 root 能读 Git 仓库**
+
+新版 Git 默认拒绝 root 操作 `www` 拥有的仓库，会报 `detected dubious ownership`。加一次安全目录：
+
+```bash
+git config --global --add safe.directory /www/wwwroot/infowe.site
+cd /www/wwwroot/infowe.site
+git rev-parse --short HEAD
+```
+
+能输出 commit 才继续。
+
+**第三步：配置运行环境**
+
+```bash
+source py-project-env infowe_site
+
+cat > /root/.infowe-auto-restart.env <<EOF
+BASE=/www/wwwroot/infowe.site
+PY=$(python -c 'import sys; print(sys.executable)')
+PORT=5000
+EOF
+
+chmod 600 /root/.infowe-auto-restart.env
+```
+
+| 变量 | 说明 |
+| --- | --- |
+| `BASE` | 项目目录 |
+| `PY` | 用于补装依赖和数据迁移，不是启动 gunicorn 的命令 |
+| `PORT` | 健康检查端口，和 gunicorn 监听端口一致 |
+| `BLOG_DATA_DIR` | 数据目录，默认 `$BASE/var` |
+| `STOP_CMD` / `START_CMD` | 宝塔 / systemd / supervisor 托管时填完整停止、启动命令；不填则按原 gunicorn 命令行重放 |
+
+**第四步：手动验证**
+
+```bash
+rm -f /www/wwwroot/infowe.site/var/.auto-restart.head
+/root/infowe-auto-restart.sh
+```
+
+正常输出：
+
+```text
+检测到代码更新： -> xxxxxxxx
+已平滑重载 gunicorn master ...
+完成，记录 commit ...
+```
+
+常见报错：
+
+| 日志 | 原因 | 处理 |
 | --- | --- | --- |
-| `BASE` | `/www/wwwroot/infowe.site` | 项目目录 |
-| `PY` | `$BASE/.venv/bin/python` | 项目 venv 的解释器 |
-| `PORT` | `5000` | 健康检查用的本地端口 |
-| `STOP_CMD` | 空 | 停止命令，如 `systemctl stop infowe`；留空则对 gunicorn master 发 QUIT |
-| `START_CMD` | 空 | 启动命令，如 `systemctl start infowe`；留空则重放原 gunicorn 命令行 |
-| `BLOG_DATA_DIR` | `$BASE/var` | 数据目录，需与站点实际配置一致 |
+| `读取 Git HEAD 失败` | root 没有仓库权限 | 执行第二步的 `safe.directory` |
+| `未找到 gunicorn master` | 启动命令里没有项目名，或不是 gunicorn | `ps -eo pid,ppid,user,args \| grep -E '[g]unicorn\|[u]wsgi'`，再配 `STOP_CMD` / `START_CMD` |
+| `依赖安装失败` | pip 装不上 | 先手动解决依赖，脚本会保留旧进程 |
 
-行为说明：
+**第五步：宝塔计划任务（必须）**
 
-- `post-merge` 和计划任务同时触发也不会重复执行（`flock` + HEAD 记录）
-- 在线升级状态是 `running` 时最多等 10 分钟；`failed` 或超时直接退出，不带坏依赖重启
-- `requirements.txt` 哈希变化时先在 venv 里 `pip install -r requirements.txt`（手动 `git pull` 也会补装）
-- **首次迁移到 `var/`**：停服 → `python -m services.storage --force` → 清页面缓存 → 启动 → 健康检查；迁移失败则不启动，避免旧库继续写入
-- 普通升级：清页面缓存 → `kill -HUP <master>` 平滑重载，不中断请求
-- 启动方式：优先用 `START_CMD`；没配置时按原 master 的 gunicorn 命令行重放，日志写到 `var/gunicorn-restart.log`
+宝塔 → 计划任务 → 添加任务：
 
-> 用宝塔 / systemd / supervisor 守护时，建议显式配置 `STOP_CMD`、`START_CMD`，比脚本重放进程命令行更可靠。
+| 项 | 值 |
+| --- | --- |
+| 类型 | Shell 脚本 |
+| 名称 | infowe 自动重启 |
+| 周期 | 每 1 分钟 |
+| 脚本 | `/root/infowe-auto-restart.sh` |
 
-**第二步：可选，配置即时触发**
+这是自动触发源，不加的话脚本不会自己跑。
 
-`post-merge` 在 `git pull` 成功后执行。注意此时 `pip install` 还没结束，所以 hook 只负责启动脚本，真正的重启由脚本等待 `done` 后再做。
+**可选：post-merge 即时触发**
+
+只有 `git pull` 由 root 执行时才用。`www` 用户读不了 `/root`，hook 会失败。
 
 ```bash
 cat > /www/wwwroot/infowe.site/.git/hooks/post-merge <<'EOF'
 #!/bin/sh
-nohup /root/infowe-auto-restart.sh \
-  >>/var/log/infowe-auto-restart.log 2>&1 &
+nohup /root/infowe-auto-restart.sh >>/var/log/infowe-auto-restart.log 2>&1 &
 EOF
-
 chmod +x /www/wwwroot/infowe.site/.git/hooks/post-merge
 ```
 
-**第三步：宝塔计划任务兜底（可选，但推荐）**
-
-`post-merge` 正常触发时，其实不需要计划任务。它不是强制项；但当前如果 hook 偶尔不触发，计划任务是最简单的兜底。
-
-宝塔 → 计划任务 → 添加任务：
-
-- 类型：Shell 脚本
-- 名称：infowe 自动重启
-- 周期：每分钟
-- 脚本：`/root/infowe-auto-restart.sh`
-
-脚本里有 `flock` 和 HEAD 记录，hook 和计划任务同时存在也不会重复重启。如果不加计划任务，就至少确认 `post-merge` 确实收到触发，并检查 `/var/log/infowe-auto-restart.log`。
+计划任务和 hook 同时存在不会重复重启，脚本里有 `flock` 和 HEAD 记录。
 
 **验证**
 
 ```bash
-cat /www/wwwroot/infowe.site/var/upgrade_state.json
+crontab -l | grep infowe
+tail -n 20 /var/log/infowe-auto-restart.log
 cat /www/wwwroot/infowe.site/var/.auto-restart.head
-
-/root/infowe-auto-restart.sh
-sleep 2
-
-cat /var/log/infowe-auto-restart.log
 ps -eo pid,ppid,lstart,args | grep '[g]unicorn'
 ```
 
-预期：
-
-- 普通升级：日志出现 `已平滑重载 gunicorn master ...`，master PID 不变、worker 变新
-- 首次迁移：日志依次出现 `检测到旧版数据目录`、`迁移数据目录`、`服务已恢复`，迁移完成后 `var/.migrated` 生成
-- 生成或更新 `var/.auto-restart.head`、`var/.auto-restart.req`
-- 迁移完成后旧的 `data/`、`uploads/`、`backups/`、`storage/` 为空目录（脚本会尽力清理）
-
-手动测试时如果 HEAD 和 `.auto-restart.head` 已经相同，脚本会直接退出，这是正常的。要测试真实重启，可以用一次后台在线升级，或在测试前删掉：
-
-```bash
-rm -f /www/wwwroot/infowe.site/var/.auto-restart.head
-```
-
-> 旧的 `.auto-restart.stamp` 可以删掉，新脚本不再使用。
-
-如果 `upgrade_state.json` 是 `running`，脚本会等它结束；如果是 `failed`，不会自动重启，避免带着未装好的依赖启动。其他情况下，只要 Git HEAD 变了就会重启。
-
-> 手动执行 `/root/infowe-auto-restart.sh` 时，输出只在终端；日志文件只记录 hook 或计划任务触发的重启。HEAD 没变化时脚本会静默退出，不会写日志。
-> `HUP` 只对 master 发，不要对 worker 发。
-> 手动 SSH 执行 `git pull` 后，只要 HEAD 变了，hook 和计划任务都会触发自动重启；如果本次升级状态是 `failed`，会跳过自动重启，需要先处理依赖再手动 `kill -HUP <master>`。
-> 如果以后 Web 服务从 root 改成 www 运行，`.git/hooks` 通常没有权限操作 root 的 Gunicorn master，这时把脚本放到 root 的宝塔计划任务里执行。
-> Gunicorn 的 `--reload` 只监听 Python 文件变化，不处理 `pip install` 的新依赖，也不适合替代这里的明确重启。
+重启成功后 master PID 不变、worker PID 变新。
 
 ### 宝塔常见错误
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| 403 Forbidden（nginx） | 443 server 没有反代，落到静态目录 | 在 443 加 `location /` |
+| 403 Forbidden（nginx） | 宝塔站点没有反向代理，请求落到静态目录 | 在宝塔站点里加反向代理到 `http://127.0.0.1:5000`，伪静态保持为空 |
 | 502 Bad Gateway | uWSGI/gunicorn 未启动、端口/目录不对 | 查看项目日志，确认 5000 返回 200 |
 | 413 Request Entity Too Large | Nginx 上传上限太小 | `client_max_body_size 64m` |
 | 上传/备份 500 | 目录无写权限 | `chown -R www:www var` |
-| 登录后重定向循环 | `site_url` 与访问域名不一致，或未传 `X-Forwarded-Proto` | 修改 `site_url`，检查 Nginx 头 |
+| 登录后重定向循环 | `site_url` 与访问域名不一致，或未传 `X-Forwarded-Proto` | 修改 `site_url`，检查反代头 |
 | 证书 key usage 错误 | 证书类型/链不对 | 重新申请或重新部署证书 |
-| 样式/图片 404 | 只代理了 `/`，漏了 `/static`、`/uploads` | 全部路径统一反代 |
 
 ---
 
