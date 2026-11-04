@@ -455,7 +455,8 @@ location / {
     if ($request_method !~ ^(GET|HEAD)$) { set $blog_skip_cache 1; }
 
     # 后台、登录、接口、评论、动态图片不缓存
-    if ($request_uri ~* "^/(admin|login|logout|api|comments|upload|share-thumb|avatar|readme-img|status)") { set $blog_skip_cache 1; }
+    # 注意：不要写 upload，否则 /uploads/ 图片也会命中，变成 BYPASS
+    if ($request_uri ~* "^/(admin|login|logout|api|comments|share-thumb|avatar|readme-img|status)(/|$|\?)") { set $blog_skip_cache 1; }
 
     # 管理员 / 评论者带 Cookie 时直接回源，避免看到别人的缓存
     if ($http_cookie ~* "(^|;\s*)(session|blog_commenter)=") { set $blog_skip_cache 1; }
@@ -545,6 +546,7 @@ Nginx 会重新生成缓存文件，不用重启。适合文章不多、能接�
 - `?nocache=1` 可以临时绕过
 - 两层缓存叠加后，页面更新延迟 = Nginx TTL + 应用 TTL；发现更新慢先降 Nginx TTL
 - CDN 同理：回源 Host、Cookie bypass、发布后 purge，规则和这一节一致
+- 图片一直显示 `BYPASS`：检查排除规则里有没有写 `upload`。`/uploads/` 以 `/upload` 开头，写了 `upload` 会把图片全部跳过
 
 ### 7. 申请 SSL
 
