@@ -407,8 +407,141 @@ location / {
 
 后台自定义入口 `admin_path` 不需要改 Nginx，项目内部路由会自动生成。
 
-> 如果以后访问量更大，可以再加 Nginx `proxy_cache` 或 CDN 作为一级缓存；
-> 记得对带 Cookie 的请求 bypass，并在发布/评论后 purge。
+> 如果以后访问量更大，可以再加 Nginx `proxy_cache` 或 CDN 作为一级缓存，配置见 6.2；
+> 加之前先确认能接受“页面更新延迟”，并配好 bypass 和清理。
+
+### 6.2 可选：Nginx proxy_cache（高流量）
+
+项目自带应用层页面缓存，大多数博客不需要再加 Nginx 缓存。只有访问量上来、Flask 进程顶不住时再用。两层缓存会叠加延迟，必须配 bypass 和清理，否则会出现“发了文章或评论，页面还是旧的”。
+
+**1. 开启缓存区（http 级）**
+
+`proxy_cache_path` 只能写在 `http {}` 里，不能写进站点的 `server {}`。
+
+```bash
+mkdir -p /www/server/nginx/cache
+chown -R www:www /www/server/nginx/cache
+chmod 700 /www/server/nginx/cache
+```
+
+> 如果 `ps -o user= -C nginx` 显示的不是 `www`，把上面的用户换成实际运行用户。
+
+在 `/www/server/nginx/conf/nginx.conf` 的 `http {}` 内加一行（宝塔 → 软件商店 → Nginx → 配置修改）：
+
+```nginx
+proxy_cache_path /www/server/nginx/cache levels=1:2 keys_zone=blog_cache:20m max_size=2g inactive=10m use_temp_path=off;
+```
+
+**2. 站点配置**
+
+把原来的 `location /` 换成：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:5000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_read_timeout 120s;
+    client_max_body_size 64m;
+
+    # 默认不跳过缓存
+    set $blog_skip_cache 0;
+
+    # 非 GET / HEAD 不缓存（表单、上传、评论提交）
+    if ($request_method !~ ^(GET|HEAD)$) { set $blog_skip_cache 1; }
+
+    # 后台、登录、接口、评论、动态图片不缓存
+    if ($request_uri ~* "^/(admin|login|logout|api|comments|upload|share-thumb|avatar|readme-img|status)") { set $blog_skip_cache 1; }
+
+    # 管理员 / 评论者带 Cookie 时直接回源，避免看到别人的缓存
+    if ($http_cookie ~* "(^|;\s*)(session|blog_commenter)=") { set $blog_skip_cache 1; }
+
+    # 手动绕过：?nocache=1
+    if ($arg_nocache) { set $blog_skip_cache 1; }
+
+    proxy_cache blog_cache;
+    proxy_cache_key "$host$uri$is_args$args";
+    proxy_cache_valid 200 301 302 5m;
+    proxy_cache_valid 404 1m;
+    proxy_cache_bypass $blog_skip_cache;
+    # 带 Set-Cookie 的响应不写入缓存，避免会话串给其他访客
+    proxy_no_cache $blog_skip_cache $upstream_http_set_cookie;
+    proxy_cache_lock on;
+    proxy_cache_lock_timeout 5s;
+    proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+    proxy_cache_background_update on;
+}
+```
+
+如果想看 Nginx 这一层有没有命中，在 `server {}` 里加（不要放进 `location`，否则会覆盖 server 级其他 `add_header`）：
+
+```nginx
+add_header X-Nginx-Cache $upstream_cache_status always;
+```
+
+验证：
+
+```bash
+curl -I https://www.infowe.site/
+curl -I https://www.infowe.site/
+```
+
+第一次 `X-Nginx-Cache: MISS`，第二次 `HIT`。应用自己的 `X-Cache` 仍然表示 Flask 缓存状态，两个都看。
+
+**3. 清理缓存**
+
+应用层缓存发文章/评论后会自动清，Nginx 这层不会。三种处理方式，按环境选一种。
+
+**方式 A：`ngx_cache_purge`（需要模块）**
+
+先确认 Nginx 编译了模块：
+
+```bash
+nginx -V 2>&1 | tr ' ' '\n' | grep -i cache_purge
+```
+
+有输出才能用。站点配置里加：
+
+```nginx
+location ~ ^/purge(/.*)$ {
+    allow 127.0.0.1;
+    deny all;
+    proxy_cache_purge blog_cache "$host$1$is_args$args";
+}
+```
+
+清理示例（在服务器本机执行，必须带正确的 Host，否则 key 对不上）：
+
+```bash
+curl -X PURGE -H "Host: www.infowe.site" http://127.0.0.1/purge/
+curl -X PURGE -H "Host: www.infowe.site" http://127.0.0.1/purge/post/89
+```
+
+**方式 B：没有模块，用短 TTL**
+
+把 `proxy_cache_valid 200 301 302 5m` 改成 `1m`。发文章/评论后最多 1 分钟旧页面自动过期，不需要 purge。
+
+**方式 C：发布后直接清缓存目录**
+
+在部署脚本或 `git pull` 后执行：
+
+```bash
+find /www/server/nginx/cache -type f -delete
+```
+
+Nginx 会重新生成缓存文件，不用重启。适合文章不多、能接受短暂回源的站点。
+
+**4. 注意**
+
+- 不要缓存 `/admin`、`/api`、登录、上传、评论提交
+- 带 `session` 或 `blog_commenter` Cookie 的请求必须 bypass
+- `?nocache=1` 可以临时绕过
+- 两层缓存叠加后，页面更新延迟 = Nginx TTL + 应用 TTL；发现更新慢先降 Nginx TTL
+- CDN 同理：回源 Host、Cookie bypass、发布后 purge，规则和这一节一致
 
 ### 7. 申请 SSL
 
