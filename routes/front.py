@@ -378,7 +378,7 @@ def comment_upload():
     file = request.files.get("image")
     url, error = upload.save(
         file,
-        {".jpg", ".jpeg", ".png", ".gif", ".webp"},
+        {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"},
         max_bytes=8 * 1024 * 1024,
         sub_dir=datetime.now().strftime("comment/%Y/%m"),
         randomize=True,

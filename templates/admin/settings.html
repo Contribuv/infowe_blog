@@ -393,7 +393,7 @@
                 <label>图片扩展名</label>
                 <input type="text" name="upload_image_ext" class="input-text"
                        value="{{ upload_image_ext }}" placeholder="png, jpg, jpeg, gif, webp, bmp, heic, heif">
-                <span class="form-hint">PNG/JPG/JPEG/WebP/BMP 会走水印处理；GIF、HEIC、HEIF 仅上传，不叠加水印（HEIC 需服务器额外解码支持）。</span>
+                <span class="form-hint">PNG/JPG/JPEG/WebP/BMP 会走水印处理；HEIC/HEIF 上传后自动转为 WebP 再叠加水印；GIF 仅上传，不叠加水印。</span>
             </div>
             <div class="form-group">
                 <label>音视频扩展名</label>

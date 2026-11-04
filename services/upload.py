@@ -29,6 +29,26 @@ BLOCKED_EXTS = {
 
 logger = logging.getLogger(__name__)
 
+# HEIC/HEIF 浏览器支持面窄，上传后统一转成 WebP 再落盘
+HEIC_EXTS = {".heic", ".heif"}
+
+_heif_ready: bool | None = None
+
+
+def _ensure_heif() -> bool:
+    """按需注册 pillow-heif 解码器；未安装时降级为不支持 HEIC。"""
+    global _heif_ready
+    if _heif_ready is None:
+        try:
+            from pillow_heif import register_heif_opener
+
+            register_heif_opener()
+            _heif_ready = True
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("pillow-heif 不可用，HEIC/HEIF 将无法转码: %s", exc)
+            _heif_ready = False
+    return _heif_ready
+
 
 def normalize_ext_input(raw: str, fallback: set[str]) -> set[str]:
     result: set[str] = set()
@@ -154,6 +174,32 @@ def _apply_watermark(path: Path) -> None:
         return
 
 
+def _convert_heic(src: Path, quality: int = 92) -> Path | None:
+    """把 HEIC/HEIF 解码并转存为 WebP，返回新路径；失败返回 None。"""
+    if not _ensure_heif():
+        return None
+    out = src.with_suffix(".webp")
+    try:
+        from PIL import Image, ImageOps
+
+        index = 1
+        while out.exists():
+            out = src.with_name(f"{src.stem}_{index}.webp")
+            index += 1
+        with Image.open(src) as img:
+            # 手机竖拍依赖 EXIF Orientation，先摆正再转码
+            img = ImageOps.exif_transpose(img)
+            if img.mode not in {"RGB", "RGBA"}:
+                img = img.convert("RGBA" if "A" in img.getbands() else "RGB")
+            img.save(out, "WEBP", quality=quality, method=4)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("heic convert failed for %s: %s", src, exc)
+        out.unlink(missing_ok=True)
+        return None
+    src.unlink(missing_ok=True)
+    return out
+
+
 def save(
     file: FileStorage | None,
     allowed_ext: set[str],
@@ -190,7 +236,7 @@ def save(
     dest = folder / filename
     dest.write_bytes(data)
 
-    if ext in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
+    if ext in {".jpg", ".jpeg", ".png", ".webp", ".bmp"} | HEIC_EXTS:
         try:
             from PIL import Image
             with Image.open(dest) as img:
@@ -198,6 +244,13 @@ def save(
         except Exception:
             dest.unlink(missing_ok=True)
             return "", "图片文件损坏或格式不受支持"
+        if ext in HEIC_EXTS:
+            converted = _convert_heic(dest)
+            if converted is None:
+                dest.unlink(missing_ok=True)
+                return "", "HEIC 图片解析失败，请先转换为 JPG/WebP 后重试"
+            dest = converted
+            filename = dest.name
         # 先备份无痕原图（公网不可达），再叠水印；关闭水印时原图和展示图一致
         try:
             origin = root() / ".originals" / sub / filename
@@ -375,3 +428,7 @@ def delete_by_url(url: str) -> bool:
         return True
     except OSError:
         return False
+
+
+# 启动时注册一次，让 image_dims / share_thumb / 头像裁剪等 PIL 调用也能识别 HEIC
+_ensure_heif()

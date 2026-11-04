@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.6.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.6.9)
+[![version](https://img.shields.io/badge/version-3.7.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -58,7 +58,7 @@
 - 留存审计（插件）：后台操作记录、AI 审核记录、评论留存，日期/关键词筛选与 CSV 导出
 - AI 助手：机器人昵称/头像自定义、评论 AI 审核、通过后 AI 回复，审核记录与徽章
 - 邮件通知：评论/回复/AI 回复/友链申请 HTML 通知邮件（Outlook 兼容，正文展示真实内容，敏感词除外）
-- 上传：图片 / 媒体 / 附件，白名单与大小限制，水印
+- 上传：图片 / 媒体 / 附件，白名单与大小限制，水印；HEIC/HEIF 自动转 WebP
 - 孤儿文件清理：扫描未被引用的上传文件
 - 主题切换
 - 设置：站点信息、导航、评论、SMTP、水印、敏感词、统计代码、上传限制
@@ -86,7 +86,7 @@
 | 数据库 | SQLite（WAL） |
 | 模板 | Jinja2 |
 | Markdown | `markdown`（表格、代码块、目录、脚注、details） |
-| 图片 | Pillow（水印、分享图、头像裁剪） |
+| 图片 | Pillow + pillow-heif（水印、分享图、头像裁剪、HEIC/HEIF 转 WebP） |
 | CSS | csscompressor（theme.min.css 自动生成） |
 | HTTP | requests（GitHub 同步、状态探测、头像/README 图） |
 | 生产 | gunicorn / uWSGI + Nginx |
@@ -253,7 +253,7 @@ python -c "from app import app; from services import settings; c=app.app_context
 | 首页一言 | 一行一条，`文本\|出处`；留空使用内置文案 |
 | 导航菜单 | 文章/标签/项目/友链/关于/状态 开关 |
 | 评论 | 总开关、单页条数、后台列表条数、邮件通知、评论图片、敏感词 |
-| 上传 | 图片/媒体/附件白名单、单文件大小、水印 |
+| 上传 | 图片/媒体/附件白名单、单文件大小、水印、HEIC/HEIF 自动转 WebP |
 | 邮件 | SMTP 服务器、端口、账号、通知收件人、测试发送 |
 | 账号安全 | 用户名、密码、OTP、后台入口路径 |
 | 站点地址 | `site_url`、强制 HTTPS、同主域 www 归一 |
@@ -919,16 +919,22 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.6.9**
+当前版本：**v3.7.0**
+
+### v3.7.0
+
+- HEIC/HEIF 支持：上传后自动解码并转成 WebP 落盘，Chrome、Firefox 等不支持 HEIC 的浏览器也能正常预览；转码后照常叠加水印、生成分享图，并根据 EXIF 方向自动摆正
+- 评论图片上传同步放开 HEIC/HEIF，前端类型校验兼容部分系统未注册 HEIC MIME 的情况
+- 新增依赖 `pillow-heif`，后台「图片扩展名」提示同步更新
+
+<details>
+<summary><b>历史版本（v3.6.9 及更早）</b></summary>
 
 ### v3.6.9
 
 - 移动端悬浮按钮合并为一个：向下滑显示「跳到评论」，向上滑显示「回到顶部」，到评论区后固定为「回到顶部」；两个状态共用同一位置，来回切换不会上下跳，长文任意位置都能回顶部
 - 评论说明浮窗：后台评论状态列的 AI 审核、AI 回复、人工审核说明改为可点击，点「详情」弹窗查看全文，长理由不再被单行省略截断
 - 私密评论审核修复：私密评论不再无条件绕过审核，只有已通过或待审核的私密评论对管理员可见，被拒绝后仅保留在后台
-
-<details>
-<summary><b>历史版本（v3.6.8 及更早）</b></summary>
 
 ### v3.6.8
 

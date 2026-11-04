@@ -873,8 +873,12 @@ window.initComments = function (root) {
     imgupInput.addEventListener('change', function () {
       var f = imgupInput.files && imgupInput.files[0];
       if (!f) return;
-      if (!/^image\/(png|jpeg|gif|webp)$/.test(f.type)) {
-        if (window.toast) window.toast('仅支持 png / jpg / gif / webp 图片', 'error');
+      // 部分系统未注册 HEIC MIME，type 可能为空或 octet-stream，按扩展名兜底
+      var okType = /^image\/(png|jpeg|gif|webp|heic|heif)$/.test(f.type);
+      var okHeicName = /\.(heic|heif)$/i.test(f.name) &&
+        (!f.type || f.type === 'application/octet-stream');
+      if (!okType && !okHeicName) {
+        if (window.toast) window.toast('仅支持 png / jpg / gif / webp / heic 图片', 'error');
         return;
       }
       if (f.size > IMG_MAX) {
