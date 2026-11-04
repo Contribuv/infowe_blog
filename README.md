@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.0)
+[![version](https://img.shields.io/badge/version-3.7.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.1)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -919,16 +919,22 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.0**
+当前版本：**v3.7.1**
+
+### v3.7.1
+
+- 修复 HEIC/HEIF 上传仍提示「图片文件损坏或格式不受支持」：校验前先注册 pillow-heif 解码器，安装依赖后不再需要额外重启才生效
+- HEIC/AVIF 内容被改名成 `.jpg` / `.png` 时，按真实格式转成 WebP 再落盘，浏览器可正常显示，不再因为扩展名和内容不一致而失败
+- 图片校验失败时把真实原因写入日志（如 `decoder jpeg not available`、`cannot identify image file`），便于定位是文件损坏还是服务器缺解码器
+
+<details>
+<summary><b>历史版本（v3.7.0 及更早）</b></summary>
 
 ### v3.7.0
 
 - HEIC/HEIF 支持：上传后自动解码并转成 WebP 落盘，Chrome、Firefox 等不支持 HEIC 的浏览器也能正常预览；转码后照常叠加水印、生成分享图，并根据 EXIF 方向自动摆正
 - 评论图片上传同步放开 HEIC/HEIF，前端类型校验兼容部分系统未注册 HEIC MIME 的情况
 - 新增依赖 `pillow-heif`，后台「图片扩展名」提示同步更新
-
-<details>
-<summary><b>历史版本（v3.6.9 及更早）</b></summary>
 
 ### v3.6.9
 
