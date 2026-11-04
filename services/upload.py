@@ -32,21 +32,24 @@ logger = logging.getLogger(__name__)
 # HEIC/HEIF 浏览器支持面窄，上传后统一转成 WebP 再落盘
 HEIC_EXTS = {".heic", ".heif"}
 
-_heif_ready: bool | None = None
+_heif_ready = False
+_heif_warned = False
 
 
 def _ensure_heif() -> bool:
     """按需注册 pillow-heif 解码器；未安装时降级为不支持 HEIC。"""
-    global _heif_ready
-    if _heif_ready is None:
-        try:
-            from pillow_heif import register_heif_opener
+    global _heif_ready, _heif_warned
+    if _heif_ready:
+        return True
+    try:
+        from pillow_heif import register_heif_opener
 
-            register_heif_opener()
-            _heif_ready = True
-        except Exception as exc:  # noqa: BLE001
+        register_heif_opener()
+        _heif_ready = True
+    except Exception as exc:  # noqa: BLE001
+        if not _heif_warned:
+            _heif_warned = True
             logger.warning("pillow-heif 不可用，HEIC/HEIF 将无法转码: %s", exc)
-            _heif_ready = False
     return _heif_ready
 
 
@@ -175,9 +178,8 @@ def _apply_watermark(path: Path) -> None:
 
 
 def _convert_heic(src: Path, quality: int = 92) -> Path | None:
-    """把 HEIC/HEIF 解码并转存为 WebP，返回新路径；失败返回 None。"""
-    if not _ensure_heif():
-        return None
+    """把 HEIC/HEIF（以及改名成其它扩展的 AVIF）解码并转存为 WebP，返回新路径；失败返回 None。"""
+    _ensure_heif()  # 装不上也让 Pillow 原生解码试一次
     out = src.with_suffix(".webp")
     try:
         from PIL import Image, ImageOps
@@ -237,18 +239,22 @@ def save(
     dest.write_bytes(data)
 
     if ext in {".jpg", ".jpeg", ".png", ".webp", ".bmp"} | HEIC_EXTS:
+        _ensure_heif()
         try:
             from PIL import Image
             with Image.open(dest) as img:
+                real_fmt = (img.format or "").upper()
                 img.verify()
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("图片校验失败 %s: %s", dest, exc)
             dest.unlink(missing_ok=True)
             return "", "图片文件损坏或格式不受支持"
-        if ext in HEIC_EXTS:
+        # .jpg 里装 HEIC/AVIF 的情况（iPhone 改扩展名）：按真实格式转成 WebP
+        if ext in HEIC_EXTS or real_fmt in {"HEIF", "HEIC", "AVIF"}:
             converted = _convert_heic(dest)
             if converted is None:
                 dest.unlink(missing_ok=True)
-                return "", "HEIC 图片解析失败，请先转换为 JPG/WebP 后重试"
+                return "", "图片解析失败（HEIC/AVIF），请先转换为 JPG/WebP 后重试"
             dest = converted
             filename = dest.name
         # 先备份无痕原图（公网不可达），再叠水印；关闭水印时原图和展示图一致
