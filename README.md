@@ -868,6 +868,8 @@ chown -R www:www var
 
 当前版本：**v3.7.1**
 
+> 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
 ### v3.7.1
 
 - 修复 HEIC/HEIF 上传仍提示「图片文件损坏或格式不受支持」：校验前先注册 pillow-heif 解码器，安装依赖后不再需要额外重启才生效
@@ -875,7 +877,7 @@ chown -R www:www var
 - 图片校验失败时把真实原因写入日志（如 `decoder jpeg not available`、`cannot identify image file`），便于定位是文件损坏还是服务器缺解码器
 
 <details>
-<summary><b>历史版本（v3.7.0 及更早）</b></summary>
+<summary><b>历史版本（v3.7.0 及更早，点击展开）</b></summary>
 
 ### v3.7.0
 
