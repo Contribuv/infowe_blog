@@ -517,15 +517,24 @@ location ~ ^/purge(/.*)$ {
 清理示例（在服务器本机执行，必须带正确的 Host，否则 key 对不上）：
 
 ```bash
-# 80 和 443 在同一个 server 块时
+# 80 和 443 在同一个 server 块，且 80 不跳转
 curl -X PURGE -H "Host: www.infowe.site" http://127.0.0.1/purge/
 curl -X PURGE -H "Host: www.infowe.site" http://127.0.0.1/purge/post/89
 
-# 如果 80 会 301 到 HTTPS，用 --resolve 直接打本机 443
-curl --resolve www.infowe.site:443:127.0.0.1 -X PURGE https://www.infowe.site/purge/
-curl --resolve www.infowe.site:443:127.0.0.1 -X PURGE https://www.infowe.site/purge/post/89
+# 80 会 301 到 HTTPS：让 curl 连本机 443，Host/SNI 仍然是 www.infowe.site
+curl --noproxy '*' --resolve www.infowe.site:443:127.0.0.1 \
+  -X PURGE https://www.infowe.site/purge/
+curl --noproxy '*' --resolve www.infowe.site:443:127.0.0.1 \
+  -X PURGE https://www.infowe.site/purge/post/89
+
+# 裸域也缓存了的话，再清一遍裸域
+curl --noproxy '*' --resolve infowe.site:443:127.0.0.1 \
+  -X PURGE https://infowe.site/purge/
 ```
 
+> `--resolve` 只是让 curl 把 `www.infowe.site:443` 解析到 `127.0.0.1`，请求的 Host 和 SNI 仍然是 `www.infowe.site`，所以能过 `allow 127.0.0.1`，缓存 key 也对得上。
+> `--noproxy '*'` 防止服务器上设置了 `https_proxy`，请求被转发到代理，导致源 IP 不是 `127.0.0.1`。
+> purge 的 `location` 必须和 `proxy_cache` 写在同一个 `server {}` 里；只写在 80 的跳转块，443 上不会生效。
 > 不要写成 `http://127.0.0.1:5000/purge/`。`5000` 是 Flask，只处理博客路由，不处理 Nginx 缓存清理，访问会直接 404。`proxy_cache_purge` 配在 Nginx 里，必须请求 Nginx 的 80 或 443。
 > purge 返回 `404` 只表示这个 URL 当前没有缓存，不是配置失败。
 
