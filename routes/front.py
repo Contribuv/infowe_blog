@@ -365,6 +365,7 @@ def post_comment(post_id: int):
 def comment_upload():
     if not comments_service.open_comments() or not comments_service.image_upload_on():
         return jsonify({"error": "评论图片上传已关闭"}), 403
+
     from services import auth, ratelimit
 
     ip = comments_service.request_ip()
@@ -389,6 +390,74 @@ def comment_upload():
         ratelimit.touch("upload_burst", ip)
         ratelimit.touch("upload_day", ip)
     return jsonify({"url": url})
+
+
+# ── 评论者身份：换昵称前确认 / 邮箱验证 ─────────────────
+def comment_identity_check():
+    from services import comment_identity, ratelimit
+
+    email = (request.args.get("email") or "").strip()
+    author = (request.args.get("author") or "").strip()
+    ip = comments_service.request_ip()
+    if not ratelimit.allow("identity_check", ip, 60, 30):
+        return jsonify({"error": "请求过于频繁，请稍后再试"}), 429
+    ratelimit.touch("identity_check", ip)
+    found = comment_identity.conflict(email, author)
+    return jsonify(
+        {
+            "exists": comment_identity.get_row(email) is not None,
+            "conflict": bool(found),
+            "masked_author": found["masked_author"] if found else "",
+        }
+    )
+
+
+def comment_identity_code():
+    from services import comment_identity, mail_template, notify, settings
+
+    if not comments_service.open_comments():
+        abort(403)
+    email = (request.form.get("email") or "").strip()
+    author = (request.form.get("author") or "").strip()
+    row = comment_identity.get_row(email)
+    if not row:
+        return jsonify({"error": "该邮箱还没有评论记录，无需验证"}), 400
+    if (author.casefold() == str(row["current_author"] or "").casefold()):
+        return jsonify({"error": "昵称没有变化"}), 400
+    code, error = comment_identity.issue_code(
+        email, author, comments_service.request_ip()
+    )
+    if error:
+        return jsonify({"error": error}), 429
+    blog = settings.get_str("blog_name", "博客").strip() or "博客"
+    text, page = mail_template.verify_code_notice(
+        blog_name=blog,
+        site=site_url.base(),
+        code=code,
+        ttl_minutes=comment_identity.CODE_TTL // 60,
+    )
+    ok, _message = notify.send(
+        comment_identity.normalize_email(email),
+        f"[{blog}] 修改评论昵称验证码",
+        text,
+        page,
+    )
+    if not ok:
+        return jsonify({"error": "验证码发送失败，请稍后重试"}), 500
+    return jsonify({"ok": True, "cooldown": 60})
+
+
+def comment_identity_verify():
+    from services import comment_identity
+
+    email = (request.form.get("email") or "").strip()
+    code = (request.form.get("code") or "").strip()
+    token, error = comment_identity.verify_code(email, code)
+    if error:
+        return jsonify({"error": error}), 400
+    return jsonify(
+        {"ok": True, "token": token, "expires_in": comment_identity.TOKEN_TTL}
+    )
 
 
 def _comment_fragment(post_id: int | None = None, project_id: int | None = None) -> Response:
@@ -783,6 +852,9 @@ def register(app) -> None:
         ("/post/<int:post_id>/view", "post_view", post_view, ["POST"]),
         ("/post/<int:post_id>/comment", "post_comment", post_comment, ["POST"]),
         ("/comment/upload", "comment_upload", comment_upload, ["POST"]),
+        ("/api/comment/identity", "comment_identity_check", comment_identity_check, ["GET"]),
+        ("/api/comment/identity/code", "comment_identity_code", comment_identity_code, ["POST"]),
+        ("/api/comment/identity/verify", "comment_identity_verify", comment_identity_verify, ["POST"]),
         ("/comment/post/<int:post_id>", "comment_fragment_post", _comment_fragment, ["GET"]),
         ("/comment/project/<int:project_id>", "comment_fragment_project", _comment_fragment, ["GET"]),
         ("/tags", "tags", tags, ["GET"]),

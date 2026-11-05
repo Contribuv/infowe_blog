@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.4)
+[![version](https://img.shields.io/badge/version-3.7.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.5)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,23 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.4**
+当前版本：**v3.7.5**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.5
+
+- 评论身份体系：邮箱哈希作为读者身份，昵称作为可变展示名；同一邮箱换昵称时先弹出确认浮窗
+- 支持「继续使用原昵称」：服务端直接覆盖为曾用名，避免前端伪造昵称
+- 支持「验证后改名」：6 位邮箱验证码、10 分钟有效、最多尝试 5 次，验证通过后签发一次性改名令牌
+- 验证码发送限频：单邮箱 60 秒 / 10 分钟 5 次 / 24 小时 10 次，单 IP 每小时 10 次；且只允许已有评论记录的邮箱发送
+- 改名成功后同步该邮箱的历史评论昵称，评论区、读者页、排行榜和回复邮件展示保持一致
+- 新增统一的验证码邮件模板，复用现有邮件外壳与页脚，不再单独维护第三套样式
+- 安全修复：取消「评论邮箱等于 notify_email 就自动过审」，只有已登录管理员才自动通过，避免填写公开联系邮箱绕过审核
+- AI 审核与人工审核协同：沿用曾用名 / 验证改名的评论不再由 AI 自动通过，只记录 AI 建议并转人工；同时加固 AI 更新条件，避免覆盖管理员已经做出的审核结果
+- 后台评论状态列新增身份说明：首次使用邮箱昵称 / 沿用曾用昵称 / 邮箱验证改名
+- 修复评论待审核提示条的图标与文本对齐，「知道了」改为文字按钮
+- 验证码发送增加「发送中 / 成功 / 失败」反馈与 toast 提示，成功后自动聚焦验证码输入框
 
 ### v3.7.4
 

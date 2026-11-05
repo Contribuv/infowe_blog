@@ -205,7 +205,7 @@ img { max-width: 100%; }
   /* 除首页外：最大 380px + 左右 16px，内容宽 343–348px；
      比 20px 边距略宽一点，仍明显窄于首页满宽列表 */
   .tech-main:not(:has(.tech-home-head)) .tech-shell {
-    max-width: 380px;
+    max-width: 390px;
     padding: 0 16px;
   }
   .tech-main:has(.tech-home-head) .tech-shell { padding: 0 12px; }

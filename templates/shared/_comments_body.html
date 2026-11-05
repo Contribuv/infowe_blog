@@ -138,6 +138,9 @@
     <form class="cmt-form" id="comment-form" method="POST" action="{{ comment_form_action }}">
         {# 敏感词库改放表单后的 #cmt-sw JSON script：避免长串撑大标签、与 JS 读取解耦 #}
         <input type="hidden" name="parent_id" id="comment-parent-id" value="">
+        {# 身份确认：沿用曾用名 / 邮箱验证码改名后的一次性令牌 #}
+        <input type="hidden" name="identity_confirmed" id="comment-identity-confirmed" value="">
+        <input type="hidden" name="rename_token" id="comment-rename-token" value="">
         {# 已上传图片：由 comments.js 维护（每行一个 URL），提交时后端合并进正文并做站内白名单校验 #}
         <input type="hidden" name="images" id="comment-images" value="">
         <div class="cmt-hint" id="comment-replying" hidden>回复 @<b id="comment-replying-name"></b><button type="button" id="comment-cancel-reply">取消</button></div>
@@ -234,6 +237,33 @@
             </div>
         </details>
     </form>
+
+    {# 同邮箱换昵称：先让用户选择沿用曾用名，或走邮箱验证码改名。
+       浮窗放在表单外，评论浮窗片段注入时也会一起带进去。 #}
+    <div class="cmt-idmask" id="cmt-idmask" hidden>
+        <div class="cmt-idcard" role="dialog" aria-modal="true" aria-labelledby="cmt-idtitle">
+            <div class="cmt-idhead">
+                <strong id="cmt-idtitle">昵称确认</strong>
+                <button type="button" class="cmt-idclose" id="cmt-id-close" aria-label="关闭">×</button>
+            </div>
+            <p class="cmt-iddesc" id="cmt-id-desc"></p>
+            <div class="cmt-idchoice" id="cmt-id-choice">
+                <button type="button" class="cmt-idbtn cmt-idbtn--primary" id="cmt-id-use-old">继续使用原昵称</button>
+                <button type="button" class="cmt-idbtn" id="cmt-id-rename">修改昵称</button>
+            </div>
+            <div class="cmt-idverify" id="cmt-id-verify" hidden>
+                <p class="cmt-iddesc">验证码将发送到 <b id="cmt-id-email"></b></p>
+                <div class="cmt-idrow">
+                    <button type="button" class="cmt-idbtn" id="cmt-id-send">发送验证码</button>
+                    <input type="text" id="cmt-id-code" inputmode="numeric" maxlength="6"
+                           autocomplete="one-time-code" placeholder="6 位验证码">
+                </div>
+                <p class="cmt-idtip" id="cmt-id-tip" aria-live="polite"></p>
+                <button type="button" class="cmt-idbtn cmt-idbtn--primary" id="cmt-id-confirm">验证并修改</button>
+            </div>
+        </div>
+    </div>
+
     {# 敏感词库（JSON）：由 comments.js 读取做前端实时拦截；后端提交时另有兜底过滤 #}
     <script type="application/json" id="cmt-sw">{{ sensitive_words_json | default('') | safe }}</script>
     <div id="comment-form-anchor"></div>

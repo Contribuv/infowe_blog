@@ -84,6 +84,170 @@ window.initComments = function (root) {
   var emailSuggest = byId('cmt-email-suggest');
   var qqAv = byId('cmt-qq-av');
 
+  /* ── 0.6 同邮箱换昵称：身份确认 / 邮箱验证码浮窗 ── */
+  var identityMask = byId('cmt-idmask');
+  var identityChoice = byId('cmt-id-choice');
+  var identityVerify = byId('cmt-id-verify');
+  var identityDesc = byId('cmt-id-desc');
+  var identityEmailText = byId('cmt-id-email');
+  var identityTip = byId('cmt-id-tip');
+  var identityCode = byId('cmt-id-code');
+  var identitySend = byId('cmt-id-send');
+  var identityConfirmed = byId('comment-identity-confirmed');
+  var renameTokenInput = byId('comment-rename-token');
+  var identityOk = false;
+  var identityCountdown = 0;
+  var identityTimer = null;
+
+  function resetIdentity() {
+    identityOk = false;
+    if (identityConfirmed) identityConfirmed.value = '';
+    if (renameTokenInput) renameTokenInput.value = '';
+  }
+
+  function closeIdentity() {
+    if (identityMask) identityMask.hidden = true;
+  }
+
+  function openIdentity(data) {
+    if (!identityMask) {
+      if (window.toast) window.toast('该邮箱曾使用其他昵称，请使用原昵称', 'error');
+      return;
+    }
+    if (identityDesc) {
+      identityDesc.textContent = '检测到该邮箱之前使用过昵称「' + (data.masked_author || '') +
+        '」。请选择继续使用原昵称，或完成邮箱验证后修改。';
+    }
+    if (identityChoice) identityChoice.hidden = false;
+    if (identityVerify) identityVerify.hidden = true;
+    if (identityTip) identityTip.textContent = '';
+    if (identityEmailText && emailInput) identityEmailText.textContent = emailInput.value.trim();
+    identityMask.hidden = false;
+  }
+
+  function submitWithIdentity() {
+    identityOk = true;
+    closeIdentity();
+    if (submitBtn) submitBtn.click();
+  }
+
+  function postIdentity(url, data) {
+    var body = [];
+    for (var key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        body.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key] || ''));
+      }
+    }
+    return fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.join('&')
+    }).then(function (res) { return res.json(); });
+  }
+
+  var idUseOld = byId('cmt-id-use-old');
+  if (idUseOld) idUseOld.addEventListener('click', function () {
+    if (identityConfirmed) identityConfirmed.value = '1';
+    submitWithIdentity();
+  });
+
+  var idRename = byId('cmt-id-rename');
+  if (idRename) idRename.addEventListener('click', function () {
+    if (identityChoice) identityChoice.hidden = true;
+    if (identityVerify) identityVerify.hidden = false;
+    if (identityEmailText && emailInput) identityEmailText.textContent = emailInput.value.trim();
+  });
+
+  var idClose = byId('cmt-id-close');
+  if (idClose) idClose.addEventListener('click', closeIdentity);
+
+  if (identitySend) identitySend.addEventListener('click', function () {
+    if (identityCountdown > 0 || !authorInput || !emailInput) return;
+    var email = emailInput.value.trim();
+    var author = authorInput.value.trim();
+    if (!email || !author) return;
+    identitySend.disabled = true;
+    identitySend.classList.add('is-loading');
+    identitySend.textContent = '发送中…';
+    if (identityTip) {
+      identityTip.className = 'cmt-idtip';
+      identityTip.textContent = '正在发送验证码…';
+    }
+    postIdentity('/api/comment/identity/code', { email: email, author: author })
+      .then(function (data) {
+        identitySend.classList.remove('is-loading');
+        if (!data || data.error) {
+          var message = (data && data.error) || '发送失败';
+          if (identityTip) {
+            identityTip.className = 'cmt-idtip cmt-idtip--error';
+            identityTip.textContent = message;
+          }
+          if (window.toast) window.toast(message, 'error');
+          identitySend.disabled = false;
+          identitySend.textContent = '发送验证码';
+          return;
+        }
+        identityCountdown = 60;
+        if (identityTip) {
+          identityTip.className = 'cmt-idtip cmt-idtip--ok';
+          identityTip.textContent = '验证码已发送，请查收 ' + email + '（含垃圾箱）';
+        }
+        if (window.toast) window.toast('验证码已发送，请查收邮箱', 'success');
+        identitySend.textContent = identityCountdown + ' 秒后重发';
+        if (identityCode) identityCode.focus();
+        identityTimer = setInterval(function () {
+          identityCountdown -= 1;
+          if (identityCountdown <= 0) {
+            clearInterval(identityTimer);
+            identityTimer = null;
+            identitySend.disabled = false;
+            identitySend.textContent = '发送验证码';
+          } else {
+            identitySend.textContent = identityCountdown + ' 秒后重发';
+          }
+        }, 1000);
+      })
+      .catch(function () {
+        identitySend.classList.remove('is-loading');
+        if (identityTip) {
+          identityTip.className = 'cmt-idtip cmt-idtip--error';
+          identityTip.textContent = '发送失败，请稍后重试';
+        }
+        if (window.toast) window.toast('发送失败，请稍后重试', 'error');
+        identitySend.disabled = false;
+        identitySend.textContent = '发送验证码';
+      });
+  });
+
+  var identityConfirm = byId('cmt-id-confirm');
+  if (identityConfirm) identityConfirm.addEventListener('click', function () {
+    if (!identityCode || !emailInput) return;
+    var code = identityCode.value.replace(/\D/g, '');
+    if (code.length !== 6) {
+      if (identityTip) identityTip.textContent = '请输入 6 位验证码';
+      return;
+    }
+    identityConfirm.disabled = true;
+    postIdentity('/api/comment/identity/verify', {
+      email: emailInput.value.trim(), code: code
+    }).then(function (data) {
+      identityConfirm.disabled = false;
+      if (!data || data.error || !data.token) {
+        if (identityTip) identityTip.textContent = (data && data.error) || '验证失败';
+        return;
+      }
+      if (renameTokenInput) renameTokenInput.value = data.token;
+      submitWithIdentity();
+    }).catch(function () {
+      identityConfirm.disabled = false;
+      if (identityTip) identityTip.textContent = '验证失败，请稍后重试';
+    });
+  });
+
+  if (authorInput) authorInput.addEventListener('input', resetIdentity);
+  if (emailInput) emailInput.addEventListener('input', resetIdentity);
+
   /* ── 0.5 表单定位：仅当表单显示不全（底部/顶部被视口截断）时才滚动；
      完全可见（如文章内容较短、页面本身能装下表单）则不滚动，避免多余跳动 ── */
   function scrollFormIntoView() {
@@ -532,6 +696,32 @@ window.initComments = function (root) {
         ev.preventDefault();
         if (window.toast) window.toast('评论内容不能超过 ' + MAX_LEN + ' 字', 'error');
         textarea.focus();
+        return;
+      }
+      // 同邮箱换昵称：先向后端确认身份，冲突时弹窗让用户选择
+      if (authorInput && emailInput && !identityOk) {
+        ev.preventDefault();
+        var idEmail = emailInput.value.trim();
+        var idAuthor = authorInput.value.trim();
+        if (!idEmail || !idAuthor) return;
+        fetch('/api/comment/identity?email=' + encodeURIComponent(idEmail) +
+              '&author=' + encodeURIComponent(idAuthor), { credentials: 'same-origin' })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data || data.error) {
+              if (window.toast) window.toast((data && data.error) || '身份校验失败，请重试', 'error');
+              return;
+            }
+            if (!data.conflict) {
+              identityOk = true;
+              submitBtn.click();
+              return;
+            }
+            openIdentity(data);
+          })
+          .catch(function () {
+            if (window.toast) window.toast('身份校验失败，请检查网络后重试', 'error');
+          });
         return;
       }
       // 校验全部通过，即将整页 POST：清除草稿，避免成功后回来误恢复旧稿

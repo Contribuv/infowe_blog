@@ -53,9 +53,12 @@
 .cmt-title .cmt-num{font-size:11.5px;font-weight:600;color:var(--c-text3);background:var(--c-sub);padding:2px 9px;border-radius:20px;font-variant-numeric:tabular-nums}
 
 /* ── 待审核提示条 ── */
-.cmt-notice{display:flex;align-items:flex-start;gap:8px;padding:10px 13px;margin-bottom:16px;border-radius:10px;font-size:12.5px;line-height:1.6;color:var(--c-text2);background:var(--c-accent-weak);border:1px solid transparent}
-.cmt-notice svg{flex:none;width:15px;height:15px;margin-top:1px;stroke:var(--c-accent);fill:none;stroke-width:2}
+.cmt-notice{display:grid;grid-template-columns:15px minmax(0,1fr) auto;column-gap:8px;align-items:start;padding:10px 13px;margin-bottom:16px;border-radius:10px;font-size:12.5px;line-height:1.6;color:var(--c-text2);background:var(--c-accent-weak);border:1px solid transparent}
+.cmt-notice>svg{width:15px;height:15px;margin-top:3px;stroke:var(--c-accent);fill:none;stroke-width:2}
+.cmt-notice>span{min-width:0}
 .cmt-notice b{color:var(--c-accent);font-weight:600}
+.cmt-notice>button{align-self:center;margin:0;padding:2px 0;border:0;background:transparent;color:var(--c-accent);font:inherit;font-size:12.5px;font-weight:600;line-height:1.6;white-space:nowrap;cursor:pointer}
+@media (hover:hover) and (pointer:fine){.cmt-notice>button:hover{text-decoration:underline}}
 
 /* ── 楼层组 ── */
 /* padding-bottom 比 top 少 3px：补偿 .cmt-text 行高 1.75 末行半行距（~5px）
@@ -480,3 +483,44 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 }
 .cmt-actions .cmt-reply:hover .cmt-reply-count,
 .cmt-actions .cmt-reply:hover .cmt-reply-icon{color:var(--c-accent)}
+
+/* ── 同邮箱换昵称：身份确认浮窗 ── */
+.cmt-idmask{
+  position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(15,23,32,.46);backdrop-filter:blur(2px);
+}
+.cmt-idmask[hidden]{display:none}
+.cmt-idcard{
+  width:100%;max-width:430px;padding:20px;border-radius:14px;
+  background:var(--bg-raised,var(--bg-surface,var(--bg,#fff)));
+  border:1px solid var(--c-border);color:var(--c-text);
+  box-shadow:0 18px 50px rgba(15,23,32,.24);
+}
+.cmt-idhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cmt-idhead strong{font-size:16px;font-weight:600}
+.cmt-idclose{border:0;background:none;padding:0 2px;font-size:22px;line-height:1;color:var(--c-text3);cursor:pointer}
+.cmt-iddesc{margin:0 0 14px;font-size:13px;line-height:1.7;color:var(--c-text2)}
+.cmt-idchoice{display:flex;flex-wrap:wrap;gap:10px}
+.cmt-idbtn{
+  padding:9px 14px;border:1px solid var(--c-border);border-radius:8px;
+  background:transparent;color:var(--c-text);font-size:13px;cursor:pointer;
+}
+.cmt-idbtn:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.cmt-idbtn--primary{background:var(--c-accent);border-color:var(--c-accent);color:#fff}
+.cmt-idbtn--primary:hover{color:#fff;filter:brightness(.94)}
+.cmt-idbtn:disabled{opacity:.55;cursor:not-allowed}
+.cmt-idverify{margin-top:4px}
+.cmt-idrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cmt-idrow input{
+  flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid var(--c-border);
+  border-radius:8px;background:var(--bg-surface,var(--bg-subtle,transparent));
+  color:var(--c-text);font-size:14px;letter-spacing:2px;
+}
+.cmt-idtip{margin:0 0 12px;min-height:18px;font-size:12px;line-height:1.6;color:var(--c-accent)}
+.cmt-idtip--ok{color:#2f9e6f}
+.cmt-idtip--error{color:#d9534f}
+.cmt-idbtn.is-loading{opacity:.7;cursor:wait}
+@media(max-width:520px){
+  .cmt-idrow{flex-wrap:wrap}
+  .cmt-idrow .cmt-idbtn{width:100%}
+}

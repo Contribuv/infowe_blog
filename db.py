@@ -238,6 +238,10 @@ def init_db(app) -> None:
         from services import ip_location
 
         ip_location.migrate_comments(conn)
+        # 为历史评论补「邮箱 -> 当前昵称」身份记录
+        from services import comment_identity
+
+        comment_identity.backfill(conn)
     finally:
         conn.close()
 

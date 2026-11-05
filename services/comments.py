@@ -12,7 +12,7 @@ from flask import request
 from markupsafe import Markup
 
 from config import CACHE_DIR
-from services import avatar, ip_location, sensitive, site_url, upload
+from services import avatar, comment_identity, ip_location, sensitive, site_url, upload
 from services import settings
 
 COOLDOWN = 30
@@ -269,6 +269,43 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
             return {"url": back, "error": "邮箱格式不正确"}
         email_hash = avatar.email_hash(email)
         qq = avatar.qq_from_email(email)
+
+    # 身份校验：同一邮箱换昵称必须沿用曾用名，或完成邮箱验证码验证。
+    # 管理员昵称由后台固定，不参与这套逻辑。
+    rename_verified = False
+    identity_action = ""
+    identity_note = ""
+    if email and not is_admin:
+        identity_row = comment_identity.get_row(email)
+        found = comment_identity.conflict(email, author)
+        if found:
+            if str(form.get("identity_confirmed") or "").strip().lower() in {
+                "1", "on", "true", "yes",
+            }:
+                # 沿用曾用名：服务端直接覆盖，避免前端伪造
+                author = found["current_author"]
+                identity_action = "keep"
+                identity_note = "沿用曾用昵称「%s」" % found["current_author"]
+            elif comment_identity.verify_token(
+                str(form.get("rename_token") or ""), email, author
+            ):
+                rename_verified = True
+                identity_action = "rename"
+                identity_note = "邮箱验证通过，昵称「%s」→「%s」" % (
+                    found["current_author"], author,
+                )
+            else:
+                return {
+                    "url": back,
+                    "error": (
+                        "该邮箱曾使用昵称「%s」，请选择沿用原昵称，"
+                        "或完成邮箱验证后再修改" % found["masked_author"]
+                    ),
+                }
+        elif identity_row is None:
+            identity_action = "first"
+            identity_note = "首次使用该邮箱昵称「%s」" % author
+
     if website:
         normalized = normalize_website(website)
         if normalized is None:
@@ -286,10 +323,8 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         ):
             parent_id = int(parent_raw)
 
-    notify_email = settings.get_str("notify_email", "").strip()
-    status = "approved" if is_admin or (
-        email and notify_email and email.lower() == notify_email.lower()
-    ) else "pending"
+    # 只有已登录管理员才自动通过；不再凭表单邮箱是否等于 notify_email 放行
+    status = "approved" if is_admin else "pending"
 
     comment_id = Comment.save(
         None if is_project else target_id,
@@ -300,9 +335,15 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         is_owner=is_admin,
         notify=notify_on,
         user_agent=request.headers.get("User-Agent", ""),
+        identity_action=identity_action,
+        identity_note=identity_note,
     )
     if not is_admin:
         _touch_cooldown("comment", ip)
+        if rename_verified:
+            comment_identity.rename(email, author)
+        else:
+            comment_identity.remember(email, author)
 
     # 记住评论者信息（30 天）
     old = commenter()

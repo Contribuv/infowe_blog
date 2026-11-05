@@ -263,15 +263,18 @@ def save(
     is_owner: bool = False,
     notify: bool = True,
     user_agent: str = "",
+    identity_action: str = "",
+    identity_note: str = "",
 ) -> int:
     return db.insert(
         "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, "
         "website, content, status, is_private, notify, qq, ip_text, ip_location, is_ai, is_owner, "
-        "user_agent, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "user_agent, identity_action, identity_note, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (post_id, project_id, parent_id, author, email, email_hash, website, content,
          status, 1 if is_private else 0, 1 if notify else 0, qq, ip_text, ip_location,
-         1 if is_ai else 0, 1 if is_owner else 0, str(user_agent or "")[:400], db.now()),
+         1 if is_ai else 0, 1 if is_owner else 0, str(user_agent or "")[:400],
+         str(identity_action or ""), str(identity_note or ""), db.now()),
     )
 
 

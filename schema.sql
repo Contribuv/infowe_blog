@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS comments (
     is_owner INTEGER DEFAULT 0,
     is_picked INTEGER DEFAULT 0,
     user_agent TEXT DEFAULT '',
+    identity_action TEXT DEFAULT '',
+    identity_note TEXT DEFAULT '',
     deleted_at TEXT DEFAULT NULL,
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
@@ -178,3 +180,30 @@ CREATE TABLE IF NOT EXISTS rate_events (
     ts REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_rate_events ON rate_events (bucket, key, ts);
+
+-- 评论者身份：邮箱哈希 -> 当前统一昵称（改名需邮箱验证码）
+CREATE TABLE IF NOT EXISTS comment_identities (
+    email_hash TEXT PRIMARY KEY,
+    email TEXT NOT NULL DEFAULT '',
+    current_author TEXT NOT NULL DEFAULT '',
+    previous_author TEXT DEFAULT '',
+    verified_at TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+-- 改名验证码：只存哈希，一次性使用
+CREATE TABLE IF NOT EXISTS email_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email_hash TEXT NOT NULL,
+    email TEXT NOT NULL DEFAULT '',
+    code_hash TEXT NOT NULL,
+    new_author TEXT NOT NULL DEFAULT '',
+    purpose TEXT NOT NULL DEFAULT 'rename',
+    expires_at INTEGER NOT NULL DEFAULT 0,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    used_at TEXT DEFAULT '',
+    ip TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_codes_email ON email_codes (email_hash, created_at DESC);

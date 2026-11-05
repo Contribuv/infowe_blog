@@ -1,9 +1,7 @@
 """评论通知邮件模板（HTML + 纯文本）。
 
-样式参照主流博客的邮件通知模板，统一 8px 圆角体系：
-- 顶部品牌色条圆角 8px 8px 0 0，与卡片顶部圆角严丝合缝；
-- 底部页脚圆角 0 0 8px 8px，与卡片底部圆角严丝合缝；
-- 正文卡用左侧 3px 色条 + 右下圆角，不用四边描边，避免层层套框的割裂感。
+统一 600px 居中卡片、8px 圆角：顶部品牌行（固定读取博客名称 blog_name）、
+标题与元信息、分割线、正文卡片、页脚说明。强调色读取当前主题的 --accent。
 """
 
 from __future__ import annotations
@@ -155,12 +153,19 @@ def _avatar(name: str, accent: str, avatar_url: str = "") -> str:
     ) % (size, size, size, accent, size, size, size, _initials(name))
 
 
-def _shell(*, tag: str, headline: str, meta_html: str, body: str, blog_name: str,
-           site: str, accent: str, foot_note: str) -> str:
-    """邮件外壳：品牌行 + 标题 + 分割线 + 正文 + 页脚说明。
+def _shell(*, headline: str, meta_html: str, body: str, foot_note: str) -> str:
+    """邮件外壳：标题 + 元信息 + 分割线 + 正文 + 页脚说明。
 
-    不再使用顶部色条；品牌行显示站点名，页脚链接显示邮件发信人。
+    顶部不再显示品牌行，邮件直接从标题开始。
+    meta_html 为空时不渲染副标题行。
     """
+    if meta_html:
+        meta_block = (
+            '<p style="margin:0 0 16px 0;font-size:13px;line-height:1.7;color:%s;">%s</p>'
+            % (_META, meta_html)
+        )
+    else:
+        meta_block = '<div style="height:12px;line-height:12px;font-size:0;">&nbsp;</div>'
     return """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -175,19 +180,9 @@ def _shell(*, tag: str, headline: str, meta_html: str, body: str, blog_name: str
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%%;max-width:600px;">
       <tr><td>
         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:8px;border:1px solid %(border)s;">
-          <tr><td style="padding:16px 30px 0 30px;">
-            <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td style="font-size:15px;font-weight:700;color:%(text)s;letter-spacing:0;">
-                  <a href="%(site)s" style="font-size:15px;font-weight:700;color:%(muted)s;text-decoration:none;">%(blog)s</a>
-                </td>
-                <td style="font-size:12px;line-height:20px;color:%(muted)s;text-align:right;white-space:nowrap;">%(tag)s</td>
-              </tr>
-            </table>
-          </td></tr>
-          <tr><td style="padding:0 30px;">
-            <h1 style="margin:12px 0 4px 0;font-size:19px;line-height:1.5;font-weight:700;color:%(text)s;">%(headline)s</h1>
-            <p style="margin:0 0 16px 0;font-size:13px;line-height:1.7;color:%(meta)s;">%(meta_html)s</p>
+          <tr><td style="padding:22px 30px 0 30px;">
+            <h1 style="margin:0 0 4px 0;font-size:19px;line-height:1.5;font-weight:700;color:%(text)s;">%(headline)s</h1>
+            %(meta_block)s
           </td></tr>
           <tr><td style="padding:0 30px;">
             <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
@@ -209,17 +204,12 @@ def _shell(*, tag: str, headline: str, meta_html: str, body: str, blog_name: str
 </html>""" % {
         "headline": _esc(headline),
         "font": _FONT,
-        "accent": accent,
         "border": _BORDER,
         "text": _TEXT,
-        "meta": _META,
         "muted": _MUTED,
         "page_bg": _PAGE_BG,
         "foot_bg": _FOOT_BG,
-        "blog": _esc(blog_name),
-        "site": _esc(site),
-        "tag": _esc(tag),
-        "meta_html": meta_html,
+        "meta_block": meta_block,
         "body": body,
         "foot_note": foot_note,
     }
@@ -319,13 +309,9 @@ def generic_notice(*, blog_name: str, site: str, tag: str, headline: str, body_h
     body = "".join(parts)
     text = "%s\n\n%s" % (headline, _strip_tags(body_html))
     page = _shell(
-        tag=tag,
         headline=headline,
-        meta_html=_esc(blog_name),
+        meta_html="",
         body=body,
-        blog_name=blog_name,
-        site=site,
-        accent=accent,
         foot_note=foot_note or (
             '<p style="margin:0;">此邮件由 %s 自动发送，请勿直接回复。</p>'
             '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
@@ -339,16 +325,59 @@ def _strip_tags(html_text: str) -> str:
     return re.sub(r"<[^>]+>", "", html_text).strip()
 
 
+def verify_code_notice(*, blog_name: str, site: str, code: str, ttl_minutes: int = 10) -> tuple[str, str]:
+    """改名验证码邮件：与其它通知共用同一外壳和页脚口径。"""
+    body = (
+        '<p style="margin:0 0 14px 0;font-size:15px;line-height:1.85;color:%s;">'
+        '你正在修改该邮箱在 %s 使用的评论昵称，请输入下面的验证码：</p>'
+        '<div style="margin:0 0 14px 0;padding:16px 0;border:1px solid %s;border-radius:8px;'
+        'background:%s;text-align:center;font-size:30px;line-height:1.2;font-weight:700;'
+        'letter-spacing:8px;color:%s;font-family:Consolas,Menlo,monospace;">%s</div>'
+        '<p style="margin:0 0 6px 0;font-size:13px;line-height:1.8;color:%s;">'
+        '验证码 %d 分钟内有效，请勿转发给他人。</p>'
+        '<p style="margin:0;font-size:13px;line-height:1.8;color:%s;">'
+        '如果这不是你本人的操作，请忽略本邮件，你的昵称不会被修改。</p>'
+    ) % (_BODY, _esc(blog_name), _BORDER, _CARD_BG, _TEXT, _esc(code),
+         _META, int(ttl_minutes), _MUTED)
+    text = (
+        f"你正在修改评论昵称，验证码：{code}\n"
+        f"{ttl_minutes} 分钟内有效，请勿转发给他人。\n"
+        "如果这不是你本人的操作，请忽略本邮件。"
+    )
+    page = _shell(
+        headline="验证你的邮箱",
+        meta_html="",
+        body=body,
+        foot_note=(
+            '<p style="margin:0;">此邮件由 %s 自动发送，请勿直接回复。</p>'
+            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
+            % (_esc(blog_name), _esc(site), _esc(sender_name()))
+        ),
+    )
+    return text, page
+
+
+def _footer(site: str, reason_html: str) -> str:
+    """统一页脚：收件原因 + 免责说明 + 发件人署名。
+
+    评论类通知共用这套句式，避免各模板各写一段、措辞不一致。
+    """
+    return (
+        '<p style="margin:0;">%s</p>'
+        '<p style="margin:0;">此邮件由系统自动发送，直接回复不会出现在博客评论区；'
+        '如需回复，请点击上方按钮前往文章页。</p>'
+        '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
+    ) % (reason_html, _esc(site), _esc(sender_name()))
+
+
 def comment_notice(*, blog_name: str, site: str, label: str, title: str, url: str, author: str, content: str, when: str, status: str, parent_author: str = "", parent_content: str = "", author_avatar: str = "") -> tuple[str, str]:
     """博主提醒：访客新评论 / 访客回复访客。"""
     accent = accent_color()
     pending = status != "approved"
     if parent_author:
         headline = "%s 回复了%s的评论" % (author, parent_author)
-        tag = "新回复"
     else:
         headline = "%s 发表了新评论" % author
-        tag = "待审核" if pending else "新评论"
 
     body_parts = [_card(author, _content_html(content, site), accent, author_avatar)]
     if parent_author and parent_content:
@@ -363,19 +392,14 @@ def comment_notice(*, blog_name: str, site: str, label: str, title: str, url: st
         f"{author} · {when}\n\n{content}\n\n查看对话：{url}\n"
     )
     page = _shell(
-        tag=tag,
         headline=headline,
         meta_html=_meta_line(when, title, url, accent),
         body=body,
-        blog_name=blog_name,
-        site=site,
-        accent=accent,
-        foot_note=(
-            '<p style="margin:0;">你收到这封邮件，是因为有人在《%s》下发表了评论，'
-            '博主需要及时处理。</p>'
-            '<p style="margin:0;">直接回复本邮件，即可回给 %s。</p>'
-            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
-        ) % (_esc(title), _esc(author), _esc(site), _esc(sender_name())),
+        foot_note=_footer(
+            site,
+            '你收到这封邮件，是因为有人在《%s》下发表了评论，博主需要及时处理。'
+            % _esc(title),
+        ),
     )
     return text, page
 
@@ -384,7 +408,6 @@ def reply_notice(*, blog_name: str, site: str, label: str, title: str, url: str,
     """被回复者提醒：你的评论收到了回复。"""
     accent = accent_color()
     headline = "%s 回复了你的评论" % author
-    tag = "新回复"
 
     body_parts = [_card(author, _content_html(content, site), accent, author_avatar)]
     if parent_content:
@@ -404,17 +427,12 @@ def reply_notice(*, blog_name: str, site: str, label: str, title: str, url: str,
     if reader_url:
         text += f"我的留言：{reader_url}\n"
     page = _shell(
-        tag=tag,
         headline=headline,
         meta_html=_meta_line(when, title, url, accent),
         body=body,
-        blog_name=blog_name,
-        site=site,
-        accent=accent,
-        foot_note=(
-            '<p style="margin:0;">你收到这封邮件，是因为你在《%s》下的评论收到了回复。</p>'
-            '<p style="margin:0;">此邮件由系统自动发送，直接回复不会出现在博客评论区；如需回复，请点击上方按钮前往文章页。</p>'
-            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
-        ) % (_esc(title), _esc(site), _esc(sender_name())),
+        foot_note=_footer(
+            site,
+            '你收到这封邮件，是因为你在《%s》下的评论收到了回复。' % _esc(title),
+        ),
     )
     return text, page

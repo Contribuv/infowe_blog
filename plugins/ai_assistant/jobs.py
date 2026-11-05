@@ -317,10 +317,18 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
             meta = json.dumps({"decision": decision, "reason": reason}, ensure_ascii=False)
 
             if decision == "reject":
-                db.execute("UPDATE comments SET status='rejected', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
+                db.execute(
+                    "UPDATE comments SET status='rejected', ai_state='done', ai_meta=? "
+                    "WHERE id=? AND status='pending' AND ai_state='running'",
+                    (meta, cid),
+                )
                 return
             if decision != "approve":
-                db.execute("UPDATE comments SET ai_state='review', ai_meta=? WHERE id=?", (meta, cid))
+                db.execute(
+                    "UPDATE comments SET ai_state='review', ai_meta=? "
+                    "WHERE id=? AND status='pending' AND ai_state='running'",
+                    (meta, cid),
+                )
                 return
 
             # 兜底复检：即使模型判 approve，原文再过一遍安全拦截
@@ -328,10 +336,38 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
             final_hit = _blocked_word(content)
             if final_hit:
                 meta = json.dumps({"decision": "reject", "reason": f"兜底拦截命中敏感词：{final_hit}"}, ensure_ascii=False)
-                db.execute("UPDATE comments SET status='rejected', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
+                db.execute(
+                    "UPDATE comments SET status='rejected', ai_state='done', ai_meta=? "
+                    "WHERE id=? AND status='pending' AND ai_state='running'",
+                    (meta, cid),
+                )
                 return
 
-            db.execute("UPDATE comments SET status='approved', ai_state='done', ai_meta=? WHERE id=?", (meta, cid))
+            # 方案 A：沿用曾用名 / 验证改名属于身份确认评论，不自动通过，
+            # 只记录 AI 建议并转人工，避免 AI 绕过人工审核。
+            if str(comment.get("identity_action") or "") in {"keep", "rename"}:
+                meta = json.dumps(
+                    {
+                        "decision": "approve",
+                        "reason": "身份确认评论，转人工；AI 判断：%s"
+                        % (reason or "内容正常"),
+                    },
+                    ensure_ascii=False,
+                )
+                db.execute(
+                    "UPDATE comments SET ai_state='review', ai_meta=? "
+                    "WHERE id=? AND status='pending' AND ai_state='running'",
+                    (meta, cid),
+                )
+                return
+
+            cur = db.execute(
+                "UPDATE comments SET status='approved', ai_state='done', ai_meta=? "
+                "WHERE id=? AND status='pending' AND ai_state='running'",
+                (meta, cid),
+            )
+            if cur.rowcount == 0:
+                return
             _invalidate_page(comment)
             if cfg.get("comment_reply") and reply and not _blocked_word(reply) and _in_reply_time_window(cfg):
                 profile = config.active_profile()
