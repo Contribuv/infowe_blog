@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.6)
+[![version](https://img.shields.io/badge/version-3.7.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.7)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,16 +925,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.6**
+当前版本：**v3.7.7**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.7
+
+- 留存记录评论 tab 改为「关键列 + 详情」：默认只显示 ID、昵称、身份、状态、内容摘要、评论时间，完整字段点「详情」查看
+- 评论留存新增身份动作、身份说明两列，CSV 导出同步包含
+- 评论改名写入操作记录：旧昵称 → 新昵称、操作人、IP、设备 UA，便于留存追溯
+- 详情弹窗改为内容区独立滚动，默认隐藏滚动条，滚动时显示、停止后自动隐藏
+- 修复后台详情弹窗未打开时仍显示空头部的问题
+- 移动端详情弹窗单列布局，长文本自动换行，不产生横向溢出
+
+<details>
+<summary><b>历史版本（v3.7.6 及更早，点击展开）</b></summary>
 
 ### v3.7.6
 
 - 后台评论管理的身份说明改为可点击「详情」浮窗，长文案不再被单行截断，与 AI 审核说明、人工审核说明保持一致
-
-<details>
-<summary><b>历史版本（v3.7.5 及更早，点击展开）</b></summary>
 
 ### v3.7.5
 

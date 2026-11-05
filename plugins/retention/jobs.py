@@ -56,6 +56,34 @@ def on_admin_action(payload) -> None:
     db.get_db().commit()
 
 
+def on_identity_rename(payload) -> None:
+    """订阅前台评论改名事件：把身份变更写入操作记录，便于留存追溯。"""
+    if not isinstance(payload, dict):
+        return
+    from flask import has_request_context
+
+    if not has_request_context():
+        return
+    if not _enabled():
+        return
+    from services.comments import request_ip
+
+    old_author = str(payload.get("old_author") or "")[:60]
+    new_author = str(payload.get("new_author") or "")[:60]
+    db.execute(
+        "INSERT INTO op_logs (action, target, detail, operator, ip, user_agent) VALUES (?,?,?,?,?,?)",
+        (
+            "comment.identity.rename",
+            "comment#%s" % str(payload.get("comment_id") or "")[:20],
+            "昵称「%s」→「%s」" % (old_author, new_author),
+            "访客",
+            str(payload.get("ip") or request_ip())[:64],
+            str(payload.get("user_agent") or "")[:400],
+        ),
+    )
+    db.get_db().commit()
+
+
 def cleanup(days: int = KEEP_DAYS) -> int:
     """删除超过保留期的操作审计，返回删除条数；days<=0 表示永久保存，直接跳过。"""
     if int(days) <= 0:

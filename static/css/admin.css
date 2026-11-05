@@ -520,6 +520,16 @@ svg { vertical-align: -3px; flex: none; }
   /* 单行省略：完整文案靠 title 悬浮查看，避免长说明把列撑宽、把后续列挤换行 */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* 留存记录：身份说明列。PC 限制最大宽度并允许任意位置换行，移动端卡片布局解除限制 */
+.identity-note {
+  max-width: 220px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+@media (max-width: 767.98px) {
+  .identity-note { max-width: none; }
+}
 /* 可点击的说明行：保留单行省略，整行 + 右侧「详情」都可点开弹窗 */
 .cell-sub-btn {
   display: flex; align-items: center; gap: 6px;
@@ -2125,9 +2135,18 @@ html[data-theme=light] .badge-picked {
   background: var(--bg-surface);
   color: var(--text);
   box-shadow: 0 24px 70px rgba(0, 0, 0, .35);
+  overflow: hidden;
+  scrollbar-width: none;
 }
+.admin-detail-dialog:not([open]) { display: none; }
+.admin-detail-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.admin-detail-dialog::-webkit-scrollbar { display: none; }
 .admin-detail-dialog::backdrop { background: rgba(4, 6, 12, .55); }
 .admin-detail-head {
+  flex: none;
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 14px 18px;
   border-bottom: 1px solid var(--border);
@@ -2144,7 +2163,9 @@ html[data-theme=light] .badge-picked {
   .admin-detail-close:hover { background: var(--bg-hover); color: var(--text); }
 }
 .admin-detail-body {
-  max-height: calc(70vh - 66px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
   padding: 16px 18px 20px;
   font-size: var(--fz-md);
@@ -2157,5 +2178,49 @@ html[data-theme=light] .badge-picked {
   .admin-detail-dialog { width: calc(100vw - 24px); max-height: 76vh; }
   .admin-detail-head { padding: 10px 14px; }
   .admin-detail-close { width: 44px; height: 44px; }
-  .admin-detail-body { padding: 14px; max-height: calc(76vh - 65px); }
+  .admin-detail-body { padding: 14px; max-height: none; }
+}
+
+/* ── 留存记录：评论详情弹窗 ── */
+.retention-detail-body {
+  white-space: normal;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.retention-detail-body.is-scrolling {
+  scrollbar-color: color-mix(in srgb, var(--text-tertiary) 55%, transparent) transparent;
+}
+.retention-detail-body::-webkit-scrollbar { width: 5px; height: 5px; }
+.retention-detail-body::-webkit-scrollbar-track { background: transparent; }
+.retention-detail-body::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+.retention-detail-body.is-scrolling::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-tertiary) 50%, transparent);
+}
+.retention-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+}
+.retention-detail-item { min-width: 0; }
+.retention-detail-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: var(--fz-xs);
+  color: var(--text-tertiary);
+}
+.retention-detail-value {
+  display: block;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.retention-detail-full { grid-column: 1 / -1; }
+.retention-detail-content { white-space: pre-wrap; }
+@media (max-width: 640px) {
+  .retention-detail-grid { grid-template-columns: 1fr; gap: 12px; }
 }

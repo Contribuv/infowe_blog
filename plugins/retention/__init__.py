@@ -35,3 +35,5 @@ def on_enable(app) -> None:
     jobs.start_scheduler(app)
     # 订阅后台关键操作审计事件（admin.py/_audit 与 auth.py 登录流程发出）
     hooks.on("admin.action", jobs.on_admin_action)
+    # 订阅前台评论改名事件，留存旧昵称 → 新昵称的变更流水
+    hooks.on("comment.identity.rename", jobs.on_identity_rename)

@@ -273,6 +273,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     # 身份校验：同一邮箱换昵称必须沿用曾用名，或完成邮箱验证码验证。
     # 管理员昵称由后台固定，不参与这套逻辑。
     rename_verified = False
+    rename_old_author = ""
     identity_action = ""
     identity_note = ""
     if email and not is_admin:
@@ -290,6 +291,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
                 str(form.get("rename_token") or ""), email, author
             ):
                 rename_verified = True
+                rename_old_author = found["current_author"]
                 identity_action = "rename"
                 identity_note = "邮箱验证通过，昵称「%s」→「%s」" % (
                     found["current_author"], author,
@@ -342,6 +344,22 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         _touch_cooldown("comment", ip)
         if rename_verified:
             comment_identity.rename(email, author)
+            try:
+                from services import hooks
+
+                hooks.emit(
+                    "comment.identity.rename",
+                    {
+                        "comment_id": comment_id,
+                        "old_author": rename_old_author,
+                        "new_author": author,
+                        "email_hash": email_hash,
+                        "ip": ip,
+                        "user_agent": request.headers.get("User-Agent", ""),
+                    },
+                )
+            except Exception:
+                pass
         else:
             comment_identity.remember(email, author)
 

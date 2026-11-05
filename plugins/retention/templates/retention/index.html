@@ -79,7 +79,8 @@
         <table class="table retention-table">
             <thead>
                 <tr>
-                    {% for h in tabs[active].headers %}<th>{{ h }}</th>{% endfor %}
+                    {% set page_headers = tabs[active].view_headers if active == 'comments' else tabs[active].headers %}
+                    {% for h in page_headers %}<th>{{ h }}</th>{% endfor %}
                 </tr>
             </thead>
             <tbody>
@@ -119,32 +120,79 @@
                     <td data-label="时间">{{ r.created_at[:16] }}</td>
                     {% else %}
                     <td data-label="ID">{{ r.id }}</td>
-                    <td class="main-td" data-label="昵称">
-                        <strong>{{ r.author }}</strong>
+                    <td class="main-td" data-label="昵称"><strong>{{ r.author }}</strong></td>
+                    <td data-label="身份">
+                        {% if r.identity_action == 'first' %}<span class="badge">首次</span>
+                        {% elif r.identity_action == 'keep' %}<span class="badge badge-warning">沿用</span>
+                        {% elif r.identity_action == 'rename' %}<span class="badge badge-success">改名</span>
+                        {% else %}<span class="cell-muted">—</span>{% endif %}
+                    </td>
+                    <td data-label="状态">
                         {% if r.status == 'pending' %}<span class="badge badge-warning">待审核</span>
                         {% elif r.status == 'approved' %}<span class="badge badge-success">已通过</span>
                         {% else %}<span class="badge badge-danger">已拒绝</span>{% endif %}
                         {% if r.deleted_at %}<span class="badge badge-private">已删除</span>{% endif %}
                     </td>
-                    <td class="wrap-text" data-label="邮箱">{{ r.email or '—' }}</td>
-                    <td class="wrap-text" data-label="主页">
-                        {% if r.website %}<a href="{{ r.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ r.website[:30] }}</a>
-                        {% else %}<span class="cell-muted">—</span>{% endif %}
-                    </td>
-                    <td class="wrap-text" data-label="IP">{{ r.ip_text or '—' }}</td>
-                    <td class="wrap-text" data-label="归属地">{{ r.ip_location or '—' }}</td>
-                    <td class="wrap-text" data-label="设备/UA" title="{{ r.user_agent }}">{{ r.ua_label or r.user_agent or '—' }}</td>
-                    <td class="wrap-cell" data-label="内容">
-                        {% if r.content|length > 80 %}
-                        <details class="comment-details">
-                            <summary>{{ r.content[:80] }}…</summary>
-                            <div class="comment-full">{{ r.content }}</div>
-                        </details>
-                        {% else %}{{ r.content }}{% endif %}
-                    </td>
-                    <td data-label="状态">{{ status_labels.get(r.status, r.status) }}</td>
-                    <td data-label="删除时间">{{ (r.deleted_at or '')[:16] or '—' }}</td>
+                    <td class="wrap-cell" data-label="内容">{{ r.content[:80] }}{% if r.content|length > 80 %}…{% endif %}</td>
                     <td data-label="评论时间">{{ r.created_at[:16] }}</td>
+                    <td data-label="操作">
+                        <button type="button" class="btn btn-sm" data-retention-detail="retention-detail-{{ r.id }}" aria-expanded="false">详情</button>
+                        <template id="retention-detail-{{ r.id }}">
+                            <div class="retention-detail-grid">
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">身份动作</span>
+                                    <span class="retention-detail-value">
+                                        {% if r.identity_action == 'first' %}首次使用该邮箱昵称
+                                        {% elif r.identity_action == 'keep' %}沿用曾用昵称
+                                        {% elif r.identity_action == 'rename' %}邮箱验证改名
+                                        {% else %}—{% endif %}
+                                    </span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">身份说明</span>
+                                    <span class="retention-detail-value">{{ r.identity_note or '—' }}</span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">邮箱</span>
+                                    <span class="retention-detail-value">{{ r.email or '—' }}</span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">主页</span>
+                                    <span class="retention-detail-value">
+                                        {% if r.website %}<a href="{{ r.website }}" target="_blank" rel="noopener nofollow" class="cell-link">{{ r.website }}</a>{% else %}—{% endif %}
+                                    </span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">IP</span>
+                                    <span class="retention-detail-value">{{ r.ip_text or '—' }}</span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">归属地</span>
+                                    <span class="retention-detail-value">{{ r.ip_location or '—' }}</span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">设备 / UA</span>
+                                    <span class="retention-detail-value">{{ r.ua_label or r.user_agent or '—' }}</span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">状态</span>
+                                    <span class="retention-detail-value">{{ status_labels.get(r.status, r.status) }}</span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">删除时间</span>
+                                    <span class="retention-detail-value">{{ (r.deleted_at or '')[:16] or '—' }}</span>
+                                </div>
+                                <div class="retention-detail-item">
+                                    <span class="retention-detail-label">评论时间</span>
+                                    <span class="retention-detail-value">{{ r.created_at[:16] }}</span>
+                                </div>
+                                <div class="retention-detail-item retention-detail-full">
+                                    <span class="retention-detail-label">完整内容</span>
+                                    <div class="retention-detail-value retention-detail-content">{{ r.content }}</div>
+                                </div>
+                            </div>
+                        </template>
+                    </td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -174,4 +222,53 @@
     <p>暂无{{ tabs[active].label }}{% if args.get('q') or args.get('start') or args.get('end') %}，试试放宽筛选条件{% endif %}</p>
 </div>
 {% endif %}
+
+<dialog class="admin-detail-dialog" id="retention-detail-dialog" aria-labelledby="retention-detail-title">
+    <div class="admin-detail-head">
+        <strong id="retention-detail-title">评论详情</strong>
+        <button type="button" class="admin-detail-close" id="retention-detail-close" aria-label="关闭">×</button>
+    </div>
+    <div class="admin-detail-body retention-detail-body" id="retention-detail-body"></div>
+</dialog>
+<script>
+(function () {
+    var dialog = document.getElementById('retention-detail-dialog');
+    var body = document.getElementById('retention-detail-body');
+    var closeBtn = document.getElementById('retention-detail-close');
+    if (!dialog || !body) return;
+
+    function close() {
+        body.classList.remove('is-scrolling');
+        if (typeof dialog.close === 'function') dialog.close();
+        else dialog.removeAttribute('open');
+    }
+
+    var scrollTimer = null;
+    body.addEventListener('scroll', function () {
+        body.classList.add('is-scrolling');
+        if (scrollTimer) clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(function () {
+            body.classList.remove('is-scrolling');
+        }, 600);
+    }, { passive: true });
+
+    Array.prototype.forEach.call(
+        document.querySelectorAll('[data-retention-detail]'),
+        function (btn) {
+            btn.addEventListener('click', function () {
+                var tpl = document.getElementById(btn.getAttribute('data-retention-detail'));
+                if (!tpl) return;
+                body.innerHTML = '';
+                body.appendChild(tpl.content.cloneNode(true));
+                if (typeof dialog.showModal === 'function') dialog.showModal();
+                else dialog.setAttribute('open', '');
+            });
+        }
+    );
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    dialog.addEventListener('click', function (ev) {
+        if (ev.target === dialog) close();
+    });
+})();
+</script>
 {% endblock %}

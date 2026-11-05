@@ -33,13 +33,15 @@ TABS = {
         "label": "评论留存",
         # 不过滤 deleted_at：软删除的评论正是本 tab 的核心价值——正文永久可查
         "sql": (
-            "SELECT id, author, email, website, ip_text, ip_location, user_agent, content, status, "
-            "deleted_at, created_at"
+            "SELECT id, author, identity_action, identity_note, email, website, ip_text, "
+            "ip_location, user_agent, content, status, deleted_at, created_at"
             " FROM comments WHERE is_ai = 0"
         ),
-        "headers": ["ID", "昵称", "邮箱", "主页", "IP", "归属地", "设备/UA", "内容", "状态", "删除时间", "评论时间"],
+        "headers": ["ID", "昵称", "身份动作", "身份说明", "邮箱", "主页", "IP", "归属地", "设备/UA", "内容", "状态", "删除时间", "评论时间"],
+        # 页面默认只展示关键列，完整字段收进「详情」弹窗；CSV 仍按 headers 导出全部字段
+        "view_headers": ["ID", "昵称", "身份", "状态", "内容", "评论时间", "操作"],
         "time_col": "created_at",
-        "keyword_cols": "author, email, website, ip_text, user_agent, content",
+        "keyword_cols": "author, email, website, ip_text, user_agent, content, identity_note",
     },
 }
 
@@ -57,6 +59,7 @@ OPS_LABELS = {
     "link.delete": "删除友链",
     "comment.approve": "通过评论",
     "comment.delete": "删除评论",
+    "comment.identity.rename": "评论改名",
     "settings.save": "保存设置",
 }
 
@@ -258,6 +261,8 @@ def _cell(key: str, col: str, value) -> str:
         return ""
     if key == "comments" and col == "status":
         return STATUS_LABELS.get(str(value), str(value))
+    if key == "comments" and col == "identity_action":
+        return {"first": "首次", "keep": "沿用", "rename": "改名"}.get(str(value), "")
     if key == "ai" and col == "ok":
         return "是" if value else "否"
     return str(value)
