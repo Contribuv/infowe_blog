@@ -56,7 +56,7 @@
                         {% if c.is_private %}<span class="badge badge-private">私密</span>{% endif %}
                         {# 身份动作说明：首次使用邮箱昵称 / 沿用曾用名 / 验证改名 #}
                         {% if c.identity_note %}
-                        <div class="cell-sub">身份：{{ c.identity_note }}</div>
+                        {{ detail_sub('身份：' ~ c.identity_note, '身份确认说明') }}
                         {% endif %}
                         {# AI 审核记录：ai_state 是流水线状态，ai_decision/ai_reason 来自 ai_meta JSON #}
                         {% if c.ai_state and c.ai_state != 'idle' %}

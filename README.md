@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.5)
+[![version](https://img.shields.io/badge/version-3.7.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,13 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.5**
+当前版本：**v3.7.6**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.6
+
+- 后台评论管理的身份说明改为可点击「详情」浮窗，长文案不再被单行截断，与 AI 审核说明、人工审核说明保持一致
 
 ### v3.7.5
 
