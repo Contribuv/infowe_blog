@@ -487,13 +487,70 @@ add_header X-Nginx-Cache $upstream_cache_status always;
 验证：
 
 ```bash
-curl -I https://www.infowe.site/
-curl -I https://www.infowe.site/
+for i in 1 2; do
+  curl -sS -o /dev/null -D - https://www.infowe.site/ | grep -i x-nginx-cache
+done
 ```
 
 第一次 `X-Nginx-Cache: MISS`，第二次 `HIT`。应用自己的 `X-Cache` 仍然表示 Flask 缓存状态，两个都看。
 
-**3. 清理缓存**
+**3. 图片 / CSS / JS 也走 proxy_cache**
+
+不要再给 `/static/`、`/themes/`、`/uploads/` 配 `alias`。`alias` 或 `^~` 会让 Nginx 直接读文件，绕过 `proxy_cache`，`X-Nginx-Cache` 就不会出现 `MISS/HIT`。
+
+把下面两个 deny 和静态资源 location 加到站点配置里（放在 `location /` 前后都行，但两个 deny 必须在静态正则前面）：
+
+```nginx
+# 模板源码和上传目录隐藏文件先 deny
+location ~ ^/themes/[^/]+/templates/ {
+    deny all;
+    return 404;
+}
+
+location ~ ^/uploads/\. {
+    deny all;
+}
+
+# 图片 / CSS / JS / 字体：统一走 Nginx 缓存 7 天
+location ~* \.(css|js|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|otf)$ {
+    proxy_pass http://127.0.0.1:5000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_cache blog_cache;
+    proxy_cache_key "$host$uri$is_args$args";
+    proxy_cache_valid 200 7d;
+    proxy_cache_valid 404 1m;
+
+    # 手动绕过：?nocache=1
+    proxy_cache_bypass $arg_nocache;
+    proxy_no_cache $arg_nocache $upstream_http_set_cookie;
+
+    proxy_cache_lock on;
+    proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504;
+}
+```
+
+验证图片 / CSS / JS（用 GET，不要用 `curl -I`，HEAD 不一定会写入缓存）：
+
+```bash
+for i in 1 2; do
+  curl -sS -o /dev/null -D - https://www.infowe.site/themes/tech/static/theme.min.css | grep -i x-nginx-cache
+done
+
+for i in 1 2; do
+  curl -sS -o /dev/null -D - https://www.infowe.site/uploads/2026/11/xxx.png | grep -i x-nginx-cache
+done
+```
+
+预期都是第一次 `MISS`，第二次 `HIT`。
+
+如果出现 `STATIC` 或没有 `X-Nginx-Cache`，说明还有 `alias` / `^~` 在抢；如果出现 `BYPASS`，检查 `location /` 的排除规则里有没有 `upload`。
+
+**4. 清理缓存**
 
 应用层缓存发文章/评论后会自动清，Nginx 这层不会。三种处理方式，按环境选一种。
 
@@ -539,7 +596,7 @@ find /www/server/nginx/cache -type f -delete
 
 Nginx 会重新生成缓存文件，不用重启。适合文章不多、能接受短暂回源的站点。
 
-**4. 注意**
+**5. 注意**
 
 - 不要缓存 `/admin`、`/api`、登录、上传、评论提交
 - 带 `session` 或 `blog_commenter` Cookie 的请求必须 bypass
