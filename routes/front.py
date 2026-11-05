@@ -465,6 +465,7 @@ def about():
         github=settings.get_str("github_username", "") or settings.get_str("social_github", ""),
         timeline=Timeline.load(),
         post_total=post_total,
+        heatmap=Post.heatmap(),
         category_total=int(db.scalar("SELECT COUNT(*) FROM categories", (), 0)),
     )
 

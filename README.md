@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.1)
+[![version](https://img.shields.io/badge/version-3.7.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.2)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -868,18 +868,24 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.1**
+当前版本：**v3.7.2**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.2
+
+- 关于页新增「写作热力图」：按天统计近一年已发布文章，桌面展示完整 53 周、移动端自动收窄到最近 26 周；悬停可看当天文章数，底部汇总更新天数与最长连更
+- 热力图沿用主题变量，暗色 / 亮色自动适配；月份标签与格子逐列对齐，320–1536px 无横向溢出
+- 首页保持原样，不占用首屏文章列表空间
+
+<details>
+<summary><b>历史版本（v3.7.1 及更早，点击展开）</b></summary>
 
 ### v3.7.1
 
 - 修复 HEIC/HEIF 上传仍提示「图片文件损坏或格式不受支持」：校验前先注册 pillow-heif 解码器，安装依赖后不再需要额外重启才生效
 - HEIC/AVIF 内容被改名成 `.jpg` / `.png` 时，按真实格式转成 WebP 再落盘，浏览器可正常显示，不再因为扩展名和内容不一致而失败
 - 图片校验失败时把真实原因写入日志（如 `decoder jpeg not available`、`cannot identify image file`），便于定位是文件损坏还是服务器缺解码器
-
-<details>
-<summary><b>历史版本（v3.7.0 及更早，点击展开）</b></summary>
 
 ### v3.7.0
 

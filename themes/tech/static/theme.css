@@ -548,6 +548,120 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 }
 @media (hover: hover) and (pointer: fine) { .tech-search-close:hover { color: var(--text); background: var(--bg-subtle); } }
 
+/* ── 写作热力图（首页文章列表上方，贡献图样式） ── */
+.tech-hm {
+  padding: 18px;
+  margin: 0 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.tech-hm-head { margin-bottom: 10px; }
+.tech-hm-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.tech-hm-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-weak);
+}
+.tech-hm-live i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.tech-hm-sub { margin: 3px 0 0; font-size: 12px; color: var(--text-secondary); }
+/* 月份与格子共用 53 列 + 3px gap，保证纵向严格对齐 */
+.tech-hm-months {
+  display: grid;
+  grid-auto-flow: column;
+  /* 必须与格子用同样的 minmax(0,1fr)：1fr 的 auto 最小值会被月份文字撑宽，导致逐列偏移 */
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+  height: 14px;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+.tech-hm-months span { white-space: nowrap; }
+.tech-hm-month-end { justify-self: end; }
+.tech-hm-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(7, auto);
+  gap: 3px;
+}
+.tech-hm-cell {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 2px;
+  background: var(--border);
+  transition: transform .12s, opacity .12s;
+}
+.tech-hm-cell-future { visibility: hidden; }
+.tech-hm-cell-l1 { background: var(--accent); opacity: .32; }
+.tech-hm-cell-l2 { background: var(--accent); opacity: .52; }
+.tech-hm-cell-l3 { background: var(--accent); opacity: .74; }
+.tech-hm-cell-l4 { background: var(--accent); opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-hm-cell:hover {
+    transform: scale(1.35);
+    outline: 1.5px solid var(--accent);
+    outline-offset: 1px;
+    opacity: 1;
+  }
+}
+.tech-hm-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.tech-hm-stats { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tech-hm-stats b { color: var(--text); font-weight: 600; }
+.tech-hm-stats i { width: 1px; height: 10px; background: var(--border); }
+.tech-hm-legend { display: flex; align-items: center; gap: 4px; font-size: 10.5px; margin-left: auto; }
+.tech-hm-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--border);
+  display: inline-block;
+}
+/* 图例复用格子色阶类，但需要压过 .tech-hm-legend i 的基础背景 */
+.tech-hm-legend i.tech-hm-cell-l1 { background: var(--accent); opacity: .32; }
+.tech-hm-legend i.tech-hm-cell-l2 { background: var(--accent); opacity: .52; }
+.tech-hm-legend i.tech-hm-cell-l3 { background: var(--accent); opacity: .74; }
+.tech-hm-legend i.tech-hm-cell-l4 { background: var(--accent); opacity: 1; }
+@media (max-width: 720px) {
+  .tech-hm { padding: 14px; }
+  .tech-hm-title { font-size: 14px; }
+  .tech-hm-sub { font-size: 11px; }
+  /* 小屏只保留最近 26 周：前 27 列 × 7 = 189 格不参与布局 */
+  .tech-hm-months { display: none; }
+  .tech-hm-grid { gap: 1px; }
+  .tech-hm-grid > .tech-hm-cell:nth-child(-n+189) { display: none; }
+  .tech-hm-cell { border-radius: 1.5px; }
+  .tech-hm-foot { gap: 8px; }
+  .tech-hm-legend { font-size: 9px; }
+  .tech-hm-legend i { width: 7px; height: 7px; border-radius: 1.5px; }
+}
+
 /* ── 文章列表（列表式） ── */
 .tech-post-list { list-style: none; margin: 0; padding: 0; }
 /* 整卡可点，样式与侧栏卡片 .tech-side-card 同款：1px 描边 + 12px 圆角独立卡片，

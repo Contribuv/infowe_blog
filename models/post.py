@@ -213,6 +213,79 @@ def increment_views(post_id: int) -> None:
     db.execute("UPDATE posts SET views = views + 1 WHERE id = ?", (post_id,))
 
 
+def heatmap(weeks: int = 53) -> dict:
+    """写作热力图数据：按自然日统计近一年的已发布文章。
+
+    cells 按日期顺序排列，每 7 个为一列（周日起），模板用
+    grid-auto-flow: column 填充；months 给出月份标签的起始列与跨度。
+    """
+    from datetime import date, timedelta
+
+    today = date.today()
+    # 以本周六为终点往前推 53 周，保证 start 是周日且窗口包含今天
+    end = today + timedelta(days=(5 - today.weekday()) % 7)
+    start = end - timedelta(days=weeks * 7 - 1)
+
+    counts = {
+        str(row["d"]): int(row["n"])
+        for row in db.query(
+            "SELECT substr(created_at, 1, 10) AS d, COUNT(*) AS n FROM posts "
+            "WHERE status='published' AND deleted_at IS NULL "
+            "AND substr(created_at, 1, 10) >= ? GROUP BY d",
+            (start.isoformat(),),
+        )
+    }
+
+    cells: list[dict] = []
+    total = 0
+    active_days = 0
+    longest = 0
+    streak = 0
+    for index in range(weeks * 7):
+        day = start + timedelta(days=index)
+        future = day > today
+        count = 0 if future else counts.get(day.isoformat(), 0)
+        if count:
+            total += count
+            active_days += 1
+            streak += 1
+            longest = max(longest, streak)
+        else:
+            streak = 0
+        if count == 0:
+            level = 0
+        elif count >= 4:
+            level = 4
+        else:
+            level = count
+        cells.append(
+            {
+                "date": day.isoformat(),
+                "count": count,
+                "level": level,
+                "future": future,
+            }
+        )
+
+    months: list[dict] = []
+    prev_month = 0
+    for col in range(weeks):
+        day = start + timedelta(days=col * 7)
+        if col == 0 or day.month != prev_month:
+            months.append({"label": f"{day.month}月", "col": col + 1, "span": 1})
+            prev_month = day.month
+        else:
+            months[-1]["span"] += 1
+
+    return {
+        "cells": cells,
+        "months": months,
+        "total": total,
+        "active_days": active_days,
+        "longest_streak": longest,
+    }
+
+
 def slug_exists(slug: str, exclude_id: int | None = None) -> bool:
     if exclude_id is not None:
         return db.one("SELECT 1 FROM posts WHERE slug = ? AND id != ?", (slug, exclude_id)) is not None

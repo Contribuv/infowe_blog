@@ -52,6 +52,32 @@
 </div>
 
 <div class="tech-about">
+    <!-- 写作热力图：过去一年按天统计；桌面 53 周，移动端 CSS 只保留最近 26 周 -->
+    {% if heatmap %}
+    <section class="tech-hm" aria-label="写作热力图">
+        <div class="tech-hm-head">
+            <div class="tech-hm-title">写作热力图<span class="tech-hm-live"><i></i>持续更新</span></div>
+            <p class="tech-hm-sub">过去一年 · 每个格子是这一天写下的文章数</p>
+        </div>
+        <div class="tech-hm-chart">
+            <div class="tech-hm-months" aria-hidden="true">
+                {% for m in heatmap.months %}<span{% if m.span == 1 %} class="tech-hm-month-end"{% endif %} style="grid-column: {{ m.col }} / span {{ m.span }}">{{ m.label }}</span>{% endfor %}
+            </div>
+            <div class="tech-hm-grid" role="img" aria-label="过去一年共 {{ heatmap.total }} 篇文章，{{ heatmap.active_days }} 天有更新，最长连更 {{ heatmap.longest_streak }} 天">
+                {% for cell in heatmap.cells %}<i class="tech-hm-cell{% if cell.level %} tech-hm-cell-l{{ cell.level }}{% endif %}{% if cell.future %} tech-hm-cell-future{% endif %}"{% if not cell.future %} title="{{ cell.date }} · {% if cell.count %}{{ cell.count }} 篇{% else %}没有更新{% endif %}"{% endif %}></i>{% endfor %}
+            </div>
+        </div>
+        <div class="tech-hm-foot">
+            <div class="tech-hm-stats">
+                <span><b>{{ heatmap.total }}</b> 篇</span><i></i>
+                <span><b>{{ heatmap.active_days }}</b> 天有更新</span><i></i>
+                <span>最长连更 <b>{{ heatmap.longest_streak }}</b> 天</span>
+            </div>
+            <div class="tech-hm-legend" aria-hidden="true">少<i></i><i class="tech-hm-cell-l1"></i><i class="tech-hm-cell-l2"></i><i class="tech-hm-cell-l3"></i><i class="tech-hm-cell-l4"></i>多</div>
+        </div>
+    </section>
+    {% endif %}
+
     {# 站点状态：文本 + 动态数据，放在人物卡后的第一个内容卡；
        明细表收进折叠区，status.js 仍按原来的 svc-row / expiry hooks 更新 #}
     <section class="tech-about-section tech-status-card" id="status" data-status-summary>
