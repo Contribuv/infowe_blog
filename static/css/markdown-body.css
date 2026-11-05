@@ -178,12 +178,13 @@
 }
 
 /* ── 表格（GitHub 细线网格，表头微底） ──
-   表格自身 display:table + width:max-content：按内容自然宽度排版，单元格不折行；
-   JS 外层包 .table-wrap 滚动容器（max-width:100% + overflow-x:auto）：
-   窄表格原样展示，宽表格在容器内左右滑动，不撑破页面。 */
+   与 GitHub 一致：先按内容计算自然宽度（窄表格不会拉满），
+   超过容器宽度时自动折行；外层 .table-wrap 的横向滚动只兜底
+   不可断行的长串（长 URL / 代码），正常情况下不出现滚动条。 */
 .markdown-body table {
   display: table;
   width: max-content;
+  max-width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
   margin: 0 0 16px;
@@ -200,6 +201,7 @@
   border: 1px solid var(--mb-border);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: break-word;
 }
 .markdown-body th {
   font-weight: 600;

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.3)
+[![version](https://img.shields.io/badge/version-3.7.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -868,9 +868,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.3**
+当前版本：**v3.7.4**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.4
+
+- Markdown 表格改为 GitHub 同款折行规则：窄表格保持自然宽度，超过容器宽度时单元格自动换行，不再需要横向滚动查看
+- 单元格补充长串断行保护，长 URL / 行内代码不会撑破表格
+
+<details>
+<summary><b>历史版本（v3.7.3 及更早，点击展开）</b></summary>
 
 ### v3.7.3
 
@@ -878,9 +886,6 @@ chown -R www:www var
 - 邮件视觉优化：移除顶部色条，头像与正文分区并用细线隔开，正文调整为 15px / 1.85 行高，段落间距更清楚
 - 修正回复邮件页脚「直接回复本邮件」的误导文案：邮件回复不会出现在博客评论区，需点击按钮前往文章页
 - 邮件顶部品牌行恢复显示站点名，页脚链接显示发件人名称
-
-<details>
-<summary><b>历史版本（v3.7.2 及更早，点击展开）</b></summary>
 
 ### v3.7.2
 
