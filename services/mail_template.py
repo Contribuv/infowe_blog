@@ -22,6 +22,7 @@ _FONT = (
 
 # 中性色板：与主题强调色搭配，深浅层次固定，避免每处单独写色值
 _TEXT = "#1f2a33"
+_BODY = "#33414d"
 _META = "#5c6b78"
 _MUTED = "#8a97a4"
 _BORDER = "#e3e9ef"
@@ -81,6 +82,19 @@ def blogger_name() -> str:
     return settings.get_str("author", "").strip() or display_name(settings.get_str("blog_name", "博客"))
 
 
+def sender_name() -> str:
+    """邮件正文品牌行显示的发件人：优先 smtp_sender_name，与邮件客户端一致。"""
+    from services import settings
+
+    name = settings.get_str("smtp_sender_name", "").strip()
+    if name:
+        return name
+    user = settings.get_str("smtp_user", "").strip()
+    if user:
+        return user.split("@", 1)[0]
+    return blogger_name()
+
+
 def esc(value: object) -> str:
     """HTML 转义，供外部模块构造邮件内容时使用。"""
     return html.escape(str(value or ""), quote=True)
@@ -100,8 +114,17 @@ def _content_html(text: str, site: str) -> str:
             'style="display:block;max-width:100%;height:auto;border-radius:8px;margin:10px 0 6px;">'
         )
 
-    html_text = _IMAGE_RE.sub(repl, safe).replace("\r\n", "\n").replace("\n", "<br>")
-    return html_text
+    html_text = _IMAGE_RE.sub(repl, safe).replace("\r\n", "\n")
+    blocks = [block.strip("\n") for block in re.split(r"\n{2,}", html_text) if block.strip()]
+    if not blocks:
+        return ""
+    rendered = []
+    for index, block in enumerate(blocks):
+        margin = "0" if index == len(blocks) - 1 else "0 0 12px 0"
+        rendered.append(
+            '<div style="margin:%s;">%s</div>' % (margin, block.replace("\n", "<br>"))
+        )
+    return "".join(rendered)
 
 
 def _initials(name: str) -> str:
@@ -134,10 +157,9 @@ def _avatar(name: str, accent: str, avatar_url: str = "") -> str:
 
 def _shell(*, tag: str, headline: str, meta_html: str, body: str, blog_name: str,
            site: str, accent: str, foot_note: str) -> str:
-    """邮件外壳：品牌条 + 品牌行 + 标题 + 分割线 + 正文 + 页脚说明。
+    """邮件外壳：品牌行 + 标题 + 分割线 + 正文 + 页脚说明。
 
-    圆角全部按 8px 体系对齐：品牌条顶部圆角 = 卡片顶部圆角，
-    页脚底部圆角 = 卡片底部圆角，中途不留直角断口。
+    不再使用顶部色条；品牌行显示站点名，页脚链接显示邮件发信人。
     """
     return """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -153,12 +175,11 @@ def _shell(*, tag: str, headline: str, meta_html: str, body: str, blog_name: str
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%%;max-width:600px;">
       <tr><td>
         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:8px;border:1px solid %(border)s;">
-          <tr><td style="height:3px;line-height:3px;font-size:0;background:%(accent)s;border-radius:8px 8px 0 0;">&nbsp;</td></tr>
           <tr><td style="padding:16px 30px 0 30px;">
             <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="font-size:15px;font-weight:700;color:%(text)s;letter-spacing:0;">
-                  <a href="%(site)s" style="font-size:15px;font-weight:700;color:%(text)s;text-decoration:none;">%(blog)s</a>
+                  <a href="%(site)s" style="font-size:15px;font-weight:700;color:%(muted)s;text-decoration:none;">%(blog)s</a>
                 </td>
                 <td style="font-size:12px;line-height:20px;color:%(muted)s;text-align:right;white-space:nowrap;">%(tag)s</td>
               </tr>
@@ -214,22 +235,31 @@ def _meta_line(when: str, title: str, url: str, accent: str) -> str:
 
 
 def _card(author: str, content_html: str, accent: str, avatar_url: str = "") -> str:
-    """正文内容卡：浅底 + 左侧 3px 强调色条，不用四边描边。
+    """正文内容卡：头像/作者单独一行，下方细线分隔，正文独立一块。
 
-    头像+作者名是 meta 层级（小号灰字），与正文（大号深色）拉开层次，
-    避免作者名和评论内容糊成一片。
+    不再用左侧贯穿色条，避免头像、作者名和正文糊在一起。
     """
     return (
         '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" '
-        'style="background:%s;border-left:3px solid %s;border-radius:0 6px 6px 0;">'
-        '<tr><td style="padding:14px 18px;">'
+        'style="background:%s;border:1px solid %s;border-radius:8px;">'
+        '<tr><td style="padding:14px 18px 10px 18px;">'
         '<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>'
         '%s'
         '<td style="font-size:12px;line-height:32px;font-weight:600;color:%s;vertical-align:middle;">%s</td>'
         '</tr></table>'
-        '<div style="padding:8px 0 0 0;font-size:16px;line-height:1.75;color:%s;word-break:break-word;overflow-wrap:anywhere;">%s</div>'
+        '</td></tr>'
+        '<tr><td style="padding:0 18px;">'
+        '<table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0">'
+        '<tr><td style="height:1px;line-height:1px;font-size:0;background:%s;">&nbsp;</td></tr>'
+        '</table>'
+        '</td></tr>'
+        '<tr><td style="padding:12px 18px 14px 18px;">'
+        '<div style="font-size:15px;line-height:1.85;color:%s;word-break:break-word;overflow-wrap:anywhere;">%s</div>'
         '</td></tr></table>'
-    ) % (_CARD_BG, accent, _avatar(author, accent, avatar_url), _META, _esc(author), _TEXT, content_html)
+    ) % (
+        _CARD_BG, _BORDER, _avatar(author, accent, avatar_url), _META, _esc(author),
+        _BORDER, _BODY, content_html,
+    )
 
 
 def _quote(text_html: str) -> str:
@@ -299,7 +329,7 @@ def generic_notice(*, blog_name: str, site: str, tag: str, headline: str, body_h
         foot_note=foot_note or (
             '<p style="margin:0;">此邮件由 %s 自动发送，请勿直接回复。</p>'
             '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
-            % (_esc(blog_name), _esc(site), _esc(blog_name))
+            % (_esc(blog_name), _esc(site), _esc(sender_name()))
         ),
     )
     return text, page
@@ -345,12 +375,12 @@ def comment_notice(*, blog_name: str, site: str, label: str, title: str, url: st
             '博主需要及时处理。</p>'
             '<p style="margin:0;">直接回复本邮件，即可回给 %s。</p>'
             '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
-        ) % (_esc(title), _esc(author), _esc(site), _esc(blog_name)),
+        ) % (_esc(title), _esc(author), _esc(site), _esc(sender_name())),
     )
     return text, page
 
 
-def reply_notice(*, blog_name: str, site: str, label: str, title: str, url: str, author: str, content: str, when: str, parent_author: str = "", parent_content: str = "", author_avatar: str = "") -> tuple[str, str]:
+def reply_notice(*, blog_name: str, site: str, label: str, title: str, url: str, author: str, content: str, when: str, parent_author: str = "", parent_content: str = "", author_avatar: str = "", reader_url: str = "") -> tuple[str, str]:
     """被回复者提醒：你的评论收到了回复。"""
     accent = accent_color()
     headline = "%s 回复了你的评论" % author
@@ -360,13 +390,19 @@ def reply_notice(*, blog_name: str, site: str, label: str, title: str, url: str,
     if parent_content:
         body_parts.append(_quote(_content_html(parent_content, site)))
     body_parts.append(_cta(url, accent, "查看并回复"))
-    body_parts.append(_action_row([("打开文章", url), ("返回首页", site)]))
+    links = [("打开文章", url)]
+    if reader_url:
+        links.append(("我的留言", reader_url))
+    links.append(("返回首页", site))
+    body_parts.append(_action_row(links))
     body = "".join(body_parts)
 
     text = (
         f"{headline}\n\n你在{label}《{title}》的评论收到了回复\n\n"
         f"{author} · {when}\n\n{content}\n\n查看对话：{url}\n"
     )
+    if reader_url:
+        text += f"我的留言：{reader_url}\n"
     page = _shell(
         tag=tag,
         headline=headline,
@@ -377,8 +413,8 @@ def reply_notice(*, blog_name: str, site: str, label: str, title: str, url: str,
         accent=accent,
         foot_note=(
             '<p style="margin:0;">你收到这封邮件，是因为你在《%s》下的评论收到了回复。</p>'
-            '<p style="margin:0;">直接回复本邮件，即可回给 %s。</p>'
+            '<p style="margin:0;">此邮件由系统自动发送，直接回复不会出现在博客评论区；如需回复，请点击上方按钮前往文章页。</p>'
             '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
-        ) % (_esc(title), _esc(author), _esc(site), _esc(blog_name)),
+        ) % (_esc(title), _esc(site), _esc(sender_name())),
     )
     return text, page

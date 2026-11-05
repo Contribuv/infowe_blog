@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.2)
+[![version](https://img.shields.io/badge/version-3.7.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.3)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -868,18 +868,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.2**
+当前版本：**v3.7.3**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.3
+
+- 回复通知邮件底部新增「我的留言」：被回复的访客可以直接点进自己的读者页，查看在本站的全部公开留言
+- 邮件视觉优化：移除顶部色条，头像与正文分区并用细线隔开，正文调整为 15px / 1.85 行高，段落间距更清楚
+- 修正回复邮件页脚「直接回复本邮件」的误导文案：邮件回复不会出现在博客评论区，需点击按钮前往文章页
+- 邮件顶部品牌行恢复显示站点名，页脚链接显示发件人名称
+
+<details>
+<summary><b>历史版本（v3.7.2 及更早，点击展开）</b></summary>
 
 ### v3.7.2
 
 - 关于页新增「写作热力图」：按天统计近一年已发布文章，桌面展示完整 53 周、移动端自动收窄到最近 26 周；悬停可看当天文章数，底部汇总更新天数与最长连更
 - 热力图沿用主题变量，暗色 / 亮色自动适配；月份标签与格子逐列对齐，320–1536px 无横向溢出
 - 首页保持原样，不占用首屏文章列表空间
-
-<details>
-<summary><b>历史版本（v3.7.1 及更早，点击展开）</b></summary>
 
 ### v3.7.1
 

@@ -116,6 +116,16 @@ def _detail_url(detail_path: str, comment_id: int | None) -> str:
     return base + path + anchor
 
 
+def _reader_url(email_hash: str, author: str = "") -> str:
+    """被回复者的公开读者页地址；没有可用标识时返回空串。"""
+    key = (email_hash or "").strip().lower() or (author or "").strip().lower()
+    if not key:
+        return ""
+    from services import readers
+
+    return site_url.base() + "/readers/" + readers.reader_id(key)
+
+
 def _dispatch(jobs: list[dict]) -> None:
     """邮件放到后台线程发送，失败静默，不阻塞请求。"""
     if not jobs:
@@ -181,9 +191,10 @@ def notify_comment(
     reply_email = ""
     reply_private = False
     reply_notify = True
+    reply_reader_url = ""
     if parent_id:
         parent = db.one(
-            "SELECT author, email, content, is_private, notify, status FROM comments "
+            "SELECT author, email, email_hash, content, is_private, notify, status FROM comments "
             "WHERE id = ? AND deleted_at IS NULL",
             (parent_id,),
         )
@@ -195,6 +206,7 @@ def notify_comment(
             reply_private = bool(int(parent["is_private"] or 0))
             # 被回复者提交时取消了「邮箱通知」→ 不再发回复邮件（旧数据默认 1）
             reply_notify = bool(int(parent["notify"] if parent["notify"] is not None else 1))
+            reply_reader_url = _reader_url(str(parent["email_hash"] or ""), parent_author)
 
     jobs: list[dict] = []
     admin_to = _admin_to()
@@ -256,6 +268,7 @@ def notify_comment(
                 parent_author=parent_author,
                 parent_content=parent_content,
                 author_avatar=author_avatar,
+                reader_url=reply_reader_url,
             )
             jobs.append(
                 {
@@ -331,6 +344,9 @@ def notify_approved_reply(comment_id: int) -> None:
             str(parent.get("content") or ""), str(parent.get("status") or "")
         ),
         author_avatar=author_avatar,
+        reader_url=_reader_url(
+            str(parent.get("email_hash") or ""), str(parent.get("author") or "")
+        ),
     )
     _dispatch(
         [
