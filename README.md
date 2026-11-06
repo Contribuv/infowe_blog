@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.0)
+[![version](https://img.shields.io/badge/version-3.8.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.1)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.0**
+当前版本：**v3.8.1**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.1
+
+- 深色页面底色回调为 `#181b21`，导航玻璃底与首屏防闪白同步调整
+- 深色动态光斑大幅减弱：主层 6% / 4% / 2.5%，关闭副光斑层，饱和度降到 95%
+- 移除光斑的 `blur()` 与缩放动画，只保留平移，修复深色下出现的块状马赛克
+- 移动端文章目录折叠条：去掉 header 多余下边距，保留上下分隔线并让「目录」文字居中
+- 关于页作者卡、热力图、状态卡、内容卡补齐全站统一的悬停底色
+- 归档条目悬停与卡片间距对齐，圆角统一 6px
+- 项目详情内容卡与评论区拆分，评论独立成卡
+- 相关推荐与上下篇统一为普通卡片色，悬停反馈一致
+- 分页、查看全部归档、友链提交、后台保存主题按钮统一为卡片色 + 6px 圆角
+- 修复首页最后一张卡底部内距、查看全部归档上下间距；读者页统计改 2×2 小卡
+
+<details>
+<summary><b>历史版本（v3.8.0 及更早，点击展开）</b></summary>
 
 ### v3.8.0
 
@@ -942,9 +958,6 @@ chown -R www:www var
 - 移动端取消 390px 内容宽度上限；读者页统计改 2×2 小卡，修复窄屏换行孤行
 - 分页、查看全部归档、友链提交、后台保存主题按钮统一为卡片色 + 6px 圆角
 - 归档条目悬停与卡片间距对齐；修复首页最后一张卡底部内距和「查看全部归档」上下间距
-
-<details>
-<summary><b>历史版本（v3.7.9 及更早，点击展开）</b></summary>
 
 ### v3.7.9
 

@@ -73,9 +73,9 @@
   /* 夜间配色：与后台设计系统对齐——近黑的冷灰蓝底 + 中性柔白文字。
      层级不再靠蓝调变化区分，而是照后台用 #161a24 / #12151f 两档表面，
      边框改成低透明度白线，整体更接近后台那种「干净的深色面板」 */
-  --bg: #1c1f26;
+  --bg: #181b21;
   /* 导航：深色玻璃底，比页面亮一档，滚动时与正文拉开层级 */
-  --nav-bg: rgba(32, 35, 43, .72);
+  --nav-bg: rgba(29, 32, 39, .72);
   --bg-subtle: #1f232b;
   --bg-code: #1a1e24;
   --border: rgba(255, 255, 255, .08);
@@ -117,10 +117,10 @@
   /* 卡片悬停：比页面亮一档的面板色，配一条淡蓝描边 */
   --hover-bg: #242a34;
   --hover-ring: rgba(107, 156, 245, .34);
-  /* 暗色光斑：蓝紫更明显一点，但在近黑底上仍保持低饱和 */
-  --blob-1: rgba(107, 156, 245, .20);
-  --blob-2: rgba(167, 139, 250, .14);
-  --blob-3: rgba(107, 156, 245, .10);
+  /* 暗色光斑：只留一层很淡的冷光，避免形成明显的蓝雾 */
+  --blob-1: rgba(107, 156, 245, .06);
+  --blob-2: rgba(167, 139, 250, .04);
+  --blob-3: rgba(107, 156, 245, .025);
 }
 
 /* ── 接管 markdown 正文令牌（markdown-body.css 后加载，用 html[...] 提高特异性）
@@ -966,6 +966,18 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   color: var(--accent);
   border-left-color: var(--accent);
   font-weight: 500;
+}
+
+/* 窄屏折叠目录：保留目录自己的底边线，做成 header 与正文之间的一条分隔带。
+   折叠时去掉 sidebar 的上间距，让「目录」文字夹在上、下两条线之间居中；
+   展开时仍是原来的 16px 间距，避免列表贴着文章头部。 */
+@media (max-width: 1399px) {
+  .tech-toc { border-bottom: 0; }
+  .tech-toc[open] { border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 1000px) {
+  .tech-toc-sidebar:has(.tech-toc:not([open])) { margin-top: 0; }
+  .tech-toc:not([open]) { border-bottom: 1px solid var(--border); }
 }
 
 @media (min-width: 1400px) {
@@ -4809,6 +4821,12 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
    不再额外叠一层 .tech-main 的 padding-bottom，避免按钮下方比上方多 24px */
 .tech-main:has(.tech-home-grid) { padding-bottom: 0; }
 
+/* 移动端 / 平板文章头部下方紧跟目录时，去掉 header 的 margin-bottom：
+   目录自身已有上下 16px 间距，再叠一层会让目录上方比下方多一截 */
+@media (max-width: 1000px) {
+  .tech-post-header:has(+ .tech-toc-sidebar) { margin-bottom: 0; }
+}
+
 /* 图片失败占位卡：比卡片底色再深一档，虚线边界才看得出来 */
 .md-img-error {
   background: var(--bg-subtle);
@@ -4832,34 +4850,31 @@ body::after {
 body::before {
   inset: -18%;
   background:
-    radial-gradient(38% 42% at 16% 10%, var(--blob-1), transparent 70%),
-    radial-gradient(34% 38% at 84% 8%,  var(--blob-2), transparent 72%),
-    radial-gradient(46% 46% at 66% 86%, var(--blob-3), transparent 70%);
-  filter: blur(48px) saturate(115%);
+    radial-gradient(42% 46% at 16% 10%, var(--blob-1), transparent 82%),
+    radial-gradient(38% 42% at 84% 8%,  var(--blob-2), transparent 84%),
+    radial-gradient(50% 50% at 66% 86%, var(--blob-3), transparent 82%);
   animation: tech-blob-drift 26s ease-in-out infinite alternate;
 }
 body::after {
   inset: -22%;
   z-index: -1;
   background:
-    radial-gradient(30% 34% at 74% 28%, var(--blob-1), transparent 72%),
-    radial-gradient(28% 30% at 26% 76%, var(--blob-3), transparent 74%);
-  filter: blur(56px);
+    radial-gradient(34% 38% at 74% 28%, var(--blob-1), transparent 84%),
+    radial-gradient(32% 34% at 26% 76%, var(--blob-3), transparent 86%);
   opacity: .7;
   animation: tech-blob-drift-reverse 32s ease-in-out infinite alternate;
 }
+[data-theme="dark"] body::after { opacity: 0; }
+/* 只用 translate 做动画：scale 会拉伸已栅格化的渐变纹理，暗色低透明度下容易出现块状马赛克；
+   filter: blur 同样会放大这种块状感，渐变本身已经足够柔和，直接去掉。 */
 @keyframes tech-blob-drift {
-  from { transform: translate3d(-2%, -1%, 0) scale(1); }
-  to   { transform: translate3d(2%, 2%, 0) scale(1.07); }
+  from { transform: translate3d(-2%, -1%, 0); }
+  to   { transform: translate3d(2%, 2%, 0); }
 }
 @keyframes tech-blob-drift-reverse {
-  from { transform: translate3d(2%, 1%, 0) scale(1.04); }
-  to   { transform: translate3d(-2%, -2%, 0) scale(.98); }
+  from { transform: translate3d(2%, 1%, 0); }
+  to   { transform: translate3d(-2%, -2%, 0); }
 }
 @media (prefers-reduced-motion: reduce) {
   body::before, body::after { animation: none; }
-}
-@media (max-width: 767px) {
-  body::before { filter: blur(36px) saturate(110%); }
-  body::after { filter: blur(42px); }
 }
