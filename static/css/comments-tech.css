@@ -374,7 +374,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ═══ 评论表单：透明底（扁平化已去掉毛玻璃，只保留描边） ═══
    表单不要底色块，只留 1px 描边和圆角，让页面底色直接透出来。
    注意 .cmt-form.is-inline 的 background:none 特异性更高，不受影响。 */
-.cmt-form{background:transparent}
+.cmt-form{background:color-mix(in srgb,var(--c-text) 3%,transparent)}
 
 /* AI 助手回复标识 */
 .cmt-badge--ai{background:rgba(90,150,190,.11);color:#8fb8d0;border-color:rgba(90,150,190,.20)}
@@ -535,3 +535,121 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-idrow{flex-wrap:wrap}
   .cmt-idrow .cmt-idbtn{width:100%}
 }
+/* 移动端评论主体：把右侧操作列收到正文下方，避免图标挤压作者行与正文 */
+@media (max-width:767px){
+  .cmt-main{display:block}
+  .cmt-actions{margin:8px 0 0;display:flex;justify-content:flex-end;align-self:auto}
+}
+
+/* ═══════════════════════════════════════════════
+   V6 评论列表重构：去卡片化，移动优先
+   参考知乎 / B站 / 小红书 / Reddit 的评论列表：
+   - 根评论不再每条一张描边卡，改用留白 + 细线分隔
+   - 作者、正文、操作保持单列，操作行在正文下方
+   - 楼中楼只保留一级缩进 + 左侧细线，回复之间用留白分层
+   - 移动端隐藏设备 UA，减少作者行换行
+   ═══════════════════════════════════════════════ */
+.cmt-thread{
+  padding:14px 16px 16px;
+  border:0;
+  border-radius:12px;
+  background:color-mix(in srgb,var(--c-text) 3%,transparent);
+}
+.cmt-thread+.cmt-thread{margin-top:12px}
+@media (hover:hover) and (pointer:fine){
+  .cmt-thread:hover{background:color-mix(in srgb,var(--c-text) 4%,transparent)}
+}
+
+.cmt-main{display:block}
+.cmt-actions{
+  margin:0 0 0 auto;
+  display:flex;
+  justify-content:flex-end;
+  align-self:center;
+}
+.cmt-actions .cmt-reply{
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  gap:4px;
+  padding:4px 6px;
+  border-radius:8px;
+  color:var(--c-text3);
+  font-size:12px;
+  line-height:1;
+}
+/* 操作按钮已移入作者行，取消旧「byline 后换行」的 6px 上距 */
+.cmt-head .cmt-actions{margin-top:0}
+.cmt-actions .cmt-reply-icon{width:16px;height:16px}
+.cmt-reply-count{font-size:11px}
+
+.cmt-foot{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:4px 8px;
+  margin-top:8px;
+  font-size:11px;
+  line-height:1.4;
+  color:var(--c-text3);
+}
+.cmt-foot .cmt-time{margin-left:0;font-size:11px}
+.cmt-foot .cmt-loc{font-size:11px}
+.cmt-foot .cmt-byline{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  margin-top:0;
+  min-width:0;
+  max-width:100%;
+  line-height:1.4;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.cmt-foot .cmt-ua{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmt-foot .cmt-actions{margin-left:auto;margin-top:0;display:flex;align-items:center}
+
+.cmt-head{row-gap:4px}
+.cmt-text{font-size:14.5px;line-height:1.75;margin-top:8px}
+.cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.7;margin-top:6px}
+
+.cmt-replies{
+  margin:12px 0 0;
+  padding:10px 12px;
+  border-left:0;
+  border-radius:10px;
+  background:color-mix(in srgb,var(--c-accent) 5%,transparent);
+}
+.cmt-replies .cmt-item{padding:8px 0}
+.cmt-replies .cmt-item:first-child{padding-top:0}
+.cmt-replies .cmt-item:last-child{padding-bottom:0}
+.cmt-replies .cmt-item+.cmt-item{
+  margin-top:0;
+  border-top:1px solid color-mix(in srgb,var(--c-hairline) 45%,transparent);
+}
+
+@media (max-width:767px){
+  .cmt-thread{padding:12px 12px 14px}
+  .cmt-thread+.cmt-thread{margin-top:10px}
+  /* 设备 UA 收到底部元信息行，不再占作者行 */
+  .cmt-byline{display:inline-flex}
+  .cmt-foot{gap:3px 6px;margin-top:6px}
+  .cmt-head{row-gap:3px}
+  .cmt-text{font-size:15px;line-height:1.75}
+  .cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.7}
+  .cmt-replies{margin:10px 0 0;padding:8px 10px;border-radius:10px}
+  .cmt-replies .cmt-item{padding:7px 0}
+  .cmt-replies .cmt-item:first-child{padding-top:0}
+  .cmt-replies .cmt-item:last-child{padding-bottom:0}
+  .cmt-actions{margin-top:0}
+  .cmt-actions .cmt-reply{padding:4px}
+}
+
+
+/* 评论卡片跟随全站色卡圆角 */
+.cmt { --c-radius: var(--card-radius, 6px); }
+.cmt-replies { border-radius: var(--card-radius, 6px); }
+
+/* 评论楼层与表单卡直接跟随全站 6px 圆角 */
+.cmt-thread, .cmt-form { border-radius: var(--card-radius, 6px); }

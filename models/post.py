@@ -141,11 +141,11 @@ def get_by_slug(slug: str) -> dict | None:
     return hydrate(row) if row else None
 
 
-def related(current_id: int, tags: list[str], limit: int = 2) -> list[dict]:
+def related(current_id: int, tags: list[str], limit: int = 4) -> list[dict]:
     """一条 SQL 取相关文章：所有 tag 用 OR 拼起来，避免每个 tag 查一次。
 
-    默认只取 2 条：正文末尾的推荐区是收尾点缀，4 条会把页面拖长、
-    抢走评论区的注意力。先按命中 tag 数降序，再按发布时间降序，
+    默认取最多 4 条：正文末尾的相关推荐是 2–4 张强调色小卡，
+    桌面两列、移动端单列。先按命中 tag 数降序，再按发布时间降序，
     避免时间最新但只沾一个冷门 tag 的文章挤掉真正高相关的。
     """
     tags = [str(t).strip() for t in (tags or []) if str(t).strip()][:6]

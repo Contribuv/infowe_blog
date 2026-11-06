@@ -2224,3 +2224,20 @@ html[data-theme=light] .badge-picked {
 @media (max-width: 640px) {
   .retention-detail-grid { grid-template-columns: 1fr; gap: 12px; }
 }
+
+/* ── 卡片式按钮：与前台卡片同一套底色与 6px 圆角 ──
+   用于「保存主题与外观」这类不需要高饱和实心主色的确认操作 */
+.btn.btn-card {
+  background: var(--bg-surface-2);
+  border-color: var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn.btn-card:hover {
+    background: var(--bg-hover);
+    border-color: var(--border);
+    color: var(--text);
+    box-shadow: none;
+  }
+}

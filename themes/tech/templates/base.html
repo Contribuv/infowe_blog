@@ -11,8 +11,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <!-- 防白屏闪烁：主题 CSS 加载前先给 html 上色，避免深色主题刷新/跳转时闪白 -->
     <style>
-      html { background: #1a1d23; color-scheme: dark; }
-      html[data-theme="light"] { background: #fbfcfd; color-scheme: light; }
+      html { background: #1c1f26; color-scheme: dark; }
+      html[data-theme="light"] { background: #f4f6fa; color-scheme: light; }
     </style>
     <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>
@@ -259,6 +259,7 @@
         </div>
     </div>
     <script type="application/json" id="techSafeHosts">{{ friend_hosts | tojson }}</script>
+    <script src="{{ url_for('static', filename='js/media-fallback.js', t=static_ver) }}" defer></script>
     <script src="{{ url_for('static', filename='js/external-link.js', t=static_ver) }}"></script>
     {# 统计代码：后台「统计代码」原样注入，仅管理员可填。
        放进 template，等 load 后空闲时再执行，避免第三方统计阻塞首屏和 load 事件。 #}

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.9)
+[![version](https://img.shields.io/badge/version-3.8.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,26 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.9**
+当前版本：**v3.8.0**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.0
+
+- 全站卡片配色统一为评论区两种卡片色：普通卡文字色 3%、强调卡主色 5%，圆角统一 6px，悬停只加深底色
+- 顶部导航改为半透明毛玻璃（blur 16px + saturate 180%），底部细线与轻投影拉开层级
+- 亮色页面底色调整为 #f4f6fa，暗色提亮为 #1c1f26，卡片不再用纯灰叠加
+- 新增全站动态光斑背景：两层径向渐变缓慢漂移，亮暗各一套，支持系统减弱动效
+- 文章整篇收进阅读卡；项目内容卡与评论区拆分，评论区独立成卡
+- 相关推荐改为最多 4 张卡片，桌面两列、移动端单列；上下篇悬停与相关推荐一致
+- 正文图片加载失败改为紧凑说明条，并同步隐藏对应图片备注
+- 关于页时间线日期左对齐并预留长日期宽度，日期标签改中性色，不再用蓝色胶囊
+- 移动端取消 390px 内容宽度上限；读者页统计改 2×2 小卡，修复窄屏换行孤行
+- 分页、查看全部归档、友链提交、后台保存主题按钮统一为卡片色 + 6px 圆角
+- 归档条目悬停与卡片间距对齐；修复首页最后一张卡底部内距和「查看全部归档」上下间距
+
+<details>
+<summary><b>历史版本（v3.7.9 及更早，点击展开）</b></summary>
 
 ### v3.7.9
 
@@ -942,9 +959,6 @@ chown -R www:www var
 - 新增柔和主按钮（淡 accent 底）用于首页「查看全部归档」与友链申请「提交申请」；友链申请页返回改为文字链接
 - 文章目录滚动条隐藏，修复部分分辨率下右侧出现竖线的问题
 - 评论区恢复「缩进 + 1px 细竖线」布局，移除条目间横线，回复更紧凑
-
-<details>
-<summary><b>历史版本（v3.7.8 及更早，点击展开）</b></summary>
 
 ### v3.7.8
 
