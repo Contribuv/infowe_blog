@@ -1,15 +1,10 @@
 {% extends "base.html" %}
 {% block title %}留言榜单{% endblock %}
 {% block content %}
+<div class="tech-narrow">
 <div class="tech-page-head">
     <h1 class="tech-page-title">留言榜单</h1>
-    <p class="tech-page-desc">每一条真诚的留言，都是温暖的相遇</p>
-</div>
-
-{# 规则说明单独成卡片：第一行标题居中，正文左对齐，和下方榜单形成层级 #}
-<div class="tech-reader-rules">
-    <p class="tech-reader-rules-title">榜单规则</p>
-    <p class="tech-reader-rules-text">展示留言排行榜（近 6 个月，按留言数排序），向每一份真诚的分享与鼓励致谢。真诚地邀请您留下您的印记，您的声音对我来说都弥足珍贵。</p>
+    <p class="tech-page-desc">每一条真诚的留言，都是温暖的相遇。榜单按近 6 个月的留言数排序。</p>
 </div>
 
 <div class="circle-stats tech-reader-stats">
@@ -44,7 +39,7 @@
                 {% endif %}
                 <a class="tech-podium-count" href="{{ url_for('reader_comments', rid=r.reader_id) }}" title="查看 {{ r.author }} 的全部留言">{{ r.count }} 条留言</a>
             </div>
-            {% if r.last_text %}<p class="tech-podium-quote">{{ r.last_text }}</p>{% endif %}
+            {% if r.last_text %}<p class="tech-podium-quote" title="{{ r.last_text }}">{{ r.last_text }}</p>{% endif %}
             {% if r.source_title and r.source_url %}
             <span class="tech-podium-source">来自 <a href="{{ r.source_url }}">{{ r.source_title }}</a></span>
             {% endif %}
@@ -117,4 +112,5 @@
 </div>
 {% endif %}
 
+</div>
 {% endblock %}

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>评论区「左右对话」Demo v2</title>
+<style>
+  :root {
+    --bg: #fbfcfd;
+    --text: #1a1d23;
+    --text2: #5a6575;
+    --text3: #8a94a6;
+    --text4: #a9b1bf;
+    --border: rgba(0, 0, 0, .10);
+    --accent: #2f7ad1;
+    --accent-weak: rgba(47, 122, 209, .10);
+    --bubble-left: #f1f3f7;
+    --bubble-right: rgba(47, 122, 209, .10);
+    --badge-author: rgba(47, 122, 209, .12);
+    --badge-author-text: #2f7ad1;
+  }
+  [data-theme="dark"] {
+    --bg: #1a1d23;
+    --text: #e7e9ef;
+    --text2: #a4aab7;
+    --text3: #78808f;
+    --text4: #646c7b;
+    --border: rgba(255, 255, 255, .09);
+    --accent: #6b9cf5;
+    --accent-weak: rgba(107, 156, 245, .14);
+    --bubble-left: rgba(255, 255, 255, .055);
+    --bubble-right: rgba(107, 156, 245, .13);
+    --badge-author: rgba(107, 156, 245, .14);
+    --badge-author-text: #9dbcf7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 16px 64px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    transition: background-color .2s, color .2s;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  .demo-title { margin: 0 0 6px; font-size: 20px; font-weight: 700; }
+  .demo-sub { margin: 0; font-size: 13px; color: var(--text2); line-height: 1.75; }
+  .rule {
+    margin: 14px 0 0;
+    padding: 12px 15px;
+    border-left: 2px solid var(--accent);
+    background: var(--accent-weak);
+    border-radius: 0 8px 8px 0;
+    font-size: 12.5px; line-height: 1.8; color: var(--text2);
+  }
+  .rule b { color: var(--text); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0 24px; }
+  .btn {
+    appearance: none; cursor: pointer;
+    padding: 6px 13px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--text2);
+    font: inherit; font-size: 12.5px;
+    transition: color .15s, border-color .15s, background-color .15s;
+  }
+  .btn:hover { color: var(--accent); border-color: var(--accent); }
+  .btn.is-on { color: var(--accent); border-color: var(--accent); background: var(--accent-weak); }
+  .hint { font-size: 12px; color: var(--text3); }
+  .stage { transition: max-width .2s ease; }
+  .stage.is-mobile { max-width: 390px; }
+
+  .plan-label { margin: 26px 0 10px; font-size: 12.5px; font-weight: 600; color: var(--text3); }
+
+  .thread { padding: 18px 20px 16px; border: 1px solid var(--border); border-radius: 12px; margin-top: 14px; }
+
+  /* ── 对话行：侧别由层数决定，奇数层在右、偶数层在左 ── */
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg + .msg { margin-top: 14px; }
+  .msg--right { flex-direction: row-reverse; }
+
+  .av {
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: #fff;
+    background: var(--av-color, var(--accent)); user-select: none;
+  }
+
+  .msg-body { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .msg--left .msg-body { align-items: flex-start; }
+  .msg--right .msg-body { align-items: flex-end; }
+
+  .msg-meta {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    margin-bottom: 5px;
+    font-size: 12px; color: var(--text3); line-height: 1.5;
+  }
+  .msg--right .msg-meta { justify-content: flex-end; }
+  .msg-author { font-weight: 600; color: var(--text2); text-decoration: none; }
+  .msg-badge {
+    font-size: 10.5px; font-weight: 500; padding: 0 6px; height: 16px;
+    display: inline-flex; align-items: center; border-radius: 3px;
+    background: var(--badge-author); color: var(--badge-author-text);
+  }
+  .msg-at { color: var(--accent); text-decoration: none; font-size: 11.5px; }
+  .msg-dot { opacity: .5; }
+  /* IP 归属地与 UA：比时间再淡一档，保留信息但不抢戏 */
+  .msg-loc, .msg-ua { color: var(--text4); }
+  .msg-ua { display: inline-flex; align-items: center; gap: 4px; }
+  .msg-ua svg { width: 11px; height: 11px; opacity: .8; flex: none; }
+
+  .bubble {
+    max-width: 72%;
+    padding: 9px 13px;
+    font-size: 13.5px; line-height: 1.65;
+    color: var(--text); overflow-wrap: anywhere;
+  }
+  /* 气泡的「尖角」朝向说话人，帮助快速判断谁在说 */
+  .bubble--left { background: var(--bubble-left); border-radius: 3px 12px 12px 12px; }
+  .bubble--right { background: var(--bubble-right); border-radius: 12px 3px 12px 12px; }
+
+  .msg-actions { display: flex; gap: 12px; margin-top: 6px; font-size: 12px; color: var(--text3); }
+  .msg-actions button {
+    appearance: none; border: 0; background: none; padding: 0;
+    font: inherit; font-size: 12px; color: var(--text3); cursor: pointer;
+  }
+  .msg-actions button:hover { color: var(--accent); }
+
+  .fold {
+    display: flex; align-items: center; gap: 5px;
+    margin-top: 14px; padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: 12.5px; color: var(--accent);
+  }
+  .fold svg { width: 11px; height: 11px; }
+
+  .note {
+    margin: 34px 0 0; padding: 14px 16px;
+    border: 1px dashed var(--border); border-radius: 10px;
+    font-size: 12.5px; line-height: 1.85; color: var(--text3);
+  }
+  .note b { color: var(--text2); }
+
+  @media (max-width: 640px) {
+    body { padding: 20px 12px 48px; }
+    .thread { padding: 14px 13px 12px; }
+    .av { width: 28px; height: 28px; font-size: 11px; }
+    .bubble { max-width: 86%; }
+    .msg-meta { font-size: 11.5px; gap: 5px; }
+    .msg { gap: 8px; }
+  }
+  .stage.is-mobile .thread { padding: 14px 13px 12px; }
+  .stage.is-mobile .av { width: 28px; height: 28px; font-size: 11px; }
+  .stage.is-mobile .bubble { max-width: 86%; }
+  .stage.is-mobile .msg-meta { font-size: 11.5px; gap: 5px; }
+  .stage.is-mobile .msg { gap: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="demo-title">评论区「左右对话」Demo v2</h1>
+  <p class="demo-sub">规则和微信一致：<b>回复出现在被回复者的另一侧</b>。两人对话自动形成 A 左 → B 右 → A 左 → B 右 的一来一回。每条都保留原有的 IP 归属地与 UA 信息。</p>
+  <div class="rule">
+    <b>侧别规则：</b>根评论 = 左；层数 1（直接回复根）= 右；层数 2 = 左；层数 3 = 右……即<b>奇数层右、偶数层左</b>，等价于「回复落在对象对侧」。同一人连续发言会保持在同一侧（和你回复谁有关）。多人场景靠现有的 <span class="msg-at">@某人</span> 标记区分对象。
+  </div>
+
+  <div class="toolbar">
+    <button type="button" class="btn is-on" id="btnDark">深色主题</button>
+    <button type="button" class="btn" id="btnMobile">390px 移动端预览</button>
+    <span class="hint">也可以直接拉窄窗口 / F12 手机模式看真实响应式</span>
+  </div>
+
+  <div class="stage" id="stage">
+
+    <p class="plan-label">示例 1 · 两人一来一回（最常见的评论形态）</p>
+    <article class="thread">
+      <!-- 层 0：根评论，左 -->
+      <div class="msg msg--left">
+        <span class="av" style="--av-color:#5b8def">X</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">xinsenz</a><span class="msg-badge">常客</span>
+            <span class="msg-dot">·</span><time>11 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">湖北省 · 荆门市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Chrome</span>
+          </div>
+          <div class="bubble bubble--left">我的虚拟主机目前不支持评论回复发邮件🤣</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+
+      <!-- 层 1：回复根，右 -->
+      <div class="msg msg--right">
+        <span class="av" style="--av-color:#6b9cf5">豪</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">豪子</a><span class="msg-badge">博主</span>
+            <span class="msg-dot">·</span><a class="msg-at" href="#">@xinsenz</a>
+            <span class="msg-dot">·</span><time>11 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">重庆市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Edge</span>
+          </div>
+          <div class="bubble bubble--right">这个后面打算加个 webhook 通知，邮件服务器的成本太高就没做。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+
+      <!-- 层 2：回复层 1，左 -->
+      <div class="msg msg--left">
+        <span class="av" style="--av-color:#5b8def">X</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">xinsenz</a><span class="msg-badge">常客</span>
+            <span class="msg-dot">·</span><a class="msg-at" href="#">@豪子</a>
+            <span class="msg-dot">·</span><time>10 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">湖北省 · 荆门市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Chrome</span>
+          </div>
+          <div class="bubble bubble--left">webhook 也行，我去接个飞书机器人试试。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+
+      <!-- 层 3：回复层 2，右 -->
+      <div class="msg msg--right">
+        <span class="av" style="--av-color:#6b9cf5">豪</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">豪子</a><span class="msg-badge">博主</span>
+            <span class="msg-dot">·</span><a class="msg-at" href="#">@xinsenz</a>
+            <span class="msg-dot">·</span><time>9 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">重庆市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Edge</span>
+          </div>
+          <div class="bubble bubble--right">好，回头把文档补到插件仓库里 👍</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+
+      <button type="button" class="fold">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        收起 1 条回复
+      </button>
+    </article>
+
+    <p class="plan-label">示例 2 · 三人参与（靠 @ 标记区分在回谁）</p>
+    <article class="thread">
+      <div class="msg msg--left">
+        <span class="av" style="--av-color:#8a7ee2">O</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">obaby</a><span class="msg-badge">回头客</span>
+            <span class="msg-dot">·</span><time>7 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">山东省 · 济南市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 3H7.6A3.6 3.6 0 0 0 4 6.6v10.8A3.6 3.6 0 0 0 7.6 21h8.8a3.6 3.6 0 0 0 3.6-3.6V6.6A3.6 3.6 0 0 0 16.4 3Zm2.1 14.4a2.1 2.1 0 0 1-2.1 2.1H7.6a2.1 2.1 0 0 1-2.1-2.1V6.6c0-1.16.94-2.1 2.1-2.1h8.8c1.16 0 2.1.94 2.1 2.1v10.8ZM8.75 9.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Zm6.5 0a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Zm-6.2 5.3a.75.75 0 0 1 1.05-.15c.55.44 1.22.66 1.9.66s1.35-.22 1.9-.66a.75.75 0 1 1 .9 1.2c-.77.6-1.72.92-2.8.92s-2.03-.32-2.8-.92a.75.75 0 0 1-.15-1.05Z"/></svg>macOS</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Chrome</span>
+          </div>
+          <div class="bubble bubble--left">这思路有意思，不过我没什么限制。匿名评论，冒用身份也会有。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+
+      <div class="msg msg--right">
+        <span class="av" style="--av-color:#6b9cf5">豪</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">豪子</a><span class="msg-badge">博主</span>
+            <span class="msg-dot">·</span><a class="msg-at" href="#">@obaby</a>
+            <span class="msg-dot">·</span><time>7 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">重庆市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Edge</span>
+          </div>
+          <div class="bubble bubble--right">匿名确实难防，现在只是加了一层身份校验兜底。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+
+      <div class="msg msg--left">
+        <span class="av" style="--av-color:#d4a15a">L</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">Lan</a><span class="msg-badge">新朋友</span>
+            <span class="msg-dot">·</span><a class="msg-at" href="#">@豪子</a>
+            <span class="msg-dot">·</span><time>5 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">广东省 · 广州市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 3H7.6A3.6 3.6 0 0 0 4 6.6v10.8A3.6 3.6 0 0 0 7.6 21h8.8a3.6 3.6 0 0 0 3.6-3.6V6.6A3.6 3.6 0 0 0 16.4 3Zm2.1 14.4a2.1 2.1 0 0 1-2.1 2.1H7.6a2.1 2.1 0 0 1-2.1-2.1V6.6c0-1.16.94-2.1 2.1-2.1h8.8c1.16 0 2.1.94 2.1 2.1v10.8ZM8.75 9.5a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Zm6.5 0a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Zm-6.2 5.3a.75.75 0 0 1 1.05-.15c.55.44 1.22.66 1.9.66s1.35-.22 1.9-.66a.75.75 0 1 1 .9 1.2c-.77.6-1.72.92-2.8.92s-2.03-.32-2.8-.92a.75.75 0 0 1-.15-1.05Z"/></svg>macOS</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Safari</span>
+          </div>
+          <div class="bubble bubble--left">那这层校验会不会误伤老读者？比如换了个浏览器就认不出来了。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+
+      <div class="msg msg--right">
+        <span class="av" style="--av-color:#6b9cf5">豪</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">豪子</a><span class="msg-badge">博主</span>
+            <span class="msg-dot">·</span><a class="msg-at" href="#">@Lan</a>
+            <span class="msg-dot">·</span><time>5 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">重庆市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Edge</span>
+          </div>
+          <div class="bubble bubble--right">有兜底：认不出就退回昵称 + 邮箱验证，不会卡死不让评论。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+    </article>
+
+    <p class="plan-label">示例 3 · 楼主发起一条新根评论后，访客只回一条</p>
+    <article class="thread">
+      <div class="msg msg--left">
+        <span class="av" style="--av-color:#6b9cf5">豪</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">豪子</a><span class="msg-badge">博主</span>
+            <span class="msg-dot">·</span><time>2 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">重庆市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Edge</span>
+          </div>
+          <div class="bubble bubble--left">顺便说一句，评论区现在支持图片上传了，贴截图更方便。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+      <div class="msg msg--right">
+        <span class="av" style="--av-color:#5b8def">X</span>
+        <div class="msg-body">
+          <div class="msg-meta">
+            <a class="msg-author" href="#">xinsenz</a><span class="msg-badge">常客</span>
+            <span class="msg-dot">·</span><a class="msg-at" href="#">@豪子</a>
+            <span class="msg-dot">·</span><time>1 小时前</time>
+            <span class="msg-dot">·</span><span class="msg-loc">湖北省 · 荆门市</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v7a2.5 2.5 0 0 1-2.5 2.5H5.5A2.5 2.5 0 0 1 3 12.5v-7Zm2.5-1a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-13ZM8 19a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2H8Z"/></svg>Windows</span>
+            <span class="msg-dot">·</span>
+            <span class="msg-ua">Chrome</span>
+          </div>
+          <div class="bubble bubble--right">看到了，刚才那条就是直接贴的图，挺顺手的。</div>
+          <div class="msg-actions"><button type="button">回复</button></div>
+        </div>
+      </div>
+    </article>
+
+    <p class="note">
+      <b>这次请重点看：</b>① 两人多轮时，左右交替是否清楚、像对话；② 三人场景里同侧出现不同作者（示例 2 的豪子与 Lan 分居右/左）是否能靠 @ 与头像分辨；③ 每条的 IP 归属地 + UA 是否齐全都保留、且不会抢正文；④ 长段落气泡占 72%（移动 86%）宽是否好读；⑤ 楼层卡片是否仍需要（去掉了会变成纯聊天流）。
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var btnDark = document.getElementById('btnDark');
+  var btnMobile = document.getElementById('btnMobile');
+  var stage = document.getElementById('stage');
+
+  btnDark.addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') !== 'dark';
+    root.setAttribute('data-theme', dark ? 'dark' : 'light');
+    btnDark.textContent = dark ? '深色主题' : '浅色主题';
+    btnDark.classList.toggle('is-on', dark);
+  });
+  btnMobile.addEventListener('click', function () {
+    var on = stage.classList.toggle('is-mobile');
+    btnMobile.classList.toggle('is-on', on);
+    btnMobile.textContent = on ? '退出移动端预览' : '390px 移动端预览';
+  });
+})();
+</script>
+</body>
+</html>

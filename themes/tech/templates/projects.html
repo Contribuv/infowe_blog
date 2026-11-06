@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% from "_icons.html" import arrow %}
 {% block title %}开源项目{% endblock %}
 {% block content %}
+<div class="tech-narrow">
 <div class="tech-page-head">
     <h1 class="tech-page-title">开源项目</h1>
     <p class="tech-page-desc">我创建和维护的开源项目，涵盖 {{ languages|length }} 种编程语言</p>
@@ -31,10 +31,6 @@
                 </span>
                 <a href="/projects/{{ project.id }}" class="tech-project-name">{{ project.name }}</a>
                 {% if project.featured %}<span class="tech-project-featured">精选</span>{% endif %}
-                <span class="tech-project-stars">
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="m12 3 2.7 5.47 6.03.88-4.36 4.25 1.03 6.01L12 16.77l-5.4 2.84 1.03-6.01L3.27 9.35l6.03-.88L12 3z"/></svg>
-                    {{ project.stars }}
-                </span>
             </div>
             {% if project.description %}
             <p class="tech-project-desc">{{ project.description }}</p>
@@ -59,8 +55,11 @@
                     <span class="tech-project-lang-pct">{{ project.language }}</span>
                 </span>
                 {% endif %}
+                <span class="tech-project-stars">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="m12 3 2.7 5.47 6.03.88-4.36 4.25 1.03 6.01L12 16.77l-5.4 2.84 1.03-6.01L3.27 9.35l6.03-.88L12 3z"/></svg>
+                    {{ project.stars }}
+                </span>
             </div>
-            <a class="tech-project-open" href="/projects/{{ project.id }}">查看项目</a>
         </article>
         {% endfor %}
     </div>
@@ -94,6 +93,7 @@
     <p>开源项目正在整理中，敬请期待...</p>
 </div>
 {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}

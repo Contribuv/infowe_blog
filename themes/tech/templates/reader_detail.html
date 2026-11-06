@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ reader.author }}的留言{% endblock %}
 {% block content %}
+<div class="tech-narrow">
 <div class="tech-page-head">
     <p class="tech-reader-back"><a href="{{ url_for('readers_page') }}">返回留言榜单</a></p>
     <h1 class="tech-page-title">{{ reader.author }}的留言</h1>
@@ -74,4 +75,5 @@
     {% endif %}
 </nav>
 {% endif %}
+</div>
 {% endblock %}

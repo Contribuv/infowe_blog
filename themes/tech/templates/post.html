@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ post.title }}{% endblock %}
 {% block og_type %}article{% endblock %}
-{% block og_title %}{{ post.title }}{% endblock %}
-{% block tw_title %}{{ post.title }}{% endblock %}
 {% block og_description %}{{ (post.excerpt or blog_subtitle) }}{% endblock %}
 {% block tw_description %}{{ (post.excerpt or blog_subtitle) }}{% endblock %}
 {% block og_url %}{{ request.url }}{% endblock %}

@@ -128,8 +128,15 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-reply{font-size:12.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer;transition:color .15s}
 @media (hover:hover) and (pointer:fine){ .cmt-reply:hover{color:var(--c-accent)} }
 
-/* ── 回复区：无底色，仅靠缩进与头像尺度分层（组内一律平铺） ── */
-.cmt-replies{margin:14px 0 0 var(--indent);padding:0}
+/* ── 回复区：缩进 + 一条细分隔线（PC / 移动统一） ──
+   竖线落在根评论头像右缘：PC 用 (--indent - 12px) 的左外边距 + 12px 内边距，
+   回复正文仍与根评论正文左对齐；移动端 --indent 为 0，由下方媒体查询退回卡片内 10px。
+   线宽 1px、颜色用 --c-hairline（比 --c-border 更淡），作为层级提示而不抢戏。 */
+.cmt-replies{
+  margin:14px 0 0 calc(var(--indent) - 12px);
+  padding:0 0 0 12px;
+  border-left:1px solid var(--c-hairline);
+}
 .cmt-replies .cmt-item+.cmt-item{margin-top:14px}
 /* display:flex 会覆盖 UA 的 [hidden]，必须强制隐藏 */
 .cmt [hidden]{display:none !important}
@@ -262,7 +269,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (max-width:767px){
   .cmt{--av-root:36px;--av-reply:20px;--gap:6px;--indent:0}
   .cmt-thread{padding:16px 10px 13px}
-  .cmt-replies{margin-top:14px;padding:0 0 0 10px;border-left:2px solid var(--c-border)}
+  .cmt-replies{margin-left:0;padding-left:10px}
   .cmt-replies .cmt-item+.cmt-item{margin-top:14px}
   .cmt-form .row{flex-direction:column;gap:7px;margin-bottom:8px}
   .cmt-text{font-size:14px;line-height:1.75}
@@ -450,15 +457,14 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-act { color: var(--c-accent); }
 }
 
-/* 楼中楼：回复之间靠 9px 上下留白 + 一条细分隔线，
-   最后一条不再留底部 padding，让卡片上下的留白一样多 */
-.cmt-replies { margin-top: 9px; }
+/* 楼中楼：回复之间只用留白分隔。
+   外层已有楼层描边、左侧已有层级竖线，再给每条回复加横线会形成
+   「线框套线框」；取消横线，竖线颜色降为 --c-hairline 更安静。 */
 .cmt-replies > .cmt-item {
-  padding-top: 9px;
-  padding-bottom: 9px;
-  border-top: 1px solid var(--c-hairline);
+  padding-top: 0;
+  padding-bottom: 0;
 }
-.cmt-replies > .cmt-item + .cmt-item { margin-top: 0; }
+.cmt-replies > .cmt-item + .cmt-item { margin-top: 16px; }
 .cmt-replies > .cmt-item:last-child { padding-bottom: 0; }
 .cmt-text { margin-bottom: 0; }
 .cmt-byline { margin-top: 6px; }

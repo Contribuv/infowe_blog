@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}友情链接{% endblock %}
 {% block content %}
+<div class="tech-narrow">
 <div class="tech-page-head">
     <h1 class="tech-page-title">友情链接</h1>
     <p class="tech-page-desc">朋友们的地盘，目前共 {{ links|length }} 位 · <a href="/links/apply">申请友链</a> · <a href="/circle">看看圈子动态</a></p>
@@ -83,5 +84,6 @@
             <button type="button" class="tech-copy" data-copy='<a href="{{ site_url }}/" target="_blank">{{ site_title }}</a>'>复制 HTML 代码</button>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}

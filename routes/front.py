@@ -226,10 +226,19 @@ def search_page(q: str):
 def archive_page(year: int):
     per_page = settings.get_int("archive_per_page", 20) or 20
     page = request.args.get("page", 1, type=int) or 1
-    posts, total = Post.load("published", None, None, str(year), page, per_page)
+    # 月份筛选：只接受 1-12，统一补成两位与 created_at 的 MM 对齐
+    month_raw = (request.args.get("month") or "").strip()
+    month = ""
+    if month_raw.isdigit() and 1 <= int(month_raw) <= 12:
+        month = f"{int(month_raw):02d}"
+    posts, total = Post.load(
+        "published", None, None, str(year), page, per_page, month=month or None
+    )
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = min(max(1, page), total_pages)
-    posts, total = Post.load("published", None, None, str(year), page, per_page)
+    posts, total = Post.load(
+        "published", None, None, str(year), page, per_page, month=month or None
+    )
     posts = _decorate_categories(posts)
     return render_template(
         "posts.html",
@@ -244,6 +253,9 @@ def archive_page(year: int):
         all_years=Post.all_years(),
         active_tag="",
         active_year=str(year),
+        active_month=month,
+        month_counts=Post.month_counts(str(year)),
+        year_months=Post.month_counts_all(),
         sidebar=_sidebar_data(),
     )
 
@@ -286,6 +298,9 @@ def posts_page():
         all_years=Post.all_years(),
         active_tag=tag or "",
         active_year=year or "",
+        active_month="",
+        month_counts={},
+        year_months=Post.month_counts_all(),
         sidebar=_sidebar_data(),
     )
 
@@ -836,6 +851,8 @@ def category_page(category_id: int):
         all_years=Post.all_years(),
         active_tag="",
         active_year="",
+        active_month="",
+        month_counts={},
         active_category=category,
     )
 

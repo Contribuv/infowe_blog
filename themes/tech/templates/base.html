@@ -41,7 +41,11 @@
         } catch (e) {}
       })();
     </script>
-    <title>{% block full_title %}{% set page_title = self.title() | trim %}{% if page_title and page_title != blog_name %}{{ page_title }} - {% endif %}{{ blog_name }}{% endblock %}</title>
+    {% set page_title = self.title() | trim %}{% set home_label = home_title or blog_name %}{% set is_home = (not page_title) or page_title == blog_name or page_title == home_label %}
+    {# 完整 SEO 标题：其它页面「页面标题 - 首页标题 - 博客名称」，首页「首页标题 - 博客名称」，
+       <title> / og:title / twitter:title 共用同一个变量，避免三处漂移 #}
+    {% set seo_title = ((page_title ~ ' - ') if not is_home else '') ~ ((home_title ~ ' - ') if home_title else '') ~ blog_name %}
+    <title>{% block full_title %}{{ seo_title }}{% endblock %}</title>
     <!-- SEO 描述与 og:description 同源（self 取子模板覆盖后的值），避免两处文案漂移 -->
     <meta name="description" content="{% block meta_description %}{{ self.og_description() }}{% endblock %}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
@@ -49,13 +53,13 @@
     <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
     <!-- 社交分享：Open Graph + Twitter Card -->
     <meta property="og:site_name" content="{{ blog_name }}">
-    <meta property="og:title" content="{% block og_title %}{{ blog_name }}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ seo_title }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ blog_subtitle }}{% endblock %}">
     <meta property="og:type" content="{% block og_type %}website{% endblock %}">
     <meta property="og:url" content="{% block og_url %}{{ request.url }}{% endblock %}">
     <meta property="og:image" content="{% block og_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="{% block tw_title %}{{ blog_name }}{% endblock %}">
+    <meta name="twitter:title" content="{% block tw_title %}{{ seo_title }}{% endblock %}">
     <meta name="twitter:description" content="{% block tw_description %}{{ blog_subtitle }}{% endblock %}">
     <meta name="twitter:image" content="{% block tw_image %}{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='images/og-image.png') }}{% endblock %}">
     {% if request.path.startswith('/post/') or request.path.startswith('/projects/') %}

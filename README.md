@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.8)
+[![version](https://img.shields.io/badge/version-3.7.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.9)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,26 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.8**
+当前版本：**v3.7.9**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.9
+
+- 内容页宽度统一：项目、友链、圈子、读者、关于、文章归档与文章内页统一 780px 版心；首页保持 1000px 多栏布局
+- 项目列表卡片重做：单/双/三栏共用同一结构，图标 + 名称 + 精选 + 两行描述 + 语言与星数；整卡可点，移动端简介完整展开
+- 博客圈卡片改为「标题 + 时间徽章 → 摘要 → 出处」结构，作者行弱化；整卡可点
+- 博客圈统计与读者页规则说明改为轻量文字，移除模板感卡片；榜单领奖台留言限制为一行
+- 归档页改为单栏 780：点击年份标题弹出居中浮窗选择年份与月份，新增按月归档 `/archive/<年>?month=<月>`
+- 移动端卡片统一改为横线列表：首页文章、侧栏卡片、归档条目均取消描边与圆角，悬停不再出现背景块
+- 移动端首页宽度统一 390px 上限 + 16px 边距，与其他页面一致
+- SEO 标题统一为「页面标题 - 首页标题 - 博客名称」，`<title>`、`og:title`、`twitter:title` 三处同步
+- 新增柔和主按钮（淡 accent 底）用于首页「查看全部归档」与友链申请「提交申请」；友链申请页返回改为文字链接
+- 文章目录滚动条隐藏，修复部分分辨率下右侧出现竖线的问题
+- 评论区恢复「缩进 + 1px 细竖线」布局，移除条目间横线，回复更紧凑
+
+<details>
+<summary><b>历史版本（v3.7.8 及更早，点击展开）</b></summary>
 
 ### v3.7.8
 
@@ -939,9 +956,6 @@ chown -R www:www var
 - 桌面项目页标题与正文文字统一 760px，代码块和表格保持 780px 全宽
 - 修复文章正文段落间距为 0 的问题，恢复段落呼吸感
 - PC 评论区保持原有 14px / 13.5px 与 52px 缩进
-
-<details>
-<summary><b>历史版本（v3.7.7 及更早，点击展开）</b></summary>
 
 ### v3.7.7
 

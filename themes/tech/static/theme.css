@@ -208,15 +208,32 @@ img { max-width: 100%; }
     max-width: 390px;
     padding: 0 16px;
   }
-  .tech-main:has(.tech-home-head) .tech-shell { padding: 0 12px; }
+  /* 首页与其它页保持完全一致的移动端宽度：390px 上限 + 16px 边距 */
+  .tech-main:has(.tech-home-head) .tech-shell {
+    max-width: 390px;
+    padding: 0 16px;
+  }
 }
 @media (max-width: 360px) {
   /* 320 级小屏：上限不生效，16px 边距保持约 273px */
   .tech-main:not(:has(.tech-home-head)) .tech-shell { padding: 0 16px; }
-  .tech-main:has(.tech-home-head) .tech-shell { padding: 0 12px; }
+  .tech-main:has(.tech-home-head) .tech-shell {
+    max-width: 390px;
+    padding: 0 16px;
+  }
 }
-/* 项目列表页与其它内容页同宽 1000px（内宽 960）；
-   语言筛选 chip 可自然换行，不再单独放宽到导航宽度，避免与全站版心不一致 */
+/* ── 内容页阅读宽度 ──
+   项目列表 / 友链 / 圈子 / 读者 / 关于 / 文章归档（含分类、标签、年份）统一切到 780px，
+   与文章内页（.tech-post-wrap）、项目内页（.tech-proj）同一档版心。
+   首页保持 1000px 版心（首页有自己的双列/侧栏布局）。
+   用内层容器而不是改 .tech-shell：窄视口下收缩节奏与文章页完全一致
+   （先维持 780 上限，视口不足时再跟着 .tech-shell 的内边距一起缩）。 */
+.tech-narrow {
+  width: 100%;
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 /* ── 导航 ── */
 .tech-nav {
@@ -694,10 +711,18 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   transition: opacity .18s ease, transform .18s ease;
   pointer-events: none;
 }
-/* 窄屏：卡片基础样式已是独立描边卡片，这里只收紧内边距、隐藏箭头 */
+/* 窄屏：文章卡改为横线列表——取消边框/圆角/卡片间距，
+   用底部分隔线区分条目（触摸端没有 hover，卡片边框只剩视觉噪音） */
 @media (max-width: 1000px) {
-  .tech-post-item { padding: 14px 16px; }
-  .tech-post-item:last-child { margin-bottom: 0; }
+  .tech-post-item {
+    margin: 0;
+    padding: 16px 0;
+    border: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+  }
+  .tech-post-item:last-child { border-bottom: 0; }
   .tech-post-arrow { display: none; }
 }
 .tech-post-meta {
@@ -861,8 +886,9 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 博主自定义：文章/项目详情内容页正文定宽 780px（原 920），评论区随列同步收窄；移动端仍占满壳宽 */
 .tech-post-wrap { max-width: 780px; margin: 0 auto; }
 .tech-post-layout { display: block; }
-/* 正文版心：在 1000px 容器下收窄到 760px，避免长行换行丢行 */
-.tech-post-main { max-width: 760px; }
+/* 正文版心与项目详情页、评论区保持一致（780）：
+   此前单独收窄到 760，会和 780 的评论区错位 20px */
+.tech-post-main { max-width: 780px; }
 
 /* TOC：窄屏内联折叠，≥1400px 变成右侧固定文字索引。
    视觉参考「左侧高亮线」式目录：目录本身不画卡片，只靠字色与 2px 左边线
@@ -897,16 +923,12 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   max-height: 46vh;
   overflow-y: auto;
 }
-/* 目录滚动条：系统默认粗条（Windows 约 15px）会把 220px 宽的目录撑得很难看
-   注意 Chromium 121+ 只要设了标准属性 scrollbar-width，就会忽略 ::-webkit-scrollbar，故两者分开写 */
-.tech-toc-body::-webkit-scrollbar { width: 6px; }
-.tech-toc-body::-webkit-scrollbar-track { background: transparent; }
-.tech-toc-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-@media (hover: hover) and (pointer: fine) { .tech-toc-body::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); } }
-/* Firefox 不支持 ::-webkit-scrollbar，改用标准属性兜底（thin 细条 + 同色） */
-@supports (-moz-appearance: none) {
-  .tech-toc-body { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-}
+/* 目录滚动条：全程隐形。目录长且窗口矮时右侧会挂出一条 var(--border) 「竖线」，
+   无论平显还是悬停显示都被反馈为视觉噪音；改为 scrollbar-width: none 全隐藏，
+   滚动仍由滚轮/键盘/触摸完成（Android/iOS 本来就不常驻滚动条）。
+   Chromium 121+ 只设标准属性就会忽略 ::-webkit-scrollbar，两套写法都要给 */
+.tech-toc-body { scrollbar-width: none; }
+.tech-toc-body::-webkit-scrollbar { width: 0; height: 0; }
 .tech-toc-body .toc { margin: 0; }
 .tech-toc-body ul { list-style: none; margin: 0; padding: 0; }
 
@@ -1585,8 +1607,8 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 }
 .tech-stat span { font-size: 12px; color: var(--text-secondary); }
 
-/* 正文叙事区 */
-.tech-about { max-width: 1000px; margin: 20px auto 0; }
+/* 正文叙事区：宽度交给外层 .tech-narrow（780），这里只管上间距 */
+.tech-about { margin: 20px 0 0; }
 /* 叙事区块：无装饰线，仅靠留白分层 */
 .tech-about-section { margin-bottom: 24px; }
 .tech-about-section > h2 {
@@ -1689,82 +1711,122 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-project-grid--one { grid-template-columns: 1fr; }
 .tech-project-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tech-project-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 1100px) {
+
+/* 三栏在 780 版心内每栏约 250px：图标、字号、按钮各收一档，
+   描述保持两行；结构与其他栏位完全一致，只换尺寸 */
+.tech-project-grid--three .tech-project-card { padding: 14px 15px; }
+.tech-project-grid--three .tech-project-card-head { gap: 8px; min-height: 26px; }
+.tech-project-grid--three .tech-project-icon { width: 26px; height: 26px; border-radius: 7px; }
+.tech-project-grid--three .tech-project-name { font-size: 14.5px; }
+.tech-project-grid--three .tech-project-desc { font-size: 13px; }
+.tech-project-grid--three .tech-project-meta { gap: 4px 10px; margin-top: 10px; font-size: 11.5px; }
+.tech-project-grid--three .tech-project-lang,
+.tech-project-grid--three .tech-project-lang-more { font-size: 11.5px; gap: 5px; }
+.tech-project-grid--three .tech-lang-dot { width: 8px; height: 8px; }
+
+/* 三栏 → 两栏 → 单栏：按版心实际可容纳的卡片宽度切换。
+   780 版心在视口 ≤810px 时开始变窄，三栏每栏已不足 ~240px，退两栏；
+   ≤570px 时两栏每栏也不足 ~240px，统一单栏。 */
+@media (max-width: 810px) {
   .tech-project-grid--three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 720px) {
+@media (max-width: 570px) {
   .tech-project-grid--one,
   .tech-project-grid--two,
   .tech-project-grid--three { grid-template-columns: 1fr; }
+
+  /* 移动端：项目介绍完整展开（不限行），卡片留白更舒展；
+     整卡可点，点任意位置进项目详情 */
+  .tech-project-grid--one .tech-project-desc,
+  .tech-project-grid--two .tech-project-desc,
+  .tech-project-grid--three .tech-project-desc {
+    -webkit-line-clamp: unset; line-clamp: unset;
+    -webkit-box-orient: unset; display: block;
+  }
+  .tech-project-card { padding: 15px 16px; }
 }
+
+/* ── 项目卡片：一套结构适配单 / 双 / 三栏与所有视口 ──
+   头部：淡底图标 + 项目名（精选徽章）；
+   两行描述；底部一行「语言色点 · 语言 · 占比」与右端星数。
+   整卡可点（stretched-link），语言提示浮在覆盖层之上。 */
 .tech-project-card {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 20px 22px; min-width: 0;
-  border: 1px solid var(--border); border-radius: 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: transparent;
-  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease;
-}
-@media (hover: hover) and (pointer: fine) { .tech-project-card:hover { background: var(--hover-bg); border-color: var(--hover-ring); /* 扁平化：去掉投影与上浮 */ } }
-.tech-project-card-head { display: flex; align-items: center; gap: 8px; }
-.tech-project-name {
-  font-size: 17px; font-weight: 600; color: var(--text); text-decoration: none;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-@media (hover: hover) and (pointer: fine) { .tech-project-name:hover { color: var(--accent); } }
-.tech-project-featured {
-  font-size: 11px; color: var(--warning);
-  border: 1px solid var(--warning); border-radius: 10px; padding: 1px 8px;
-  flex-shrink: 0;
-}
-.tech-project-desc {
-  font-size: 14px; color: var(--text-secondary); margin: 0;
-  display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-}
-.tech-project-meta {
-  display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--text-secondary);
-  margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border);
-}
-.tech-project-open {
-  align-self: flex-start;
-  margin-top: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  text-decoration: none;
-  transition: color .18s ease, transform .18s ease;
+  transition: background-color .18s ease, border-color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .tech-project-open:hover {
-    color: var(--accent);
-    transform: translateX(2px);
-  }
+  .tech-project-card:hover { background: var(--hover-bg); border-color: var(--hover-ring); }
 }
-.tech-project-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
-.tech-project-card-head .tech-project-stars {
-  margin-left: auto;
+.tech-project-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  min-width: 0;
+}
+.tech-project-name {
+  font-size: 15.5px; font-weight: 600; color: var(--text); text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-project-card:hover .tech-project-name { color: var(--accent); }
+}
+/* 精选：淡 accent 底的小徽章（比描边胶囊安静） */
+.tech-project-featured {
   flex-shrink: 0;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
-  font-size: 11.5px;
+  font-size: 10.5px; font-weight: 500; letter-spacing: .04em;
+  color: var(--accent);
+  background: var(--accent-weak);
+  border-radius: 999px; padding: 1px 7px;
 }
-.tech-project-lang {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 2px 10px; border-radius: 8px;
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
+.tech-project-desc {
+  margin: 8px 0 0; font-size: 13.5px; line-height: 1.65;
+  color: var(--text-secondary);
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.tech-project-meta {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 6px 14px;
+  margin-top: 12px;
   font-size: 12px;
   color: var(--text-secondary);
 }
-.tech-project-lang-pct { opacity: .7; }
+/* 语言：纯文字 + 色点，不再套描边胶囊（去掉「表格底栏」感） */
+.tech-project-lang {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.tech-project-lang-pct { opacity: .6; }
 .tech-project-lang-more {
-  display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 8px;
-  border: 1px solid var(--border-strong); background: var(--bg);
-  color: var(--text-secondary); font-size: 12px;
-  cursor: help; position: relative;
+  display: inline-flex; align-items: center;
+  font-size: 12px; color: var(--text-secondary);
+  cursor: help;
+  position: relative;
+  z-index: 1; /* 可交互控件需浮在整卡覆盖层之上 */
+}
+.tech-project-stars {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  flex: none;
+}
+/* 整卡可点：项目名链接铺满卡片；语言「+N 种」等交互控件需浮在覆盖层之上 */
+.tech-project-name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
 }
 /* hover/点击 浮出隐藏语言列表：
    竖排每行一语言（.tech-tip-item），用 right:0 锚定按钮右缘从右向左生长，
@@ -2228,11 +2290,11 @@ html { touch-action: manipulation; }
 }
 
 @media (max-width: 480px) {
-  /* 导航/页脚同步收到 12px，避免正文比页头还宽造成错位 */
-  .tech-shell { padding: 0 12px; }
+  /* 导航/页脚与正文统一 16px 边距（原先 12px 会让页头比正文更贴边） */
+  .tech-shell { padding: 0 16px; }
   .tech-post-body pre { padding: 12px; }
-  /* 首页/列表卡片：水平内边距同步压到 12px，把宽度让给正文 */
-  .tech-post-item { padding: 14px 12px; }
+  /* 首页/列表：横线列表不再需要左右内距，保持与标题左对齐 */
+  .tech-post-item { padding: 14px 0; }
   /* ≤480px：标签/年份占半行并排，排序独占第二行并与第一排等宽对齐 */
   .tech-cs { flex: 1 1 calc(50% - 4px); max-width: calc(50% - 4px); }
   .tech-cs:last-child { flex: 1 1 100%; max-width: 100%; }
@@ -2378,8 +2440,37 @@ html { touch-action: manipulation; }
 .markdown-body details { margin: 1em 0; }
 .markdown-body summary { cursor: pointer; font-weight: 600; }
 .markdown-body details[open] summary { margin-bottom: .5em; }
-.tech-form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-.tech-form-actions .tech-btn { width: auto; }
+/* 表单动作区：主操作使用实心主按钮（与全站 .tech-btn-primary 一致），
+   次操作「返回友链」是文字链接而不是第二个按钮——
+   描边次按钮视觉重量天然小于实心按钮，会显得「小一号」，文字链接没有这个问题。
+   两个动作之间留 16px 间距；移动端上下排列、主按钮全宽，间距 12px。 */
+.tech-form-actions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.tech-form-actions .tech-btn {
+  width: auto;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 10px;
+}
+/* 提交按钮改用「柔和 accent」样式（与首页「查看全部归档」共用 .tech-btn-soft），
+   定义见文件末尾统一段，避免这里的局部规则与主按钮状态互相覆盖 */
+@media (max-width: 640px) {
+  .tech-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .tech-form-actions .tech-btn {
+    width: 100%;
+    height: 44px;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .tech-form-actions .tech-page-action {
+    justify-content: center;
+    min-height: 44px;
+    font-size: 14px;
+  }
+}
 
 /* ═══ 实色底统一段（扁平化）═══
    原「毛玻璃降级」：现在全部去模糊，代码块一律实色底，
@@ -2393,50 +2484,53 @@ html { touch-action: manipulation; }
 }
 
 /* ── 博客圈（友链 RSS 聚合）── */
+/* ── 统计：一行小字（无卡片壳、无边框、无渐变） ──
+   原四格大数字卡更像后台模板，只传达 4 个数不值得一个整块；
+   改成一行内联统计「数字 + 标签 · 数字 + 标签」，安静跟随版心 */
 .circle-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin: 20px 0 20px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 0;
+  margin: 14px 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: none;
 }
 .circle-stats > div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0;
   border: 0;
-  border-left: 1px solid var(--border);
   border-radius: 0;
-  background: transparent;
-  transition: background-color .18s ease;
+  background: none;
+  transition: none;
 }
-/* 博客圈统计：卡片内部改成单栏（标签在上、数字在下），外框与 hover 不动 */
-.circle-stats--circle > div { flex-direction: column-reverse; gap: 6px; }
-.circle-stats--circle > div > span {
-  font-size: 12px;
-  letter-spacing: .02em;
+/* 条目之间用圆点分隔，不再用边框拼接 */
+.circle-stats > div + div::before {
+  content: "·";
+  margin-right: 12px;
+  color: var(--border-strong);
 }
-.circle-stats > div:first-child { border-left: 0; }
 .circle-stats b {
-  font-size: 26px;
-  line-height: 1.1;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
   color: var(--text);
-  letter-spacing: -.01em;
+  letter-spacing: 0;
 }
-.circle-stats span { font-size: 12px; color: var(--text-secondary); }
-@media (hover: hover) and (pointer: fine) {
-  .circle-stats > div:hover { background: var(--hover-bg); }
-}
-[data-theme="dark"] .circle-stats {
-  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 14%, transparent), transparent);
+.circle-stats span { font-size: 12.5px; color: var(--text-secondary); }
+.circle-stats--circle > div { flex-direction: row; gap: 5px; }
+.circle-stats--circle > div > span {
+  font-size: 12.5px;
+  letter-spacing: 0;
 }
 
-/* 文章卡片：参考 leelaa 的信息层级，单栏排列（紧凑版，避免一屏装不下两张卡） */
+/* 文章卡片：结构参考老张博客博友圈——标题先行（相对时间徽章内嵌）、摘要两行、
+   底部一行「头像 + 站名 + 短日期」，阅读流为内容在前、出处在后 */
 .circle-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2445,8 +2539,9 @@ html { touch-action: manipulation; }
 .circle-item {
   display: flex;
   flex-direction: column;
+  position: relative;
   min-width: 0;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: transparent;
@@ -2455,66 +2550,61 @@ html { touch-action: manipulation; }
 /* hover 统一由下方「全站卡片 hover」的 @media (hover:hover) 规则提供：
    这里不再单写一份，否则触摸设备点一下就留下粘住的 hover 底色 */
 
-.circle-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  min-width: 0;
+/* 整卡可点：标题链接铺满卡片（stretched-link），
+   摘要、出处行任意位置都能进文章；站名与头像保持独立链接特性，
+   提高 z-index 使其不被 title 的隐形覆盖层拦截 */
+.circle-title a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
 }
-.circle-avatar-link { flex: none; display: inline-flex; }
-.circle-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
-  border: 1px solid var(--border);
-  background: var(--bg-subtle);
-}
-.circle-avatar--letter {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-.circle-head-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.circle-site-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  text-decoration: none;
-}
-@media (hover: hover) and (pointer: fine) { .circle-site-name:hover { color: var(--accent); } }
-.circle-date {
-  font-size: 12px;
-  color: var(--text-secondary);
+.circle-site-name,
+.circle-avatar-link { position: relative; z-index: 1; }
+/* PC 端悬停卡上任何位置，标题都点亮为 accent，明示「这卡可点」 */
+@media (hover: hover) and (pointer: fine) {
+  .circle-item:hover .circle-title a { color: var(--accent); }
 }
 
 .circle-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 8px;
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 650;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text);
   letter-spacing: -.01em;
 }
 .circle-title a { color: inherit; text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .circle-title a:hover { color: var(--accent); } }
 
+/* 相对时间徽章：胶囊小标签跟在标题后；今天/昨天给 accent 绿，更早的时间中性灰。
+   标题用 flex 排列，徽章与文字同行垂直居中，不再手工 vertical-align 补偿 */
+.circle-day-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--text-secondary);
+}
+.circle-day-badge.is-fresh {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
 .circle-summary {
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   overflow-wrap: anywhere;
   font-size: 13.5px;
   line-height: 1.7;
@@ -2526,36 +2616,51 @@ html { touch-action: manipulation; }
   overflow: hidden;
 }
 
+/* 底部出处行：头像 20px + 站名（可点）+ 短日期推到行尾 */
 .circle-foot {
-  margin-top: auto;
-  padding-top: 12px;
+  margin-top: 12px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  color: var(--text-secondary);
+  gap: 8px;
+  min-width: 0;
 }
-.circle-time { white-space: nowrap; flex: none; }
-.circle-more {
+.circle-avatar-link { flex: none; display: inline-flex; }
+.circle-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+.circle-avatar--letter {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.circle-site-name {
+  /* 作者行弱化：站点名只作为出处信息，字号/字重/颜色都比标题低一档，
+     让「点标题看文章」成为唯一视觉焦点；悬停仍可点到友站 */
   font-size: 12px;
+  font-weight: 400;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: background-color .18s, border-color .18s, color .18s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
-.circle-more svg { width: 13px; height: 13px; display: block; }
-@media (hover: hover) and (pointer: fine) {
-  .circle-more:hover {
-    background: var(--text);
-    border-color: var(--text);
-    color: var(--bg);
-  }
+@media (hover: hover) and (pointer: fine) { .circle-site-name:hover { color: var(--accent); } }
+.circle-date {
+  flex: none;
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }
 
 /* 列表末尾：已经看了 N 篇 */
@@ -2610,23 +2715,10 @@ html { touch-action: manipulation; }
 .circle-pager .is-current { border-color: transparent; background: var(--bg-subtle); color: var(--text); }
 .circle-pager .is-disabled { opacity: .4; }
 .circle-pager .is-gap { border: 0; background: none; color: var(--text-secondary); }
-@media (max-width: 860px) {
-  .circle-item { padding: 15px 16px; }
-  .circle-title { font-size: 16.5px; }
-}
-
 @media (max-width: 640px) {
-  .circle-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .circle-stats > div { padding: 14px 16px; }
-  .circle-stats > div:nth-child(2n) { border-left: 1px solid var(--border); }
-  .circle-stats > div:nth-child(2n+1) { border-left: 0; }
-  .circle-stats > div:nth-child(n+3) { border-top: 1px solid var(--border); }
-  .circle-stats b { font-size: 23px; }
-  .circle-item { min-width: 0; padding: 14px; }
-  .circle-title { font-size: 16px; }
-  .circle-avatar { width: 34px; height: 34px; }
-  .circle-avatar--letter { font-size: 14px; }
-  .circle-summary { font-size: 13px; -webkit-line-clamp: 3; line-clamp: 3; }
+  .circle-stats { margin: 12px 0; }
+  .circle-item { min-width: 0; padding: 13px 14px; }
+  .circle-summary { font-size: 13px; -webkit-line-clamp: 2; line-clamp: 2; }
   .circle-end-count b { font-size: 23px; }
 }
 
@@ -2949,6 +3041,94 @@ html { touch-action: manipulation; }
 }
 
 /* ── 归档页：按年份分组的时间线 ── */
+/* 归档选择浮窗：屏幕居中（PC / 移动一致），点年份分组标题或年份页标题打开；
+   年份切换后即时渲染该年有文章的月份，月份点击直接跳转。 */
+.tech-archive-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.tech-archive-backdrop { position: absolute; inset: 0; background: rgba(4, 6, 12, .55); }
+.tech-archive-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  max-height: min(72vh, 560px);
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+}
+.tech-archive-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.tech-archive-dialog-head strong { font-size: 15px; font-weight: 600; }
+.tech-archive-close {
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) { .tech-archive-close:hover { color: var(--accent); } }
+.tech-archive-group + .tech-archive-group {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.tech-archive-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+.tech-archive-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tech-archive-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .15s ease, background-color .15s ease, border-color .15s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-archive-chip:hover { color: var(--accent); border-color: var(--border-strong); }
+}
+.tech-archive-chip.is-active {
+  color: var(--accent);
+  background: var(--accent-weak);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  font-weight: 600;
+}
+
+/* 年份页标题也可点击（同一浮窗，带当前年份） */
+.tech-title-picker { cursor: pointer; transition: color .18s ease; }
+@media (hover: hover) and (pointer: fine) { .tech-title-picker:hover { color: var(--accent); } }
+
+@media (max-width: 640px) {
+  .tech-archive-modal { padding: 16px; }
+  .tech-archive-dialog { width: 100%; padding: 16px 16px 18px; border-radius: 16px; }
+  .tech-archive-chip { padding: 6px 12px; font-size: 13px; }
+}
+
 .tech-miles { display: flex; flex-direction: column; gap: 26px; }
 .tech-miles-head {
   display: flex;
@@ -2957,15 +3137,25 @@ html { touch-action: manipulation; }
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
-.tech-miles-head h2 {
+/* 年份标题本身就是入口：按钮外观与标题一致，hover 变 accent 提示可点 */
+.tech-miles-head .tech-miles-year {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   margin: 0;
-  padding-left: 12px;
+  padding: 0 0 0 12px;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 21px;
   font-weight: 700;
   letter-spacing: .02em;
+  color: var(--text);
+  cursor: pointer;
+  transition: color .18s ease;
 }
-.tech-miles-head h2::before {
+.tech-miles-head .tech-miles-year::before {
   content: "";
   position: absolute;
   left: 0;
@@ -2974,7 +3164,12 @@ html { touch-action: manipulation; }
   width: 3px;
   height: 17px;
   border-radius: 2px;
-  background: var(--accent) /* 扁平化：装饰条改纯色 */;
+  background: var(--accent);
+}
+.tech-miles-year-caret { color: var(--text-secondary); opacity: .55; transition: color .18s ease, opacity .18s ease; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-miles-head .tech-miles-year:hover { color: var(--accent); }
+  .tech-miles-head .tech-miles-year:hover .tech-miles-year-caret { color: var(--accent); opacity: 1; }
 }
 .tech-miles-head span { font-size: 12px; color: var(--text-secondary); }
 .tech-miles-list { list-style: none; margin: 0; padding: 0; }
@@ -3024,22 +3219,27 @@ html { touch-action: manipulation; }
   .tech-miles-item:hover .tech-miles-arrow { opacity: 1; transform: none; }
 }
 
-/* 窄屏改成与文章列表同款的独立卡片：负 margin 外扩在窄屏会把 hover 高亮块
-   顶到版心外，触摸端看起来就是「背景框溢出」；这里改为描边卡片 + 间距分隔 */
+/* 窄屏归档列表：行式索引，不做描边卡片。
+   卡片化时第一张卡的上边框会紧贴年份标题（看起来像标题下多一条线），
+   且每张卡四边框在细列表上偏重；这里改为行式列表 + 底部分隔线，
+   保留 11-05 / 标题 / 分类 / 标签的横向结构，视觉更接近归档索引。
+   hover 高亮块与桌面保持一致：左右内距 + 8px 圆角，避免窄屏变成通栏方角块。 */
 @media (max-width: 1000px) {
-  .tech-miles-list { display: flex; flex-direction: column; gap: 10px; }
+  .tech-miles-head { border-bottom: 0; padding-bottom: 8px; }
+  .tech-miles-list { display: flex; flex-direction: column; gap: 0; }
   .tech-miles-item {
     margin: 0;
-    padding: 11px 14px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    padding: 12px 10px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 8px;
   }
-  .tech-miles-item:last-child { border-color: var(--border); }
+  .tech-miles-item:last-child { border-bottom-color: transparent; }
   .tech-miles-item:hover { box-shadow: none; }
 }
 
 @media (max-width: 640px) {
-  .tech-miles-head h2 { font-size: 19px; }
+  .tech-miles-head .tech-miles-year { font-size: 19px; }
   .tech-miles-item { gap: 10px; padding: 11px 12px; }
   .tech-miles-date { flex-basis: 42px; }
   .tech-miles-title { font-size: 15px; }
@@ -3049,7 +3249,6 @@ html { touch-action: manipulation; }
    .tech-post-item 不在此列：它与侧栏卡片 .tech-side-card 一致，只做底色+描边变化 */
 .tech-link-card,
 .circle-item,
-.circle-stats > div,
 .tech-project-card,
 .tech-miles-item {
   transition: background-color .18s ease, border-color .18s ease;
@@ -3057,7 +3256,6 @@ html { touch-action: manipulation; }
 @media (hover: hover) and (pointer: fine) {
   .tech-link-card:hover,
   .circle-item:hover,
-  .circle-stats > div:hover,
   .tech-project-card:hover,
   .tech-miles-item:hover {
     background: var(--hover-bg);
@@ -3067,12 +3265,6 @@ html { touch-action: manipulation; }
 
 /* ── 读者页：留言榜单 ── */
 .tech-reader-stats { margin-top: 20px; }
-.tech-reader-stats.circle-stats {
-  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
-}
-[data-theme="dark"] .tech-reader-stats.circle-stats {
-  background: radial-gradient(600px 120px at top, color-mix(in srgb, var(--accent) 16%, transparent), transparent);
-}
 .tech-reader-list {
   display: flex;
   flex-direction: column;
@@ -3201,8 +3393,6 @@ html { touch-action: manipulation; }
 @media (hover: hover) and (pointer: fine) { .tech-apply-notes a:hover { text-decoration: underline; } }
 
 @media (max-width: 640px) {
-  .tech-reader-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .tech-reader-stats > div { padding: 12px; }
   /* 列表项保持与 PC / 前三名一致的完整卡片边框，仅微调内边距 */
   /* 手机端：序号不再单独占一列，改成叠在头像左上角的小角标，
      把横向空间全留给昵称和留言内容 */
@@ -3245,28 +3435,6 @@ html { touch-action: manipulation; }
   line-height: 1.8;
   color: var(--text-secondary);
 }
-/* 榜单规则卡片：标题行居中，正文保持左对齐便于阅读 */
-.tech-reader-rules {
-  margin: 18px 0 4px;
-  padding: 14px 18px 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--text) 2%, transparent);
-}
-.tech-reader-rules-title {
-  margin: 0 0 6px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: .08em;
-  color: var(--text-secondary);
-}
-.tech-reader-rules-text {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.8;
-  color: var(--text-secondary);
-}
 /* 领奖台：冠军放中间（2-1-3），移动端恢复 1-2-3 的纵向顺序 */
 @media (min-width: 721px) {
   .tech-podium:not(.tech-podium--one):not(.tech-podium--two) .tech-podium-item--2 { order: 1; }
@@ -3292,9 +3460,9 @@ html { touch-action: manipulation; }
 .tech-podium-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  padding: 13px 14px;
+  padding: 12px 13px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: transparent;
@@ -3322,13 +3490,13 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   display: block;
 }
 .tech-podium-avatar {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--bg-subtle);
 }
-.tech-podium-item--1 .tech-podium-avatar { width: 50px; height: 50px; }
+.tech-podium-item--1 .tech-podium-avatar { width: 46px; height: 46px; }
 .tech-podium-crown {
   position: absolute;
   top: -11px;
@@ -3342,7 +3510,7 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
 .tech-podium-head {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 .tech-podium-rank {
@@ -3350,9 +3518,9 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   align-items: center;
   justify-content: center;
   flex: none;
-  min-width: 40px;
+  min-width: 36px;
   height: 19px;
-  padding: 0 7px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--medal-bg);
   color: var(--medal);
@@ -3379,10 +3547,11 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   line-height: 1.6;
   color: var(--text-secondary);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  /* 领奖台只展示一句代表留言，完整内容在读者详情页；PC 悬停 title 可看全文 */
 }
 /* 来源单行省略：标题很长时不会把卡片撑高，破坏三卡齐平 */
 .tech-podium-source {
@@ -3659,17 +3828,49 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
 }
 
 @media (max-width: 1000px) {
-  .tech-home-grid { grid-template-columns: 1fr; gap: 24px; }
-  /* 窄屏侧栏改为正文下方的 2 列堆叠：此时吸附无意义，也取消高度限制 */
+  .tech-home-grid { grid-template-columns: 1fr; gap: 20px; }
+  /* 窄屏侧栏：改成单列横线列表（取消卡片边框/圆角/左右内距），
+     与文章列表共用同一套排版基线——内容宽度都等于版心内宽，左右对齐。
+     触摸端没有 hover，卡片壳只剩视觉噪音，横线分隔更接近阅读流。 */
   .tech-sidebar {
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    position: static; max-height: none; overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: static;
+    max-height: none;
+    overflow: visible;
+    border-top: 1px solid var(--border);
   }
-  .tech-side-widget { grid-column: 1 / -1; }
+  .tech-side-card {
+    padding: 16px 0;
+    border: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+    background: transparent;
+  }
+  .tech-side-card:last-child { border-bottom: 0; }
+  .tech-side-widget { grid-column: auto; }
 }
 @media (max-width: 640px) {
-  .tech-sidebar { grid-template-columns: 1fr; }
-  .tech-side-card { padding: 16px; }
+  .tech-sidebar { display: flex; }
+  .tech-side-card { padding: 16px 0; }
+}
+
+/* 窄屏（≤1000px，含手机与 9:16 窄窗口）已是横线列表，不再出现「背景卡片」：
+   取消悬停背景块与边框变色，仅保留文章标题的 accent 变色作为悬停反馈。
+   全局 .tech-post-item:hover 的背景规则在窄屏下被这里的同权重后置规则覆盖。 */
+@media (max-width: 1000px) and (hover: hover) and (pointer: fine) {
+  .tech-post-item:hover,
+  .tech-side-card:hover {
+    background: transparent;
+    border-color: transparent;
+  }
+}
+
+/* 窄屏列表最后一项不再留底部内距：它下面已有 .tech-more-wrap 的 margin，
+   两层叠加会让列表与「查看全部归档」之间出现双倍间距 */
+@media (max-width: 1000px) {
+  .tech-post-list > .tech-post-item:last-child { padding-bottom: 0; }
 }
 
 /* ── 站外链接确认浮窗：始终屏幕居中 ── */
@@ -3895,7 +4096,6 @@ html.tech-external-open { overflow: hidden; }
   align-items: center;
   gap: 4px;
 }
-.tech-project-card-head .tech-project-stars { margin-left: auto; }
 
 /* ── 读者详情：个人留言档案 ── */
 .tech-reader-back { margin: 0 0 8px; font-size: 12.5px; }
@@ -4139,32 +4339,54 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
     align-items: flex-start;
     gap: 6px;
   }
-  .tech-page-head--with-action .tech-btn {
-    position: relative;
-    height: auto;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    color: var(--accent);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.6;
+}
+
+/* 页头右侧动作：纯文字链接。
+   原先这里是 tech-btn-primary 按钮，但文件末尾的页头规则
+   （.tech-page-head--with-action .tech-btn:hover 背景置透明）
+   特异性反超 .tech-btn-primary:hover，悬停时按钮外壳会消失、只剩蓝字。
+   改为文字链接后不再有按钮壳参与，hover 只做文字色渐变与箭头位移。 */
+.tech-page-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.6;
+  text-decoration: none;
+  transition: color .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.tech-page-action-arrow { transition: transform .18s ease; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-page-action:hover {
+    /* accent 与正文色混合：浅色主题下沉一点、深色主题提亮一点，
+       两套主题下的对比度都落在 AA 以上；下划线给出明确的交互反馈 */
+    color: color-mix(in srgb, var(--accent) 84%, var(--text));
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
   }
-  /* 文字链接视觉很小，透明热区仍扩到约 44px */
-  .tech-page-head--with-action .tech-btn::after {
-    content: "";
-    position: absolute;
-    inset: -10px -8px;
-  }
+  .tech-page-action:hover .tech-page-action-arrow { transform: translateX(2px); }
+}
+.tech-page-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* ── 柔和主按钮（.tech-btn-soft）──
+   淡 accent 底 + accent 文字 + 淡 accent 描边，替代高对比实心 primary。
+   用于首页「查看全部归档」、友链申请「提交申请」这类需要按钮形态、
+   但在安静页面里不应过于抢眼的主操作；深浅两套主题由 color-mix 自动适配。 */
+.tech-btn.tech-btn-soft {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  color: color-mix(in srgb, var(--accent) 76%, var(--text));
 }
 @media (hover: hover) and (pointer: fine) {
-  .tech-page-head--with-action .tech-btn:hover,
-  .tech-page-head--with-action .tech-btn:focus-visible {
-    background: transparent;
-    border-color: transparent;
-    color: var(--accent);
+  .tech-btn.tech-btn-soft:hover {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    color: color-mix(in srgb, var(--accent) 86%, var(--text));
   }
 }
 

@@ -1,7 +1,5 @@
 {% extends "base.html" %}
 {% block title %}{{ project.name }}{% endblock %}
-{% block og_title %}{{ project.name }}{% endblock %}
-{% block tw_title %}{{ project.name }}{% endblock %}
 {% block og_description %}{{ (project.description or blog_subtitle) }}{% endblock %}
 {% block tw_description %}{{ (project.description or blog_subtitle) }}{% endblock %}
 {% block og_url %}{{ request.url }}{% endblock %}

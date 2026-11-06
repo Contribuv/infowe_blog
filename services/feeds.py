@@ -228,6 +228,17 @@ def date_text(ts: float) -> str:
     return f"{dt.year}年{dt.month}月{dt.day}日"
 
 
+def date_short(ts: float) -> str:
+    """博友圈卡片用的短日期：当年显示 MM-DD，往年补上年份避免歧义。"""
+    ts = float(ts or 0)
+    if not ts:
+        return ""
+    dt = datetime.fromtimestamp(ts)
+    if dt.year != datetime.now().year:
+        return f"{dt.year}-{dt.month:02d}-{dt.day:02d}"
+    return f"{dt.month:02d}-{dt.day:02d}"
+
+
 def aggregate(page: int = 1, per_page: int = PER_PAGE) -> tuple[list[dict], int, dict]:
     page = max(1, int(page or 1))
     total = int(db.scalar(
@@ -251,6 +262,7 @@ def aggregate(page: int = 1, per_page: int = PER_PAGE) -> tuple[list[dict], int,
         item["summary"] = _clean(item.get("summary") or "")
         item["time_text"] = rel_time(item.get("published"))
         item["date_text"] = date_text(item.get("published"))
+        item["date_short"] = date_short(item.get("published"))
         items.append(item)
 
     now = datetime.now()

@@ -1,13 +1,12 @@
 {% extends "base.html" %}
 {% from "_icons.html" import arrow %}
-{% block title %}{% if active_category %}{{ active_category.name }}{% elif is_miles %}文章归档{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
+{% block title %}{% if active_category %}{{ active_category.name }}{% elif is_miles %}文章归档{% elif active_month %}{{ active_year }} 年 {{ active_month | int }} 月归档{% elif active_year %}{{ active_year }} 年归档{% elif active_tag %}{{ active_tag }}{% else %}文章{% endif %}{% endblock %}
 {% block content %}
+<div class="tech-narrow">
 <div class="tech-page-head">
-    <h1 class="tech-page-title">{% if active_category %}{{ active_category.name }}{% elif is_miles %}文章归档{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
-    <p class="tech-page-desc">{% if active_category %}共 {{ total }} 篇文章 · 分类{% elif is_miles %}共 {{ total }} 篇文章，记录每一次折腾与思考 · <a href="/tags">按标签浏览</a>{% else %}共 {{ total }} 篇文章{% endif %}</p>
+    <h1 class="tech-page-title{% if active_year %} tech-title-picker{% endif %}"{% if active_year %} data-archive-open="{{ active_year }}" title="切换年份 / 月份"{% endif %}>{% if active_category %}{{ active_category.name }}{% elif is_miles %}文章归档{% elif active_month %}{{ active_year }} 年 {{ active_month | int }} 月归档{% elif active_year %}{{ active_year }} 年归档{% else %}全部文章{% endif %}</h1>
+    <p class="tech-page-desc">{% if active_category %}共 {{ total }} 篇文章 · 分类{% elif is_miles %}共 {{ total }} 篇文章，记录每一次折腾与思考 · <a href="/tags">按标签浏览</a>{% elif active_month %}共 {{ total }} 篇文章 · {{ active_year }} 年 {{ active_month | int }} 月{% else %}共 {{ total }} 篇文章{% endif %}</p>
 </div>
-
-{% if post_layout == 'multi' and sidebar %}<div class="tech-home-grid"><div class="tech-home-main">{% endif %}
 
 <!-- 筛选栏：自定义下拉（替代原生 select，弹层跟随暗色主题，iOS/微信亦一致） -->
 {% if not is_miles and (all_tags or all_years) %}
@@ -56,7 +55,10 @@
     {% for year, items in groups %}
     <section class="tech-miles-group">
         <header class="tech-miles-head">
-            <h2>{{ year }}</h2>
+            <button type="button" class="tech-miles-year" data-archive-open="{{ year }}" title="选择年份 / 月份">
+                {{ year }}
+                <svg class="tech-miles-year-caret" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
+            </button>
             <span>{{ year_counts.get(year, items|length) }} 篇</span>
         </header>
         <ul class="tech-miles-list">
@@ -112,7 +114,7 @@
 {% if active_category %}
     {% set page_endpoint = 'category_page' %}{% set page_params = {'category_id': active_category.id} %}
 {% elif active_year %}
-    {% set page_endpoint = 'archive_page' %}{% set page_params = {'year': active_year} %}
+    {% set page_endpoint = 'archive_page' %}{% set page_params = {'year': active_year, 'month': active_month or none} %}
 {% elif active_tag %}
     {% set page_endpoint = 'tag_page' %}{% set page_params = {'tag': active_tag} %}
 {% else %}
@@ -140,7 +142,34 @@
     {% endif %}
 </nav>
 {% endif %}
-{% if post_layout == 'multi' and sidebar %}</div>{% include "_sidebar.html" %}</div>{% endif %}
+
+{# 归档选择浮窗：点年份分组标题（或年份页标题）打开，屏幕居中，先选年份再选月份 #}
+{% if (is_miles or active_year) and all_years %}
+<div class="tech-archive-modal" data-archive-modal hidden>
+    <div class="tech-archive-backdrop" data-archive-close></div>
+    <div class="tech-archive-dialog" role="dialog" aria-modal="true" aria-label="选择归档年份与月份">
+        <div class="tech-archive-dialog-head">
+            <strong>选择归档</strong>
+            <button type="button" class="tech-archive-close" data-archive-close aria-label="关闭">&times;</button>
+        </div>
+        <div class="tech-archive-group">
+            <span class="tech-archive-label">年份</span>
+            <div class="tech-archive-chips" data-archive-years>
+                <button type="button" class="tech-archive-chip" data-year="">全部</button>
+                {% for y in all_years %}
+                <button type="button" class="tech-archive-chip" data-year="{{ y }}">{{ y }}</button>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="tech-archive-group" data-archive-months-group hidden>
+            <span class="tech-archive-label">月份</span>
+            <div class="tech-archive-chips" data-archive-months></div>
+        </div>
+    </div>
+</div>
+<script type="application/json" id="tech-archive-data">{{ year_months | tojson }}</script>
+{% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -296,6 +325,77 @@
     /* 初始排序：取当前选中值（默认 new） */
     var sortSel = doc.querySelector('[data-cs-role="sort"] .is-selected');
     applySort(sortSel ? sortSel.getAttribute('data-cs-value') : 'new');
+})();
+
+/* 归档选择浮窗：点年份标题打开、屏幕居中；年份切换即时刷新月份，月份点击跳转 */
+(function () {
+    'use strict';
+    var modal = document.querySelector('[data-archive-modal]');
+    if (!modal) return;
+    var dataEl = document.getElementById('tech-archive-data');
+    var data = {};
+    try { data = JSON.parse(dataEl ? dataEl.textContent : '{}') || {}; } catch (e) { data = {}; }
+
+    var yearBox = modal.querySelector('[data-archive-years]');
+    var monthBox = modal.querySelector('[data-archive-months]');
+    var monthsGroup = modal.querySelector('[data-archive-months-group]');
+    var root = document.documentElement;
+
+    function monthChip(href, label) {
+        var a = document.createElement('a');
+        a.className = 'tech-archive-chip';
+        a.href = href;
+        a.textContent = label;
+        return a;
+    }
+
+    function setYear(year) {
+        Array.prototype.forEach.call(yearBox.querySelectorAll('[data-year]'), function (b) {
+            b.classList.toggle('is-active', b.getAttribute('data-year') === year);
+        });
+        monthsGroup.hidden = !year;
+        monthBox.innerHTML = '';
+        if (!year) return;
+        var months = data[year] || {};
+        monthBox.appendChild(monthChip('/archive/' + year, '全部'));
+        Object.keys(months).map(Number).sort(function (a, b) { return b - a; }).forEach(function (m) {
+            monthBox.appendChild(monthChip('/archive/' + year + '?month=' + m, m + ' 月'));
+        });
+    }
+
+    function open(year) {
+        modal.hidden = false;
+        root.style.overflow = 'hidden';
+        setYear(year || '');
+        var active = yearBox.querySelector('.is-active');
+        if (active) active.focus({ preventScroll: true });
+    }
+
+    function close() {
+        modal.hidden = true;
+        root.style.overflow = '';
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-archive-open]'), function (t) {
+        t.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            open(t.getAttribute('data-archive-open'));
+        });
+    });
+    Array.prototype.forEach.call(modal.querySelectorAll('[data-archive-close]'), function (b) {
+        b.addEventListener('click', close);
+    });
+    yearBox.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-year]');
+        if (!b) return;
+        var y = b.getAttribute('data-year');
+        if (!y) { location.href = '/posts'; return; }
+        setYear(y);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.hidden) close();
+    });
 })();
 </script>
 {% endblock %}

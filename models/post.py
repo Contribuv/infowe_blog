@@ -36,6 +36,7 @@ def load(
     page: int = 1,
     per_page: int = PAGE_SIZE,
     category_id: int | None = None,
+    month: str | None = None,
 ) -> tuple[list[dict], int]:
     # 回收站（deleted_at 非空）的文章对前台和后台列表都不可见
     conditions: list[str] = ["deleted_at IS NULL"]
@@ -57,6 +58,9 @@ def load(
     if year:
         conditions.append("SUBSTR(created_at, 1, 4) = ?")
         params.append(year)
+    if month:
+        conditions.append("SUBSTR(created_at, 6, 2) = ?")
+        params.append(month)
     if category_id is not None:
         conditions.append("category_id = ?")
         params.append(int(category_id))
@@ -88,6 +92,30 @@ def year_counts() -> dict[str, int]:
         "WHERE status = 'published' AND deleted_at IS NULL GROUP BY year ORDER BY year DESC"
     )
     return {str(r["year"]): int(r["n"]) for r in rows}
+
+
+def month_counts(year: str) -> dict[str, int]:
+    """某年每月已发布文章数，供归档选择器的月份分组使用（仅返回有文章的月份）。"""
+    rows = db.query(
+        "SELECT SUBSTR(created_at, 6, 2) AS month, COUNT(*) AS n FROM posts "
+        "WHERE status = 'published' AND deleted_at IS NULL AND SUBSTR(created_at, 1, 4) = ? "
+        "GROUP BY month ORDER BY month DESC",
+        (str(year),),
+    )
+    return {str(int(r["month"])): int(r["n"]) for r in rows}
+
+
+def month_counts_all() -> dict[str, dict[str, int]]:
+    """全部年份的逐月文章数：{年: {月: 篇数}}，供归档浮窗切换年份时即时渲染月份。"""
+    rows = db.query(
+        "SELECT SUBSTR(created_at, 1, 4) AS year, SUBSTR(created_at, 6, 2) AS month, COUNT(*) AS n "
+        "FROM posts WHERE status = 'published' AND deleted_at IS NULL "
+        "GROUP BY year, month ORDER BY year DESC, month DESC"
+    )
+    result: dict[str, dict[str, int]] = {}
+    for row in rows:
+        result.setdefault(str(row["year"]), {})[str(int(row["month"]))] = int(row["n"])
+    return result
 
 
 def tag_counts(limit: int = 12) -> list[tuple[str, int]]:
