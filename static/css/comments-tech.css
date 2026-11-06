@@ -258,15 +258,20 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt>#cmt-region{order:5;margin-top:20px}
 .cmt>.cmt-form{margin-top:0} /* 与标题的 18px 间距由 .cmt-title 的 margin-bottom 收口 */
 
-/* ── 移动端：收紧尺度，回复区缩进对齐根评论正文左缘（36+10=46） ── */
+/* ── 移动端：字号抬一档、缩进改为左侧细线，把宽度还给回复正文 ── */
 @media (max-width:767px){
-  .cmt{--av-root:36px;--av-reply:26px;--gap:10px;--indent:46px}
-  .cmt-thread{padding:16px 14px 13px}
-  .cmt-replies{margin-top:12px;padding:0}
-  .cmt-replies .cmt-item+.cmt-item{margin-top:12px}
+  .cmt{--av-root:36px;--av-reply:20px;--gap:6px;--indent:0}
+  .cmt-thread{padding:16px 10px 13px}
+  .cmt-replies{margin-top:14px;padding:0 0 0 10px;border-left:2px solid var(--c-border)}
+  .cmt-replies .cmt-item+.cmt-item{margin-top:14px}
   .cmt-form .row{flex-direction:column;gap:7px;margin-bottom:8px}
-  .cmt-text{font-size:13.5px}
-  .cmt-title{font-size:15px}
+  .cmt-text{font-size:14px;line-height:1.75}
+  .cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.75}
+  .cmt-author{font-size:14px}
+  .cmt-title{font-size:16px}
+  .cmt-actions .cmt-reply{padding:4px}
+  .cmt-reply-icon{width:16px;height:16px}
+  .cmt-reply-count{font-size:10px}
   /* 移动端表单：字号贴近正文、内边距压扁，避免输入框比正文大一圈而显得突兀。
      iOS 也统一 14px（保持视觉一致）：代价是 iOS Safari 聚焦时会整页放大一下，属已知取舍。 */
   .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{font-size:14px;line-height:1.35;padding:6px 10px}

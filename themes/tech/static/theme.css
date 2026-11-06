@@ -861,6 +861,8 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 博主自定义：文章/项目详情内容页正文定宽 780px（原 920），评论区随列同步收窄；移动端仍占满壳宽 */
 .tech-post-wrap { max-width: 780px; margin: 0 auto; }
 .tech-post-layout { display: block; }
+/* 正文版心：在 1000px 容器下收窄到 760px，避免长行换行丢行 */
+.tech-post-main { max-width: 760px; }
 
 /* TOC：窄屏内联折叠，≥1400px 变成右侧固定文字索引。
    视觉参考「左侧高亮线」式目录：目录本身不画卡片，只靠字色与 2px 左边线
@@ -993,7 +995,7 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 正文排版修复：16px / 1.8 行高；中文不加字间距（等宽字符加间距反显松散，博主实测后去掉） */
 .tech-post-body,
 .tech-post-body.markdown-body {
-  font-size: 16px; line-height: 1.8; word-wrap: break-word;
+  font-size: 16.5px; line-height: 1.82; word-wrap: break-word;
 }
 .tech-post-body h1, .tech-post-body h2, .tech-post-body h3,
 .tech-post-body h4, .tech-post-body h5, .tech-post-body h6,
@@ -1003,28 +1005,27 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   /* 标题上下距统一 14px（与下方块级统一值一致），只留少量分节留白 */
   font-weight: 700; line-height: 1.35; margin: 14px 0;
 }
-/* 桌面标题梯度：22/20/18/16.5/16/15.5，明显低于页面标题 26px
+/* 桌面标题梯度：21/20/18.5/17.5/17/17，明显低于页面标题 26px
    —— 页面标题本身就是文章 h1，正文里若再出现一个 24px 的 # 大标题，
    两个大标题紧挨着会「打架」（博主觉得双标题丑），故整体下调一级；
    h1 显式清掉 markdown-body 默认的下边框，只留 h2 带分隔线，层级更清爽 */
 .tech-post-body h1, .tech-post-body.markdown-body h1 {
-  font-size: 20px; padding-bottom: 0; border-bottom: 0;
+  font-size: 21px; padding-bottom: 0; border-bottom: 0;
 }
-/* 正文排版修复：h2 19px，上距分节、下距贴近换行间距 */
+/* 正文排版修复：h2 20px，上距 18、下距 8，避免密集标题形成断层 */
 .tech-post-body h2, .tech-post-body.markdown-body h2 {
-  font-size: 19px; padding-bottom: 8px;
-  /* 上距 14；下距 5 + padding 8 + border 1 = 14，h2 上下总距与其它块级一致 */
-  margin: 14px 0 5px;
+  font-size: 20px; padding-bottom: 8px;
+  margin: 18px 0 8px;
   border-bottom: 1px solid var(--border);
 }
 /* 层级拉开：h3/h4 递进 1px；h5、h6 与 h4 同字号、仅用次级色区分——
    原先 h3–h6 挤在 16.5/15.5/15/14.5 的 2px 区间里，视觉上完全无法辨识层级 */
-.tech-post-body h3, .tech-post-body.markdown-body h3 { font-size: 17.5px; }
-.tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 16.5px; }
-.tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 16.5px; color: var(--text-secondary); }
-.tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 16.5px; color: var(--text-secondary); }
-/* 段距与段内换行一致，段落间不留额外空隙 */
-.tech-post-body p, .tech-post-body.markdown-body p { margin: 0; /* 段落上下间距归零 */ }
+.tech-post-body h3, .tech-post-body.markdown-body h3 { font-size: 18.5px; }
+.tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 17.5px; }
+.tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 17px; color: var(--text-secondary); }
+.tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 17px; color: var(--text-secondary); }
+/* 段落之间保留轻微呼吸感，但不过度拉散正文 */
+.tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 0.65em; }
 .tech-post-body strong, .tech-post-body.markdown-body strong { font-weight: 600; }
 .tech-post-body em { font-style: italic; }
 .tech-post-body s, .tech-post-body del { color: var(--text-secondary); }
@@ -1881,29 +1882,36 @@ html { touch-action: manipulation; }
 .tech-proj-feedback:active { transform: translateY(0); }
 .tech-proj-feedback:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tech-proj-feedback-icon { display: inline-block; vertical-align: middle; }
+/* 桌面：项目页标题与正文按文章页 720 阅读宽度对齐；
+   代码块与表格保持外层 780 全宽，避免缩窄后新增横向滚动 */
+@media (min-width: 721px) {
+  .tech-proj-head,
+  .tech-proj-info,
+  .tech-proj-readme-head { max-width: 760px; }
+  .tech-proj-readme-body :is(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6) { max-width: 760px; }
+}
 .tech-proj-readme-body { min-width: 0; }
-/* README 正文基准：14px / 1.7。
-   项目文档是「仓库介绍」，信息密度高于长文阅读，字号比文章正文 16px 小一档，
-   与全站控件、卡片正文同档，避免一进项目页就出现整页大字。
-   所有子元素都按这个基准放大/缩小，不再各自写死一套绝对值 */
-.tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 14px; line-height: 1.7; }
-/* README 标题梯度：19 / 17 / 15.5 / 14.5 / 14 / 13.5。
+/* README 正文基准：15.5px / 1.8。
+   项目文档信息密度高于长文，但 14px 在移动端后半档只有 13.5px，阅读吃力；
+   15.5px 是密度与可读性的折中 */
+.tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 15px; line-height: 1.75; }
+/* README 标题梯度：21 / 19 / 17 / 16 / 15.5 / 15。
    标题与正文的比值保持在 1.2–1.35，README 里连续出现 h2/h3 也不会显得突兀；
    h1 清掉 markdown-body 默认的下边框，只让 h2 带分隔线，层级更清爽 */
 .tech-proj-readme-body h1, .tech-proj-readme-body.markdown-body h1 {
-  font-size: 19px; font-weight: 700; line-height: 1.35; margin: 18px 0 8px;
+  font-size: 20px; font-weight: 700; line-height: 1.35; margin: 20px 0 9px;
   padding-bottom: 0; border-bottom: 0;
 }
 .tech-proj-readme-body h2, .tech-proj-readme-body.markdown-body h2 {
-  font-size: 17px; font-weight: 700; line-height: 1.35; margin: 18px 0 8px;
+  font-size: 18px; font-weight: 700; line-height: 1.35; margin: 20px 0 9px;
   padding-bottom: 7px; border-bottom: 1px solid var(--border);
 }
-.tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 15.5px; font-weight: 700; line-height: 1.35; margin: 16px 0 7px; }
-.tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin: 14px 0 6px; }
-.tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 14px; font-weight: 700; line-height: 1.35; margin: 12px 0 6px; }
-.tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 13.5px; font-weight: 700; line-height: 1.35; margin: 12px 0 6px; }
+.tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 16.5px; font-weight: 700; line-height: 1.35; margin: 18px 0 8px; }
+.tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 15.5px; font-weight: 700; line-height: 1.35; margin: 16px 0 7px; }
+.tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 15px; font-weight: 700; line-height: 1.35; margin: 14px 0 6px; }
+.tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 14.5px; font-weight: 700; line-height: 1.35; margin: 14px 0 6px; }
 /* README 段落与其他块同样按门户密度收紧 */
-.tech-proj-readme-body.markdown-body p { margin: 0 0 12px; }
+.tech-proj-readme-body.markdown-body p { margin: 0 0 13px; }
 .tech-proj-readme-body.markdown-body ul,
 .tech-proj-readme-body.markdown-body ol { margin: 0 0 9px; padding-left: 22px; }
 .tech-proj-readme-body.markdown-body li { margin-top: 0; margin-bottom: 2px; }
@@ -1912,7 +1920,7 @@ html { touch-action: manipulation; }
    代码块固定 12.5px / 1.55，长行更紧凑，与正文的落差也更自然 */
 .tech-proj-readme-body.markdown-body :not(pre) > code,
 .tech-proj-readme-body.markdown-body :not(pre) > kbd { font-size: .9em; }
-.tech-proj-readme-body.markdown-body pre { font-size: 12.5px; line-height: 1.55; padding: 14px; }
+.tech-proj-readme-body.markdown-body pre { font-size: 13px; line-height: 1.65; padding: 14px; }
 .tech-proj-readme-body.markdown-body pre code { font-size: 100%; }
 /* 表格：README 常见多列对照表，13px 才能让「模块 + 说明」一行放下更多字 */
 .tech-proj-readme-body.markdown-body table { font-size: 13px; }
@@ -1923,8 +1931,8 @@ html { touch-action: manipulation; }
    元素保留不隐藏，目录里指向它的锚点仍可命中（用 display:none 会让 TOC 跳到空处）。 */
 .tech-proj-readme-body.markdown-body > h1:first-child,
 .tech-proj-readme-body > h1:first-child {
-  font-size: 14px; font-weight: 600; color: var(--text-secondary);
-  margin: 0 0 14px; padding: 0; border: 0;
+  font-size: 15px; font-weight: 600; color: var(--text-secondary);
+  margin: 0 0 16px; padding: 0; border: 0;
 }
 /* 点目录跳转时留出 sticky nav（56px）呼吸空间，与文章页正文一致 */
 .tech-proj-readme-body :is(h1, h2, h3, h4, h5, h6) { scroll-margin-top: 72px; }
@@ -1940,23 +1948,24 @@ html { touch-action: manipulation; }
 /* 详情页移动端：信息行与 README 卡片间距收紧 + 字号再降半档 */
 @media (max-width: 720px) {
   .tech-proj-readme { padding: 0; }
-  .tech-proj-crumb { font-size: 17px; }
+  .tech-proj-crumb { font-size: 20px; flex: 1 1 100%; }
+  .tech-proj-about-desc { font-size: 15px; }
   .tech-proj-readme-head { padding-bottom: 12px; margin-bottom: 14px; }
-  /* README 正文：移动端 13.5px，比桌面再小半档；行高保持 1.7 保证可读性 */
-  .tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 13.5px; line-height: 1.7; }
+  /* README 正文：移动端 15px / 1.75，比桌面略小半档但保持可读 */
+  .tech-proj-readme-body, .tech-proj-readme-body.markdown-body { font-size: 15px; line-height: 1.75; }
   /* README 标题与段落整体收紧，避免手机上一页过散 */
-  .tech-proj-readme-body h1, .tech-proj-readme-body.markdown-body h1 { font-size: 17.5px; margin: 16px 0 8px; }
-  .tech-proj-readme-body h2, .tech-proj-readme-body.markdown-body h2 { font-size: 15.5px; margin: 16px 0 8px; }
-  .tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 14.5px; }
-  .tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 13.5px; }
-  .tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 13px; }
-  .tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 12.5px; }
+  .tech-proj-readme-body h1, .tech-proj-readme-body.markdown-body h1 { font-size: 19px; margin: 18px 0 9px; }
+  .tech-proj-readme-body h2, .tech-proj-readme-body.markdown-body h2 { font-size: 17.5px; margin: 18px 0 9px; }
+  .tech-proj-readme-body h3, .tech-proj-readme-body.markdown-body h3 { font-size: 16.5px; }
+  .tech-proj-readme-body h4, .tech-proj-readme-body.markdown-body h4 { font-size: 15.5px; }
+  .tech-proj-readme-body h5, .tech-proj-readme-body.markdown-body h5 { font-size: 15px; }
+  .tech-proj-readme-body h6, .tech-proj-readme-body.markdown-body h6 { font-size: 14.5px; }
   /* README 首个标题（通常即项目名，已降级为灰色说明行）随正文同档 */
   .tech-proj-readme-body.markdown-body > h1:first-child,
-  .tech-proj-readme-body > h1:first-child { font-size: 13.5px; margin: 0 0 12px; }
-  .tech-proj-readme-body.markdown-body p { margin: 0 0 11px; }
-  .tech-proj-readme-body.markdown-body pre { font-size: 12px; padding: 12px; }
-  .tech-proj-readme-body.markdown-body table { font-size: 12.5px; }
+  .tech-proj-readme-body > h1:first-child { font-size: 15px; margin: 0 0 14px; }
+  .tech-proj-readme-body.markdown-body p { margin: 0 0 13px; }
+  .tech-proj-readme-body.markdown-body pre { font-size: 12.5px; padding: 12px; }
+  .tech-proj-readme-body.markdown-body table { font-size: 13px; }
 }
 
 /* ── 友链页 ── */
@@ -2125,7 +2134,7 @@ html { touch-action: manipulation; }
   .tech-main:has(.tech-proj) { padding-top: 16px; }
   /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（缩小态同样覆盖） */
   .tech-top { bottom: calc(72px + env(safe-area-inset-bottom)); }
-  .tech-post-title-lg { font-size: 20px; }
+  .tech-post-title-lg { font-size: 23px; }
   /* 移动端文章头部收紧：标题下留白与分隔线间距缩小，避免顶部一大片空白 */
   .tech-post-header { margin-bottom: 14px; padding-bottom: 10px; }
   .tech-page-title { font-size: 20px; }
@@ -2162,45 +2171,42 @@ html { touch-action: manipulation; }
   .tech-license { margin-left: 0; }
 }
 
-/* ≤767px：文章页公众号式排版（手机与平板统一，桌面窄窗预览同样生效）：
-   14px / 1.6 行高 / 13px 段距 / 两端对齐；含 <br> 的段落自动排除，避免短行被拉伸 */
+/* ≤767px：文章页移动排版：
+   16.5px 正文 / 1.9 行高 / 1.1em 段距；标题梯度 20/19/17.5/16.5/16/15.5，
+   与 24px 页面标题拉开层级，避免移动端正文过小或标题挤在一起 */
 @media (max-width: 767px) {
   .tech-post-title { font-size: 16px; }
-  .tech-post-excerpt { font-size: 14px; }
+  .tech-post-excerpt { font-size: 15px; }
   .tech-post-body, .tech-post-body.markdown-body {
-    /* 中文正文不加字间距：0.03em 在 14px 下约 0.4px/字，移动端视觉明显发「散」（博主实测） */
-    font-size: 14px; line-height: 1.6; letter-spacing: normal;
+    /* 中文正文不加字间距：字间距在小屏上容易发「散」 */
+    font-size: 16px; line-height: 1.75; letter-spacing: normal;
   }
-  /* 移动标题梯度：18/16/15/14/13.5/13，与页面标题 20px 拉开，避免双标题打架 */
-  .tech-post-body h1, .tech-post-body.markdown-body h1 { font-size: 18px; padding-bottom: 0; border-bottom: 0; }
+  .tech-post-body h1, .tech-post-body.markdown-body h1 { font-size: 20px; padding-bottom: 0; border-bottom: 0; }
   .tech-post-body h2, .tech-post-body.markdown-body h2 {
-    font-size: 16px; padding-bottom: 7px;
+    font-size: 18.5px; padding-bottom: 7px;
   }
-  .tech-post-body h3, .tech-post-body.markdown-body h3 { font-size: 15px; }
-  .tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 14px; }
-  .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 13.5px; }
-  .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 13px; }
-  /* 段距与段内换行一致：移动端同步归零 */
-  .tech-post-body p, .tech-post-body.markdown-body p { margin: 0; /* 移动端同步归零 */ }
-  /* 移动端标题同步收紧，与归零的段距匹配 */
+  .tech-post-body h3, .tech-post-body.markdown-body h3 { font-size: 17.5px; }
+  .tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 16.5px; }
+  .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 16px; }
+  .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 15.5px; }
+  .tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 0.85em; }
   .tech-post-body h1, .tech-post-body.markdown-body h1,
   .tech-post-body h2, .tech-post-body.markdown-body h2,
   .tech-post-body h3, .tech-post-body.markdown-body h3,
   .tech-post-body h4, .tech-post-body.markdown-body h4,
   .tech-post-body h5, .tech-post-body.markdown-body h5,
-  .tech-post-body h6, .tech-post-body.markdown-body h6 { margin: 12px 0; }
-  /* 移动端块级同步统一 12px（p 保持归零），h2 下距 4 + padding 7 + border 1 = 12 */
-  .tech-post-body h2, .tech-post-body.markdown-body h2 { margin-bottom: 4px; }
+  .tech-post-body h6, .tech-post-body.markdown-body h6 { margin: 18px 0 8px; }
+  .tech-post-body h2, .tech-post-body.markdown-body h2 { margin-bottom: 8px; }
   .tech-post-body.markdown-body :is(blockquote, pre, table, ul, ol, hr, dl, details, .admonition, .img-gallery) {
-    margin: 12px 0;
+    margin: 14px 0;
   }
-  .tech-post-body.markdown-body img { margin: 12px auto; }
-  .tech-post-body.markdown-body .md-figure { margin: 12px 0; }
-  .tech-post-body.markdown-body .md-figure-caption { font-size: 12px; }
-  .tech-post-body.markdown-body .table-wrap { margin: 12px 0; }
-  .tech-post-body.markdown-body .code-wrap { margin: 12px 0; }
+  .tech-post-body.markdown-body img { margin: 14px auto; }
+  .tech-post-body.markdown-body .md-figure { margin: 14px 0; }
+  .tech-post-body.markdown-body .md-figure-caption { font-size: 13px; }
+  .tech-post-body.markdown-body .table-wrap { margin: 14px 0; }
+  .tech-post-body.markdown-body .code-wrap { margin: 14px 0; }
   .tech-post-body.markdown-body .code-wrap pre { margin: 0; }
-  /* 不使用两端对齐：justify 会拉伸含短行的段落字距，移动端观感发「散」（博主实测后移除 justify） */
+  /* 不使用两端对齐：justify 会拉伸含短行的段落字距 */
 }
 
 @media (max-width: 768px) {

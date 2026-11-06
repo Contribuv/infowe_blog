@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.7.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.7)
+[![version](https://img.shields.io/badge/version-3.7.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.7.8)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,23 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.7.7**
+当前版本：**v3.7.8**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.7.8
+
+- 移动端文章正文调整为 16px / 1.75，段落间距 0.85em；文章标题 23px、h2 18.5px
+- 移动端项目 README 调整为 15px / 1.75，标题梯度同步收敛
+- 移动端项目标题占满整行（20px），不再被 Star / GitHub 按钮挤压；项目描述 15px
+- 移动端楼中楼：正文 14px / 1.75，缩进改为左侧细线，头像 20px，回复按钮缩小
+- 桌面文章正文 16.5px / 1.82，版心 760px，段落间距 0.65em，h2 20px
+- 桌面项目页标题与正文文字统一 760px，代码块和表格保持 780px 全宽
+- 修复文章正文段落间距为 0 的问题，恢复段落呼吸感
+- PC 评论区保持原有 14px / 13.5px 与 52px 缩进
+
+<details>
+<summary><b>历史版本（v3.7.7 及更早，点击展开）</b></summary>
 
 ### v3.7.7
 
@@ -937,9 +951,6 @@ chown -R www:www var
 - 详情弹窗改为内容区独立滚动，默认隐藏滚动条，滚动时显示、停止后自动隐藏
 - 修复后台详情弹窗未打开时仍显示空头部的问题
 - 移动端详情弹窗单列布局，长文本自动换行，不产生横向溢出
-
-<details>
-<summary><b>历史版本（v3.7.6 及更早，点击展开）</b></summary>
 
 ### v3.7.6
 
