@@ -3921,15 +3921,12 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
     overflow: visible;
     border-top: 0;
   }
+  /* 侧栏卡片在窄屏沿用全站卡片语言（3% 底色 + 6px 圆角），与文章列表一致；
+     这里只调内距，不再重置描边/圆角/底色——那些声明会被后置的
+     「卡片基础」规则覆盖，属于失效代码，留着只会误导后续维护 */
   .tech-side-card {
     padding: 16px;
-    border: 0;
-    border-radius: 0;
-    border-bottom: 1px solid var(--border);
-    background: transparent;
   }
-  .tech-side-card:last-child { border-bottom: 0; }
-  .tech-side-widget { grid-column: auto; }
 }
 @media (max-width: 640px) {
   .tech-sidebar { display: flex; }
@@ -4824,9 +4821,13 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   }
 }
 
-/* 首页底部留白交给「查看全部归档」自身间距和页脚内边距，
-   不再额外叠一层 .tech-main 的 padding-bottom，避免按钮下方比上方多 24px */
-.tech-main:has(.tech-home-grid) { padding-bottom: 0; }
+/* 首页底部留白：双栏（≥1001px）时交给「查看全部归档」自身间距和页脚内边距，
+   不再额外叠一层 .tech-main 的 padding-bottom，避免按钮下方比上方多 24px；
+   窄屏单列时最后一块是侧栏（十年之约卡），必须保留 .tech-main 的底部内距，
+   否则该卡底边会直接压在页脚分隔线上（实测间距 0） */
+@media (min-width: 1001px) {
+  .tech-main:has(.tech-home-grid) { padding-bottom: 0; }
+}
 
 /* 移动端 / 平板文章头部下方紧跟目录时，去掉 header 的 margin-bottom：
    目录自身已有上下 16px 间距，再叠一层会让目录上方比下方多一截 */

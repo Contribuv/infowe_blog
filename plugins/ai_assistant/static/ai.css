@@ -78,9 +78,19 @@
 .ai-actions {
   display: flex; justify-content: flex-end; gap: var(--sp-2);
   padding: var(--sp-4) var(--sp-5);
-  border-top: 1px solid var(--border);
+  /* 独立出现时（配置页）它就是一张卡：四边描边 + 与 .ai-section 同圆角。
+     不再用 sticky 悬浮——带圆角描边的悬浮条会变成一块脱离版面的浮动块 */
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
   background: var(--bg-surface);
-  position: sticky; bottom: 0;
+}
+/* 位于 .ai-section 内部时（模型管理页）它其实是卡片页脚：
+   只留上分隔线，底部圆角由外层卡片 overflow 裁切，不再是卡片里的嵌套方块 */
+.ai-section .ai-actions {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
 }
 
 /* 模型管理 */

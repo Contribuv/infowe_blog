@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.4)
+[![version](https://img.shields.io/badge/version-3.8.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.5)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.4**
+当前版本：**v3.8.5**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.5
+
+- 修复移动端首页侧栏「十年之约」卡片贴住页脚：底部内距不再被清零，卡片与页脚间距 0 → 24px
+- 首页底部留白规则只在双栏生效，PC 端留白行为保持不变
+- AI 插件保存条按所在位置区分样式：配置页为独立圆角卡片，模型管理页为卡片页脚
+- AI 插件保存条取消悬浮定位，回归文档流，不再像固定浮层
+- 清理移动端侧栏失效样式：描边/圆角/底色声明早已被后置规则覆盖，注释与实际效果相反
+
+<details>
+<summary><b>历史版本（v3.8.4 及更早，点击展开）</b></summary>
 
 ### v3.8.4
 
@@ -937,9 +948,6 @@ chown -R www:www var
 - 占位卡保留次级色文字、无悬停反馈，仍明确不可点击
 - 评论底部 UA（系统 / 浏览器）与时间、属地对齐到同一条文字基线
 - 移动端楼中楼回复正文与根评论正文左缘对齐
-
-<details>
-<summary><b>历史版本（v3.8.3 及更早，点击展开）</b></summary>
 
 ### v3.8.3
 
