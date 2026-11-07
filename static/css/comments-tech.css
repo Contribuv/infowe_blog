@@ -149,7 +149,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
 /* 毛玻璃：底色在文件末尾「毛玻璃降级」段统一给出（默认实色 + 特性查询升级） */
 /* 扁平化：去掉毛玻璃，仅保留描边卡 */
-.cmt-form{margin-top:20px;border:1px solid var(--c-hairline);border-radius:var(--c-radius);padding:14px 16px;scroll-margin:50px 0}
+.cmt-form{margin-top:20px;border:0;border-radius:var(--c-radius);padding:14px 16px;scroll-margin:50px 0}
 .cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}

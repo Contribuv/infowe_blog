@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.1)
+[![version](https://img.shields.io/badge/version-3.8.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.2)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.1**
+当前版本：**v3.8.2**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.2
+
+- 评论表单取消外层边框，仅保留淡底色与 6px 圆角，与已去描边的评论楼层保持一致
+- 折叠态输入条与展开后的输入框保留自身边框，输入区域仍然可辨
+
+<details>
+<summary><b>历史版本（v3.8.1 及更早，点击展开）</b></summary>
 
 ### v3.8.1
 
@@ -941,9 +949,6 @@ chown -R www:www var
 - 相关推荐与上下篇统一为普通卡片色，悬停反馈一致
 - 分页、查看全部归档、友链提交、后台保存主题按钮统一为卡片色 + 6px 圆角
 - 修复首页最后一张卡底部内距、查看全部归档上下间距；读者页统计改 2×2 小卡
-
-<details>
-<summary><b>历史版本（v3.8.0 及更早，点击展开）</b></summary>
 
 ### v3.8.0
 
