@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.5)
+[![version](https://img.shields.io/badge/version-3.8.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,26 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.5**
+当前版本：**v3.8.6**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.6
+
+- 升级页发布日期改为本地时间，不再显示 `2026-11-07T13:35:50Z` 原始 ISO 串
+- 升级页「更新内容」按 markdown 渲染成列表，不再是带 `- ` 前缀的等宽代码块
+- 升级页「在 XX 查看」链接跟随「升级源」单选：选哪个源就在哪个源看
+- 升级页「发布于」行与「更新内容」区块的上下留白重新对齐
+- 邮件通知：操作行与页脚之间补 22px 留白，不再贴死页脚分隔线
+- 邮件通知：标题下的时间与文章链接拆成两行显示
+- 邮件通知：标题与元信息间距 4px → 8px
+- 邮件通知：所有链接去掉下划线（显式 `text-decoration:none`，避免回落浏览器默认下划线）
+- 前台主题 9 处悬停下划线改为统一的混色反馈，与导航、卡片标题一致
+- 评论区与分享面板 4 处悬停下划线改为变色
+- 后台 2 处悬停下划线改为变色
+
+<details>
+<summary><b>历史版本（v3.8.5 及更早，点击展开）</b></summary>
 
 ### v3.8.5
 

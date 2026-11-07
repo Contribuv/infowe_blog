@@ -160,8 +160,10 @@ def _shell(*, headline: str, meta_html: str, body: str, foot_note: str) -> str:
     meta_html 为空时不渲染副标题行。
     """
     if meta_html:
+        # 用 div 而不是 p：元信息要占两行（时间一行、文章链接一行），
+        # <p> 里塞块级元素会被浏览器提前闭合，间距全乱
         meta_block = (
-            '<p style="margin:0 0 16px 0;font-size:13px;line-height:1.7;color:%s;">%s</p>'
+            '<div style="margin:0 0 16px 0;font-size:13px;line-height:1.7;color:%s;">%s</div>'
             % (_META, meta_html)
         )
     else:
@@ -181,7 +183,7 @@ def _shell(*, headline: str, meta_html: str, body: str, foot_note: str) -> str:
       <tr><td>
         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:8px;border:1px solid %(border)s;">
           <tr><td style="padding:22px 30px 0 30px;">
-            <h1 style="margin:0 0 4px 0;font-size:19px;line-height:1.5;font-weight:700;color:%(text)s;">%(headline)s</h1>
+            <h1 style="margin:0 0 8px 0;font-size:19px;line-height:1.5;font-weight:700;color:%(text)s;">%(headline)s</h1>
             %(meta_block)s
           </td></tr>
           <tr><td style="padding:0 30px;">
@@ -189,7 +191,7 @@ def _shell(*, headline: str, meta_html: str, body: str, foot_note: str) -> str:
               <tr><td style="height:1px;line-height:1px;font-size:0;background:%(border)s;">&nbsp;</td></tr>
             </table>
           </td></tr>
-          <tr><td style="padding:18px 30px 0 30px;">
+          <tr><td style="padding:18px 30px 22px 30px;">
             %(body)s
           </td></tr>
           <tr><td style="padding:22px 30px 26px 30px;background:%(foot_bg)s;border-top:1px solid %(border)s;border-radius:0 0 8px 8px;font-family:%(font)s;font-size:12px;line-height:1.9;color:%(muted)s;">
@@ -216,12 +218,15 @@ def _shell(*, headline: str, meta_html: str, body: str, foot_note: str) -> str:
 
 
 def _meta_line(when: str, title: str, url: str, accent: str) -> str:
-    """标题下方的时间 + 文章链接。"""
+    """标题下方的元信息：时间一行、文章链接一行（挤在一行太长，分两行更好读）。"""
     link = (
-        '<a href="%s" style="color:%s;text-decoration:underline;">《%s》</a>'
+        '<a href="%s" style="color:%s;text-decoration:none;">《%s》</a>'
         % (_esc(url), accent, _esc(title))
     )
-    return "%s · %s" % (_esc(when), link)
+    return (
+        '<div style="margin:0 0 2px 0;">%s</div>'
+        '<div style="margin:0;">%s</div>'
+    ) % (_esc(when), link)
 
 
 def _card(author: str, content_html: str, accent: str, avatar_url: str = "") -> str:
@@ -273,7 +278,7 @@ def _cta(url: str, accent: str, button_text: str, action_html: str = "") -> str:
         '</td></tr></table>'
         '<div style="padding:10px 0 0 0;font-size:12px;line-height:1.7;color:%s;word-break:break-all;">'
         '按钮点不动？复制链接到浏览器：<br>'
-        '<a href="%s" style="color:%s;text-decoration:underline;">%s</a></div>'
+        '<a href="%s" style="color:%s;text-decoration:none;">%s</a></div>'
         '%s'
     ) % (
         btn_bg, _esc(url), _esc(button_text), _MUTED,
@@ -290,7 +295,7 @@ def _action_row(items: list[tuple[str, str]]) -> str:
         if index:
             parts.append('<span style="padding:0 6px;color:#b9c5cf;">·</span>')
         parts.append(
-            '<a href="%s" style="color:#2470a8;text-decoration:underline;">%s</a>'
+            '<a href="%s" style="color:#2470a8;text-decoration:none;">%s</a>'
             % (_esc(url), _esc(text))
         )
     return '<div style="padding:12px 0 0 0;font-size:13px;line-height:1.8;color:%s;">%s</div>' % (
@@ -314,7 +319,7 @@ def generic_notice(*, blog_name: str, site: str, tag: str, headline: str, body_h
         body=body,
         foot_note=foot_note or (
             '<p style="margin:0;">此邮件由 %s 自动发送，请勿直接回复。</p>'
-            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
+            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:none;">%s</a></p>'
             % (_esc(blog_name), _esc(site), _esc(sender_name()))
         ),
     )
@@ -350,7 +355,7 @@ def verify_code_notice(*, blog_name: str, site: str, code: str, ttl_minutes: int
         body=body,
         foot_note=(
             '<p style="margin:0;">此邮件由 %s 自动发送，请勿直接回复。</p>'
-            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
+            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:none;">%s</a></p>'
             % (_esc(blog_name), _esc(site), _esc(sender_name()))
         ),
     )
@@ -366,7 +371,7 @@ def _footer(site: str, reason_html: str) -> str:
         '<p style="margin:0;">%s</p>'
         '<p style="margin:0;">此邮件由系统自动发送，直接回复不会出现在博客评论区；'
         '如需回复，请点击上方按钮前往文章页。</p>'
-        '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:underline;">%s</a></p>'
+        '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:none;">%s</a></p>'
     ) % (reason_html, _esc(site), _esc(sender_name()))
 
 

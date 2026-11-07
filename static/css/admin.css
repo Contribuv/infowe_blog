@@ -357,7 +357,7 @@ svg { vertical-align: -3px; flex: none; }
   background: none; border: none; padding: 0;
   color: var(--accent); font-size: var(--fz-sm); font-weight: 500;
 }
-@media (hover: hover) and (pointer: fine) { .btn-link:hover { color: var(--accent-hover); text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .btn-link:hover { color: var(--accent-hover); } }
 .btn-group { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 
 /* ─────────── 7. 徽章 ─────────── */
@@ -1187,7 +1187,9 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
 .upgrade-help { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-5); }
 .upgrade-help li { font-size: var(--fz-sm); color: var(--text-secondary); line-height: 1.7; padding-left: 14px; position: relative; }
 .upgrade-help li::before { content: ''; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-.upgrade-notes { padding: 0 var(--sp-5); }
+/* 升级页「发布于 … · 来源 …」行：上下各留一档，不再贴着上面的更新源行与下面的更新内容 */
+.card > p.upgrade-published { padding: var(--sp-5) var(--sp-5) 0; }
+.upgrade-notes { padding: var(--sp-4) var(--sp-5) 0; }
 .upgrade-notes h4 { font-size: var(--fz-md); font-weight: 600; color: var(--text); margin-bottom: var(--sp-2); }
 .upgrade-notes .text-muted { font-size: var(--fz-sm); color: var(--text-tertiary); margin-bottom: var(--sp-2); }
 .upgrade-body {
@@ -1195,9 +1197,10 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
   font-size: var(--fz-sm); color: var(--text-secondary); line-height: 1.7;
   scrollbar-width: thin;
 }
-.upgrade-body h1, .upgrade-body h2, .upgrade-body h3 { font-size: var(--fz-md); font-weight: 600; color: var(--text); margin: var(--sp-3) 0 6px; }
-.upgrade-body p { margin-bottom: 8px; }
-.upgrade-body ul { padding-left: 18px; list-style: disc; }
+.upgrade-body h1, .upgrade-body h2, .upgrade-body h3,
+.upgrade-body h4, .upgrade-body h5, .upgrade-body h6 { font-size: var(--fz-md); font-weight: 600; color: var(--text); margin: var(--sp-3) 0 6px; }
+.upgrade-body p { margin: 0 0 8px; }
+.upgrade-body ul { margin: 6px 0; padding-left: 18px; list-style: disc; }
 .upgrade-body li { margin-bottom: 4px; }
 .upgrade-body code { font-size: 11px; }
 /* 升级源单选行：与 notes / actions 同样左右留白（此前缺 padding 贴卡边），间距全部走 spacing 变量 */
@@ -2001,7 +2004,7 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
   color: var(--accent);
   text-decoration: none;
 }
-.theme-config-link:hover { text-decoration: underline; }
+.theme-config-link:hover { color: var(--accent-hover); }
 .theme-config-body { padding: var(--sp-4) var(--sp-5) var(--sp-5); }
 .card-header + .theme-config-body { padding-top: var(--sp-4); }
 .layout-options {

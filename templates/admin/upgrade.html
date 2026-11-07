@@ -103,6 +103,36 @@
             '<br>连不上或超时的平台会被临时熔断，期间自动改用另一个；点右上角「重新检测」可立刻重试两个平台。</p>';
     }
 
+    // 更新内容：发布说明是 markdown 列表，原先直接塞进 <pre>，
+    // "- " 前缀和等宽字体都露在外面。这里渲染成真正的列表（内容仍走 esc 转义）。
+    function notesHtml(text) {
+        var lines = String(text || '').split(/\r?\n/);
+        var html = '', inList = false;
+        function closeList() {
+            if (inList) { html += '</ul>'; inList = false; }
+        }
+        lines.forEach(function (raw) {
+            var line = raw.trim();
+            if (!line) return;
+            var bullet = /^[-*+]\s+(.*)$/.exec(line);
+            var numbered = /^\d+[.)]\s+(.*)$/.exec(line);
+            if (bullet || numbered) {
+                if (!inList) { html += '<ul>'; inList = true; }
+                html += '<li>' + esc((bullet || numbered)[1]) + '</li>';
+                return;
+            }
+            closeList();
+            var heading = /^#{1,6}\s+(.*)$/.exec(line);
+            if (heading) {
+                html += '<h5>' + esc(heading[1]) + '</h5>';
+                return;
+            }
+            html += '<p>' + esc(line) + '</p>';
+        });
+        closeList();
+        return html;
+    }
+
     function render(d) {
         latestBox.textContent = d.ok && d.latest_version ? 'v' + d.latest_version : '-';
         if (!d.ok) {
@@ -121,8 +151,12 @@
             // 「来源」指这份版本信息来自哪个平台，与下方「更新源」的实时可用状态是两回事：
             // 信息可能来自缓存（当时该平台可用、现在已熔断），故补上缓存时间，避免看起来自相矛盾
             var cached = d.cached_at ? '（版本信息缓存于 ' + srcTime(d.cached_at) + '）' : '';
-            if (d.published_at) notes += '<p class="text-muted">发布于 ' + esc(d.published_at) + ' · 来源 ' + esc(srcName) + esc(cached) + '</p>';
-            if (d.body) notes += '<div class="upgrade-notes"><h4>更新内容</h4><pre class="upgrade-body">' + esc(d.body_html || d.body) + '</pre></div>';
+            if (d.published_at) notes += '<p class="text-muted upgrade-published">发布于 ' + esc(d.published_at) + ' · 来源 ' + esc(srcName) + esc(cached) + '</p>';
+            if (d.body) notes += '<div class="upgrade-notes"><h4>更新内容</h4><div class="upgrade-body">' + notesHtml(d.body) + '</div></div>';
+            // 「查看 Releases」跟随上面的「升级源」单选：选了哪个源就在哪个源看
+            var urls = d.release_urls || {};
+            function viewUrl(src) { return urls[src] || d.release_url; }
+            function viewLabel(src) { return src === 'gitee' ? '在 Gitee 镜像查看' : '在 GitHub 查看'; }
             resultBox.innerHTML =
                 '<div class="card">' +
                 '<div class="card-header"><h3>' + svgIcon('check-circle', 18) + ' 发现新版本 v' + esc(d.latest_version) +
@@ -131,13 +165,22 @@
                 notes +
                 '<div class="upgrade-source-row">' +
                     '<span class="upgrade-source-row-title">升级源：</span>' +
-                    '<label><input type="radio" name="upgrade-source" value="github" checked> GitHub</label>' +
-                    '<label><input type="radio" name="upgrade-source" value="gitee"> Gitee</label>' +
+                    '<label><input type="radio" name="upgrade-source" value="github" id="upgrade-src-github" checked> GitHub</label>' +
+                    '<label><input type="radio" name="upgrade-source" value="gitee" id="upgrade-src-gitee"> Gitee</label>' +
                 '</div>' +
                 '<div class="upgrade-actions">' +
                     '<button type="button" class="btn btn-primary" data-action="upgrade" data-version="' + esc(d.latest_version) + '">' + svgIcon('download', 16, 'icon-sm') + ' 备份数据并一键升级</button>' +
-                '<a href="' + esc(d.release_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">' + svgIcon('external-link', 16, 'icon-sm') + ' 在 ' + esc(srcName) + ' 查看</a>' +
+                '<a href="' + esc(viewUrl('github')) + '" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" id="upgrade-view-link">' + svgIcon('external-link', 16, 'icon-sm') + ' ' + viewLabel('github') + '</a>' +
                 '</div></div>';
+            // 单选切换时同步「查看」链接指向的平台
+            Array.prototype.forEach.call(resultBox.querySelectorAll('input[name="upgrade-source"]'), function (radio) {
+                radio.addEventListener('change', function () {
+                    var link = document.getElementById('upgrade-view-link');
+                    if (!link) return;
+                    link.setAttribute('href', viewUrl(radio.value));
+                    link.innerHTML = svgIcon('external-link', 16, 'icon-sm') + ' ' + viewLabel(radio.value);
+                });
+            });
         } else {
             resultBox.innerHTML =
                 '<div class="card">' +

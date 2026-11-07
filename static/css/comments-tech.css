@@ -58,7 +58,7 @@
 .cmt-notice>span{min-width:0}
 .cmt-notice b{color:var(--c-accent);font-weight:600}
 .cmt-notice>button{align-self:center;margin:0;padding:2px 0;border:0;background:transparent;color:var(--c-accent);font:inherit;font-size:12.5px;font-weight:600;line-height:1.6;white-space:nowrap;cursor:pointer}
-@media (hover:hover) and (pointer:fine){.cmt-notice>button:hover{text-decoration:underline}}
+@media (hover:hover) and (pointer:fine){.cmt-notice>button:hover{color:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));}}
 
 /* ── 楼层组 ── */
 /* padding-bottom 比 top 少 3px：补偿 .cmt-text 行高 1.75 末行半行距（~5px）
@@ -123,7 +123,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-text{margin-top:9px;font-size:14px;line-height:1.75;color:var(--c-text);word-break:break-word;white-space:pre-wrap;overflow-wrap:anywhere}
 .cmt-item[data-lv="reply"] .cmt-text{font-size:13.5px;margin-top:7px}
 .cmt-at{color:var(--c-accent);text-decoration:none;font-weight:500;margin-right:2px}
-@media (hover:hover) and (pointer:fine){ .cmt-at:hover{text-decoration:underline} }
+@media (hover:hover) and (pointer:fine){ .cmt-at:hover{color:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));} }
 .cmt-actions{margin-top:7px;display:flex;gap:14px}
 .cmt-reply{font-size:12.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer;transition:color .15s}
 @media (hover:hover) and (pointer:fine){ .cmt-reply:hover{color:var(--c-accent)} }
@@ -144,7 +144,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-fold{margin-top:14px;font-size:12.5px;font-weight:500;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .cmt-fold svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.4;transition:transform .18s}
 .cmt-fold[aria-expanded="true"] svg{transform:rotate(180deg)}
-@media (hover:hover) and (pointer:fine){ .cmt-fold:hover{text-decoration:underline} }
+@media (hover:hover) and (pointer:fine){ .cmt-fold:hover{color:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));} }
 
 /* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
 /* 毛玻璃：底色在文件末尾「毛玻璃降级」段统一给出（默认实色 + 特性查询升级） */

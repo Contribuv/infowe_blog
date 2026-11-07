@@ -1944,10 +1944,10 @@ html { touch-action: manipulation; }
   font-size: 20px; font-weight: 400; line-height: 1.4;
 }
 .tech-proj-owner { color: var(--accent); text-decoration: none; min-width: 0; }
-@media (hover: hover) and (pointer: fine) { .tech-proj-owner:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-proj-owner:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 .tech-proj-sep { color: var(--text-secondary); }
 .tech-proj-repo { color: var(--accent); font-weight: 600; text-decoration: none; min-width: 0; }
-@media (hover: hover) and (pointer: fine) { .tech-proj-repo:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-proj-repo:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 .tech-proj-badge {
   font-size: 11px; font-weight: 500; color: var(--warning);
   border: 1px solid var(--warning); border-radius: 10px; padding: 1px 8px;
@@ -2125,7 +2125,7 @@ html { touch-action: manipulation; }
 .tech-links-intro p { margin: 0 0 12px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
 .tech-links-intro p:last-child { margin-bottom: 0; }
 .tech-links-intro a { color: var(--accent); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) { .tech-links-intro a:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-links-intro a:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 .tech-links-rules {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3437,7 +3437,7 @@ html { touch-action: manipulation; }
   color: var(--text-secondary);
 }
 .tech-reader-source a { color: var(--accent); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) { .tech-reader-source a:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-reader-source a:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 
 /* 榜单卡片沿用全站 hover（扁平化：只换底色与描边） */
 .tech-reader-item {
@@ -3467,7 +3467,7 @@ html { touch-action: manipulation; }
 }
 .tech-apply-notes li { overflow-wrap: anywhere; }
 .tech-apply-notes a { color: var(--accent); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) { .tech-apply-notes a:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-apply-notes a:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 
 @media (max-width: 640px) {
   /* 列表项保持与 PC / 前三名一致的完整卡片边框，仅微调内边距 */
@@ -3641,7 +3641,7 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   color: var(--text-secondary);
 }
 .tech-podium-source a { color: var(--accent); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) { .tech-podium-source a:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-podium-source a:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 @media (hover: hover) and (pointer: fine) {
   .tech-podium-item:hover {
     background: var(--hover-bg);
@@ -3895,7 +3895,7 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   font-size: 12px;
   text-decoration: none;
 }
-@media (hover: hover) and (pointer: fine) { .tech-widget-wormhole:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-widget-wormhole:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 .tech-side-widget-link {
   display: block;
   margin-top: 8px;
@@ -4203,7 +4203,7 @@ html.tech-external-open { overflow: hidden; }
 .tech-archive-text { margin: 7px 0 0; font-size: 13.5px; line-height: 1.75; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
 @media (hover: hover) and (pointer: fine) { .tech-archive-item:hover { background: var(--hover-bg); } }
 .tech-archive-more { color: var(--accent); text-decoration: none; white-space: nowrap; }
-@media (hover: hover) and (pointer: fine) { .tech-archive-more:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .tech-archive-more:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 @media (hover: hover) and (pointer: fine) {
   a.tech-reader-count:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
@@ -4434,11 +4434,8 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 @media (hover: hover) and (pointer: fine) {
   .tech-page-action:hover {
     /* accent 与正文色混合：浅色主题下沉一点、深色主题提亮一点，
-       两套主题下的对比度都落在 AA 以上；下划线给出明确的交互反馈 */
+       两套主题下的对比度都落在 AA 以上；全站统一「无下划线 + 变色」反馈 */
     color: color-mix(in srgb, var(--accent) 84%, var(--text));
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    text-decoration-thickness: 1px;
   }
   .tech-page-action:hover .tech-page-action-arrow { transform: translateX(2px); }
 }

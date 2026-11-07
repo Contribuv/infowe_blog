@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -47,6 +48,25 @@ def _clean_version(value: str) -> str:
     return (value or "").strip().lstrip("vV")
 
 
+def _local_dt(value: str) -> str:
+    """把平台返回的 ISO 时间转成本地时间字符串。
+
+    GitHub 给的是 UTC（"2026-11-07T13:35:50Z"），Gitee 给的是带偏移的 ISO；
+    直接透传会在后台显示成原始 ISO，和站内其它本地时间（评论、文章）口径不一致。
+    """
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    text = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+    try:
+        dt = datetime.fromisoformat(text)
+    except ValueError:
+        return raw
+    if dt.tzinfo is not None:
+        dt = dt.astimezone()
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
 def _fetch_github() -> dict | None:
     try:
         resp = requests.get(
@@ -63,7 +83,7 @@ def _fetch_github() -> dict | None:
             "tag": _clean_version(data.get("tag_name", "")),
             "url": data.get("html_url") or f"https://github.com/{GITHUB_REPO}/releases",
             "notes": (data.get("body") or "")[:4000],
-            "published_at": data.get("published_at") or "",
+            "published_at": _local_dt(data.get("published_at") or ""),
         }
     except (requests.RequestException, ValueError):
         return None
@@ -112,7 +132,7 @@ def _fetch_gitee() -> dict | None:
             "tag": tag,
             "url": f"https://gitee.com/{GITEE_REPO}/releases/tag/v{tag}",
             "notes": (data.get("body") or "")[:4000],
-            "published_at": data.get("created_at") or "",
+            "published_at": _local_dt(data.get("created_at") or ""),
         }
 
     for branch in ("main", "master"):
@@ -160,6 +180,9 @@ def check(force: bool = False) -> dict:
                 "ok", "current_version", "latest_version", "upgradable", "sources"
             } <= set(data)
             if fresh and complete and cached.get("version") == current:
+                # 旧缓存里的 published_at 可能还是原始 ISO，统一再格式化一次（幂等）
+                if isinstance(data.get("published_at"), str):
+                    data["published_at"] = _local_dt(data["published_at"])
                 return data
         except (ValueError, OSError, KeyError, TypeError):
             pass
@@ -201,6 +224,12 @@ def check(force: bool = False) -> dict:
             "notes": latest["notes"],
             "body": latest["notes"],
             "published_at": latest.get("published_at", ""),
+            # 两个平台的 Release 地址都给出：页面上的「查看」链接跟随「升级源」单选，
+            # 选了哪个源就在哪个源看，不必手动换成另一个平台
+            "release_urls": {
+                "github": f"https://github.com/{GITHUB_REPO}/releases/tag/v{latest['tag']}",
+                "gitee": f"https://gitee.com/{GITEE_REPO}/releases/tag/v{latest['tag']}",
+            },
             "sources": sources,
             "checked": now,
         }

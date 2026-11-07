@@ -1,4 +1,4 @@
-﻿@charset "UTF-8";
+@charset "UTF-8";
 /* ==============================================
    infowe Blog · 分享面板（default / tech 两主题通用）
    仅使用两主题共有的 CSS 变量（带缺省回退，保证任意主题可用）
@@ -100,7 +100,7 @@
   border: none; background: none; cursor: pointer;
   color: var(--accent, #0969da);
 }
-@media (hover: hover) and (pointer: fine) { .share-back:hover { text-decoration: underline; } }
+@media (hover: hover) and (pointer: fine) { .share-back:hover { color: color-mix(in srgb, var(--accent, #0969da) 84%, var(--text, #1f2a33)); } }
 
 .share-qr-box {
   display: flex; justify-content: center;
