@@ -269,7 +269,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (max-width:767px){
   .cmt{--av-root:36px;--av-reply:20px;--gap:6px;--indent:0}
   .cmt-thread{padding:16px 10px 13px}
-  .cmt-replies{margin-left:0;padding-left:10px}
+  .cmt-replies{margin-left:0;padding-left:calc(var(--av-root) - var(--av-reply))}
   .cmt-replies .cmt-item+.cmt-item{margin-top:14px}
   .cmt-form .row{flex-direction:column;gap:7px;margin-bottom:8px}
   .cmt-text{font-size:14px;line-height:1.75}
@@ -434,7 +434,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;
   margin-top:6px;font-size:11px;line-height:1;color:var(--c-text3);
 }
-.cmt-byline .cmt-ua{display:inline-flex;align-items:center;gap:4px;line-height:1}
+/* UA 文本与时间/属地共用同一条基线：图标改行内 svg 并下沉 2px；
+   .cmt-ua 不再用 flex 居中（flex 首项是图标，会把容器基线拉到图标底边，文字被抬高） */
+.cmt-byline .cmt-ua{display:inline;line-height:1.4}
+.cmt-byline .cmt-ua .cmt-ua-icon{vertical-align:-2px;margin-right:4px}
 /* 设备/浏览器信息挂在作者行末尾（跟着地名），不再单独占一行 */
 .cmt-head .cmt-byline{margin-top:0;align-self:center;gap:4px 8px}
 .cmt-head .cmt-byline::before{content:"·";opacity:.5}
@@ -585,7 +588,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 .cmt-foot{
   display:flex;
-  align-items:center;
+  /* 基线对齐：时间/属地/UA 三段共用一条文字基线；
+     align-items:center 会把 UA 行（图标高度）与文字块居中，产生 1~2px 错位 */
+  align-items:baseline;
   flex-wrap:wrap;
   gap:4px 8px;
   margin-top:8px;
@@ -597,7 +602,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-foot .cmt-loc{font-size:11px}
 .cmt-foot .cmt-byline{
   display:inline-flex;
-  align-items:center;
+  align-items:baseline;
   gap:4px;
   margin-top:0;
   min-width:0;
@@ -608,15 +613,18 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   text-overflow:ellipsis;
 }
 .cmt-foot .cmt-ua{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cmt-foot .cmt-actions{margin-left:auto;margin-top:0;display:flex;align-items:center}
+/* 右侧操作按钮不参与基线，保持自身居中 */
+.cmt-foot .cmt-actions{margin-left:auto;margin-top:0;display:flex;align-items:center;align-self:center}
 
 .cmt-head{row-gap:4px}
 .cmt-text{font-size:14.5px;line-height:1.75;margin-top:8px}
 .cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.7;margin-top:6px}
 
+/* 楼中楼左内边距 = 根头像 - 回复头像：回复正文与根评论正文左缘对齐
+   （桌面 40-28=12 与旧值一致；移动端头像变 36/20 时自动补到 16px） */
 .cmt-replies{
   margin:12px 0 0;
-  padding:10px 12px;
+  padding:10px 12px 10px calc(var(--av-root) - var(--av-reply));
   border-left:0;
   border-radius:10px;
   background:color-mix(in srgb,var(--c-accent) 5%,transparent);
@@ -638,7 +646,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-head{row-gap:3px}
   .cmt-text{font-size:15px;line-height:1.75}
   .cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.7}
-  .cmt-replies{margin:10px 0 0;padding:8px 10px;border-radius:10px}
+  .cmt-replies{margin:10px 0 0;padding:8px 10px 8px calc(var(--av-root) - var(--av-reply));border-radius:10px}
   .cmt-replies .cmt-item{padding:7px 0}
   .cmt-replies .cmt-item:first-child{padding-top:0}
   .cmt-replies .cmt-item:last-child{padding-bottom:0}

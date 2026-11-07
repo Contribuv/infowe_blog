@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.3)
+[![version](https://img.shields.io/badge/version-3.8.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,17 +925,26 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.3**
+当前版本：**v3.8.4**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.4
+
+- 归档选择浮窗改为毛玻璃：半透明底 + 背景模糊，打开时透出页面与光斑
+- 浮窗描边改半透明；不支持 backdrop-filter 的浏览器回退为不透明底
+- 上下篇占位卡统一为全站卡片语言：与可点卡片同底色、同圆角，去掉虚线描边
+- 占位卡保留次级色文字、无悬停反馈，仍明确不可点击
+- 评论底部 UA（系统 / 浏览器）与时间、属地对齐到同一条文字基线
+- 移动端楼中楼回复正文与根评论正文左缘对齐
+
+<details>
+<summary><b>历史版本（v3.8.3 及更早，点击展开）</b></summary>
 
 ### v3.8.3
 
 - 修复外链确认浮窗悬停时透明度异常：浮窗不再参与全站卡片悬停，始终使用不透明实色背景
 - 浮窗保留 1px 淡描边与阴影，遮罩与按钮交互不变
-
-<details>
-<summary><b>历史版本（v3.8.2 及更早，点击展开）</b></summary>
 
 ### v3.8.2
 
