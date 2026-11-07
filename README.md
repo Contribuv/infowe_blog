@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.7)
+[![version](https://img.shields.io/badge/version-3.8.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.8)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.7**
+当前版本：**v3.8.8**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.8
+
+- 修复后台锚点定位被 sticky 顶栏遮挡：仪表盘「N 条评论待审核」点进去后，目标卡片头部被顶栏盖住
+- 后台内容区锚点统一预留顶栏高度 + 16px 间距，定位后目标完整可见
+- 前台主题本来就有同类处理（`#comments`、标题、楼层均为 72~80px），本次补齐后台这一侧
+
+<details>
+<summary><b>历史版本（v3.8.7 及更早，点击展开）</b></summary>
 
 ### v3.8.7
 

@@ -241,6 +241,11 @@ svg { vertical-align: -3px; flex: none; }
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
 }
+/* 锚点定位避让 sticky 顶栏：顶栏 56px 常驻在视口顶部，
+   不设 scroll-margin 的话 #pending-comments 这类锚点会正好停在视口顶端，
+   目标卡片的头部被顶栏完全盖住（窄屏表格卡片化后更明显）。
+   前台主题已有同类处理（#comments / 标题 / 楼层都是 72~80px）。 */
+.admin-content [id] { scroll-margin-top: calc(var(--topbar-h) + var(--sp-4)); }
 .admin-burger {
   display: none; /* 移动端显示 */
   align-items: center; justify-content: center;
