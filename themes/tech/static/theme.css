@@ -4502,7 +4502,6 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 .tech-podium-item,
 .tech-side-card,
 .tech-widget,
-.tech-external-panel,
 .tech-timeline-item,
 .circle-item {
   border: 0;
@@ -4520,7 +4519,6 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   .tech-podium-item:hover,
   .tech-side-card:hover,
   .tech-widget:hover,
-  .tech-external-panel:hover,
   .tech-timeline-item:hover,
   .circle-item:hover {
     background: var(--card-bg-hover);
