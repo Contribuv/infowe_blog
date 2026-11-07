@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.6)
+[![version](https://img.shields.io/badge/version-3.8.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.7)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.6**
+当前版本：**v3.8.7**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.7
+
+- 修复移动端后台评论管理「待审核」高亮被切成一截截色带：行级高亮改由整行承担，恢复成一张连续的卡
+- 文件清理页「批量选中」「删除失败」的高亮同步改为整行着色
+- 桌面端表格保持原样：逐单元格着色仍保留，只在卡片化的窄屏改整行
+
+<details>
+<summary><b>历史版本（v3.8.6 及更早，点击展开）</b></summary>
 
 ### v3.8.6
 

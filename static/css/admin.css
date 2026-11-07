@@ -1666,6 +1666,20 @@ body.bulk-on #orphanTable tbody tr { cursor: pointer; }
   75% { transform: translateX(4px); }
 }
 
+/* 移动端表格卡片化后，行级高亮必须落在 tr 上，而不是 td 上。
+   td 逐个上色时，td 之间夹着 tr 的透明内距，整行会被切成一截一截的色带
+   （评论管理「待审核」、文件清理的「选中 / 删除失败」都是这个症状）。
+   这里把高亮整体交给 tr，并清掉单元格自己的底色，恢复成一张连续的卡。 */
+@media (max-width: 767.98px) {
+  .row-pending td { background: transparent; }
+  .table tbody tr.row-pending { background: var(--warning-soft); }
+  #orphanTable tbody tr.row-on td,
+  #orphanTable tbody tr.row-on:hover td { background: transparent; }
+  #orphanTable tbody tr.row-on { background: var(--accent-soft); }
+  #orphanTable tbody tr.row-failed td { background: transparent; }
+  #orphanTable tbody tr.row-failed { background: var(--danger-soft); }
+}
+
 /* 按钮提交中 / 动态提示图标 */
 .btn.btn-loading { opacity: .65; pointer-events: none; }
 .flash-icon {
