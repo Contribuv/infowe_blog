@@ -923,7 +923,7 @@ def _activate_theme():
 TEXT_KEYS = [
     "blog_name", "blog_subtitle", "author", "author_bio", "about_intro", "skills",
     "avatar", "github_username", "social_github", "github_token", "contact_email",
-    "home_title", "home_kicker", "home_quotes", "icp_beian", "police_beian",
+    "home_title", "home_quotes", "icp_beian", "police_beian",
     "home_posts_count", "posts_per_page",
     "smtp_host", "smtp_sender_name", "smtp_port", "smtp_user", "smtp_pass",
     "notify_email", "footer_copyright_year", "footer_copyright_owner",
@@ -945,8 +945,6 @@ def _settings_view() -> dict:
         "force_https": "1" if settings.bool_of("force_https") else "0",
         "unify_www": "1" if settings.bool_of("unify_www") else "0",
         "home_quotes": settings.get_str("home_quotes", ""),
-        # 首屏标语：首页大标题上方那行小字，留空则回退副标题
-        "home_kicker": settings.get_str("home_kicker", ""),
         "smtp_host": settings.get_str("smtp_host", ""),
         "smtp_port": settings.get_str("smtp_port", "465"),
         "smtp_user": settings.get_str("smtp_user", ""),

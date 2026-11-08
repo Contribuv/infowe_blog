@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.12)
+[![version](https://img.shields.io/badge/version-3.8.13-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.13)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.12**
+当前版本：**v3.8.13**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.13
+
+- 后台「博主设置」删除重复的「首屏标语」输入项：首页标语统一在「主题配置 → 首页标题区」维护，避免同一项设置在两处都能写、互相覆盖
+- `home_kicker` 从博主设置的保存白名单中移除：站点设置页保存其它项时不再触碰该字段，已配置的标语不会被清空
+
+<details>
+<summary><b>历史版本（v3.8.12 及更早，点击展开）</b></summary>
 
 ### v3.8.12
 
