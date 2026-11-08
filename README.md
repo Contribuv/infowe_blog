@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.0)
+[![version](https://img.shields.io/badge/version-3.9.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.1)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.0**
+当前版本：**v3.9.1**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.1
+
+- **关于页标题样式统一**：「写作热力图」「站点状态」两个标题与「技术栈 / 网站历程」区块标题同一套视觉（18px + 主色强调条 + 统一 14px 下间距）；此前热力图标题 15px 无强调条、状态卡标题因嵌在 flex 头部漏掉了区块选择器
+- **favicon 缓存修复**：前台与后台所有模板的图标链接带上 mtime 版本参数（`?v=`），替换图标后无需清浏览器缓存；`/favicon.ico` 根路径重定向从 301 改为 302 并附带版本号，避免浏览器永久缓存旧跳转
+- **页面缓存自动失效**：缓存元数据记录资源签名（模板 / 主题 CSS / favicon 的最新 mtime），签名变化即作废旧 HTML——此前改模板或样式后，匿名访客最长 30 分钟仍看到旧页面
+
+<details>
+<summary><b>历史版本（v3.9.0 及更早，点击展开）</b></summary>
 
 ### v3.9.0
 

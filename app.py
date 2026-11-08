@@ -286,6 +286,7 @@ def _register_hooks(app: Flask) -> None:
             "project_layout": conf.get("project_layout", "three"),
             "version": config.VERSION,
             "static_ver": _static_version(),
+            "favicon_ver": _favicon_version(),
             "admin_prefix": app.config.get("ADMIN_PREFIX", "/admin"),
             "theme_css_name": theme_service.css_name(active),
             "theme_asset_ver": theme_service.asset_version(),
@@ -460,6 +461,16 @@ def _static_version() -> int:
             latest = max(latest, int(path.stat().st_mtime))
     _STATIC_VER_CACHE.update(ts=now, ver=latest)
     return latest
+
+
+def _favicon_version() -> int:
+    """favicon.ico 的 mtime，单独做缓存戳。
+
+    _static_version 只统计 css/js，图片不在其中；不单独给图标一个版本号，
+    替换 favicon 后浏览器会继续用旧缓存。
+    """
+    path = config.STATIC_DIR / "images" / "favicon.ico"
+    return int(path.stat().st_mtime) if path.is_file() else 0
 
 
 def icon_svg(name: str, size: int = 20, class_name: str = "") -> str:

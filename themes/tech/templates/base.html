@@ -48,7 +48,7 @@
     <title>{% block full_title %}{{ seo_title }}{% endblock %}</title>
     <!-- SEO 描述与 og:description 同源（self 取子模板覆盖后的值），避免两处文案漂移 -->
     <meta name="description" content="{% block meta_description %}{{ self.og_description() }}{% endblock %}">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico', v=favicon_ver) }}">
     <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/static/' ~ theme_css_name, t=theme_asset_ver) }}">
     <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
     <!-- 社交分享：Open Graph + Twitter Card -->

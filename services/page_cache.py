@@ -17,9 +17,12 @@ from urllib.parse import urlparse
 
 from flask import g, has_request_context, make_response, request, session
 
-from config import CACHE_DIR
+from config import CACHE_DIR, STATIC_DIR, TEMPLATE_DIR, THEMES_DIR
 
 PAGE_ROOT = Path(CACHE_DIR) / "pages"
+
+# 资源签名缓存：避免每个请求都扫目录
+_ASSET_SIG = {"ts": 0.0, "sig": 0}
 
 # 不缓存的路径前缀
 EXCLUDED_PREFIXES = (
@@ -79,6 +82,27 @@ def _cacheable() -> bool:
     return True
 
 
+def _asset_signature() -> int:
+    """模板 / 主题 CSS / favicon 的最新 mtime。
+
+    页面缓存只按 URL 命中，改模板或换图标后会继续返回旧 HTML，
+    表现为「改了样式刷新没变化」。签名变化即视为旧缓存失效。
+    """
+    now = time.time()
+    if now - _ASSET_SIG["ts"] < 30:
+        return _ASSET_SIG["sig"]
+    latest = 0.0
+    for root in (TEMPLATE_DIR, THEMES_DIR):
+        for path in root.rglob("*"):
+            if path.suffix.lower() in {".html", ".css"} and path.is_file():
+                latest = max(latest, path.stat().st_mtime)
+    icon = STATIC_DIR / "images" / "favicon.ico"
+    if icon.is_file():
+        latest = max(latest, icon.stat().st_mtime)
+    _ASSET_SIG.update(ts=now, sig=int(latest))
+    return _ASSET_SIG["sig"]
+
+
 def _folder(url: str) -> Path:
     """缓存目录名只由路径首段决定，不依赖 host，后台线程也能算。"""
     path = urlparse(url).path or "/"
@@ -129,6 +153,11 @@ def load():
             html_path.unlink(missing_ok=True)
             meta_path.unlink(missing_ok=True)
             return None
+        # 模板 / 样式 / 图标改过，旧 HTML 一并作废
+        if int(meta.get("asset") or 0) != _asset_signature():
+            html_path.unlink(missing_ok=True)
+            meta_path.unlink(missing_ok=True)
+            return None
         html = html_path.read_text(encoding="utf-8")
     except (OSError, ValueError):
         return None
@@ -171,6 +200,7 @@ def store(response) -> None:
                 "url": url,
                 "created": time.time(),
                 "ttl": _ttl(request.path),
+                "asset": _asset_signature(),
                 "content_type": response.headers.get("Content-Type") or "text/html; charset=utf-8",
             }),
             encoding="utf-8",

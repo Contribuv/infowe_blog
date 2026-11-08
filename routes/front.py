@@ -759,8 +759,16 @@ def _age_text(ts: float) -> str:
 
 def favicon():
     """浏览器/阅读器会直接请求根路径 /favicon.ico，重定向到静态图标，
-    避免日志里出现大量 404（config.ADMIN_PATH_RESERVED 已把该路径列为保留）。"""
-    return redirect(url_for("static", filename="images/favicon.ico"), code=301)
+    避免日志里出现大量 404（config.ADMIN_PATH_RESERVED 已把该路径列为保留）。
+
+    用 302 而非 301：301 会被浏览器永久缓存，之后换图标也不会重新请求。
+    目标 URL 带上 favicon 的 mtime，替换文件后缓存自动失效。
+    """
+    import config
+
+    icon = config.STATIC_DIR / "images" / "favicon.ico"
+    v = int(icon.stat().st_mtime) if icon.is_file() else 0
+    return redirect(url_for("static", filename="images/favicon.ico", v=v), code=302)
 
 
 def rss_feed():

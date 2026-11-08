@@ -593,7 +593,8 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   border: 1px solid var(--border);
   border-radius: 12px;
 }
-.tech-hm-head { margin-bottom: 10px; }
+/* 与关于页其它区块 h2 的 14px 下间距统一 */
+.tech-hm-head { margin-bottom: 14px; }
 .tech-hm-title {
   display: flex;
   align-items: center;
@@ -601,6 +602,21 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   font-size: 15px;
   font-weight: 600;
   line-height: 1.4;
+}
+/* 关于页热力图标题与区块 h2 统一：18px + 左侧强调条（限定 .tech-about，避免影响其它页面） */
+.tech-about .tech-hm-title {
+  position: relative;
+  padding-left: 14px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: normal; /* 与 h2 默认行高一致，保证标题与下方内容的间距同步 */
+}
+.tech-about .tech-hm-title::before {
+  content: "";
+  position: absolute; left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 4px; height: 18px; border-radius: 2px;
+  background: var(--accent);
 }
 .tech-hm-live {
   display: inline-flex;
@@ -1773,11 +1789,14 @@ html .tech-tag--more:hover {
 .tech-about { margin: 20px 0 0; }
 /* 叙事区块：无装饰线，仅靠留白分层 */
 .tech-about-section { margin-bottom: 24px; }
-.tech-about-section > h2 {
+/* 站点状态标题在 flex 头部里，不是 section 直接子级，需一起纳入同一套 h2 样式 */
+.tech-about-section > h2,
+.tech-status-head > h2 {
   position: relative; font-size: 18px; font-weight: 600;
   margin: 0 0 16px; padding-left: 14px;
 }
-.tech-about-section > h2::before {
+.tech-about-section > h2::before,
+.tech-status-head > h2::before {
   content: ""; position: absolute; left: 0; top: 50%;
   transform: translateY(-50%);
   width: 4px; height: 18px; border-radius: 2px;
@@ -2946,7 +2965,7 @@ html { touch-action: manipulation; }
 }
 .tech-status-head {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; margin-bottom: 12px;
+  gap: 12px; margin-bottom: 14px; /* 与 .tech-about-section > h2 的下间距统一 */
 }
 .tech-status-head > h2 { margin: 0; }
 .tech-status-badge {
