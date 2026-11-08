@@ -731,13 +731,14 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   display: flex; flex-wrap: wrap; gap: 6px 16px;
   font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;
 }
-/* 精选徽标：用主题强调色 --accent（亮 #1d4e7e / 暗 #5b8def），
-   与标题 hover、箭头、彩条同色系，亮色下清晰不糊灰；金色 chip 方案观感偏脏已弃 */
+/* 精选徽标：文字 ★ 改为项目统一的 SVG 星标（static/icons/star.svg），
+   沿用 --accent 强调色；inline-flex 让图标与「精选」文字垂直居中 */
 .tech-badge-featured {
-  display: inline-block; flex: none;
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
   color: var(--accent);
   font-size: 12px; font-weight: 600;
 }
+.tech-badge-icon { flex: none; }
 .tech-post-title { font-size: 17px; font-weight: 600; line-height: 1.5; margin: 0 0 6px; }
 .tech-post-title a { color: var(--text); text-decoration: none; transition: color .15s; }
 .tech-post-excerpt {
@@ -1452,7 +1453,7 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   margin: 0 0 10px;
   color: var(--text-secondary);
 }
-/* 精选推荐区：全站彩条只在页头出现一次，这里用「细分隔线 + 标题侧短竖标记」收口。
+/* 精选推荐区：全站彩条只在页头出现一次，这里用「细分隔线 + 标题侧蓝色竖条」收口。
    下方「全部文章」标题是 sr-only，这条线是两组卡片唯一的视觉分组；线两侧留白
    与组内卡片间距一致（PC 14px / ≤1000px 8px），避免一端贴卡、一端悬空 */
 .tech-featured {
@@ -3700,6 +3701,9 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
    不生效；窄屏是单列，不受影响。sticky 的吸附行为不受 margin-top 影响。 */
 @media (min-width: 1001px) {
   .tech-home-grid:has(.tech-featured) .tech-sidebar { margin-top: 36px; }
+  /* sticky 侧栏滚到粘性范围末端时底边与 grid 底边对齐，而 PC 双栏的
+     .tech-main 底部留白为 0，不留这段会让最后一张「十年之约」卡压在页脚线上 */
+  .tech-sidebar { padding-bottom: 24px; }
 }
 .tech-side-card {
   min-width: 0;
@@ -3739,16 +3743,6 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   color: var(--text-secondary);
 }
 .tech-side-profile-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
-.tech-side-profile-kicker {
-  align-self: flex-start;
-  padding: 1px 8px;
-  border-radius: 8px;
-  background: var(--accent-weak);
-  color: var(--accent);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .08em;
-}
 .tech-side-profile-name {
   display: block;
   overflow: hidden;
@@ -4378,28 +4372,17 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 }
 
 
-/* 侧栏博主：改为「博主：名字」一行，字号收小 */
-.tech-side-profile { gap: 10px; }
-.tech-side-avatar { width: 44px; height: 44px; }
-.tech-side-profile-main {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 0;
-}
-.tech-side-profile-kicker {
-  padding: 0;
-  border-radius: 0;
-  background: none;
-  color: var(--text-secondary);
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0;
-}
-.tech-side-profile-kicker::after { content: "："; }
-.tech-side-profile-name { font-size: 14px; font-weight: 600; }
+/* 侧栏博主：与「热门标签 / 文章分类」共用「标题 + 内容」骨架。
+   h3「博主」承担标题层，头像与名字组成资料行，名字升到卡片主标题级。 */
+.tech-side-profile-card h3 { margin-bottom: 12px; }
+.tech-side-profile { gap: 12px; }
+.tech-side-avatar { width: 48px; height: 48px; }
+.tech-side-profile-main { display: block; min-width: 0; }
+.tech-side-profile-name { font-size: 16.5px; font-weight: 700; line-height: 1.3; }
+.tech-side-profile-card .tech-side-bio { margin-top: 14px; }
 
 /* 侧栏社交：关于页那种文字 + SVG，不做胶囊 */
-.tech-side-social { gap: 14px; margin-top: 12px; }
+.tech-side-social { gap: 14px; margin-top: 14px; }
 .tech-side-social a {
   display: inline-flex;
   align-items: center;
@@ -4408,7 +4391,7 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   border: 0;
   border-radius: 0;
   background: none;
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 .tech-side-social a svg { flex: none; opacity: .85; }

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.10-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.10)
+[![version](https://img.shields.io/badge/version-3.8.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.11)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.10**
+当前版本：**v3.8.11**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.11
+
+- 侧栏博主卡改为与「热门标签 / 文章分类」一致的「标题 + 内容」骨架：卡片标题统一为「关于博主」，头像 48px，博主名升到 16.5px 卡片主标题级
+- PC 双栏侧栏滚到粘性范围末端时，最后一张卡片与页脚线留 24px，不再压线
+- 精选徽标由字符 `★` 换成项目统一的 SVG 星标（`static/icons/star.svg`），与全站图标同源；徽标改为 inline-flex，图标与文字垂直居中
+
+<details>
+<summary><b>历史版本（v3.8.10 及更早，点击展开）</b></summary>
 
 ### v3.8.10
 

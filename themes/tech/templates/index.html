@@ -53,7 +53,7 @@
                 <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
                 {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
                 <span>{{ post.read_time }} 分钟</span>
-                <span class="tech-badge-featured">★ 精选</span>
+                <span class="tech-badge-featured">{{ icon('star', 12, 'tech-badge-icon') | safe }}精选</span>
             </div>
             <h3 class="tech-post-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
             <p class="tech-post-excerpt">{{ post.excerpt }}</p>
