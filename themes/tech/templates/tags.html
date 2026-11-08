@@ -11,7 +11,7 @@
     {% for tag, posts in tag_groups %}
     {% set n = posts|length %}
     <a href="{{ url_for('tag_page', tag=tag) }}" class="tech-tag-cloud-item{% if n >= 10 %} tech-tag-cloud-item--lg{% elif n >= 3 %} tech-tag-cloud-item--md{% endif %}">
-        # {{ tag }}
+        {{ tag }}
         <span class="tech-tag-cloud-count">{{ n }}</span>
     </a>
     {% endfor %}

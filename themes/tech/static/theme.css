@@ -1681,24 +1681,31 @@ html .tech-tag--more:hover {
 .tech-textarea { min-height: 100px; resize: vertical; }
 
 /* ── 标签云 ── */
-/* 纯文字标签云：不铺底色，靠「字号 + 文字层级」表达热度，
-   悬停才亮起主色。95 个标签从一屏碎药丸回到一片可扫读的文字 */
-.tech-tags-cloud { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; }
+/* 药丸芯片：所有标签统一尺寸，热度只用文字/边框颜色 + 数字表达，
+   避免字号、内边距分档导致大小不一 */
+.tech-tags-cloud { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .tech-tag-cloud-item {
-  display: inline-flex; align-items: baseline; gap: 4px;
-  font-size: 12.5px; line-height: 1.5;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; line-height: 1;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt, transparent);
   color: var(--text-secondary); text-decoration: none;
-  transition: color .18s ease;
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
 }
-.tech-tag-cloud-item--md { font-size: 14.5px; color: var(--text); }
-.tech-tag-cloud-item--lg { font-size: 18px; color: var(--text); font-weight: 600; }
+.tech-tag-cloud-item--md { color: var(--text); }
+.tech-tag-cloud-item--lg { color: var(--accent); border-color: var(--accent); }
 @media (hover: hover) and (pointer: fine) {
-  .tech-tag-cloud-item:hover,
-  .tech-tag-cloud-item:hover .tech-tag-cloud-count { color: var(--accent); }
+  .tech-tag-cloud-item:hover {
+    color: var(--accent); border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+  .tech-tag-cloud-item:hover .tech-tag-cloud-count { color: var(--accent); opacity: 1; }
 }
 .tech-tag-cloud-count {
-  font-size: 10px; line-height: 1; color: inherit; opacity: .55;
-  font-variant-numeric: tabular-nums;
+  font-size: 11px; line-height: 1; color: inherit; opacity: .5;
+  font-variant-numeric: tabular-nums; font-weight: 400;
   transition: color .18s ease, opacity .18s ease;
 }
 
@@ -2957,11 +2964,24 @@ html { touch-action: manipulation; }
 /* ── 站点状态卡：文本优先，明细折叠 ──
    第一屏只读日期/延迟/连通率；原来的两张表收进 <details>，
    需要逐项核对时再展开，避免一上来就是监控面板。 */
-.tech-status-card {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px 24px;
+/* 提高选择器权重，压过后面 .tech-about-section { padding: 20px 22px } 的外壳规则 */
+.tech-about-section.tech-status-card {
+  /* 视觉上下留白统一为 20px：卡片 padding 要扣掉首尾内容自带的行距/内边距。
+     顶部 = h2 行框上半 +3px；折叠底部 = summary 40px 行框下半 +12.6px；
+     展开底部 = 最后一行 .svc-row 的 padding-bottom +8px。
+     不扣的话三种留白分别是 23 / 32.6 / 28px，看起来上下不齐。 */
+  --status-gutter: 20px;
+  --status-lead-top: 3px;
+  --status-lead-bottom: 12.6px;
+  --status-row-bottom: 8px;
+  /* 只覆盖 padding：border / radius / 底色继续交给后面的扁平化外壳规则 */
+  padding: calc(var(--status-gutter) - var(--status-lead-top)) 22px
+           calc(var(--status-gutter) - var(--status-lead-bottom));
   scroll-margin-top: 80px;
+}
+/* 展开后末尾是明细行，下内边距按该行的 8px 补偿，仍得到 20px 视觉留白 */
+.tech-about-section.tech-status-card:has(.tech-status-detail[open]) {
+  padding-bottom: calc(var(--status-gutter) - var(--status-row-bottom));
 }
 .tech-status-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -3024,6 +3044,10 @@ html { touch-action: manipulation; }
   transform: rotate(45deg); transition: transform .2s; margin-top: -3px;
 }
 .tech-status-detail[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
+/* 展开态最后一项（服务行或空态）的下内边距固定为补偿值，保证卡片底部留白一致 */
+.tech-status-detail[open] .tech-status-section:last-child .svc-list > :last-child {
+  padding-bottom: var(--status-row-bottom);
+}
 
 /* 折叠内沿用原来的行式明细，只把标题降级、行距收紧 */
 .tech-status-detail .tech-status { gap: 0; }
@@ -3050,7 +3074,14 @@ html { touch-action: manipulation; }
 .tech-status-detail .svc-count { font-size: 10.5px; }
 
 @media (max-width: 640px) {
-  .tech-status-card { padding: 16px; }
+  /* 移动端 summary 行高 44px、明细行 padding 9px，只换补偿值，视觉留白仍是 20px；
+     显式写 padding 以压过后面 .tech-about-section { padding: 16px } 的同级覆盖 */
+  .tech-about-section.tech-status-card {
+    --status-lead-bottom: 14.6px;
+    --status-row-bottom: 9px;
+    padding: calc(var(--status-gutter) - var(--status-lead-top)) 16px
+             calc(var(--status-gutter) - var(--status-lead-bottom));
+  }
   .tech-status-head { align-items: flex-start; }
   .tech-status-sentence { font-size: 14.5px; line-height: 1.75; }
   .tech-status-meta { font-size: 11.5px; }
@@ -4226,16 +4257,19 @@ html.tech-external-open { overflow: hidden; }
   gap: 6px;
   margin-top: 4px;
 }
+/* 与侧栏「热门标签」同一套药丸语言：无边框、全圆角、6% 浅底。
+   统计项不是链接，所以只统一形状，不加 hover/按压反馈，数字仍加粗突出 */
 .tech-home-stats span {
   display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 2px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 999px;
   color: var(--text-secondary);
   font-size: 12px;
-  background: var(--bg);
+  line-height: 1;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 .tech-home-stats b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 /* 一言作为报头「落款」：字号略低于标题、颜色降一档，形成头重脚轻的反向平衡 */
@@ -4261,11 +4295,6 @@ html.tech-external-open { overflow: hidden; }
 .tech-home-head--multi::after { left: 0; transform: none; }
 .tech-home-head--multi .tech-home-head-main { align-items: flex-start; }
 .tech-home-head--multi .tech-home-stats { justify-content: flex-start; gap: 8px; }
-.tech-home-head--multi .tech-home-stats span {
-  padding: 2px 10px;
-  border-radius: 8px;
-  background: var(--bg);
-}
 .tech-home-head--multi .tech-home-head-quote { min-width: 0; width: 100%; }
 .tech-home-head--multi .tech-quote {
   margin-top: 0;
@@ -4977,12 +5006,13 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   .circle-stats.tech-reader-stats span { font-size: 11.5px; }
 }
 
-/* 首页底部留白：双栏（≥1001px）时交给「查看全部归档」自身间距和页脚内边距，
-   不再额外叠一层 .tech-main 的 padding-bottom，避免按钮下方比上方多 24px；
-   窄屏单列时最后一块是侧栏（十年之约卡），必须保留 .tech-main 的底部内距，
-   否则该卡底边会直接压在页脚分隔线上（实测间距 0） */
+/* 首页底部留白：双栏（≥1001px）最后一块是「查看全部归档」按钮，
+   .tech-more-wrap 已统一成只有上外距，这里必须用 main 的 padding-bottom 补出
+   与按钮上方等长的下留白，否则按钮底边直接压在页脚分隔线上（实测间距 0）。
+   窄屏单列时最后一块是侧栏（十年之约卡），保留默认的 24px 底部内距，
+   否则该卡底边也会压在页脚线上 */
 @media (min-width: 1001px) {
-  .tech-main:has(.tech-home-grid) { padding-bottom: 0; }
+  .tech-main:has(.tech-home-grid) { padding-bottom: var(--home-gap); }
 }
 
 /* 图片失败占位卡：比卡片底色再深一档，虚线边界才看得出来 */
@@ -5035,4 +5065,78 @@ body::after {
 }
 @media (prefers-reduced-motion: reduce) {
   body::before, body::after { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════
+   关于页留白统一（最后覆盖层，压过前面的多层规则）
+   实测：状态卡 20/20，技术栈 23/34，网站历程 23/31.1，
+   展开明细两段之间 39px。多出来的都是首尾内容自带的行距/内边距。
+   目标：卡片上下视觉留白与明细分区间距统一为 20px。
+   ═══════════════════════════════════════════════ */
+/* 1) h2 行框上半自带 3px，卡片顶部 padding 扣掉；底部内部间距在下面分别归零 */
+.tech-about-section:not(.tech-status-card) {
+  padding-top: calc(var(--status-gutter, 20px) - 3px);
+  padding-bottom: var(--status-gutter, 20px);
+}
+/* 2) 技能行的 14px margin-bottom 会撑高网格最后一条轨道（同轨两列时更明显），
+      改成 grid row-gap：行距仍是 18px，但卡片底部不再多出 14px */
+.tech-skill-list { row-gap: 18px; }
+.tech-skill-list > .tech-skill-row { margin-bottom: 0; }
+@media (max-width: 640px) { .tech-skill-list { row-gap: 14px; } }
+/* 3) 历程：baseline 对齐 + 末项 10px 下内边距，让文字下方凭空多出一块空白；
+      改顶对齐并去掉末项下内边距，卡片下留白回到 20px */
+.tech-about-section .tech-timeline-item { align-items: flex-start; }
+.tech-about-section .tech-timeline-item:last-child { padding-bottom: 0; }
+
+/* 4) 明细分区：summary 行框下半 = --status-lead-bottom(桌面 12.6 / 移动 14.6)，
+      分区上内边距补成 20px；相邻分区的 margin + 1px 分隔线 + padding 也凑成 20px。 */
+.tech-status-card .tech-status-section {
+  padding: calc(var(--status-gutter) - var(--status-lead-bottom)) 0 0;
+}
+.tech-status-card .tech-status-detail .tech-status-section + .tech-status-section {
+  margin-top: calc(var(--status-lead-bottom) - 1px);
+  padding-top: calc(var(--status-gutter) - var(--status-lead-bottom));
+  border-top: 1px solid var(--border);
+}
+/* 前一段最后一行的 8px 下内边距属于行距，不计入分区间距 */
+.tech-status-card .tech-status-detail .tech-status-section:not(:last-child) .svc-list > :last-child {
+  padding-bottom: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   首页卡片间距统一（最后覆盖层，压过前面分散在各处的值）
+   实测改前：桌面 报头→列表 14 / 卡片间 14 / 标题→卡片 10 /
+     精选卡→「最新文章」标题 18；窄屏则是 12 / 8 / 10 / 16，
+     同一列混了 8、10、12、16 四种间距，分组处拉开到 51.5px。
+   现在只留一个节奏：桌面 14px、窄屏 8px，报头、文章卡、分组标题
+   上下、侧栏卡、归档按钮、单列栅格全部共用它。
+   ═══════════════════════════════════════════════ */
+.tech-main:has(.tech-home-grid) { --home-gap: 14px; }
+@media (max-width: 1000px) {
+  .tech-main:has(.tech-home-grid) { --home-gap: 8px; }
+  .tech-home-grid { gap: var(--home-gap); }
+}
+/* 报头外层还有 .tech-shell，用后代选择器而不是 >。
+   统计药丸改成 20px 高后，底部到报头细线只剩 31px（单栏 15px / 窄屏 11px），
+   视觉上贴线；这里补足内部底部留白，外部 margin 仍由 --home-gap 控制。
+   分界用 920px（报头两列→堆叠），不能跟 --home-gap 的 1000px 分界混用，
+   否则 921~1000px 仍是双栏却按窄屏取值，反而更贴线 */
+.tech-main:has(.tech-home-grid) .tech-home-head {
+  margin-bottom: var(--home-gap);
+  padding-bottom: 42px;
+}
+@media (max-width: 920px) {
+  .tech-main:has(.tech-home-grid) .tech-home-head { padding-bottom: 24px; }
+}
+.tech-home-grid .tech-post-item { margin-bottom: var(--home-gap); }
+.tech-home-grid .tech-post-item:last-child { margin-bottom: 0; }
+.tech-home-grid .tech-featured { margin-bottom: var(--home-gap); }
+.tech-home-grid :is(.tech-featured, .tech-latest) > .tech-related-title {
+  margin-bottom: var(--home-gap);
+}
+.tech-home-grid .tech-more-wrap { margin: var(--home-gap) 0 0; }
+.tech-home-grid .tech-sidebar { gap: var(--home-gap); }
+/* 分组标题下外距改为 14px，侧栏整体下移量同步改成 40px，保持两列首卡对齐 */
+@media (min-width: 1001px) {
+  .tech-home-grid:has(.tech-featured) .tech-sidebar { margin-top: 40px; }
 }

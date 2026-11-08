@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.1-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.1)
+[![version](https://img.shields.io/badge/version-3.9.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.2)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.1**
+当前版本：**v3.9.2**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.2
+
+- **标签页标签云尺寸统一**：取消按文章数分档的字号与内边距，所有标签同为 13px 药丸；热度改用文字/边框颜色区分，文章数照常显示；标签名去掉多余的 `# ` 前缀
+- **关于页卡片留白统一**：站点状态卡（含「监控明细」折叠与展开）、技术栈、网站历程上下视觉留白统一 20px；明细分区之间同为 20px，修正技能网格末轨道与历程末项多算的行距
+- **首页间距统一为一个节奏**：新增 `--home-gap`（桌面 14px / 窄屏 8px），报头、文章卡、分组标题上下、侧栏卡、归档按钮与单列栅格共用；两列首卡保持对齐
+- **首页报头统计改为药丸**：与侧栏「热门标签」同款无边框全圆角浅底，数字仍加粗、不给不可点元素添加悬停反馈；补足药丸到报头细线的留白
+- **修复「查看全部归档」压页脚线**：恢复桌面双栏主内容底部内距，按钮上下均为 14px；窄屏侧栏末卡与页脚保持 24px
+
+<details>
+<summary><b>历史版本（v3.9.1 及更早，点击展开）</b></summary>
 
 ### v3.9.1
 
