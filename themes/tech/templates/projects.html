@@ -13,11 +13,11 @@
          翻页/刷新/收藏都不会丢掉当前语言；数字始终按全部项目统计 -->
     <div class="tech-lang-stats">
         <a class="tech-lang-link{% if not active_lang %} is-active{% endif %}" href="{{ url_for('projects_page') }}"
-           {% if not active_lang %}aria-current="true"{% endif %}>全部 ({{ total_projects }})</a>
+           {% if not active_lang %}aria-current="true"{% endif %}>全部<span class="tech-lang-count">{{ total_projects }}</span></a>
         {% for lang, count in languages.items() %}
         <a class="tech-lang-link{% if active_lang == lang %} is-active{% endif %}"
            href="{{ url_for('projects_page', lang=lang) }}"
-           {% if active_lang == lang %}aria-current="true"{% endif %}>{{ lang }} ({{ count }})</a>
+           {% if active_lang == lang %}aria-current="true"{% endif %}>{{ lang }}<span class="tech-lang-count">{{ count }}</span></a>
         {% endfor %}
     </div>
 

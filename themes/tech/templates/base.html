@@ -48,7 +48,7 @@
     <title>{% block full_title %}{{ seo_title }}{% endblock %}</title>
     <!-- SEO 描述与 og:description 同源（self 取子模板覆盖后的值），避免两处文案漂移 -->
     <meta name="description" content="{% block meta_description %}{{ self.og_description() }}{% endblock %}">
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
     <link rel="stylesheet" href="{{ url_for('theme_static', filename=active_theme ~ '/static/' ~ theme_css_name, t=theme_asset_ver) }}">
     <link rel="alternate" type="application/rss+xml" title="{{ blog_name }} RSS" href="{{ url_for('rss_feed') }}">
     <!-- 社交分享：Open Graph + Twitter Card -->
@@ -171,10 +171,10 @@
                     <a class="tech-footer-member" href="https://www.foreverblog.cn/" target="_blank" rel="noopener"
                        title="十年之约成员博客" aria-label="十年之约成员博客">
                         <img class="tech-footer-member-logo tech-footer-member-logo--light"
-                             src="https://www.foreverblog.cn/assets/logo/logo_v2_black.png"
+                             src="{{ url_for('theme_static', filename=active_theme ~ '/static/images/foreverblog-logo-light.png', t=theme_asset_ver) }}"
                              alt="十年之约" width="125" height="32" decoding="async">
                         <img class="tech-footer-member-logo tech-footer-member-logo--dark"
-                             src="https://www.foreverblog.cn/assets/logo/logo_v2_light.png"
+                             src="{{ url_for('theme_static', filename=active_theme ~ '/static/images/foreverblog-logo-dark.png', t=theme_asset_ver) }}"
                              alt="" aria-hidden="true" width="125" height="32" decoding="async">
                     </a>
                 </div>

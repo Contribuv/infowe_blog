@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.13-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.13)
+[![version](https://img.shields.io/badge/version-3.9.0-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.0)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.13**
+当前版本：**v3.9.0**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.0
+
+- **全站卡片色统一到同一档**：深色主题的卡片底色由 6% 降回文字色 3% 叠加、悬停 5%，与评论区楼层卡完全同色；文章卡、列表卡、项目卡、侧栏卡、上下篇卡、归档条目全部消费同一组 `--card-bg` / `--card-bg-hover` 令牌，以后调深浅只改主题里一处
+- **评论区并入全站卡片语言**：楼层卡与评论表单改为直接消费 `--card-bg`，不再各写一份色值；评论入口悬停改为整张表单卡提亮一档（此前只有「写评论」文字变色，卡片没有反馈）
+- **标签与筛选控件统一为无边框柔和小药丸**：侧栏热门标签、文章分类、项目页语言筛选（11 项单行独立药丸）不再用描边方块，悬停转主色淡底
+- **标签页改为纯文字标签云**：按文章数分三档字号（18 / 14.5 / 12.5px）表达热度，不再铺一屏碎药丸
+- **文章页头部移出阅读卡**：标题与元信息落在页面底色上，左缘与卡片对齐；文章标签从页头移到正文末尾（分隔线之下、操作按钮之上），文末「分享 / 复制 / 返回」也改成同款药丸，与上方标签是同一套语言
+- **正文卡内嵌面板建立层级**：代码块 / 表头 / 引用块 / 键盘键统一用 `--inset-bg`，表头再深一档（`--inset-bg-strong`），表格网格线提到描边强档——此前代码块与卡片几乎同色、表格线在深色下几乎看不见
+- **正文分隔线与引用块统一语言**：分割线改回 1px 细线（此前被 GitHub 风格 4px 实心条覆盖），标题前那条冗余分隔线隐藏，不再出现「线—标题—线」三明治；引用块恢复主色左条 + 正常文字色
+- **正文细节对齐**：行内代码与链接色统一到主色一套，行内代码 / 有序无序列表缩进统一 22px（此前与项目 README 的排版不是一套）
+- **favicon 统一为 `favicon.ico`**：前台、后台与 403/404/50x 页面全部改指 `favicon.ico`，`favicon.svg` 已删除；补 `/favicon.ico` 根路径重定向，避免浏览器与阅读器直接请求根路径时产生 404
+- **十年之约资源本地化**：页脚 logo 与关于页虫洞图下载到主题目录，不再依赖外站 CDN
+
+<details>
+<summary><b>历史版本（v3.8.13 及更早，点击展开）</b></summary>
 
 ### v3.8.13
 

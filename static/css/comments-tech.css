@@ -371,10 +371,12 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-suggest-item+.cmt-suggest-item{border-top:1px solid var(--c-border)}
 @media (hover:hover) and (pointer:fine){ .cmt-suggest-item:hover{color:var(--c-accent)} }
 
-/* ═══ 评论表单：透明底（扁平化已去掉毛玻璃，只保留描边） ═══
-   表单不要底色块，只留 1px 描边和圆角，让页面底色直接透出来。
+/* ═══ 评论表单：与全站卡片同一档底色（--card-bg），无描边 ═══
    注意 .cmt-form.is-inline 的 background:none 特异性更高，不受影响。 */
-.cmt-form{background:color-mix(in srgb,var(--c-text) 3%,transparent)}
+.cmt-form{
+  background:var(--card-bg, color-mix(in srgb,var(--c-text) 3%,transparent));
+  transition:background-color .18s ease;
+}
 
 /* AI 助手回复标识 */
 .cmt-badge--ai{background:rgba(90,150,190,.11);color:#8fb8d0;border-color:rgba(90,150,190,.20)}
@@ -446,8 +448,12 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-ua-icon{width:13px;height:13px;flex:none}
 
 
-/* 评论入口 hover：不铺底色，只提亮文字 */
+/* 评论入口 hover：整张表单卡提亮一档（和楼层卡同源），
+   文字只保留「写评论」的强调，占位文案不再单独变亮 */
 @media (hover: hover) and (pointer: fine) {
+  .cmt .cmt-form:not(.is-inline):hover {
+    background: var(--card-bg-hover, color-mix(in srgb, var(--c-text) 5%, transparent));
+  }
   .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle,
   .cmt-form.is-inline:has(.cmt-box:not([open])):hover .cmt-toggle {
     border-color: transparent;
@@ -456,7 +462,6 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])):hover .cmt-toggle {
     background: transparent;
   }
-  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-placeholder { color: var(--c-text); }
   .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-act { color: var(--c-accent); }
 }
 
@@ -556,11 +561,13 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   padding:14px 16px 16px;
   border:0;
   border-radius:12px;
-  background:color-mix(in srgb,var(--c-text) 3%,transparent);
+  /* 与全站卡片同一令牌：文章卡、列表卡、评论楼层卡永远同色，
+     以后调深/调浅只改主题里的 --card-bg 一处 */
+  background:var(--card-bg, color-mix(in srgb,var(--c-text) 3%,transparent));
 }
 .cmt-thread+.cmt-thread{margin-top:12px}
 @media (hover:hover) and (pointer:fine){
-  .cmt-thread:hover{background:color-mix(in srgb,var(--c-text) 4%,transparent)}
+  .cmt-thread:hover{background:var(--card-bg-hover, color-mix(in srgb,var(--c-text) 4%,transparent))}
 }
 
 .cmt-main{display:block}

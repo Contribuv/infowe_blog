@@ -35,6 +35,12 @@
   --accent-soft: #5b9ad6;
   --accent-weak: #e6f0fb;
   --quote-bg: #f2f5f9;
+  /* 卡内面板（代码块 / 表头 / 引用 / 键盘键）：比卡片底色再暗一档，
+     在浅色主题下形成「纸面上的凹槽」，与卡片有明确层次 */
+  --inset-bg: #e6eaf2;
+  /* 面板里的第二层（表头）：比 --inset-bg 再暗一档，
+     否则浅色下表头与普通单元格只差 3～4 级色阶，几乎看不出是表头 */
+  --inset-bg-strong: #dde3ee;
   --success: #2b6e52;
   --warning: #8a6314;
   --danger: #a83545;
@@ -95,6 +101,11 @@
   --glass-bg-form: rgba(34, 38, 46, .84);
   --glass-bg-mobile: rgba(34, 38, 46, .92);
   --quote-bg: #22262e;
+  /* 卡内面板：深色下比卡片（文字色 3% 叠加）再亮一档，
+     否则代码块与卡片几乎同色，整页看着像「一块浮灰」 */
+  --inset-bg: #262b35;
+  /* 面板里的第二层（表头）：比 --inset-bg 再亮一档 */
+  --inset-bg-strong: #2f3542;
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
@@ -132,7 +143,7 @@ html[data-theme="light"] {
   --mb-border: #e1e6ed;
   --mb-border-muted: #eceff4;
   --mb-code-bg: #f2f5f9;
-  --mb-inline-code: rgba(28, 91, 143, .09);
+  --mb-inline-code: rgba(47, 122, 209, .10);
   --mb-hr: #eceff4;
   --mb-mark: #f7ecd2;
   --mb-th-bg: #f2f5f9;
@@ -140,11 +151,11 @@ html[data-theme="light"] {
 html[data-theme="dark"] {
   --mb-fg: #e8eaf0;
   --mb-fg-muted: #a0a6b5;
-  --mb-link: #5b8def;
+  --mb-link: #6b9cf5;
   --mb-border: rgba(255, 255, 255, .07);
   --mb-border-muted: rgba(255, 255, 255, .045);
   --mb-code-bg: #1e2229;
-  --mb-inline-code: rgba(91, 141, 239, .14);
+  --mb-inline-code: rgba(107, 156, 245, .18);
   --mb-hr: rgba(255, 255, 255, .06);
   --mb-mark: rgba(251, 191, 36, .22);
   --mb-th-bg: #22262e;
@@ -747,21 +758,16 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .tech-post-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 标签：无边框柔和小药丸，底色取文字色 6% 叠加，与全站色卡同一套语言；
+   悬停由文件末尾「交互控件 hover」统一接管（淡蓝底 + 主色字） */
 .tech-tag {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 12px; color: var(--text-secondary);
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
-  padding: 2px 10px; border-radius: 8px; text-decoration: none;
+  font-size: 12px; line-height: 1;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  padding: 5px 10px; border-radius: 999px; text-decoration: none;
   cursor: pointer;
-  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .tech-tag:hover {
-    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
-    color: var(--text);
-    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
-  }
+  transition: color .18s ease, background-color .18s ease, transform .12s ease;
 }
 .tech-tag:active { transform: translateY(1px); }
 .tech-tag--more {
@@ -897,11 +903,14 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
    视觉参考「左侧高亮线」式目录：目录本身不画卡片，只靠字色与 2px 左边线
    区分当前章节；窄屏才保留折叠，并用上下两条 hairline 作为可点区域边界。 */
 .tech-toc-sidebar { margin: 16px 0; }
+/* 标题移出卡片后，内联目录成为卡内第一块：卡自身的 padding 已经留出上边距，
+   再叠 16px margin 会让「目录」离卡顶远过正文，直接从 0 开始 */
+.tech-post-main > .tech-toc-sidebar:first-child { margin-top: 0; }
 
 .tech-toc {
   border: 0;
-  /* 移动端内联目录只保留下边线：上方已有文章头部的 border-bottom，
-     再画 border-top 会形成两条几乎重叠的横线 */
+  /* 内联目录只保留下边线：标题区在卡外、卡顶已是明确边界，
+     再画 border-top 会在卡内多出一条悬空的横线 */
   border-top: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
@@ -961,9 +970,9 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   font-weight: 500;
 }
 
-/* 窄屏折叠目录：保留目录自己的底边线，做成 header 与正文之间的一条分隔带。
-   折叠时去掉 sidebar 的上间距，让「目录」文字夹在上、下两条线之间居中；
-   展开时仍是原来的 16px 间距，避免列表贴着文章头部。 */
+/* 窄屏折叠目录：保留目录自己的底边线，作为目录与正文之间的一条分隔带。
+   折叠时去掉 sidebar 的上间距，让「目录」文字在卡顶与下边线之间居中；
+   展开时仍是原来的 16px 间距，避免列表贴着目录标题。 */
 @media (max-width: 1399px) {
   .tech-toc { border-bottom: 0; }
   .tech-toc[open] { border-bottom: 1px solid var(--border); }
@@ -1018,7 +1027,9 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   .tech-toc-body ul ul ul ul a { padding-left: 44px; }
 }
 
-.tech-post-header { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+/* 文章头部已移出阅读卡：直接与 780 版心/卡片左缘对齐（与归档页页头一致），
+   不再额外缩进到正文文字线；下边线交给卡片自身边界，间距与归档页相同 16px */
+.tech-post-header { margin: 0 0 16px; padding: 0; }
 .tech-post-title-lg { font-size: 24px; font-weight: 700; line-height: 1.35; margin: 0 0 10px; }
 /* PC 宽屏：文章标题提到 28px，与 780px 版心、16px 正文拉开层级；
    正文 h1 已压到 20px，不会重现「双标题打架」；移动端维持 24px，避免小屏换行过多 */
@@ -1027,9 +1038,8 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 }
 .tech-post-meta-lg {
   display: flex; flex-wrap: wrap; gap: 4px 14px;
-  font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;
+  font-size: 13px; color: var(--text-secondary); margin-bottom: 0;
 }
-.tech-post-tags-lg { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* 锚点定位留出 sticky nav（56px）+ 呼吸空间，防止点 TOC 后标题被导航遮住 */
 .tech-post-body :is(h1, h2, h3, h4, h5, h6) { scroll-margin-top: 72px; }
@@ -1179,6 +1189,10 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-post-body ul, .tech-post-body ol { padding-left: 22px; margin: 0 0 10px; }
 .tech-post-body li { margin-bottom: 2px; }
 .tech-post-body li > ul, .tech-post-body li > ol { margin-bottom: 0; }
+/* 列表缩进：markdown-body.css 的 2em（33px）在 16.5px 正文下过宽，
+   与项目 README 的 22px 也不一致，两页排版看着不是一套。 */
+.tech-post-body.markdown-body ul,
+.tech-post-body.markdown-body ol { padding-left: 22px; }
 .tech-post-body hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 .tech-post-body .task-list-item { list-style: none; margin-left: -20px; }
 .tech-post-body input[type="checkbox"] { margin-right: 6px; }
@@ -1251,6 +1265,58 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 代码块由 JS 包进 .code-wrap：间距由 wrap 承担，wrap 内 pre 保持 0 不叠加 */
 .tech-post-body.markdown-body .code-wrap { margin: 14px 0; }
 .tech-post-body.markdown-body .code-wrap pre { margin: 0; }
+
+/* ═══════════════════════════════════════════════
+   卡内嵌入面板：代码块 / 表头 / 键盘键 / 引用块
+   ───────────────────────────────────────────────
+   阅读卡本身是「文字色 3% 叠加」的一层薄纸面，
+   卡内再嵌内容时若继续沿用 --bg-subtle（比纸面仅深 1–2 级），
+   深色下代码块几乎和卡片同色、只剩一圈描边，浅色下更看不出来。
+   故统一改用 --inset-bg：比卡面明确拉开一档，
+   浅色更深（纸面凹槽）、深色更亮（浮起的代码面板），
+   与评论区回复区（主色 5% 强调卡）构成同一套语言。
+   用双类选择器压过后加载的 markdown-body.css（等特异性后者胜）。
+   文章正文与项目 README 都在卡片内，共用同一套面板色。 */
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body pre,
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body kbd {
+  background: var(--inset-bg);
+}
+/* 表头单独再深/亮一档：表头和正文单元格的底色差必须够明显，
+   否则整张表看不出「表头」，读者只能靠字重来猜 */
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body th {
+  background: var(--inset-bg-strong);
+}
+/* 表格网格线：深色下 --mb-border 只有 7% 白，落在 3% 卡面上几乎看不见，
+   整张表读起来像「一列色块」。单独提到 --border-strong 一档。 */
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body :is(th, td) {
+  border-color: var(--border-strong);
+}
+/* 引用块：恢复 tech 自己的语言（主色左条 + 嵌入面板 + 正常文字色），
+   覆盖 markdown-body.css 的 GitHub 式「灰条 + 次级文字」 */
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body blockquote {
+  margin: 14px 0;
+  padding: 10px 16px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  background: var(--inset-bg);
+  color: var(--text);
+}
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body blockquote > :first-child { margin-top: 0; }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body blockquote > :last-child { margin-bottom: 0; }
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body blockquote p { margin: 6px 0; }
+
+/* 分割线：tech 原本想用 1px 细线（--border），但 markdown-body.css 的
+   GitHub 式 4px 实心条后加载覆盖了它，两套分隔线语言混用才显得杂乱。
+   这里统一成 1px 细线；并且紧跟在标题前面的那条直接隐藏——
+   标题自带 1px 下边框，再叠一条 4px 粗条就成了「线—标题—线」三明治。 */
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body hr {
+  height: 1px;
+  padding: 0;
+  margin: 14px 0;
+  background: var(--border);
+  border: 0;
+}
+:is(.tech-post-body, .tech-proj-readme-body).markdown-body hr:has(+ h2) { display: none; }
 
 /* 脚注（footnotes 扩展） */
 .tech-post-body .footnote { font-size: 13px; color: var(--text-secondary); }
@@ -1355,6 +1421,9 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   margin: 22px 0 0;
   padding-top: 14px; border-top: 1px solid var(--border);
 }
+/* 标签从页头移到正文末尾：放在 footer 分隔线之下、操作按钮之上，
+   让「文章属性」和「读者动作」同处一个收尾区，又不挤标题区；
+   padding-top 14 是线到标签，margin-bottom 12 是标签到按钮 */
 .tech-post-tags-bottom {
   display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
 }
@@ -1438,6 +1507,27 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 }
 .tech-license { font-size: 13px; color: var(--text-secondary); margin: 0 0 0 auto; }
 
+/* 文末操作行与上方标签同一套语言：无边框浅底药丸，不再用描边方按钮。
+   尺寸比标签略高一档（30 / 22），保证可点面积，又不会在标签下面突然变重 */
+.tech-post-footer .tech-post-actions { gap: 8px; }
+.tech-post-footer .tech-btn {
+  height: 30px;
+  padding: 0 12px;
+  gap: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.tech-post-footer .tech-btn svg { width: 13px; height: 13px; }
+.tech-post-footer .tech-license { font-size: 12px; }
+@media (max-width: 768px) {
+  /* 触屏下比桌面放宽 4px；配合 .tech-btn::after 的 -4px 热区约 42px */
+  .tech-post-footer .tech-btn { height: 34px; }
+}
+
 /* 注：早期自绘的 .tech-toast 已废弃（模板统一使用 static/js/toast.js + toast.css），
    原样式是死代码，2026-10 清理，避免与全局 .toast 维护两份毛玻璃。 */
 
@@ -1453,20 +1543,16 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   margin: 0 0 10px;
   color: var(--text-secondary);
 }
-/* 精选推荐区：全站彩条只在页头出现一次，这里用「细分隔线 + 标题侧蓝色竖条」收口。
-   下方「全部文章」标题是 sr-only，这条线是两组卡片唯一的视觉分组；线两侧留白
-   与组内卡片间距一致（PC 14px / ≤1000px 8px），避免一端贴卡、一端悬空 */
-.tech-featured {
-  padding-bottom: 14px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--border);
-}
-/* 最后一张精选卡不再自带下外距，到线的距离统一由 section 的 padding-bottom 控制 */
+/* 精选推荐区：下方已有「最新文章」标题承担分组，不再画分隔线，
+   否则两条视觉边界叠在一起；组间距统一由 section 的下外边距控制 */
+.tech-featured { margin-bottom: 18px; }
+/* 最后一张精选卡不再自带下外距，组间距统一由 section 的 margin-bottom 控制 */
 .tech-featured .tech-post-item:last-child { margin-bottom: 0; }
 @media (max-width: 1000px) {
-  .tech-featured { padding-bottom: 8px; margin-bottom: 8px; }
+  .tech-featured { margin-bottom: 16px; }
 }
-.tech-featured > .tech-related-title {
+.tech-featured > .tech-related-title,
+.tech-latest > .tech-related-title {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1475,13 +1561,23 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   font-weight: 600;
   color: var(--text-secondary);
 }
-.tech-featured > .tech-related-title::before {
+.tech-featured > .tech-related-title::before,
+.tech-latest > .tech-related-title::before {
   content: "";
   flex: none;
   width: 3px;
   height: 14px;
   border-radius: 2px;
   background: var(--accent);
+}
+/* 最新文章：放在精选区之后，上方沿用 section 的 14px 分组间距；
+   没有精选区时与报头收口线留出同样的呼吸感 */
+.tech-latest { margin-top: 0; }
+.tech-latest > .tech-post-list { margin-top: 0; }
+/* 「+N」只是溢出提示，不可点：后置的 .tech-tag:hover 不应让它变成可点高亮 */
+html .tech-tag--more:hover {
+  color: var(--text-secondary);
+  background: transparent;
 }
 /* 相关推荐：2 列强调色卡 */
 .tech-related-grid {
@@ -1569,17 +1665,25 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-textarea { min-height: 100px; resize: vertical; }
 
 /* ── 标签云 ── */
-.tech-tags-cloud { display: flex; flex-wrap: wrap; gap: 10px; }
+/* 纯文字标签云：不铺底色，靠「字号 + 文字层级」表达热度，
+   悬停才亮起主色。95 个标签从一屏碎药丸回到一片可扫读的文字 */
+.tech-tags-cloud { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; }
 .tech-tag-cloud-item {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 14px; font-size: 14px;
-  border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text); text-decoration: none;
+  display: inline-flex; align-items: baseline; gap: 4px;
+  font-size: 12.5px; line-height: 1.5;
+  color: var(--text-secondary); text-decoration: none;
+  transition: color .18s ease;
 }
-@media (hover: hover) and (pointer: fine) { .tech-tag-cloud-item:hover { border-color: var(--accent); color: var(--accent); } }
+.tech-tag-cloud-item--md { font-size: 14.5px; color: var(--text); }
+.tech-tag-cloud-item--lg { font-size: 18px; color: var(--text); font-weight: 600; }
+@media (hover: hover) and (pointer: fine) {
+  .tech-tag-cloud-item:hover,
+  .tech-tag-cloud-item:hover .tech-tag-cloud-count { color: var(--accent); }
+}
 .tech-tag-cloud-count {
-  font-size: 12px; color: var(--text-secondary);
-  background: var(--bg-subtle); padding: 1px 8px; border-radius: 10px;
+  font-size: 10px; line-height: 1; color: inherit; opacity: .55;
+  font-variant-numeric: tabular-nums;
+  transition: color .18s ease, opacity .18s ease;
 }
 
 /* ── 关于页：人物卡 Hero（与首页居中极简同语言）+ 单列叙事 ── */
@@ -1733,30 +1837,53 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-about-fb-wormhole img { display: block; width: auto; height: 36px; }
 
 /* ── 项目页：间距统一 8px 基准（分隔线两侧 12，卡内 16，卡间 12） ── */
+/* 语言筛选：与全站标签同款独立药丸，不再套一层托底卡片。
+   每个 chip 自带浅底，悬停变主色淡底，选中用更实的强调底做区分 */
 .tech-lang-stats {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  font-size: 13px; color: var(--text-secondary);
-  margin-bottom: 0; padding-bottom: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  margin-bottom: 0;
+  font-size: 12px; color: var(--text-secondary);
 }
 .tech-lang-link {
-  cursor: pointer; color: var(--text-secondary);
-  padding: 4px 12px; border-radius: 8px;
-  border: 1px solid var(--border-strong); background: var(--bg);
-  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 0;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px; line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color .18s ease, background-color .18s ease;
+}
+.tech-lang-count {
+  display: inline-block;
+  min-width: 15px; padding: 2px 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--text-secondary);
+  font-size: 10px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: color .18s ease, background-color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-lang-link:hover {
-    color: var(--text);
-    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
-    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
+    color: var(--accent);
+    background: var(--accent-weak);
   }
+  .tech-lang-link:hover .tech-lang-count { color: var(--accent); }
 }
-.tech-lang-link:active { transform: translateY(0); }
 .tech-lang-link.is-active {
   color: var(--accent);
-  font-weight: 600;
-  background: var(--accent-weak);
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.tech-lang-link.is-active .tech-lang-count {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+@media (max-width: 640px) {
+  .tech-lang-link { padding: 5px 9px; }
 }
 .tech-project-grid {
   display: grid;
@@ -2273,8 +2400,6 @@ html { touch-action: manipulation; }
   /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（缩小态同样覆盖） */
   .tech-top { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .tech-post-title-lg { font-size: 23px; }
-  /* 移动端文章头部收紧：标题下留白与分隔线间距缩小，避免顶部一大片空白 */
-  .tech-post-header { margin-bottom: 14px; padding-bottom: 10px; }
   .tech-page-title { font-size: 20px; }
   .tech-page-desc { font-size: 14px; }
   .tech-page-head--center { padding: 32px 4px 32px; margin-bottom: 24px; }
@@ -2552,12 +2677,13 @@ html { touch-action: manipulation; }
 /* ═══ 实色底统一段（扁平化）═══
    原「毛玻璃降级」：现在全部去模糊，代码块一律实色底，
    不再需要 @supports 特性查询（也避开了 csscompressor 压缩 `@supports not` 失效的坑）。
-   TOC 已改为无底色文字索引，不再参与这一组。 */
+   TOC 已改为无底色文字索引，不再参与这一组。
+   底色统一由上文「卡内嵌入面板」段的 --inset-bg 决定，此处不再重复声明。 */
 .tech-post-body.markdown-body pre,
-.tech-proj-readme-body.markdown-body pre { background: var(--bg-subtle); }
+.tech-proj-readme-body.markdown-body pre { background: var(--inset-bg); }
 @media (max-width: 767px) {
   .tech-post-body.markdown-body pre,
-  .tech-proj-readme-body.markdown-body pre { background: var(--bg-subtle); }
+  .tech-proj-readme-body.markdown-body pre { background: var(--inset-bg); }
 }
 
 /* ── 博客圈（友链 RSS 聚合）── */
@@ -3785,56 +3911,62 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   }
 }
 .tech-side-social a:active { transform: translateY(0); }
-.tech-side-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tech-side-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+/* 与全站标签同一套药丸语言：浅底、无边框，悬停转主色 */
 .tech-side-tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 999px;
   color: var(--text-secondary);
   font-size: 12px;
+  line-height: 1;
   text-decoration: none;
-  background: var(--bg);
-  transition: border-color .18s ease, color .18s ease, background-color .18s ease;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  transition: color .18s ease, background-color .18s ease;
 }
-.tech-side-tag span { font-size: 11px; color: var(--text-secondary); }
+.tech-side-tag span {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  transition: color .18s ease;
+}
 @media (hover: hover) and (pointer: fine) {
   .tech-side-tag:hover {
-    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
-    color: var(--text);
-    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
+    color: var(--accent);
+    background: var(--accent-weak);
   }
+  .tech-side-tag:hover span { color: var(--accent); }
 }
-.tech-side-tag:active { transform: translateY(0); }
+.tech-side-tag:active { transform: translateY(1px); }
 .tech-side-cats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+/* 分类行沿用同款小药丸，宽度由文字撑开：不再用 2 列 grid 把单个拉满半栏 */
 .tech-side-cats li {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  border: 0;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  transition: color .18s ease, background-color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .tech-side-cats li:hover {
-    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
-    background: var(--hover-bg);
-  }
-  .tech-side-cats li:hover a { color: var(--text); }
+  .tech-side-cats li:hover { background: var(--accent-weak); }
+  .tech-side-cats li:hover a { color: var(--accent); }
+  .tech-side-cats li:hover b { color: var(--accent); }
 }
 .tech-side-cats a {
   color: var(--text-secondary);
@@ -3843,12 +3975,15 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color .18s ease;
 }
 .tech-side-cats b {
   font-weight: 400;
   color: var(--text-secondary);
-  font-size: 11px;
-  padding: 0 6px;
+  font-size: 10px;
+  padding: 0;
+  font-variant-numeric: tabular-nums;
+  transition: color .18s ease;
 }
 /* 十年之约「今天读什么」：服务端抓取后用本站样式渲染，不再用跨域 iframe */
 .tech-widget {
@@ -4568,8 +4703,9 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 
 /* ═══════════════════════════════════════════════
    文章阅读卡 + 嵌套卡片去重
-   参考 ygz.ink：文章标题、正文、底部操作收进同一张浅色卡，
-   圆角 6px，避免标题/正文左右边缘错位
+   标题/元信息/标签已移出卡片，落在页面底色上；
+   正文与底部操作收进同一张浅色卡，圆角 6px，
+   正文左右边缘与卡内 padding 对齐
    ═══════════════════════════════════════════════ */
 .tech-post-main {
   box-sizing: border-box;
@@ -4655,9 +4791,9 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
    全站卡片配色统一层（最终覆盖）
    ───────────────────────────────────────────────
    全站只保留评论区那两种卡片色：
-   1. 普通卡：文字色 3% 叠加（评论区楼层卡同款）
+   1. 普通卡：文字色 3% 叠加（与评论区楼层卡同一档，深浅主题一致）
    2. 强调卡：主色 5% 叠加（评论区回复区同款）
-   亮/暗主题共用同一套 color-mix 公式，自动自适应。
+   两套主题用同一套 color-mix 公式，全站卡面保持同一层纸面差。
    卡片只用 1px 描边成形，不常驻阴影、不做抬升；
    悬停与评论区楼层卡一致：描边从 8% 加深到 22%。
    ═══════════════════════════════════════════════ */
@@ -4674,6 +4810,9 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   --card-shadow-hover: none;
 }
 [data-theme="dark"] {
+  /* 深色卡面与评论区楼层卡取同一档：文字色 3% 叠加。
+     6% 在大面积文章卡上会显得整块发亮、和页面分层过重；
+     3% 恰好是「看得出是纸、又不会浮起来」的那一层，全站统一 */
   --card-bg: color-mix(in srgb, var(--text) 3%, transparent);
   --card-bg-hover: color-mix(in srgb, var(--text) 5%, transparent);
   --card-bg-accent: color-mix(in srgb, var(--accent) 5%, transparent);
@@ -4825,12 +4964,6 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
    否则该卡底边会直接压在页脚分隔线上（实测间距 0） */
 @media (min-width: 1001px) {
   .tech-main:has(.tech-home-grid) { padding-bottom: 0; }
-}
-
-/* 移动端 / 平板文章头部下方紧跟目录时，去掉 header 的 margin-bottom：
-   目录自身已有上下 16px 间距，再叠一层会让目录上方比下方多一截 */
-@media (max-width: 1000px) {
-  .tech-post-header:has(+ .tech-toc-sidebar) { margin-bottom: 0; }
 }
 
 /* 图片失败占位卡：比卡片底色再深一档，虚线边界才看得出来 */

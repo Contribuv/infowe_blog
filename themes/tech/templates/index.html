@@ -69,9 +69,16 @@
 </section>
 {% endif %}
 
-<!-- 文章列表（精选区已独立展示，此处不跳号，全部列出） -->
+<!-- 最新文章：标题沿用「精选推荐」的分组语言（蓝色竖条 + 次级色小标题）。
+     只有首页用可见标题；标签页 / 搜索页已有自己的页头，保持 sr-only 标题即可，
+     列表内容不跳号，精选文章也完整列出 -->
+<section class="tech-latest">
+{% if not current_tag and not search_query %}
+<h2 class="tech-related-title">最新文章</h2>
+{% else %}
 <h2 class="sr-only">全部文章</h2>
-<ul class="tech-post-list{% if post_layout == 'double' %} tech-post-list--double{% endif %}" aria-label="全部文章">
+{% endif %}
+<ul class="tech-post-list{% if post_layout == 'double' %} tech-post-list--double{% endif %}" aria-label="{{ '最新文章' if not current_tag and not search_query else '全部文章' }}">
     {% for post in posts %}
     <li class="tech-post-item">
         <div class="tech-post-meta">
@@ -89,6 +96,7 @@
     </li>
     {% endfor %}
 </ul>
+</section>
 
 {% if not posts and not featured %}
 <div class="tech-empty">

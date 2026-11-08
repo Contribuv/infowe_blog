@@ -598,7 +598,7 @@ def links_page():
     elif avatar_cfg:
         avatar_url = avatar_cfg
     else:
-        avatar_url = site_url.base() + "/static/images/favicon.svg"
+        avatar_url = site_url.base() + "/static/images/favicon.ico"
     return render_template(
         "links.html",
         links=Link.load("approved"),
@@ -757,6 +757,12 @@ def _age_text(ts: float) -> str:
     return f"{diff // (86400 * 365)} 年前"
 
 
+def favicon():
+    """浏览器/阅读器会直接请求根路径 /favicon.ico，重定向到静态图标，
+    避免日志里出现大量 404（config.ADMIN_PATH_RESERVED 已把该路径列为保留）。"""
+    return redirect(url_for("static", filename="images/favicon.ico"), code=301)
+
+
 def rss_feed():
     from datetime import timedelta, timezone
     from email.utils import format_datetime
@@ -889,6 +895,7 @@ def register(app) -> None:
         ("/projects/<int:project_id>", "project_detail", project_detail, ["GET"]),
         ("/projects/<int:project_id>/comment", "project_comment", project_comment, ["POST"]),
         ("/feed.xml", "rss_feed", rss_feed, ["GET"]),
+        ("/favicon.ico", "favicon", favicon, ["GET"]),
     ]
     for rule, endpoint, view, methods in rules:
         app.add_url_rule(rule, endpoint=endpoint, view_func=view, methods=methods)

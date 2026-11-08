@@ -220,11 +220,11 @@
         <a class="tech-about-fb-wormhole" href="https://www.foreverblog.cn/go.html"
            target="_blank" rel="noopener" title="虫洞 · 随机访问一位十年之约成员博客"
            aria-label="虫洞 · 随机访问一位十年之约成员博客">
-            <!-- 官方虫洞是 68 帧动图，只按当前主题加载一张；src 由下方脚本按 data-theme 切换 -->
+            <!-- 官方虫洞是 68 帧动图，已下载到主题本地（同源加载更快）；只按当前主题加载一张，src 由下方脚本按 data-theme 切换 -->
             <img class="tech-about-fb-wormhole-img"
-                 data-light="https://www.foreverblog.cn/assets/logo/wormhole_v2_dark.webp"
-                 data-dark="https://www.foreverblog.cn/assets/logo/wormhole_v2_light.webp"
-                 src="https://www.foreverblog.cn/assets/logo/wormhole_v2_dark.webp"
+                 data-light="{{ url_for('theme_static', filename=active_theme ~ '/static/images/foreverblog-wormhole-dark.webp', t=theme_asset_ver) }}"
+                 data-dark="{{ url_for('theme_static', filename=active_theme ~ '/static/images/foreverblog-wormhole-light.webp', t=theme_asset_ver) }}"
+                 src="{{ url_for('theme_static', filename=active_theme ~ '/static/images/foreverblog-wormhole-dark.webp', t=theme_asset_ver) }}"
                  alt="十年之约虫洞" width="163" height="64" loading="lazy" decoding="async">
         </a>
     </section>
