@@ -3139,9 +3139,10 @@ html { touch-action: manipulation; }
   padding: 18px 20px 20px;
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   border-radius: 14px;
-  /* 毛玻璃：半透明底 + 背景模糊，浮窗打开时能透出下方页面和光斑 */
+  /* 毛玻璃：接近不透明的玻璃底 + 背景模糊。72% 时下方正文透出太多，
+     归档弹窗里的年份/月份小字会和背后的列表糊在一起，这里收到底色 92% */
   background: var(--glass-bg);
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(170%);
   backdrop-filter: blur(20px) saturate(170%);
   box-shadow: 0 24px 70px rgba(0, 0, 0, .38);
@@ -3214,13 +3215,21 @@ html { touch-action: manipulation; }
   .tech-archive-chip { padding: 6px 12px; font-size: 13px; }
 }
 
-.tech-miles { display: flex; flex-direction: column; gap: 26px; }
+/* ═══════════════════════════════════════════════
+   归档列表：与全站文章卡（.tech-post-item）同一套语言
+   - 条目 = 浅底色块 + 卡片圆角，无描边、无分隔线。
+     旧版拿 border-bottom 当分隔线，悬停的底色块正好压在那条线上，
+     两套反馈叠一起就「线跟悬停打架」，这里从结构上直接取消分隔线。
+   - 年份标题沿用「蓝色竖条 + 标题」的分组语言（与精选推荐区同款）。
+   - 悬停反馈只在「鼠标设备 + 宽窗口（≥1100px）」下出现：
+     移动端和 PC 竖屏窄窗（9:16）不需要悬停效果。
+   ═══════════════════════════════════════════════ */
+.tech-miles { display: flex; flex-direction: column; gap: 30px; }
 .tech-miles-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
 }
 /* 年份标题本身就是入口：按钮外观与标题一致，hover 变 accent 提示可点 */
 .tech-miles-head .tech-miles-year {
@@ -3256,93 +3265,81 @@ html { touch-action: manipulation; }
   .tech-miles-head .tech-miles-year:hover { color: var(--accent); }
   .tech-miles-head .tech-miles-year:hover .tech-miles-year-caret { color: var(--accent); opacity: 1; }
 }
-.tech-miles-head span { font-size: 12px; color: var(--text-secondary); }
-.tech-miles-list { list-style: none; margin: 0; padding: 0; }
+.tech-miles-head span { font-size: 12.5px; color: var(--text-secondary); }
+.tech-miles-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
 .tech-miles-item {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  margin: 0;
-  padding: 11px 12px;
-  border: 1px solid transparent;
-  border-bottom-color: var(--border);
+  padding: 13px 16px;
+  border: 0;
   border-radius: var(--card-radius);
+  background: var(--card-bg);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .18s ease;
 }
-.tech-miles-item:last-child { border-bottom-color: transparent; }
-.tech-miles-date {
-  flex: 0 0 46px;
-  padding-top: 1px;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.tech-miles-body { flex: 1; min-width: 0; }
-.tech-miles-title { margin: 0; font-size: 15.5px; font-weight: 600; line-height: 1.55; }
-.tech-miles-title a { color: var(--text); text-decoration: none; transition: color .15s; }
+/* 条目内部排版与 .tech-post-item 同构：meta 行 + 标题 + 标签 */
 .tech-miles-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 12px;
-  margin-top: 3px;
-  font-size: 12px;
+  gap: 4px 14px;
+  margin-bottom: 4px;
+  font-size: 12.5px;
   color: var(--text-secondary);
 }
-.tech-miles-tag { color: var(--text-secondary); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) { .tech-miles-tag:hover { color: var(--accent); } }
+.tech-miles-date { font-variant-numeric: tabular-nums; }
+.tech-miles-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.tech-miles-title a { color: var(--text); text-decoration: none; transition: color .15s; }
+.tech-miles-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .tech-miles-arrow {
-  flex: none;
-  padding-top: 2px;
+  position: absolute;
+  top: 14px;
+  right: 12px;
   color: var(--accent);
   opacity: 0;
-  transform: translateX(-4px);
+  transform: translateX(-6px);
   transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
 }
-@media (hover: hover) and (pointer: fine) {
+/* 悬停反馈：鼠标设备 + 宽窗口才给；窄窗与移动端保持静态 */
+@media (hover: hover) and (pointer: fine) and (min-width: 1100px) {
+  .tech-miles-item:hover { background: var(--card-bg-hover); }
   .tech-miles-item:hover .tech-miles-title a { color: var(--accent); }
   .tech-miles-item:hover .tech-miles-arrow { opacity: 1; transform: none; }
 }
+@media (max-width: 1099px) {
+  .tech-miles-arrow { display: none; }
+}
 
-/* 窄屏归档列表：行式索引，不做描边卡片。
-   卡片化时第一张卡的上边框会紧贴年份标题（看起来像标题下多一条线），
-   且每张卡四边框在细列表上偏重；这里改为行式列表 + 底部分隔线，
-   保留 11-05 / 标题 / 分类 / 标签的横向结构，视觉更接近归档索引。
-   hover 高亮块与桌面保持一致：左右内距 + 卡片圆角，避免窄屏变成通栏方角块。 */
+/* 窄屏（平板 / 手机）：条目收紧，标签只留前两个 */
 @media (max-width: 1000px) {
-  .tech-miles-head { border-bottom: 0; padding-bottom: 8px; }
-  .tech-miles-list { display: flex; flex-direction: column; gap: 0; }
-  .tech-miles-item {
-    margin: 0;
-    padding: 12px 10px;
-    border: 0;
-    border-bottom: 1px solid var(--border);
-    border-radius: var(--card-radius);
-  }
-  .tech-miles-item:last-child { border-bottom-color: transparent; }
-  .tech-miles-item:hover { box-shadow: none; }
+  .tech-miles { gap: 24px; }
+  .tech-miles-item { padding: 12px 14px; }
 }
 
 @media (max-width: 640px) {
+  .tech-miles-head { margin-bottom: 10px; }
   .tech-miles-head .tech-miles-year { font-size: 19px; }
-  .tech-miles-item { gap: 10px; padding: 11px 12px; }
-  .tech-miles-date { flex-basis: 42px; }
+  .tech-miles-item { padding: 11px 13px; }
+  .tech-miles-meta { font-size: 12px; }
   .tech-miles-title { font-size: 15px; }
+  .tech-miles-tags { margin-top: 8px; }
+  .tech-miles-tags .tech-tag:nth-child(n+3) { display: none; }
 }
 
 /* ── 全站卡片 hover：统一底色与描边（扁平化：去掉投影与上浮） ──
    .tech-post-item 不在此列：它与侧栏卡片 .tech-side-card 一致，只做底色+描边变化 */
 .tech-link-card,
 .circle-item,
-.tech-project-card,
-.tech-miles-item {
+.tech-project-card {
   transition: background-color .18s ease, border-color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   .tech-link-card:hover,
   .circle-item:hover,
-  .tech-project-card:hover,
-  .tech-miles-item:hover {
+  .tech-project-card:hover {
     background: var(--hover-bg);
     border-color: var(--hover-ring);
   }
@@ -4151,6 +4148,22 @@ html.tech-external-open { overflow: hidden; }
   .tech-home-stats span { font-size: 11.5px; }
 }
 
+/* ── 首页报头显示范围（后台「主题配置 → 首页报头显示」）──
+   以 640px 为界：≤640 视为移动端，≥641 视为 PC。
+   报头隐藏后要把 .tech-main 的上边距补回常规值（PC 24px / 移动 18px），
+   否则上面 :has(.tech-home-head) 的 padding-top: 0 会让首屏内容贴住导航 */
+.tech-home-head.tech-home-head--none { display: none; }
+@media (max-width: 640px) {
+  .tech-home-head.tech-home-head--pc-only { display: none; }
+  .tech-main:has(.tech-home-head--pc-only),
+  .tech-main:has(.tech-home-head--none) { padding-top: 18px; }
+}
+@media (min-width: 641px) {
+  .tech-home-head.tech-home-head--mobile-only { display: none; }
+  .tech-main:has(.tech-home-head--mobile-only),
+  .tech-main:has(.tech-home-head--none) { padding-top: 24px; }
+}
+
 /* 通用箭头图标：替换字符 → */
 .tech-icon-arrow {
   display: inline-block;
@@ -4804,15 +4817,6 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   .circle-stats.tech-reader-stats > div + div::before { content: none; }
   .circle-stats.tech-reader-stats b { font-size: 17px; line-height: 1.3; }
   .circle-stats.tech-reader-stats span { font-size: 11.5px; }
-}
-
-/* 归档页行式条目：hover 与全站卡片同一套底色，不再用旧的冷灰块。
-   hover 时隐藏条目自身的底部分隔线，避免 5% 背景块上再压一条 8% 的深线。 */
-@media (hover: hover) and (pointer: fine) {
-  .tech-miles-item:hover {
-    background: var(--card-bg-hover);
-    border-color: transparent;
-  }
 }
 
 /* 首页底部留白：双栏（≥1001px）时交给「查看全部归档」自身间距和页脚内边距，

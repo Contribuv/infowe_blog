@@ -31,6 +31,28 @@
 
     <div class="card">
         <div class="card-header">
+            <h3>首页报头显示</h3>
+            <span class="form-hint">以 640px 为界区分 PC 与移动端</span>
+        </div>
+        <div class="theme-config-body">
+            <div class="theme-choice-row">
+                {% for value, label in [('all', '全部显示'), ('pc', '仅 PC'), ('mobile', '仅移动端'), ('none', '都不显示')] %}
+                <label class="theme-choice">
+                    <input type="radio" name="home_head_display" value="{{ value }}"
+                           {{ 'checked' if (home_head_display or 'all') == value else '' }}>
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="form-hint theme-config-tip">
+                控制首页顶部的报头（标语 + 大标题 + 统计 / 格言）。选「仅 PC」时手机端直接进入文章列表，
+                选「都不显示」则两端都不渲染这块视觉区域；隐藏后主内容区的上边距会自动补回，不会贴顶。
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
             <h3>文章列表布局</h3>
             <span class="form-hint">作用于首页和归档页；窄屏自动切换为单列</span>
         </div>

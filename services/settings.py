@@ -15,6 +15,8 @@ DEFAULTS: dict[str, str] = {
     "home_title": "",
     # 首页标题上方的小字标语（tech 主题 Kicker）；留空则回退到 blog_subtitle
     "home_kicker": "",
+    # 首页报头显示范围：all 两端都显示 / pc 仅 PC / mobile 仅移动端 / none 都不显示
+    "home_head_display": "all",
     "home_quotes": "",
     "home_posts_count": "6",
     "posts_per_page": "20",

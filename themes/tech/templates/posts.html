@@ -59,20 +59,22 @@
                 {{ year }}
                 <svg class="tech-miles-year-caret" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>
             </button>
-            <span>{{ year_counts.get(year, items|length) }} 篇</span>
+            <span class="tech-miles-count">{{ year_counts.get(year, items|length) }} 篇</span>
         </header>
         <ul class="tech-miles-list">
             {% for post in items %}
             <li class="tech-miles-item">
-                <time class="tech-miles-date" datetime="{{ post.created_at[0:10] }}">{{ post.created_at[5:10] }}</time>
-                <div class="tech-miles-body">
-                    <h3 class="tech-miles-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
-                    <div class="tech-miles-meta">
-                        {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
-                        <span>{{ post.read_time }} 分钟</span>
-                        {% for tag in post.tags[:3] %}<a class="tech-miles-tag" href="{{ url_for('tag_page', tag=tag) }}">#{{ tag }}</a>{% endfor %}
-                    </div>
+                <div class="tech-miles-meta">
+                    <time class="tech-miles-date" datetime="{{ post.created_at[0:10] }}">{{ post.created_at[5:10] }}</time>
+                    {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
+                    <span>{{ post.read_time }} 分钟</span>
                 </div>
+                <h3 class="tech-miles-title"><a href="/post/{{ post.id }}">{{ post.title }}</a></h3>
+                {% if post.tags %}
+                <div class="tech-miles-tags">
+                    {% for tag in post.tags[:3] %}<a class="tech-tag" href="{{ url_for('tag_page', tag=tag) }}">{{ tag }}</a>{% endfor %}
+                </div>
+                {% endif %}
                 <span class="tech-miles-arrow" aria-hidden="true">{{ arrow(16) }}</span>
             </li>
             {% endfor %}

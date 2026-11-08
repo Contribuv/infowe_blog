@@ -70,8 +70,9 @@ def load(
     page = max(1, int(page or 1))
     per_page = max(1, int(per_page or PAGE_SIZE))
     offset = (page - 1) * per_page
+    # 列表一律按时间倒序：精选只影响首页「精选推荐」区，不在归档 / 分类 / 标签 / 搜索 / RSS 里置顶
     rows = db.query(
-        f"SELECT * FROM posts {where} ORDER BY is_featured DESC, created_at DESC LIMIT ? OFFSET ?",
+        f"SELECT * FROM posts {where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
         [*params, per_page, offset],
     )
     return [hydrate(r) for r in rows], total

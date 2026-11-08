@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.11)
+[![version](https://img.shields.io/badge/version-3.8.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.12)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.11**
+当前版本：**v3.8.12**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.12
+
+- **精选不再影响归档排序**：列表统一按发布时间（`created_at`）倒序，精选只在首页「精选推荐」区生效。此前 `Post.load()` 带 `is_featured DESC`，导致归档 / 分类 / 标签 / 搜索 / RSS 里被标精选的文章一律置顶，现已移除该排序键
+- **归档列表重做**：条目改为与全站文章卡一致的浅底色块 + 卡片圆角（无描边、无分隔线），结构统一为「日期·分类·时长 → 标题 → 标签胶囊」；旧版「分隔线 + 悬停底色块」两套反馈叠加的写法一并取消
+- **悬停反馈按设备与窗口宽度启用**：仅鼠标设备且视口 ≥1100px 时才铺底色、标题变主色、右侧箭头淡入；移动端与 PC 竖屏窄窗（9:16）不再有悬停效果，也不显示箭头
+- **归档年/月浮窗毛玻璃底色由 72% 提到 92%**：浮窗下方正文不再透出糊住年 / 月小字
+- **首页报头（Hero）显示范围可配置**：主题配置新增「首页报头显示」选项，可选全部显示 / 仅 PC / 仅移动端 / 都不显示；隐藏时自动补回版心顶部间距，PC 端 Hero 沿用 v3.8.10 的居中样式不变
+
+<details>
+<summary><b>历史版本（v3.8.11 及更早，点击展开）</b></summary>
 
 ### v3.8.11
 

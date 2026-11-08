@@ -15,7 +15,8 @@
     </p>
 </div>
 {% else %}
-<div class="tech-home-head tech-home-head--{{ post_layout }}">
+{% set head_display = home_head_display or 'all' %}
+<div class="tech-home-head tech-home-head--{{ post_layout }}{% if head_display == 'pc' %} tech-home-head--pc-only{% elif head_display == 'mobile' %} tech-home-head--mobile-only{% elif head_display == 'none' %} tech-home-head--none{% endif %}">
     <div class="tech-home-head-main">
         {# 首页标语：优先取主题配置里的独立字段，留空回退站点副标题，再回退主题默认 #}
         <p class="tech-home-kicker">{{ home_kicker or blog_subtitle or 'Python · Code · Life' }}</p>

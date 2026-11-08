@@ -877,6 +877,11 @@ def admin_theme_config():
         # 首页标题区的小字标语：独立配置，避免为了改首页一句文案而改动站点的 og 描述
         kicker = " ".join((request.form.get("home_kicker") or "").split())
         settings.set_value("home_kicker", kicker[:80])
+        # 首页报头显示范围：两端都显示 / 仅 PC / 仅移动端 / 都不显示
+        head_display = (request.form.get("home_head_display") or "all").strip()
+        if head_display not in {"all", "pc", "mobile", "none"}:
+            head_display = "all"
+        settings.set_value("home_head_display", head_display)
         # 首页和列表页有整页缓存，保存后清掉，返回前台立刻能看到
         from services import page_cache
 
@@ -890,6 +895,7 @@ def admin_theme_config():
         project_layout=settings.get_str("project_layout", "three"),
         projects_per_page=settings.get_str("projects_per_page", "12"),
         home_kicker=settings.get_str("home_kicker", ""),
+        home_head_display=settings.get_str("home_head_display", "all"),
         blog_subtitle=settings.get_str("blog_subtitle", ""),
     )
 
