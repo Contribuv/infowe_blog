@@ -992,6 +992,33 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 @media (max-width: 1399px) {
   .tech-toc { border-bottom: 0; }
   .tech-toc[open] { border-bottom: 1px solid var(--border); }
+  /* 展开时也不再叠加 16px 上间距：卡片自身 padding 已是边界，再多一段会让「目录」悬空 */
+  .tech-toc-sidebar { margin-top: 0; }
+  /* 窄屏/移动端目录标题：原 12px + 字间距的「小标签」在大号正文旁显得单薄，
+     改为与正文区块标题同一套语言（14px / 600 + 左侧主色条） */
+  .tech-toc-summary {
+    position: relative;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 0 10px 14px; /* 上内距归零：目录文字到卡顶 = 卡片内距 16px，与卡底一致 */
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--text);
+  }
+  .tech-toc-summary::before {
+    content: "";
+    position: absolute; left: 0; top: 14px; /* 文字行中心实测在 14px：flex 垂直居中 + 10px 底内距 */
+    transform: translateY(-50%);
+    width: 4px; height: 16px; border-radius: 2px;
+    background: var(--accent);
+  }
+  .tech-toc-summary::after { margin-left: auto; }
+  /* 目录末条到底部分隔线的空隙收紧（原 12px 在移动端读起来像漏了一行） */
+  .tech-toc-body { padding-bottom: 6px; }
+  /* 窄屏条目收紧行高：40px 触控行在整页列表里显得太松，32px 仍足够可点 */
+  .tech-toc-body a { min-height: 32px; padding: 4px 0 4px 12px; }
 }
 @media (max-width: 1000px) {
   .tech-toc-sidebar:has(.tech-toc:not([open])) { margin-top: 0; }
@@ -1046,7 +1073,12 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 文章头部已移出阅读卡：直接与 780 版心/卡片左缘对齐（与归档页页头一致），
    不再额外缩进到正文文字线；下边线交给卡片自身边界，间距与归档页相同 16px */
 .tech-post-header { margin: 0 0 16px; padding: 0; }
-.tech-post-title-lg { font-size: 24px; font-weight: 700; line-height: 1.35; margin: 0 0 10px; }
+/* PC 端头部与卡片间距收紧：头部在卡外，16px + 卡内距 26px 叠起来约 46px，
+   深色下卡片边界几乎不可见，整段读作一个大空档；收窄到 10px */
+@media (min-width: 769px) {
+  .tech-post-header { margin-bottom: 12px; } /* 顶(导航→标题 24px)：底(meta→正文 32px) 取中，头块不再贴卡 */
+}
+.tech-post-title-lg { font-size: 24px; font-weight: 700; line-height: 1.35; margin: 0 0 12px; } /* 双排间距 10 → 12，与 meta 行拉开 */
 /* PC 宽屏：文章标题提到 28px，与 780px 版心、16px 正文拉开层级；
    正文 h1 已压到 20px，不会重现「双标题打架」；移动端维持 24px，避免小屏换行过多 */
 @media (min-width: 769px) {
@@ -1485,7 +1517,10 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
     min-width: 34px; height: 34px; padding: 0 10px; font-size: 13px;
   }
   .tech-page-btn::after { content: ""; position: absolute; inset: -5px; }
-  .tech-pagination { gap: 10px; }
+  .tech-pagination { gap: 6px; }
+  /* 移动端分页只留 4 个页码（首 / 当前 / 后一 / 末）+ 上下页，其余页码与省略号隐藏 */
+  .tech-pagination .tech-page-num:not(.tech-page-num--m),
+  .tech-pagination .tech-page-ellipsis { display: none; }
 }
 /* 主按钮三态只在此处定义一次（扁平化：纯色实底 + 无投影） */
 .tech-btn-primary {
@@ -2423,6 +2458,8 @@ html { touch-action: manipulation; }
   .tech-main:has(.tech-home-head) { padding-top: 0; }
   .tech-main:has(.tech-about-hero) { padding-top: 24px; }
   .tech-main:has(.tech-proj) { padding-top: 16px; }
+  /* 文章详情页：移动端顶部留白与底部对齐（默认 18px 上 / 24px 下不对称） */
+  .tech-main:has(.tech-post-wrap) { padding-top: 24px; }
   /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（缩小态同样覆盖） */
   .tech-top { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .tech-post-title-lg { font-size: 23px; }
@@ -4757,7 +4794,7 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
    ═══════════════════════════════════════════════ */
 .tech-post-main {
   box-sizing: border-box;
-  padding: 26px 28px;
+  padding: 20px 28px; /* 上下对称收窄（原 26px 28px）：深色下卡片边界弱，顶部空档直接决定第一观感 */
   background: var(--card-bg);
   border-radius: var(--card-radius);
 }
@@ -4766,6 +4803,15 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 }
 @media (max-width: 360px) {
   .tech-post-main { padding: 14px 12px; }
+}
+/* 无目录文章：正文首行行高在字形上方多出 ~4px leading，
+   视觉上边距（卡边→文字 30px）大于下边距（卡边→按钮 26px）；
+   负 margin 抵消这 4px。有目录时 body 不是首子元素，不受影响 */
+.tech-post-main > .tech-post-body:first-child { margin-top: -4px; }
+/* PC 端目录为 fixed 悬浮：DOM 中 sidebar 仍是首子元素，上面的规则命中不了，
+   用相邻选择器补上（窄屏目录内联展示在正文之前，不受此条影响） */
+@media (min-width: 1400px) {
+  .tech-post-main > .tech-toc-sidebar:first-child + .tech-post-body { margin-top: -4px; }
 }
 
 /* 关于页时间线：外层 about-section 已是色卡，内层不再套卡 */

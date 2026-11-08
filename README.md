@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.2-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.2)
+[![version](https://img.shields.io/badge/version-3.9.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.3)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.2**
+当前版本：**v3.9.3**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.3
+
+- **移动端分页精简**：窄屏（≤768px）只保留 4 个页码（首页 / 当前 / 后一 / 末页）加「上一页 / 下一页」，其余页码与省略号隐藏；5 个列表模板（首页 / 文章 / 项目 / 读者榜 / 读者详情）统一用可见页标记类实现，桌面分页不变
+- **移动端目录样式收紧**：内联目录标题改为与正文区块标题同一套语言（14px / 600 + 左侧主色条，竖线对齐文字行中心）；上内距归零使「目录」文字到卡顶与卡底留白一致；条目行高 40px 收紧到 32px，末条到底部分隔线的空隙 12px 收到 6px
+- **文章页顶部留白统一**：卡片内距改为上下对称 20px（原 26px 28px），正文首行行高 leading 用负 margin 抵消（含 PC 端目录 fixed 悬浮时 `:first-child` 命中不了的相邻选择器补丁）；头部与卡片间距 PC 端 8px、标题到 meta 双排 12px，meta → 正文首字 PC 与移动端同为 32px
+
+<details>
+<summary><b>历史版本（v3.9.2 及更早，点击展开）</b></summary>
 
 ### v3.9.2
 
@@ -936,9 +945,6 @@ chown -R www:www var
 - **首页间距统一为一个节奏**：新增 `--home-gap`（桌面 14px / 窄屏 8px），报头、文章卡、分组标题上下、侧栏卡、归档按钮与单列栅格共用；两列首卡保持对齐
 - **首页报头统计改为药丸**：与侧栏「热门标签」同款无边框全圆角浅底，数字仍加粗、不给不可点元素添加悬停反馈；补足药丸到报头细线的留白
 - **修复「查看全部归档」压页脚线**：恢复桌面双栏主内容底部内距，按钮上下均为 14px；窄屏侧栏末卡与页脚保持 24px
-
-<details>
-<summary><b>历史版本（v3.9.1 及更早，点击展开）</b></summary>
 
 ### v3.9.1
 
