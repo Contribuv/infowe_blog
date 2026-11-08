@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.8.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.9)
+[![version](https://img.shields.io/badge/version-3.8.10-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.8.10)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,24 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.8.9**
+当前版本：**v3.8.10**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.8.10
+
+- 首页「精选推荐」移除与页头彩条位置冲突的 64px 蓝条，改为细分隔线 + 标题侧短竖标记
+- 精选区与文章列表的横线两侧留白对称并跟随断点（PC 14px / ≤1000px 8px），与组内卡片间距一致；清理被后置色卡规则覆盖的死声明与过时注释
+- PC 双栏开启精选时侧栏下移 36px，首张侧栏卡与首张文章卡顶部对齐
+
+<details>
+<summary><b>历史版本（v3.8.9 及更早，点击展开）</b></summary>
 
 ### v3.8.9
 
 - 后台「博主设置」新增「首屏标语」输入项：首页大标题上方那行小字可单独配置
 - 留空则自动回退副标题，不再需要维护两份文案
 - 该项此前一直存在于设置表（首页一直在读），但后台没有入口，属于遗漏，本次补齐
-
-<details>
-<summary><b>历史版本（v3.8.8 及更早，点击展开）</b></summary>
 
 ### v3.8.8
 

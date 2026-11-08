@@ -721,18 +721,10 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   transition: opacity .18s ease, transform .18s ease;
   pointer-events: none;
 }
-/* 窄屏：文章卡改为横线列表——取消边框/圆角/卡片间距，
-   用底部分隔线区分条目（触摸端没有 hover，卡片边框只剩视觉噪音） */
+/* 窄屏：隐藏卡片箭头。文章卡的实际样式由文件末尾「全站色卡」区块统一为
+   浅底色块（无描边、无分隔线）；早期这里的「横线列表」声明已被后置规则覆盖，
+   不再重复定义，避免注释与实际样式相反 */
 @media (max-width: 1000px) {
-  .tech-post-item {
-    margin: 0;
-    padding: 16px 0;
-    border: 0;
-    border-radius: 0;
-    border-bottom: 1px solid var(--border);
-    background: transparent;
-  }
-  .tech-post-item:last-child { border-bottom: 0; }
   .tech-post-arrow { display: none; }
 }
 .tech-post-meta {
@@ -1460,21 +1452,36 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   margin: 0 0 10px;
   color: var(--text-secondary);
 }
-/* 精选推荐区：底部对齐页头 --center 的分隔线（细 border + 居中渐变彩条） */
+/* 精选推荐区：全站彩条只在页头出现一次，这里用「细分隔线 + 标题侧短竖标记」收口。
+   下方「全部文章」标题是 sr-only，这条线是两组卡片唯一的视觉分组；线两侧留白
+   与组内卡片间距一致（PC 14px / ≤1000px 8px），避免一端贴卡、一端悬空 */
 .tech-featured {
-  position: relative;
-  margin-bottom: 24px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--border);
 }
-.tech-featured::after {
-  content: "";
-  position: absolute; left: 50%; transform: translateX(-50%);
-  bottom: -1px; width: 64px; height: 3px; border-radius: 2px;
-  background: var(--accent) /* 扁平化：装饰条改纯色 */;
+/* 最后一张精选卡不再自带下外距，到线的距离统一由 section 的 padding-bottom 控制 */
+.tech-featured .tech-post-item:last-child { margin-bottom: 0; }
+@media (max-width: 1000px) {
+  .tech-featured { padding-bottom: 8px; margin-bottom: 8px; }
 }
-/* 多栏布局整页左对齐（报头、文章、侧栏都靠左）：精选区的彩条同步移到左端，
-   避免同一列里同时出现「左对齐报头 + 居中彩条」两套对齐方式 */
-.tech-home-grid .tech-featured::after { left: 0; transform: none; }
+.tech-featured > .tech-related-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.tech-featured > .tech-related-title::before {
+  content: "";
+  flex: none;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--accent);
+}
 /* 相关推荐：2 列强调色卡 */
 .tech-related-grid {
   display: grid;
@@ -3686,6 +3693,13 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   position: sticky;
   top: 72px;
   align-self: start;
+}
+/* 开启精选时主列开头多出「精选推荐」标题（26px 高 + 10px 下外距 = 36px），
+   侧栏没有这段标题空间，首张卡片会与标题齐平而不是与首张文章卡齐平。
+   PC 双栏下让侧栏整体下移同高，恢复两列卡片基线一致。:has() 保证未开启精选时
+   不生效；窄屏是单列，不受影响。sticky 的吸附行为不受 margin-top 影响。 */
+@media (min-width: 1001px) {
+  .tech-home-grid:has(.tech-featured) .tech-sidebar { margin-top: 36px; }
 }
 .tech-side-card {
   min-width: 0;
