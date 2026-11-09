@@ -46,14 +46,17 @@
     {% endfor %}
 </div>
 
-<nav class="circle-pager" aria-label="博客圈分页">
-    {% if page > 1 %}<a href="?page={{ page - 1 }}">上一页</a>{% else %}<span class="is-disabled">上一页</span>{% endif %}
-    {% for p in pages %}
-        {% if p == '...' %}<span class="is-gap">…</span>
-        {% elif p == page %}<span class="is-current">{{ p }}</span>
-        {% else %}<a href="?page={{ p }}">{{ p }}</a>{% endif %}
+{# 与其它列表页共用同一套分页结构与类名，配色由 theme.css 末尾「分页按钮」段统一控制 #}
+<nav class="tech-pagination" aria-label="博客圈分页">
+    {% if page > 1 %}<a href="?page={{ page - 1 }}" class="tech-page-btn tech-page-nav">上一页</a>
+    {% else %}<span class="tech-page-btn tech-page-nav is-disabled" aria-disabled="true">上一页</span>{% endif %}
+    {% for it in pager_window(page, total_pages) %}
+        {% if it.ellipsis %}<span class="tech-page-ellipsis" aria-hidden="true">…</span>
+        {% elif it.current %}<span class="tech-page-btn tech-page-num active{% if it.mobile %} tech-page-num--m{% endif %}" aria-current="page">{{ it.num }}</span>
+        {% else %}<a href="?page={{ it.num }}" class="tech-page-btn tech-page-num{% if it.mobile %} tech-page-num--m{% endif %}">{{ it.num }}</a>{% endif %}
     {% endfor %}
-    {% if page < total_pages %}<a href="?page={{ page + 1 }}">下一页</a>{% else %}<span class="is-disabled">下一页</span>{% endif %}
+    {% if page < total_pages %}<a href="?page={{ page + 1 }}" class="tech-page-btn tech-page-nav">下一页</a>
+    {% else %}<span class="tech-page-btn tech-page-nav is-disabled" aria-disabled="true">下一页</span>{% endif %}
 </nav>
 
 <div class="circle-end">

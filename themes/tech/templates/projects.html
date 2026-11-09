@@ -70,16 +70,13 @@
     {% if page > 1 %}
     <a href="{{ url_for('projects_page', page=page-1, lang=active_lang or none) }}" class="tech-page-btn tech-page-nav">上一页</a>
     {% endif %}
-    {% for p in range(1, total_pages + 1) %}
-        {% set _m = p == 1 or p == total_pages or p == page or p == page + 1 %}
-        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
-            {% if p == page %}
-            <span class="tech-page-btn tech-page-num active{% if _m %} tech-page-num--m{% endif %}" aria-current="page">{{ p }}</span>
-            {% else %}
-            <a href="{{ url_for('projects_page', page=p, lang=active_lang or none) }}" class="tech-page-btn tech-page-num{% if _m %} tech-page-num--m{% endif %}">{{ p }}</a>
-            {% endif %}
-        {% elif p == page - 3 or p == page + 3 %}
-            <span class="tech-page-ellipsis">…</span>
+    {% for it in pager_window(page, total_pages) %}
+        {% if it.ellipsis %}
+        <span class="tech-page-ellipsis">…</span>
+        {% elif it.current %}
+        <span class="tech-page-btn tech-page-num active{% if it.mobile %} tech-page-num--m{% endif %}" aria-current="page">{{ it.num }}</span>
+        {% else %}
+        <a href="{{ url_for('projects_page', page=it.num, lang=active_lang or none) }}" class="tech-page-btn tech-page-num{% if it.mobile %} tech-page-num--m{% endif %}">{{ it.num }}</a>
         {% endif %}
     {% endfor %}
     {% if page < total_pages %}

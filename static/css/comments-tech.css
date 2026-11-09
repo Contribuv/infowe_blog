@@ -229,15 +229,21 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
 .cmt-form .kbd-hint{font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
-.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;min-height:36px;box-sizing:border-box;padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
-/* 深色 accent 实底改深字：白字仅 2.52:1，深字 7.05:1（与 .tech-btn-primary 同款） */
-[data-theme="dark"] .cmt-form .submit{color:#16181d}
-/* hover：浅色加深、深色提亮（与 .tech-btn-primary 同策略） */
+/* 提交按钮：与 tech 主题 .tech-btn.tech-btn-soft 共用一套视觉语言
+   （淡 accent 底 + accent 描边 + accent 字，深浅主题由 color-mix 自动适配）。
+   配色 / hover / disabled 只在这里定义一次，文件末尾不再叠加黑白配覆盖。 */
+.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;min-height:38px;box-sizing:border-box;padding:0 20px;border-radius:var(--card-radius,6px);font-size:14px;font-weight:600;cursor:pointer;background:color-mix(in srgb,var(--c-accent) 16%,transparent);border:1px solid color-mix(in srgb,var(--c-accent) 46%,transparent);color:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));transition:border-color .2s ease,color .2s ease,background-color .2s ease,transform .12s ease,opacity .15s ease}
 @media (hover:hover) and (pointer:fine){
-  .cmt-form .submit:not([disabled]):hover{filter:brightness(.92)}
-  [data-theme="dark"] .cmt-form .submit:not([disabled]):hover{filter:brightness(1.12)}
+  /* 文字不降到纯 accent：底色加深后纯 accent 反而更糊，改为向正文色收一档 */
+  .cmt-form .submit:not([disabled]):hover{
+    background:color-mix(in srgb,var(--c-accent) 32%,transparent);
+    border-color:color-mix(in srgb,var(--c-accent) 82%,transparent);
+    color:color-mix(in srgb,var(--c-accent) 60%,var(--c-text));
+  }
 }
 .cmt-form .submit[disabled]{opacity:.6;cursor:not-allowed}
+/* 与 .tech-btn:active 同款按压反馈 */
+.cmt-form .submit:not([disabled]):active{transform:translateY(1px)}
 .cmt-hint{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px;color:var(--c-accent)}
 .cmt-hint button{font-size:11.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer}
 @media (hover:hover) and (pointer:fine){ .cmt-hint button:hover{color:var(--c-text2)} }
@@ -254,10 +260,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 /* ── 评论分页（按顶层评论分页，楼中楼跟随根评论） ── */
 .cmt-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin:20px 0 4px}
-.cmt-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 10px;font-size:13px;line-height:1;color:var(--c-text2);text-decoration:none;border:1px solid var(--c-border-strong);border-radius:9px;background:transparent;transition:border-color .18s,color .18s}
-@media (hover:hover) and (pointer:fine){.cmt-page-btn:hover{border-color:var(--c-accent);color:var(--c-accent)}}
-.cmt-page-btn.active{background:var(--c-accent);border-color:var(--c-accent);color:#fff;cursor:default}
-[data-theme="dark"] .cmt-page-btn.active{color:#16181d}
+/* 与 .tech-btn.tech-btn-soft / .tech-page-btn 同一套配色；评论区保留紧凑尺寸与 44px 热区 */
+.cmt-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 10px;font-size:13px;font-weight:600;line-height:1;text-decoration:none;border:1px solid color-mix(in srgb,var(--c-accent) 46%,transparent);border-radius:var(--card-radius,6px);background:color-mix(in srgb,var(--c-accent) 16%,transparent);color:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));transition:border-color .2s ease,color .2s ease,background-color .2s ease,transform .12s ease}
+@media (hover:hover) and (pointer:fine){.cmt-page-btn:not(.active):hover{background:color-mix(in srgb,var(--c-accent) 32%,transparent);border-color:color-mix(in srgb,var(--c-accent) 82%,transparent);color:color-mix(in srgb,var(--c-accent) 60%,var(--c-text))}}
+.cmt-page-btn.active{background:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));border-color:transparent;color:var(--bg);font-weight:700;cursor:default}
+.cmt-page-btn:not(.active):active{transform:translateY(1px)}
 /* 触控热区：视觉 32×32/30×30 不变，点击范围按 gap 6px 安全扩展到约 38×44 */
 .cmt-page-btn{position:relative}
 .cmt-page-btn::after{content:'';position:absolute;inset:-6px -3px}
@@ -394,31 +401,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 
 
-/* 评论按钮黑白配 */
-.cmt-form .submit{
-  background:color-mix(in srgb,var(--c-text) 76%,var(--bg));
-  color:var(--bg);
-  border:0;
-  border-radius:8px;
-}
-[data-theme="dark"] .cmt-form .submit{
-  background:color-mix(in srgb,var(--c-text) 82%,var(--bg));
-  color:var(--bg);
-}
-@media (hover:hover) and (pointer:fine){
-  .cmt-form .submit:not([disabled]):hover,
-  [data-theme="dark"] .cmt-form .submit:not([disabled]):hover{
-    background:var(--c-text);
-    color:var(--bg);
-    filter:none;
-  }
-}
-.cmt-page-btn.active{
-  background:var(--c-text);
-  border-color:transparent;
-  color:var(--bg);
-}
-[data-theme="dark"] .cmt-page-btn.active{color:var(--bg)}
+/* 旧的两套「黑白配」覆盖段已移除：提交按钮与分页配色各自由上方单一规则定义 */
 
 
 /* 评论入口：去掉独立底色，和外层表单合为一个整体 */

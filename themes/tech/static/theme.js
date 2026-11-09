@@ -336,7 +336,7 @@ window.techHighlightCode = techHighlightCode;
   }
 })();
 
-/* ── 全局搜索：导航放大镜按钮展开 / 收起下拉面板 ── */
+/* ── 全局搜索：屏幕居中浮窗（遮罩点击 / Esc / 焦点与滚动锁定） ── */
 (function () {
   'use strict';
   var openBtn = document.getElementById('tech-search-open');
@@ -345,27 +345,53 @@ window.techHighlightCode = techHighlightCode;
   var input = document.getElementById('tech-search-input');
   if (!openBtn || !layer) return;
 
+  var prevOverflow = '';
+
+  function isOpen() { return layer.classList.contains('open'); }
+
   function setOpen(open) {
-    openBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    layer.classList.toggle('open', open);
+    if (open === isOpen()) return;
+    if (open) {
+      // 抽屉与搜索遮罩不同时出现，先关抽屉，避免两个 body 滚动锁互相覆盖
+      var drawerOverlay = document.getElementById('tech-drawer-overlay');
+      if (drawerOverlay && drawerOverlay.classList.contains('open')) drawerOverlay.click();
+      prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      layer.classList.add('open');
+      layer.setAttribute('aria-hidden', 'false');
+      openBtn.setAttribute('aria-expanded', 'true');
+      if (input) {
+        setTimeout(function () { if (isOpen()) { input.focus(); input.select(); } }, 0);
+        requestAnimationFrame(function () {
+          if (isOpen() && document.activeElement !== input) input.focus();
+        });
+      }
+    } else {
+      layer.classList.remove('open');
+      layer.setAttribute('aria-hidden', 'true');
+      openBtn.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = prevOverflow;
+      openBtn.focus();
+    }
   }
 
-  openBtn.addEventListener('click', function () {
-    var isOpen = layer.classList.contains('open');
-    setOpen(!isOpen);
-    if (!isOpen && input) setTimeout(function () { input.focus(); }, 0);
-  });
-  if (closeBtn) closeBtn.addEventListener('click', function () {
-    setOpen(false);
-    if (openBtn) openBtn.focus();
-  });
-  // 面板内部点击不冒泡，避免误触发外部关闭
-  layer.addEventListener('click', function (e) { e.stopPropagation(); });
+  openBtn.addEventListener('click', function () { setOpen(!isOpen()); });
+  if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
+  // 点对话框之外的遮罩区域关闭
+  layer.addEventListener('click', function (e) { if (e.target === layer) setOpen(false); });
   document.addEventListener('click', function (e) {
-    if (layer.classList.contains('open') && !openBtn.contains(e.target)) setOpen(false);
+    if (isOpen() && !openBtn.contains(e.target) && !layer.contains(e.target)) setOpen(false);
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && layer.classList.contains('open')) setOpen(false);
+    if (!isOpen()) return;
+    if (e.key === 'Escape') { e.preventDefault(); setOpen(false); return; }
+    if (e.key !== 'Tab') return;
+    // 焦点锁在浮窗内，避免 Tab 跑到被遮罩挡住的页面元素
+    var f = layer.querySelectorAll('input, button, [href], [tabindex]:not([tabindex="-1"])');
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 })();
 

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.5)
+[![version](https://img.shields.io/badge/version-3.9.6-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.6)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.5**
+当前版本：**v3.9.6**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.6
+
+- **全站主按钮统一为柔和 accent**：首页「查看全部归档」、友链「提交申请」、评论「提交评论」共用同一组 `color-mix` 配色（淡 accent 底 16% / accent 描边 46% / accent 字 84%），桌面统一 38px 高、6px 圆角、14px/600、1px 描边；补齐背景/文字/描边过渡、按压反馈与 `[disabled]` 态。**反转 v3.9.5「评论按钮回到黑白配」的决定**，删除 `comments-tech.css` 里叠加的旧 accent 段与末尾黑白配覆盖段
+- **修复 hover 文字对比度**：`.tech-btn-soft` hover 时文字不再降到纯 accent（浅色约 2.7:1），改为 `color-mix(--accent 60%, --text)`，浅色约 4.7:1、深色约 5.1:1 且保留蓝色色相；深浅主题由同一套变量自动适配
+- **全站分页按钮统一**：清理 `theme.css` 中对 `.tech-page-btn` 的 4 段历史配色覆盖，配色收口到文件末尾一段；普通页与主按钮同值，hover 同值，当前页用同组变量的加重档，禁用态沿用 `opacity:.6`；圈子页改用全站统一的 `.tech-pagination / .tech-page-btn` 结构与类名，评论分页同步配色（保留紧凑尺寸与 `a[data-cmt-page]` AJAX 契约）
+- **分页窗口统一上限**：新增 `services/pagination.py`（`MAX_LINKS = 5`）并注册为 Jinja 全局 `pager_window`；5 个列表模板、圈子页、评论分页全部改用它，删除 5 份复制粘贴的窗口判断。首末页恒可见、中间围绕当前页连续 3 页、缺口用省略号占位，无论总页数多少最多 5 个页码 + 2 个省略号；移动端仍只留 4 个页码
+- **搜索改为屏幕居中浮窗**：PC / 移动端自适应，遮罩对背后整层页面做 `backdrop-filter` 毛玻璃模糊（不支持时回退半透明深底），支持点遮罩 / Esc 关闭、Tab 焦点锁、打开聚焦输入框、关闭后焦点返回与滚动锁
+- **后台入口不对访客开放**：`app.py` 注入 `is_admin`，导航「写作」图标与移动抽屉「写作」项仅在管理员登录时渲染；匿名 `/manage` 仍由 `admin_required` 重定向到登录页，页面缓存对管理员会话不命中匿名缓存
+
+<details>
+<summary><b>历史版本（v3.9.5 及更早，点击展开）</b></summary>
 
 ### v3.9.5
 
@@ -935,11 +947,8 @@ chown -R www:www var
 - **表单间距统一为一个节奏**：新增 `--cmt-gap: 10px` / `--cmt-pad: 12px`，内容区改 flex 列布局由 `gap` 统一控制，清掉 textarea / row / 身份条各自叠加的 `margin-bottom`；动作行以 1px 细线与工具行分组
 - **修复 flex 间距静默失效**：`.cmt-box[open] .cmt-box-body{display:block}` 特异性 `(0,3,0)` 压过新写的两 class 选择器，导致 `display:flex` 不生效、`gap` 不产生间距；改用带 `[open]` 的选择器，并移除被压住的重复规则
 - **移动端对齐与触控热区**：工具控件统一 32px，提交按钮移动端 40px + 44px 透明热区、桌面 36px；表情面板宽度限制为 `calc(100vw - 40px)`；实测 `.foot` 内横向溢出为 0
-- **评论提交按钮回到黑白配**：恢复 v3.9.1 的 `color-mix(--c-text 76%, --bg)` 方案，与评论分页 `.cmt-page-btn.active` 同色系；浅色深底浅字、深色浅底深字自动反转，撤掉 WIP 的淡蓝 `.tech-btn-soft`
+- **评论提交按钮回到黑白配**：恢复 v3.9.1 的 `color-mix(--c-text 76%, --bg)` 方案，与评论分页 `.cmt-page-btn.active` 同色系；浅色深底浅字、深色浅底深字自动反转，撤掉 WIP 的淡蓝 `.tech-btn-soft`（该决定已在 v3.9.6 反转）
 - **文章页头部与目录节奏**：标题与 meta 收进阅读卡、以 1px 细线与正文分区；窄屏折叠目录的上下间距与卡片内距统一；基础层 `comments.css` 同步两行结构，避免共享模板在其他主题错位
-
-<details>
-<summary><b>历史版本（v3.9.4 及更早，点击展开）</b></summary>
 
 ### v3.9.4
 

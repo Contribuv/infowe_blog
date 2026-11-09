@@ -15,7 +15,7 @@ from markupsafe import escape
 
 import db
 from models import Category, Comment, Link, Post, Project, Timeline
-from services import auth, avatar, comments as comments_service, ip_location
+from services import auth, avatar, comments as comments_service, ip_location, pagination
 from services import lang, markdown, project_sync, settings, site_url, status, theme, upload
 from services import readers as readers_service
 from services import sidebar as sidebar_service
@@ -65,11 +65,14 @@ def _comment_pager(pager: dict) -> dict:
         return request.path + ("?" + query if query else "") + "#comments"
 
     pages: list[dict] = []
-    for item in range(1, total_pages + 1):
-        if item == 1 or item == total_pages or abs(item - page) <= 2:
-            pages.append({"num": item, "url": url(item), "current": item == page, "ellipsis": False})
-        elif abs(item - page) == 3:
-            pages.append({"num": 0, "url": "", "current": False, "ellipsis": True})
+    for it in pagination.window(page, total_pages):
+        num = it["num"]
+        pages.append({
+            "num": num or 0,
+            "url": url(num) if num else "",
+            "current": it["current"],
+            "ellipsis": it["ellipsis"],
+        })
     return {
         "total_pages": total_pages,
         "page": page,
@@ -565,20 +568,6 @@ def circle():
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = min(page, total_pages)
 
-    if total_pages <= 7:
-        pages = list(range(1, total_pages + 1))
-    else:
-        marks = sorted({1, total_pages, page, page - 1, page + 1, page - 2, page + 2})
-        pages = []
-        prev = 0
-        for num in marks:
-            if not 1 <= num <= total_pages:
-                continue
-            if prev and num - prev > 1:
-                pages.append("...")
-            pages.append(num)
-            prev = num
-
     return render_template(
         "circle.html",
         items=items,
@@ -587,7 +576,6 @@ def circle():
         stats=stats,
         page=page,
         total_pages=total_pages,
-        pages=pages,
     )
 
 

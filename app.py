@@ -18,6 +18,7 @@ import config
 from db import init_app as init_db_app, init_db
 from services import settings as settings_service
 from services import theme as theme_service
+from services import pagination
 from services import quotes as quotes_service
 from services.storage import migrate_legacy_storage
 from services.settings import get_str
@@ -117,6 +118,8 @@ def create_app(test_config: dict | None = None) -> Flask:
         ]
     )
     app.extensions["theme_loader"] = theme_loader
+    # 全站分页窗口：所有前台翻页共用一个页码上限
+    app.jinja_env.globals["pager_window"] = pagination.window
 
     init_db_app(app)
     init_db(app)
@@ -225,6 +228,7 @@ def _register_hooks(app: Flask) -> None:
     @app.context_processor
     def _inject_globals() -> dict:
         from models import Link, Post
+        from services import auth as auth_service
 
         nav_on: dict[str, bool] = {}
         nav_pages: list[dict] = []
@@ -288,6 +292,8 @@ def _register_hooks(app: Flask) -> None:
             "static_ver": _static_version(),
             "favicon_ver": _favicon_version(),
             "admin_prefix": app.config.get("ADMIN_PREFIX", "/admin"),
+            # 后台入口只对已登录管理员显示，访客不渲染「写作」按钮/菜单项
+            "is_admin": auth_service.is_admin(),
             "theme_css_name": theme_service.css_name(active),
             "theme_asset_ver": theme_service.asset_version(),
             "admin_ver": theme_service.admin_asset_version(),

@@ -86,16 +86,13 @@
     <a href="{{ url_for('readers_page', page=page-1) }}" class="tech-page-btn tech-page-nav">上一页</a>
     {% endif %}
 
-    {% for p in range(1, total_pages + 1) %}
-        {% set _m = p == 1 or p == total_pages or p == page or p == page + 1 %}
-        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
-            {% if p == page %}
-            <span class="tech-page-btn tech-page-num active{% if _m %} tech-page-num--m{% endif %}" aria-current="page">{{ p }}</span>
-            {% else %}
-            <a href="{{ url_for('readers_page', page=p) }}" class="tech-page-btn tech-page-num{% if _m %} tech-page-num--m{% endif %}">{{ p }}</a>
-            {% endif %}
-        {% elif p == page - 3 or p == page + 3 %}
-            <span class="tech-page-ellipsis">…</span>
+    {% for it in pager_window(page, total_pages) %}
+        {% if it.ellipsis %}
+        <span class="tech-page-ellipsis">…</span>
+        {% elif it.current %}
+        <span class="tech-page-btn tech-page-num active{% if it.mobile %} tech-page-num--m{% endif %}" aria-current="page">{{ it.num }}</span>
+        {% else %}
+        <a href="{{ url_for('readers_page', page=it.num) }}" class="tech-page-btn tech-page-num{% if it.mobile %} tech-page-num--m{% endif %}">{{ it.num }}</a>
         {% endif %}
     {% endfor %}
 

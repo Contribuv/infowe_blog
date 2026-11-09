@@ -540,36 +540,54 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-quote-src:empty { display: none; }
 
 
-/* ── 全局搜索：导航下拉面板（入口为导航栏放大镜） ── */
+/* ── 全局搜索：屏幕居中浮窗（PC / 移动自适应） ── */
 .tech-search-layer {
-  /* 独立 fixed：body 是 flex 容器，sticky 在 flex 子元素中失效；top 56px 紧贴 nav 下方 */
-  position: fixed; top: 56px; left: 0; right: 0; z-index: 99;
+  position: fixed; inset: 0; z-index: 400;
   display: none;
-  padding: 12px 0 14px;
-  border-top: 1px solid var(--border);
-  background: var(--nav-bg);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  backdrop-filter: blur(16px) saturate(180%);
-  box-shadow: 0 16px 32px -24px rgba(15, 23, 42, .45);
+  align-items: center; justify-content: center;
+  padding: 20px;
+  background: var(--overlay);
+  /* 浮窗背后的整层页面（nav / 正文 / 侧栏 / 页脚）统一毛玻璃化；
+     对话框是本层的子元素，不受 backdrop-filter 影响，保持清晰 */
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
 }
+/* 不支持 backdrop-filter 时至少保留更实的遮罩，避免只变暗没有分层 */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .tech-search-layer { background: var(--card-bg); }
+  .tech-search-layer { background: rgba(4, 6, 12, .68); }
 }
-.tech-search-layer.open { display: block; animation: tech-search-drop .18s ease; }
-@keyframes tech-search-drop {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+.tech-search-layer.open { display: flex; animation: tech-search-fade .18s ease; }
+@keyframes tech-search-fade { from { opacity: 0; } to { opacity: 1; } }
+.tech-search-dialog {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 20px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--bg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+  animation: tech-search-rise .2s ease;
 }
+@keyframes tech-search-rise {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+.tech-search-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.tech-search-title { font-size: 15px; font-weight: 600; color: var(--text); }
 .tech-search-form { display: flex; align-items: center; gap: 8px; }
 .tech-search-input {
-  flex: 1; min-width: 0; height: 44px; padding: 0 14px;
+  flex: 1; min-width: 0; height: 46px; padding: 0 14px;
   font-size: 16px; color: var(--text);
   background: var(--bg); border: 1px solid var(--border-strong);
   border-radius: 8px; outline: none;
 }
 .tech-search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
 .tech-search-btn {
-  height: 44px; padding: 0 20px; flex-shrink: 0;
+  height: 46px; padding: 0 20px; flex-shrink: 0;
   font-size: 15px; font-weight: 600; color: #fff;
   background: var(--accent); border: none; border-radius: 8px; cursor: pointer;
 }
@@ -579,12 +597,31 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 深色下 hover 提亮会让深字与底色更接近，改为压暗 */
 @media (hover: hover) and (pointer: fine) { [data-theme="dark"] .tech-search-btn:hover { filter: brightness(.92); } }
 .tech-search-close {
-  flex: none; width: 44px; height: 44px; display: flex;
+  flex: none; width: 40px; height: 40px; display: flex;
   align-items: center; justify-content: center;
   border: none; background: none; color: var(--text-secondary);
   font-size: 24px; line-height: 1; border-radius: 8px; cursor: pointer;
 }
 @media (hover: hover) and (pointer: fine) { .tech-search-close:hover { color: var(--text); background: var(--bg-subtle); } }
+.tech-search-hint { margin: 12px 0 0; font-size: 12px; color: var(--text-secondary); }
+
+@media (max-width: 640px) {
+  .tech-search-layer { padding: 16px; }
+  .tech-search-dialog {
+    width: 100%; padding: 16px; border-radius: 14px;
+    max-height: calc(100vh - 32px);
+  }
+  .tech-search-btn { padding: 0 16px; font-size: 14px; }
+}
+/* 超窄屏：按钮换行铺满，输入框不被压成一条缝 */
+@media (max-width: 360px) {
+  .tech-search-form { flex-wrap: wrap; }
+  .tech-search-input { flex-basis: 100%; }
+  .tech-search-btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tech-search-layer.open, .tech-search-dialog { animation: none; }
+}
 
 /* ── 写作热力图（首页文章列表上方，贡献图样式） ── */
 .tech-hm {
@@ -866,30 +903,13 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
     filter: brightness(1.1);
   }
 }
+/* ── 列表分页：这里只放容器与按钮骨架，配色统一见文件末尾「分页按钮」段 ── */
 .tech-pagination { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 24px 0 0; }
 .tech-page-btn {
   min-width: 38px; height: 38px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border-strong); border-radius: 8px;
-  color: var(--text-secondary); text-decoration: none; font-size: 14px;
-  background: var(--bg);
-  transition: border-color .18s ease, color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .12s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .tech-page-btn:hover {
-    border-color: color-mix(in srgb, var(--accent) 60%, var(--border-strong));
-    color: var(--text);
-    background: var(--hover-bg); /* 扁平化：去掉投影与上浮 */
-  }
-}
-.tech-page-btn.active {
-  background: var(--accent);
-  border-color: transparent;
-  color: #fff;
-}
-[data-theme="dark"] .tech-page-btn.active {
-  background: var(--accent);
-  color: #0f1629;
+  text-decoration: none; font-size: 14px;
+  transition: border-color .2s ease, color .2s ease, background-color .2s ease, transform .12s ease, opacity .15s ease;
 }
 .tech-page-ellipsis { display: flex; align-items: center; color: var(--text-secondary); padding: 0 4px; }
 
@@ -2754,7 +2774,9 @@ html { touch-action: manipulation; }
 .tech-form-actions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
 .tech-form-actions .tech-btn {
   width: auto;
-  height: 40px;
+  /* 桌面端与首页「查看全部归档」、评论「提交评论」统一 38px；
+     移动端仍由下方 ≤640px 规则放大到 44px 保证触屏热区 */
+  height: 38px;
   padding: 0 20px;
   border-radius: 10px;
 }
@@ -3014,31 +3036,8 @@ html { touch-action: manipulation; }
   color: var(--text-secondary);
 }
 
-.circle-pager {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin: 24px 0 0;
-  font-size: 13px;
-}
-.circle-pager a,
-.circle-pager span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-@media (hover: hover) and (pointer: fine) { .circle-pager a:hover { border-color: var(--accent); color: var(--accent); } }
-.circle-pager .is-current { border-color: transparent; background: var(--bg-subtle); color: var(--text); }
-.circle-pager .is-disabled { opacity: .4; }
-.circle-pager .is-gap { border: 0; background: none; color: var(--text-secondary); }
+/* 圈子页分页已改用全站统一的 .tech-pagination / .tech-page-btn，
+   配色见文件末尾「分页按钮」段 */
 @media (max-width: 640px) {
   .circle-stats { margin: 12px 0; }
   .circle-item { min-width: 0; padding: 13px 14px; }
@@ -4574,24 +4573,7 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   }
 }
 
-/* 分页 */
-.tech-page-btn {
-  border-color: color-mix(in srgb, var(--text) 26%, transparent);
-  background: transparent;
-}
-@media (hover: hover) and (pointer: fine) {
-  .tech-page-btn:hover {
-    border-color: var(--text-secondary);
-    background: var(--hover-bg);
-    color: var(--text);
-  }
-}
-.tech-page-btn.active,
-[data-theme="dark"] .tech-page-btn.active {
-  background: var(--text);
-  border-color: transparent;
-  color: var(--bg);
-}
+/* 分页配色统一见文件末尾「分页按钮」段，此处不再重复定义 */
 
 /* 搜索 */
 .tech-search-btn {
@@ -4642,12 +4624,7 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   }
 }
 
-/* 博客圈分页当前页 */
-.circle-pager .is-current {
-  background: var(--text);
-  border-color: transparent;
-  color: var(--bg);
-}
+/* 博客圈分页当前页配色统一见文件末尾「分页按钮」段 */
 
 
 /* 侧栏十年之约：去掉内层边线，外层已有 */
@@ -5051,19 +5028,8 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   }
 }
 
-/* ── 分页按钮：卡片底色 + 卡片圆角 ── */
-.tech-page-btn {
-  border: 0;
-  border-radius: var(--card-radius);
-  background: var(--card-bg);
-  color: var(--text);
-}
+/* 分页配色统一见文件末尾「分页按钮」段 */
 @media (hover: hover) and (pointer: fine) {
-  .tech-page-btn:hover {
-    background: var(--card-bg-hover);
-    border-color: transparent;
-    color: var(--text);
-  }
   /* 上下篇卡片与相关推荐同一套悬停反馈：底色加深 + 标题转主色 */
   .tech-pager-link:not(.tech-pager-empty):hover .tech-pager-title {
     color: var(--accent);
@@ -5088,18 +5054,44 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 @media (hover: hover) and (pointer: fine) {
   /* 选择器必须压过 [data-theme="dark"] .tech-btn:not(.tech-btn-primary):hover (0,4,0)，
      否则 dark 下 hover 底色会被换成 accent+bg 的淡混色，蓝意全无 */
-  html .tech-btn.tech-btn-soft:not(.tech-btn-primary):hover {
+  html .tech-btn.tech-btn-soft:not(.tech-btn-primary):not([disabled]):hover {
     background: color-mix(in srgb, var(--accent) 32%, transparent);
     border-color: color-mix(in srgb, var(--accent) 82%, transparent);
-    color: var(--accent);
+    /* 底色加深后，文字若降到纯 accent 对比度反而下降（浅色 ~2.7:1）；
+       向正文色收一档，浅色变深蓝、深色变亮蓝，两套主题都保住可读性且仍带蓝意 */
+    color: color-mix(in srgb, var(--accent) 60%, var(--text));
   }
 }
-.tech-page-btn.active,
-[data-theme="dark"] .tech-page-btn.active {
-  background: var(--text);
+/* 与评论提交按钮保持同一套 disabled 反馈（提交中 / 不可点） */
+.tech-btn[disabled] { opacity: .6; cursor: not-allowed; }
+/* ── 分页按钮：与 .tech-btn.tech-btn-soft 同一套视觉语言 ──
+   普通页 / 上下页 = 淡 accent 底 + accent 描边 + accent 字；
+   hover 与当前页是同组变量的深浅两档，深浅主题由 --accent 自动适配。
+   放在文件末尾，前面几段历史配色覆盖（卡片底 / 黑白配）均已清理。 */
+.tech-page-btn {
+  border: 1px solid color-mix(in srgb, var(--accent) 46%, transparent);
+  border-radius: var(--card-radius);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: color-mix(in srgb, var(--accent) 84%, var(--text));
+  font-weight: 600;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tech-page-btn:not(.active):not(.is-disabled):hover {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 82%, transparent);
+    color: color-mix(in srgb, var(--accent) 60%, var(--text));
+  }
+}
+.tech-page-btn:not(.active):not(.is-disabled):active { transform: translateY(1px); }
+/* 当前页：把常态文字色翻成底色、背景色作文字，accent 系加重档，两套主题都够对比度 */
+.tech-page-btn.active {
+  background: color-mix(in srgb, var(--accent) 84%, var(--text));
   border-color: transparent;
   color: var(--bg);
+  font-weight: 700;
 }
+/* 圈子页边界按钮沿用主按钮的 disabled 反馈 */
+.tech-pagination .is-disabled { opacity: .6; cursor: not-allowed; }
 
 /* 读者页统计：手机端 2×2 小卡，避免第四项换行后变成孤行 */
 @media (max-width: 480px) {
