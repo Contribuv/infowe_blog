@@ -997,20 +997,22 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   /* 窄屏/移动端目录标题：原 12px + 字间距的「小标签」在大号正文旁显得单薄，
      改为与正文区块标题同一套语言（14px / 600 + 左侧主色条） */
   .tech-toc-summary {
-    position: relative;
     justify-content: flex-start;
     gap: 8px;
+    /* 左内距 2px 只做视觉留白：竖条 4px + gap 8px 接手原来的 14px，
+       文字总左边距仍是 14px，与下方目录条目对齐 */
     min-height: 40px;
-    padding: 0 0 10px 14px; /* 上内距归零：目录文字到卡顶 = 卡片内距 16px，与卡底一致 */
+    padding: 0 0 10px 2px; /* 上内距归零：目录文字到卡顶 = 卡片内距 16px，与卡底一致 */
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0;
     color: var(--text);
   }
+  /* 竖条改成 flex 子项：不再用 top 硬编码，交给父级 align-items:center
+     与文字行盒一起垂直居中（原先 absolute + top:14px 差 0.85px，肉眼可见） */
   .tech-toc-summary::before {
     content: "";
-    position: absolute; left: 0; top: 14px; /* 文字行中心实测在 14px：flex 垂直居中 + 10px 底内距 */
-    transform: translateY(-50%);
+    flex: none;
     width: 4px; height: 16px; border-radius: 2px;
     background: var(--accent);
   }
@@ -1465,15 +1467,21 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 }
 
 /* ── 文章底部操作 ── */
-.tech-post-footer {
-  margin: 22px 0 0;
-  padding-top: 14px; border-top: 1px solid var(--border);
+/* 读者动作独立成卡：正文卡结束 → 24px → 本卡（同 --card-bg / --card-radius）。
+   旧写法是在正文卡内用 1px 分隔线切一条页脚带，操作区读起来像正文附注；
+   现在它与「上一篇 / 下一篇」「相关推荐」「评论」同层级、同间距（24px），
+   文末形成一条等距的卡片序列。
+   标签不跟过来——它是文章属性，收在正文卡内。 */
+.tech-post-footer-card {
+  margin: 24px 0 0;
+  padding: 16px 28px;
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
 }
-/* 标签从页头移到正文末尾：放在 footer 分隔线之下、操作按钮之上，
-   让「文章属性」和「读者动作」同处一个收尾区，又不挤标题区；
-   padding-top 14 是线到标签，margin-bottom 12 是标签到按钮 */
+/* 标签从页头移到正文末尾：留在正文卡内、作为文章的属性收尾（不跟着操作卡走），
+   卡底 padding 接管下方留白，上间距与正文末段拉开 */
 .tech-post-tags-bottom {
-  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 0;
 }
 .tech-post-actions {
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
@@ -1560,8 +1568,8 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 
 /* 文末操作行与上方标签同一套语言：无边框浅底药丸，不再用描边方按钮。
    尺寸比标签略高一档（30 / 22），保证可点面积，又不会在标签下面突然变重 */
-.tech-post-footer .tech-post-actions { gap: 8px; }
-.tech-post-footer .tech-btn {
+.tech-post-footer-card .tech-post-actions { gap: 8px; }
+.tech-post-footer-card .tech-btn {
   height: 30px;
   padding: 0 12px;
   gap: 6px;
@@ -1572,11 +1580,11 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   font-size: 12.5px;
   font-weight: 500;
 }
-.tech-post-footer .tech-btn svg { width: 13px; height: 13px; }
-.tech-post-footer .tech-license { font-size: 12px; }
+.tech-post-footer-card .tech-btn svg { width: 13px; height: 13px; }
+.tech-post-footer-card .tech-license { font-size: 12px; }
 @media (max-width: 768px) {
   /* 触屏下比桌面放宽 4px；配合 .tech-btn::after 的 -4px 热区约 42px */
-  .tech-post-footer .tech-btn { height: 34px; }
+  .tech-post-footer-card .tech-btn { height: 34px; }
 }
 
 /* 注：早期自绘的 .tech-toast 已废弃（模板统一使用 static/js/toast.js + toast.css），
@@ -1586,7 +1594,7 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 文末收束：2–4 张强调色小卡（主色 5% 叠加，与评论区回复区同源）。
    桌面两列、移动端单列；标题两行截断，日期/时长放同侧副信息位，
    既能承担「继续读」的入口，又不会比正文更抢眼。 */
-.tech-related { margin: 22px 0 0; }
+.tech-related { margin: 24px 0 0; }
 /* 标题只作用于文章页相关推荐：首页「精选推荐」复用 .tech-related-title 类，
    不能跟着一起缩小 */
 .tech-related .tech-related-title {
@@ -2316,8 +2324,9 @@ html { touch-action: manipulation; }
 }
 
 /* ── 友链页底部介绍区 ── */
-/* 上边距对齐全站节奏：与 .tech-page-head 到内容的 28px 同档（原 40px 超出全页比例） */
-.tech-links-extra { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--border); }
+/* 上边距并入全站区块节奏 24px：与下方 padding-top 24 对称，
+   分隔线上下留白一致（原 28 / 24 略偏上） */
+.tech-links-extra { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
 .tech-links-intro p { margin: 0 0 12px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
 .tech-links-intro p:last-child { margin-bottom: 0; }
 .tech-links-intro a { color: var(--accent); text-decoration: none; }
@@ -2328,7 +2337,7 @@ html { touch-action: manipulation; }
   gap: 0 40px;
 }
 .tech-links-rules .tech-links-section { min-width: 0; }
-.tech-links-section { margin-top: 28px; }
+.tech-links-section { margin-top: 24px; }
 .tech-links-section h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; color: var(--text); }
 .tech-links-section ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
 .tech-links-section li { overflow-wrap: anywhere; }
@@ -2730,10 +2739,26 @@ html { touch-action: manipulation; }
     justify-content: center;
     font-size: 14px;
   }
+  /* 次操作不套 44px 盒子：
+     原先 min-height:44 会让 22px 高的文字在 44px 里垂直居中，文字下面凭空多出 11px，
+     再叠表单的 18px 下内距与「申请须知」的外边距，下方空出约 55px，
+     而上方的按钮到文字只有 24px —— 文字像是悬在两者之间。
+     现在只留文字行高 + 4px 呼吸，靠伪元素把点击热区补到 44px（上下各探 6px，
+     不会压到上方按钮的 -4px 热区）。 */
   .tech-form-actions .tech-page-action {
+    position: relative;
     justify-content: center;
-    min-height: 44px;
+    min-height: 0;
+    padding: 4px 0;
     font-size: 14px;
+  }
+  .tech-form-actions .tech-page-action::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -6px;
+    bottom: -6px;
   }
 }
 
@@ -3669,8 +3694,9 @@ html { touch-action: manipulation; }
 }
 
 /* ── 友链申请须知 ── */
+/* 与全站区块节奏一致：表单 → 须知 24px（移动端另有 16px 覆盖） */
 .tech-apply-notes {
-  margin-top: 28px;
+  margin-top: 24px;
   padding: 20px 22px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -3720,7 +3746,9 @@ html { touch-action: manipulation; }
     grid-row: 1;
   }
   .tech-reader-quote { -webkit-line-clamp: 3; line-clamp: 3; }
-  .tech-apply-notes { padding: 16px; }
+  /* 表单下方的「申请须知」跟表单更紧：移动端纵向本来就长，
+     28px 的卡片间距会把「返回友链」和须知拉成两个孤立区块 */
+  .tech-apply-notes { padding: 16px; margin-top: 16px; }
 }
 
 /* ── 留言榜单：页头说明与前三名 ── */
@@ -4292,7 +4320,10 @@ html.tech-external-open { overflow: hidden; }
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  margin-top: 4px;
+  /* 间距统一交给父级 .tech-home-head-main 的 gap（8px）。
+     原先这里额外 +4px，会让「标题 → 药丸」比「kicker → 标题」多 4px（8 vs 12）；
+     药丸自身已有 4px 上下内边距，视觉呼吸足够，不再叠加外边距 */
+  margin-top: 0;
 }
 /* 与侧栏「热门标签」同一套药丸语言：无边框、全圆角、6% 浅底。
    统计项不是链接，所以只统一形状，不加 hover/按压反馈，数字仍加粗突出 */
@@ -4789,8 +4820,9 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 /* ═══════════════════════════════════════════════
    文章阅读卡 + 嵌套卡片去重
    标题/元信息/标签已移出卡片，落在页面底色上；
-   正文与底部操作收进同一张浅色卡，圆角 6px，
-   正文左右边缘与卡内 padding 对齐
+   正文收进浅色卡，圆角 6px，正文左右边缘与卡内 padding 对齐，标签收在同一张卡底部；
+   文末操作（分享 / 复制 / 返回 + 许可）单独一张同款卡，
+   间距与「上一篇 / 下一篇」「相关推荐」同一套卡片节奏
    ═══════════════════════════════════════════════ */
 .tech-post-main {
   box-sizing: border-box;
@@ -4800,9 +4832,12 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 }
 @media (max-width: 767px) {
   .tech-post-main { padding: 16px; }
+  /* 操作卡内距跟随正文卡收紧，左右仍与正文左边缘对齐 */
+  .tech-post-footer-card { padding: 14px 16px; }
 }
 @media (max-width: 360px) {
   .tech-post-main { padding: 14px 12px; }
+  .tech-post-footer-card { padding: 12px; }
 }
 /* 无目录文章：正文首行行高在字形上方多出 ~4px leading，
    视觉上边距（卡边→文字 30px）大于下边距（卡边→按钮 26px）；
@@ -5163,16 +5198,19 @@ body::after {
   .tech-home-grid { gap: var(--home-gap); }
 }
 /* 报头外层还有 .tech-shell，用后代选择器而不是 >。
-   统计药丸改成 20px 高后，底部到报头细线只剩 31px（单栏 15px / 窄屏 11px），
-   视觉上贴线；这里补足内部底部留白，外部 margin 仍由 --home-gap 控制。
-   分界用 920px（报头两列→堆叠），不能跟 --home-gap 的 1000px 分界混用，
-   否则 921~1000px 仍是双栏却按窄屏取值，反而更贴线 */
+   统计药丸改成 20px 高后，底部到报头细线的留白按区块间距 24px 收口
+   （原 42px 偏高：药丸只有 20px 高，下方空出两倍高度，整块报头显得头轻脚重）。
+   再加 4px 做视觉补偿，让「墨迹到墨迹」上下相等：
+     · 底部 64px 彩条 bottom:-1px / height:3px，上沿侵入 padding-bottom 2px；
+     · 顶部 kicker 字号 12px 落在 20.4px 行盒里，墨迹顶比行盒顶再低 2px。
+   于是 padding-bottom = 24 + 2 + 2 = 28px，肉眼量到的上下间距都是 26px。
+   外部 margin 仍由 --home-gap 控制 */
 .tech-main:has(.tech-home-grid) .tech-home-head {
   margin-bottom: var(--home-gap);
-  padding-bottom: 42px;
+  padding-bottom: 28px;   /* 24 + 彩条侵入 2px + 顶部行距 2px */
 }
 @media (max-width: 920px) {
-  .tech-main:has(.tech-home-grid) .tech-home-head { padding-bottom: 24px; }
+  .tech-main:has(.tech-home-grid) .tech-home-head { padding-bottom: 24px; } /* 20 + 4 */
 }
 .tech-home-grid .tech-post-item { margin-bottom: var(--home-gap); }
 .tech-home-grid .tech-post-item:last-child { margin-bottom: 0; }

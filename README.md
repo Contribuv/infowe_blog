@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.3-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.3)
+[![version](https://img.shields.io/badge/version-3.9.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.4)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,27 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.3**
+当前版本：**v3.9.4**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.4
+
+- **文章底部操作区独立成卡**：文末「分享 / 复制 / 返回 + 本文许可」移出正文卡，改成与正文同款的浅底卡；文章标签留在正文卡内作为文章属性的收尾，不再跟着操作走
+- **文章页文末间距统一 24px**：正文卡 → 操作卡 → 上一篇/下一篇 → 相关推荐 → 评论五段全部等距（此前 20 / 24 / 22 / 24 四个值混用，62px 高的操作卡重心偏上）
+- **首页报头留白按视觉补偿**：底部内间距 42px → 28px；其中 24px 是区块节奏，另 4px 补偿「64px 彩条上沿侵入 2px + kicker 行盒顶部行距 2px」，使肉眼量到的上下留白同为 26px
+- **首页报头内部行距统一**：去掉统计药丸额外的 `margin-top: 4px`，三行间距统一走父级 `gap: 8px`（此前 8 / 12 不一致）
+- **友链页三处间距并入 24px**：分组之间、底部介绍区分隔线上方、申请表单到「申请须知」不再各用 28px；分隔线上下留白现在对称
+- **窄屏目录标题竖条改为 flex 子项**：去掉 `position: absolute` + 写死的 `top: 14px` 和 `translateY(-50%)`，改由父级 `align-items: center` 与文字行盒一起居中；实测竖条与文字中心偏差由 0.85px 降到 0.15px，文字左边距仍是 14px
+
+<details>
+<summary><b>历史版本（v3.9.3 及更早，点击展开）</b></summary>
 
 ### v3.9.3
 
 - **移动端分页精简**：窄屏（≤768px）只保留 4 个页码（首页 / 当前 / 后一 / 末页）加「上一页 / 下一页」，其余页码与省略号隐藏；5 个列表模板（首页 / 文章 / 项目 / 读者榜 / 读者详情）统一用可见页标记类实现，桌面分页不变
 - **移动端目录样式收紧**：内联目录标题改为与正文区块标题同一套语言（14px / 600 + 左侧主色条，竖线对齐文字行中心）；上内距归零使「目录」文字到卡顶与卡底留白一致；条目行高 40px 收紧到 32px，末条到底部分隔线的空隙 12px 收到 6px
 - **文章页顶部留白统一**：卡片内距改为上下对称 20px（原 26px 28px），正文首行行高 leading 用负 margin 抵消（含 PC 端目录 fixed 悬浮时 `:first-child` 命中不了的相邻选择器补丁）；头部与卡片间距 PC 端 8px、标题到 meta 双排 12px，meta → 正文首字 PC 与移动端同为 32px
-
-<details>
-<summary><b>历史版本（v3.9.2 及更早，点击展开）</b></summary>
 
 ### v3.9.2
 
