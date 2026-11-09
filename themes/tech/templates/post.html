@@ -11,19 +11,20 @@
 <div class="tech-reading-progress" id="readingProgress" data-reading-target=".tech-post-body" aria-hidden="true"></div>
 
 <div class="tech-post-wrap">
-<!-- 文章头部：落在页面底色上，与下方阅读卡分离；左右内距与正文对齐 -->
-<header class="tech-post-header">
-    <h1 class="tech-post-title-lg">{{ post.title }}</h1>
-    <div class="tech-post-meta-lg">
-        <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
-        {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
-        <span>{{ post.read_time }} 分钟阅读</span>
-        <span>{{ post.views }} 次浏览</span>
-    </div>
-</header>
-
 <div class="tech-post-layout">
 <article data-post-id="{{ post.id }}" class="tech-post-main">
+    <!-- 文章头部收进阅读卡：标题与 meta 在卡内顶部，
+         用 1px 细分隔线与下方内容分区（替代此前两张卡之间的缝隙） -->
+    <header class="tech-post-header">
+        <h1 class="tech-post-title-lg">{{ post.title }}</h1>
+        <div class="tech-post-meta-lg">
+            <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
+            {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
+            <span>{{ post.read_time }} 分钟阅读</span>
+            <span>{{ post.views }} 次浏览</span>
+        </div>
+    </header>
+
     <!-- 目录：≥1400px fixed 悬浮右侧；窄屏内联折叠框，显示在标题下方、正文之前 -->
     {% if toc %}
     <aside class="tech-toc-sidebar" aria-label="目录">

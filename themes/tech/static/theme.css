@@ -917,18 +917,12 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 
 /* TOC：窄屏内联折叠，≥1400px 变成右侧固定文字索引。
    视觉参考「左侧高亮线」式目录：目录本身不画卡片，只靠字色与 2px 左边线
-   区分当前章节；窄屏才保留折叠，并用上下两条 hairline 作为可点区域边界。 */
+   区分当前章节；窄屏才保留折叠。横线由下面的断点规则决定：
+   折叠态不画线，展开态才画（标题区已有分隔线，见 989 附近） */
 .tech-toc-sidebar { margin: 16px 0; }
-/* 标题移出卡片后，内联目录成为卡内第一块：卡自身的 padding 已经留出上边距，
-   再叠 16px margin 会让「目录」离卡顶远过正文，直接从 0 开始 */
-.tech-post-main > .tech-toc-sidebar:first-child { margin-top: 0; }
 
 .tech-toc {
   border: 0;
-  /* 内联目录只保留下边线：标题区在卡外、卡顶已是明确边界，
-     再画 border-top 会在卡内多出一条悬空的横线 */
-  border-top: 0;
-  border-bottom: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
 }
@@ -986,23 +980,39 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   font-weight: 500;
 }
 
-/* 窄屏折叠目录：保留目录自己的底边线，作为目录与正文之间的一条分隔带。
-   折叠时去掉 sidebar 的上间距，让「目录」文字在卡顶与下边线之间居中；
-   展开时仍是原来的 16px 间距，避免列表贴着目录标题。 */
+/* 窄屏折叠目录的纵向节奏（标题区已收进阅读卡）。
+   规则一句话：线永远贴着正文上沿——有目录时，标题线让给目录的下边线，
+   折叠/展开都保留，正文上方始终只有一条线，切换时也不会跳 1px。
+
+   有目录（折叠，默认）：
+     meta → 20px → 「目录」文字 → 10px → 线 → 20px → 正文
+   有目录（展开）：
+     meta → 20px → 「目录」文字 → 列表 → 6px → 线 → 20px → 正文
+   无目录（沿用标题线）：
+     meta → 20px → 标题线 → 20px → 正文 */
 @media (max-width: 1399px) {
-  .tech-toc { border-bottom: 0; }
-  .tech-toc[open] { border-bottom: 1px solid var(--border); }
-  /* 展开时也不再叠加 16px 上间距：卡片自身 padding 已是边界，再多一段会让「目录」悬空 */
-  .tech-toc-sidebar { margin-top: 0; }
+  .tech-toc { border-bottom: 1px solid var(--border); }
+  /* 有目录时标题区不画线、也不留下内距：meta 到「目录」文字 20px
+     （header margin 10 + 摘要上内距 10），线交给目录下沿 */
+  .tech-post-main:has(.tech-toc-sidebar) .tech-post-header {
+    margin-bottom: 10px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  /* 目录线 → 正文 20px，与无目录文章的「标题线 → 正文 20px」同一节奏 */
+  .tech-toc-sidebar { margin: 0 0 20px; }
   /* 窄屏/移动端目录标题：原 12px + 字间距的「小标签」在大号正文旁显得单薄，
      改为与正文区块标题同一套语言（14px / 600 + 左侧主色条） */
   .tech-toc-summary {
     justify-content: flex-start;
     gap: 8px;
+    /* 行盒 20 + 上下内距 10 = 40px，与原来 min-height:40 的触控高度一致，
+       但文字改成真正的上下居中（原来 10px 只加在底部，文字贴着行盒上沿） */
+    min-height: 0;
+    padding: 10px 0 10px 2px;
+    line-height: 20px;
     /* 左内距 2px 只做视觉留白：竖条 4px + gap 8px 接手原来的 14px，
        文字总左边距仍是 14px，与下方目录条目对齐 */
-    min-height: 40px;
-    padding: 0 0 10px 2px; /* 上内距归零：目录文字到卡顶 = 卡片内距 16px，与卡底一致 */
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0;
@@ -1021,10 +1031,6 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   .tech-toc-body { padding-bottom: 6px; }
   /* 窄屏条目收紧行高：40px 触控行在整页列表里显得太松，32px 仍足够可点 */
   .tech-toc-body a { min-height: 32px; padding: 4px 0 4px 12px; }
-}
-@media (max-width: 1000px) {
-  .tech-toc-sidebar:has(.tech-toc:not([open])) { margin-top: 0; }
-  .tech-toc:not([open]) { border-bottom: 1px solid var(--border); }
 }
 
 @media (min-width: 1400px) {
@@ -1072,21 +1078,19 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   .tech-toc-body ul ul ul ul a { padding-left: 44px; }
 }
 
-/* 文章头部改成与正文卡同款卡片：标题 + meta 是同一篇文章的身份信息，
-   放一张卡里，不再拆成两张（meta 只有一行 13px，单独成卡会空且切断从属关系）。
-   卡片化之后，标题不必再靠 padding 去模拟与正文对齐——
-   卡片边界天然对齐，标题/日期/正文/标签/按钮全部落在同一列。
-   与正文卡隔 12px：两者是同一篇的两段（封面 → 内容）；
-   操作卡 / 上下篇 / 相关推荐之间才是 24px（不同模块）。
-   padding 与 .tech-post-main 完全对应（28 / 16 / 12），两侧文字才能同列 */
+/* 文章头部收进阅读卡：标题 + meta 与正文同处一张卡，
+   卡内用 1px 细分隔线把「标题区」和「内容区」分开——
+   分隔线替代了此前两张卡之间的 12px 缝隙，卡片序列少一次切换。
+   卡片内距由 .tech-post-main 统一提供（28 / 16 / 12），
+   header 自己不再需要水平内距，标题 / meta / 正文天然同列。
+   标题区下方：20px + 1px 线 + 20px（margin），比原来两张卡的 12px 缝更从容 */
 .tech-post-header {
-  margin: 0 0 12px;
-  padding: 20px 28px;
-  background: var(--card-bg);
-  border-radius: var(--card-radius);
+  margin: 0 0 16px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
 }
-@media (max-width: 767px) { .tech-post-header { padding: 16px; } }
-@media (max-width: 360px) { .tech-post-header { padding: 14px 12px; } }
 .tech-post-title-lg { font-size: 24px; font-weight: 700; line-height: 1.35; margin: 0 0 12px; } /* 双排间距 10 → 12，与 meta 行拉开 */
 /* PC 宽屏：文章标题提到 28px，与 780px 版心、16px 正文拉开层级；
    正文 h1 已压到 20px，不会重现「双标题打架」；移动端维持 24px，避免小屏换行过多 */
@@ -1485,10 +1489,15 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   background: var(--card-bg);
   border-radius: var(--card-radius);
 }
-/* 标签从页头移到正文末尾：留在正文卡内、作为文章的属性收尾（不跟着操作卡走），
-   卡底 padding 接管下方留白，上间距与正文末段拉开 */
+/* 标签从页头移到正文末尾：留在正文卡内、作为文章的属性收尾（不跟着操作卡走）。
+   上方补一条 1px 分隔线，与标题区那条对称——正文被两条线夹住，
+   标签读作「文末属性」，而不是正文最后一段的尾巴。
+   间距与标题线同一套：正文末段 → 20px → 线 → 20px → 标签 */
 .tech-post-tags-bottom {
-  display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 0;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 20px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }
 .tech-post-actions {
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
@@ -1592,6 +1601,25 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 @media (max-width: 768px) {
   /* 触屏下比桌面放宽 4px；配合 .tech-btn::after 的 -4px 热区约 42px */
   .tech-post-footer-card .tech-btn { height: 34px; }
+}
+
+/* ≤767px：三个操作等宽，许可文字独占一行居中。
+   原来按钮挤在左边、许可折行后也贴左，卡片右侧空出一大块，像没排完版。
+   按钮设 140px 上限：手机（<484px）正好铺满，更宽的窄屏则整组居中，
+   不会在 767px 处长成三块 200px 的大板砖 */
+@media (max-width: 767px) {
+  .tech-post-footer-card .tech-post-actions { gap: 8px; justify-content: center; }
+  .tech-post-footer-card .tech-btn {
+    flex: 1 1 0;
+    max-width: 140px;
+    min-width: 0;
+    justify-content: center;
+  }
+  .tech-post-footer-card .tech-license {
+    flex: 1 0 100%;
+    margin: 8px 0 0;
+    text-align: center;
+  }
 }
 
 /* 注：早期自绘的 .tech-toast 已废弃（模板统一使用 static/js/toast.js + toast.css），
@@ -2510,8 +2538,6 @@ html { touch-action: manipulation; }
   .tech-form { padding: 14px 14px 16px; }
   .tech-input, .tech-textarea { font-size: 16px; }
   .tech-skill-list { grid-template-columns: 1fr; }
-  /* 许可文字折行后不再推右，避免单独悬于右侧 */
-  .tech-license { margin-left: 0; }
 }
 
 /* ≤767px：文章页移动排版：
@@ -4710,21 +4736,8 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
 .tech-page-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 
 /* ── 柔和主按钮（.tech-btn-soft）──
-   淡 accent 底 + accent 文字 + 淡 accent 描边，替代高对比实心 primary。
-   用于首页「查看全部归档」、友链申请「提交申请」这类需要按钮形态、
-   但在安静页面里不应过于抢眼的主操作；深浅两套主题由 color-mix 自动适配。 */
-.tech-btn.tech-btn-soft {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
-  color: color-mix(in srgb, var(--accent) 76%, var(--text));
-}
-@media (hover: hover) and (pointer: fine) {
-  .tech-btn.tech-btn-soft:hover {
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-    color: color-mix(in srgb, var(--accent) 86%, var(--text));
-  }
-}
+   定义已移到下方「分页 / 柔和主按钮」区块：
+   必须排在 .tech-btn 通用 hover 规则之后，否则 accent 反馈会被 --accent-weak 覆盖 */
 
 /* ── 移动端悬浮按钮瘦身：视觉 34，透明热区 44 ── */
 @media (max-width: 768px) {
@@ -4846,15 +4859,9 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   .tech-post-main { padding: 14px 12px; }
   .tech-post-footer-card { padding: 12px; }
 }
-/* 无目录文章：正文首行行高在字形上方多出 ~4px leading，
-   视觉上边距（卡边→文字 30px）大于下边距（卡边→按钮 26px）；
-   负 margin 抵消这 4px。有目录时 body 不是首子元素，不受影响 */
-.tech-post-main > .tech-post-body:first-child { margin-top: -4px; }
-/* PC 端目录为 fixed 悬浮：DOM 中 sidebar 仍是首子元素，上面的规则命中不了，
-   用相邻选择器补上（窄屏目录内联展示在正文之前，不受此条影响） */
-@media (min-width: 1400px) {
-  .tech-post-main > .tech-toc-sidebar:first-child + .tech-post-body { margin-top: -4px; }
-}
+/* 标题区已收进阅读卡并成为首子元素，正文不再与卡顶直接相邻：
+   原先用来抵消正文首行 ~4px leading 的负 margin 已无命中对象，
+   标题分隔线到正文的 20px 就是实际间距（2026-11 合并版） */
 
 /* 关于页时间线：外层 about-section 已是色卡，内层不再套卡 */
 .tech-about-section .tech-timeline-item {
@@ -5044,23 +5051,46 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   }
 }
 
-/* ── 分页 / 柔和主按钮：统一为卡片底色 + 卡片圆角 ── */
-.tech-page-btn,
-.tech-btn.tech-btn-soft {
+/* ── 分页按钮：卡片底色 + 卡片圆角 ── */
+.tech-page-btn {
   border: 0;
   border-radius: var(--card-radius);
   background: var(--card-bg);
   color: var(--text);
 }
 @media (hover: hover) and (pointer: fine) {
-  .tech-page-btn:hover,
-  html .tech-btn.tech-btn-soft:hover {
+  .tech-page-btn:hover {
     background: var(--card-bg-hover);
     border-color: transparent;
     color: var(--text);
   }
   /* 上下篇卡片与相关推荐同一套悬停反馈：底色加深 + 标题转主色 */
   .tech-pager-link:not(.tech-pager-empty):hover .tech-pager-title {
+    color: var(--accent);
+  }
+}
+
+/* ── 柔和主按钮（.tech-btn-soft）──
+   淡 accent 底 + accent 描边 + accent 文字，替代高对比实心 primary。
+   用于「查看全部归档」「提交申请」「提交评论」这类需要按钮形态、
+   但在安静页面里不应过于抢眼的主操作；深浅两套主题由 color-mix 自动适配。
+
+   必须放在这里（.tech-btn 通用 hover 之后）：
+   通用规则 html .tech-btn:not(.tech-btn-primary):hover 是 (0,3,2)，
+   且底色用极淡的 --accent-weak（浅色主题 #e6f0fb 几近于白），
+   排在前面或特异性不足都会把 accent 反应吃掉，hover 看起来「没反应」。 */
+.tech-btn.tech-btn-soft {
+  border-radius: var(--card-radius);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+  color: color-mix(in srgb, var(--accent) 84%, var(--text));
+}
+@media (hover: hover) and (pointer: fine) {
+  /* 选择器必须压过 [data-theme="dark"] .tech-btn:not(.tech-btn-primary):hover (0,4,0)，
+     否则 dark 下 hover 底色会被换成 accent+bg 的淡混色，蓝意全无 */
+  html .tech-btn.tech-btn-soft:not(.tech-btn-primary):hover {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 82%, transparent);
     color: var(--accent);
   }
 }

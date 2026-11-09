@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.4-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.4)
+[![version](https://img.shields.io/badge/version-3.9.5-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.5)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.4**
+当前版本：**v3.9.5**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.5
+
+- **评论表单底部重排**：`.foot` 拆成「工具行（表情 / 图片 / 勾选项）」与「动作行（字数 / 快捷键提示 / 提交按钮）」两个语义容器，废弃 `order:-1` + `flex-basis:100%` 的换行硬凑；提交按钮不再悬在容器中间，实测右对齐间隙由 81px 收为 0
+- **表单间距统一为一个节奏**：新增 `--cmt-gap: 10px` / `--cmt-pad: 12px`，内容区改 flex 列布局由 `gap` 统一控制，清掉 textarea / row / 身份条各自叠加的 `margin-bottom`；动作行以 1px 细线与工具行分组
+- **修复 flex 间距静默失效**：`.cmt-box[open] .cmt-box-body{display:block}` 特异性 `(0,3,0)` 压过新写的两 class 选择器，导致 `display:flex` 不生效、`gap` 不产生间距；改用带 `[open]` 的选择器，并移除被压住的重复规则
+- **移动端对齐与触控热区**：工具控件统一 32px，提交按钮移动端 40px + 44px 透明热区、桌面 36px；表情面板宽度限制为 `calc(100vw - 40px)`；实测 `.foot` 内横向溢出为 0
+- **评论提交按钮回到黑白配**：恢复 v3.9.1 的 `color-mix(--c-text 76%, --bg)` 方案，与评论分页 `.cmt-page-btn.active` 同色系；浅色深底浅字、深色浅底深字自动反转，撤掉 WIP 的淡蓝 `.tech-btn-soft`
+- **文章页头部与目录节奏**：标题与 meta 收进阅读卡、以 1px 细线与正文分区；窄屏折叠目录的上下间距与卡片内距统一；基础层 `comments.css` 同步两行结构，避免共享模板在其他主题错位
+
+<details>
+<summary><b>历史版本（v3.9.4 及更早，点击展开）</b></summary>
 
 ### v3.9.4
 
@@ -937,9 +949,6 @@ chown -R www:www var
 - **首页报头内部行距统一**：去掉统计药丸额外的 `margin-top: 4px`，三行间距统一走父级 `gap: 8px`（此前 8 / 12 不一致）
 - **友链页三处间距并入 24px**：分组之间、底部介绍区分隔线上方、申请表单到「申请须知」不再各用 28px；分隔线上下留白现在对称
 - **窄屏目录标题竖条改为 flex 子项**：去掉 `position: absolute` + 写死的 `top: 14px` 和 `translateY(-50%)`，改由父级 `align-items: center` 与文字行盒一起居中；实测竖条与文字中心偏差由 0.85px 降到 0.15px，文字左边距仍是 14px
-
-<details>
-<summary><b>历史版本（v3.9.3 及更早，点击展开）</b></summary>
 
 ### v3.9.3
 
@@ -961,9 +970,6 @@ chown -R www:www var
 - **favicon 缓存修复**：前台与后台所有模板的图标链接带上 mtime 版本参数（`?v=`），替换图标后无需清浏览器缓存；`/favicon.ico` 根路径重定向从 301 改为 302 并附带版本号，避免浏览器永久缓存旧跳转
 - **页面缓存自动失效**：缓存元数据记录资源签名（模板 / 主题 CSS / favicon 的最新 mtime），签名变化即作废旧 HTML——此前改模板或样式后，匿名访客最长 30 分钟仍看到旧页面
 
-<details>
-<summary><b>历史版本（v3.9.0 及更早，点击展开）</b></summary>
-
 ### v3.9.0
 
 - **全站卡片色统一到同一档**：深色主题的卡片底色由 6% 降回文字色 3% 叠加、悬停 5%，与评论区楼层卡完全同色；文章卡、列表卡、项目卡、侧栏卡、上下篇卡、归档条目全部消费同一组 `--card-bg` / `--card-bg-hover` 令牌，以后调深浅只改主题里一处
@@ -977,16 +983,10 @@ chown -R www:www var
 - **favicon 统一为 `favicon.ico`**：前台、后台与 403/404/50x 页面全部改指 `favicon.ico`，`favicon.svg` 已删除；补 `/favicon.ico` 根路径重定向，避免浏览器与阅读器直接请求根路径时产生 404
 - **十年之约资源本地化**：页脚 logo 与关于页虫洞图下载到主题目录，不再依赖外站 CDN
 
-<details>
-<summary><b>历史版本（v3.8.13 及更早，点击展开）</b></summary>
-
 ### v3.8.13
 
 - 后台「博主设置」删除重复的「首屏标语」输入项：首页标语统一在「主题配置 → 首页标题区」维护，避免同一项设置在两处都能写、互相覆盖
 - `home_kicker` 从博主设置的保存白名单中移除：站点设置页保存其它项时不再触碰该字段，已配置的标语不会被清空
-
-<details>
-<summary><b>历史版本（v3.8.12 及更早，点击展开）</b></summary>
 
 ### v3.8.12
 
@@ -996,26 +996,17 @@ chown -R www:www var
 - **归档年/月浮窗毛玻璃底色由 72% 提到 92%**：浮窗下方正文不再透出糊住年 / 月小字
 - **首页报头（Hero）显示范围可配置**：主题配置新增「首页报头显示」选项，可选全部显示 / 仅 PC / 仅移动端 / 都不显示；隐藏时自动补回版心顶部间距，PC 端 Hero 沿用 v3.8.10 的居中样式不变
 
-<details>
-<summary><b>历史版本（v3.8.11 及更早，点击展开）</b></summary>
-
 ### v3.8.11
 
 - 侧栏博主卡改为与「热门标签 / 文章分类」一致的「标题 + 内容」骨架：卡片标题统一为「关于博主」，头像 48px，博主名升到 16.5px 卡片主标题级
 - PC 双栏侧栏滚到粘性范围末端时，最后一张卡片与页脚线留 24px，不再压线
 - 精选徽标由字符 `★` 换成项目统一的 SVG 星标（`static/icons/star.svg`），与全站图标同源；徽标改为 inline-flex，图标与文字垂直居中
 
-<details>
-<summary><b>历史版本（v3.8.10 及更早，点击展开）</b></summary>
-
 ### v3.8.10
 
 - 首页「精选推荐」移除与页头彩条位置冲突的 64px 蓝条，改为细分隔线 + 标题侧短竖标记
 - 精选区与文章列表的横线两侧留白对称并跟随断点（PC 14px / ≤1000px 8px），与组内卡片间距一致；清理被后置色卡规则覆盖的死声明与过时注释
 - PC 双栏开启精选时侧栏下移 36px，首张侧栏卡与首张文章卡顶部对齐
-
-<details>
-<summary><b>历史版本（v3.8.9 及更早，点击展开）</b></summary>
 
 ### v3.8.9
 
@@ -1029,17 +1020,11 @@ chown -R www:www var
 - 后台内容区锚点统一预留顶栏高度 + 16px 间距，定位后目标完整可见
 - 前台主题本来就有同类处理（`#comments`、标题、楼层均为 72~80px），本次补齐后台这一侧
 
-<details>
-<summary><b>历史版本（v3.8.7 及更早，点击展开）</b></summary>
-
 ### v3.8.7
 
 - 修复移动端后台评论管理「待审核」高亮被切成一截截色带：行级高亮改由整行承担，恢复成一张连续的卡
 - 文件清理页「批量选中」「删除失败」的高亮同步改为整行着色
 - 桌面端表格保持原样：逐单元格着色仍保留，只在卡片化的窄屏改整行
-
-<details>
-<summary><b>历史版本（v3.8.6 及更早，点击展开）</b></summary>
 
 ### v3.8.6
 
@@ -1055,9 +1040,6 @@ chown -R www:www var
 - 评论区与分享面板 4 处悬停下划线改为变色
 - 后台 2 处悬停下划线改为变色
 
-<details>
-<summary><b>历史版本（v3.8.5 及更早，点击展开）</b></summary>
-
 ### v3.8.5
 
 - 修复移动端首页侧栏「十年之约」卡片贴住页脚：底部内距不再被清零，卡片与页脚间距 0 → 24px
@@ -1065,9 +1047,6 @@ chown -R www:www var
 - AI 插件保存条按所在位置区分样式：配置页为独立圆角卡片，模型管理页为卡片页脚
 - AI 插件保存条取消悬浮定位，回归文档流，不再像固定浮层
 - 清理移动端侧栏失效样式：描边/圆角/底色声明早已被后置规则覆盖，注释与实际效果相反
-
-<details>
-<summary><b>历史版本（v3.8.4 及更早，点击展开）</b></summary>
 
 ### v3.8.4
 

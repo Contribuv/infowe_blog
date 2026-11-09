@@ -162,7 +162,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 卡内的 details 不再自带内距，统一由 .cmt-form 的 padding 收口 */
 .cmt-form .cmt-toggle{padding:0}
 .cmt-form .cmt-box[open] .cmt-toggle{padding-bottom:12px}
-.cmt-form .cmt-box-body{padding:0}
+/* 展开态：flex 列布局，间距只由 --cmt-gap 提供。
+   选择器必须带 [open]：上面的 .cmt-box[open] .cmt-box-body{display:block} 是 (0,3,0)，
+   不带 [open] 的两 class 选择器压不过，flex 与 gap 会静默失效。 */
+.cmt-form .cmt-box[open] .cmt-box-body{display:flex;flex-direction:column;gap:var(--cmt-gap);padding:var(--cmt-pad) 0 0}
+.cmt-form .cmt-box-body>*{margin-bottom:0}
 /* 折叠态整卡都是展开热区：内边距与空白处也给手型，避免只有「写评论」可点 */
 .cmt-form:has(.cmt-box:not([open])){cursor:pointer}
 /* ── 折叠态：把 summary 做成「输入框占位条」 ──
@@ -203,22 +207,29 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .cmt-box:not([open]) .cmt-toggle:focus-visible{
   outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak);
 }
-.cmt-form .row{display:flex;gap:9px;margin-bottom:9px}
+.cmt-form{--cmt-gap:10px;--cmt-pad:12px}
+/* 展开态内容区的 flex 布局见上方 .cmt-form .cmt-box[open] .cmt-box-body；
+   tech 主题只加载本文件（不加载 comments.css），令牌必须在本文件定义 */
+.cmt-form .row{display:flex;gap:9px}
 /* 只作用于文本类输入框：复选框保留原生外观（否则勾选态没有对勾），由 .chk input 单独控制 */
 .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
-.cmt-form textarea{min-height:76px;resize:vertical;margin-bottom:10px}
+.cmt-form textarea{min-height:76px;resize:vertical}
 .cmt-form input::placeholder,.cmt-form textarea::placeholder{color:var(--c-text3)}
 .cmt-form input:focus,.cmt-form textarea:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak)}
-.cmt-form .foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.cmt-form .chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--c-text3);cursor:pointer;user-select:none}
+/* 表单底部两行：工具行是输入辅助，动作行是提交；分隔线用主题细线，
+   间距统一由 --cmt-gap / --cmt-pad 提供（定义在本文件 .cmt-form） */
+.cmt-form .foot{display:flex;flex-direction:column;gap:var(--cmt-gap,10px)}
+.cmt-form .cmt-foot-tools{display:flex;align-items:center;gap:var(--cmt-gap,10px);flex-wrap:wrap;min-height:32px}
+.cmt-form .cmt-foot-actions{display:flex;align-items:center;gap:var(--cmt-gap,10px);border-top:1px solid var(--c-hairline);padding-top:var(--cmt-pad,12px)}
+.cmt-form .chk{display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:12.5px;color:var(--c-text3);cursor:pointer;user-select:none}
 .cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
 /* 邮箱必填被拦截时的红边：提示文案交给全局 Toast（底部弹出），这里只标出是哪个字段 */
 .cmt-form input.is-invalid,.cmt-form textarea.is-invalid{border-color:var(--danger,#b4232f);box-shadow:0 0 0 3px rgba(180,35,47,.14)}
-.cmt-form .count{margin-left:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
+.cmt-form .count{margin-right:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
-.cmt-form .kbd-hint{margin-left:8px;font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
-.cmt-form .submit{padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
+.cmt-form .kbd-hint{font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
+.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;min-height:36px;box-sizing:border-box;padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
 /* 深色 accent 实底改深字：白字仅 2.52:1，深字 7.05:1（与 .tech-btn-primary 同款） */
 [data-theme="dark"] .cmt-form .submit{color:#16181d}
 /* hover：浅色加深、深色提亮（与 .tech-btn-primary 同策略） */
@@ -271,7 +282,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-thread{padding:16px 10px 13px}
   .cmt-replies{margin-left:0;padding-left:calc(var(--av-root) - var(--av-reply))}
   .cmt-replies .cmt-item+.cmt-item{margin-top:14px}
-  .cmt-form .row{flex-direction:column;gap:7px;margin-bottom:8px}
+  .cmt-form .row{flex-direction:column;gap:7px}
   .cmt-text{font-size:14px;line-height:1.75}
   .cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.75}
   .cmt-author{font-size:14px}
@@ -291,10 +302,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{-webkit-appearance:none;appearance:none}
   /* 焦点态只保留细一圈的光环：3px 在深色下像铺了一块底，移动端收窄到 2px */
   .cmt-form input:focus,.cmt-form textarea:focus{box-shadow:0 0 0 2px var(--c-accent-weak)}
-  /* 字数统计在窄屏独占一行并右对齐排在工具行上方：避免与提交按钮挤在一起 */
-  .cmt-form .count{order:-1;flex-basis:100%;margin-left:0;text-align:right}
-  /* 触屏无 Ctrl 键，窄屏隐藏快捷提交提示，避免独占行只剩它一个 */
+  /* 动作行字数左 / 提交右；触屏无 Ctrl 键隐藏提示，按钮补足 44px 热区 */
   .cmt-form .kbd-hint{display:none}
+  .cmt-form .submit{min-height:40px;position:relative}
+  .cmt-form .submit::after{content:"";position:absolute;inset:-2px}
 }
 
 /* ── 邮箱字段：纯数字 QQ 号下拉补全 @qq.com + 头像预览 ── */
@@ -308,9 +319,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 /* ── 表情选择：精选 Unicode emoji（面板由 comments.js 生成） ── */
 .cmt-emoji{position:relative;flex:none}
-.cmt-emoji-btn{width:30px;height:30px;font-size:17px;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;padding:0;transition:border-color .15s}
+.cmt-emoji-btn{width:32px;height:32px;font-size:17px;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;padding:0;transition:border-color .15s}
 @media (hover:hover) and (pointer:fine){ .cmt-emoji-btn:hover{background:var(--c-reply);border-color:var(--c-accent)} }
-.cmt-emoji-panel{position:absolute;bottom:calc(100% + 8px);left:0;z-index:30;width:min(300px,calc(100vw - 56px));max-height:220px;overflow-y:auto;padding:10px 12px;background:var(--c-sub);border:1px solid var(--c-border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16)}
+.cmt-emoji-panel{position:absolute;bottom:calc(100% + 8px);left:0;z-index:30;width:min(300px,calc(100vw - 40px));max-height:220px;overflow-y:auto;padding:10px 12px;background:var(--c-sub);border:1px solid var(--c-border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.16)}
 /* 滚动条细化：表情面板与浮窗表单区都是小高度滚动容器（220px / 45dvh），
    Chromium 默认 ~15px 粗滚动条在其中非常突兀——thin + 6px 圆角半透明滑块。
    移动端浮窗列表区走「滚动条不显示」，foot/面板不受影响，细条继续可用 */
@@ -351,7 +362,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 /* ── 图片上传按钮（与表情按钮同尺寸，放在表情右侧） ── */
 .cmt-imgup{position:relative;flex:none}
-.cmt-imgup-btn{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;padding:0;color:var(--c-text2);transition:border-color .15s,color .15s}
+.cmt-imgup-btn{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;padding:0;color:var(--c-text3);transition:border-color .15s,color .15s}
 .cmt-imgup-btn svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (hover:hover) and (pointer:fine){ .cmt-imgup-btn:hover{background:var(--c-reply);border-color:var(--c-accent);color:var(--c-accent)} }
 .cmt-imgup-btn[disabled]{opacity:.55;cursor:default}
@@ -417,6 +428,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   border-radius:0;
   padding:2px 0;
 }
+/* 折叠态高度收到一条输入框：18px 上下内距是给展开后的 textarea 留的，
+   折叠时整卡只有一行占位语，62.9px 读起来像一张空卡；
+   收到 10px（约 47px），左右仍是 20px，与楼层内容对齐不变 */
+.cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:10px 20px}
 @media (hover:hover) and (pointer:fine){
   .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle{background:transparent}
 }
