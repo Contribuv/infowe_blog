@@ -1072,14 +1072,21 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   .tech-toc-body ul ul ul ul a { padding-left: 44px; }
 }
 
-/* 文章头部已移出阅读卡：直接与 780 版心/卡片左缘对齐（与归档页页头一致），
-   不再额外缩进到正文文字线；下边线交给卡片自身边界，间距与归档页相同 16px */
-.tech-post-header { margin: 0 0 16px; padding: 0; }
-/* PC 端头部与卡片间距收紧：头部在卡外，16px + 卡内距 26px 叠起来约 46px，
-   深色下卡片边界几乎不可见，整段读作一个大空档；收窄到 10px */
-@media (min-width: 769px) {
-  .tech-post-header { margin-bottom: 12px; } /* 顶(导航→标题 24px)：底(meta→正文 32px) 取中，头块不再贴卡 */
+/* 文章头部改成与正文卡同款卡片：标题 + meta 是同一篇文章的身份信息，
+   放一张卡里，不再拆成两张（meta 只有一行 13px，单独成卡会空且切断从属关系）。
+   卡片化之后，标题不必再靠 padding 去模拟与正文对齐——
+   卡片边界天然对齐，标题/日期/正文/标签/按钮全部落在同一列。
+   与正文卡隔 12px：两者是同一篇的两段（封面 → 内容）；
+   操作卡 / 上下篇 / 相关推荐之间才是 24px（不同模块）。
+   padding 与 .tech-post-main 完全对应（28 / 16 / 12），两侧文字才能同列 */
+.tech-post-header {
+  margin: 0 0 12px;
+  padding: 20px 28px;
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
 }
+@media (max-width: 767px) { .tech-post-header { padding: 16px; } }
+@media (max-width: 360px) { .tech-post-header { padding: 14px 12px; } }
 .tech-post-title-lg { font-size: 24px; font-weight: 700; line-height: 1.35; margin: 0 0 12px; } /* 双排间距 10 → 12，与 meta 行拉开 */
 /* PC 宽屏：文章标题提到 28px，与 780px 版心、16px 正文拉开层级；
    正文 h1 已压到 20px，不会重现「双标题打架」；移动端维持 24px，避免小屏换行过多 */
