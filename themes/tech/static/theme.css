@@ -4110,12 +4110,13 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   top: 72px;
   align-self: start;
 }
-/* 开启精选时主列开头多出「精选推荐」标题（26px 高 + 10px 下外距 = 36px），
-   侧栏没有这段标题空间，首张卡片会与标题齐平而不是与首张文章卡齐平。
-   PC 双栏下让侧栏整体下移同高，恢复两列卡片基线一致。:has() 保证未开启精选时
-   不生效；窄屏是单列，不受影响。sticky 的吸附行为不受 margin-top 影响。 */
+/* 主列开头恒有分组标题（「精选推荐」或「最新文章」，26px 高 + 14px 下外距 = 40px）。
+   侧栏没有这段标题空间：若首张侧栏卡从 grid 顶部起排，会与标题齐平、比首张文章卡高 40px，
+   两列卡片基线不一致。PC 双栏下让侧栏整体下移 40px，无论是否开启精选，
+   首张侧栏卡都对齐主列首张文章卡（开启精选 -> 首张精选卡；未开启 -> 首张最新卡）。
+   窄屏是单列、侧栏不 sticky，不受影响；sticky 的吸附行为不受 margin-top 影响。 */
 @media (min-width: 1001px) {
-  .tech-home-grid:has(.tech-featured) .tech-sidebar { margin-top: 36px; }
+  .tech-home-grid .tech-sidebar { margin-top: 40px; }
   /* sticky 侧栏滚到粘性范围末端时底边与 grid 底边对齐，而 PC 双栏的
      .tech-main 底部留白为 0，不留这段会让最后一张「十年之约」卡压在页脚线上 */
   .tech-sidebar { padding-bottom: 24px; }
@@ -4541,8 +4542,10 @@ html.tech-external-open { overflow: hidden; }
   border-radius: 2px;
   background: var(--accent) /* 扁平化：装饰条改纯色 */;
 }
-.tech-home-head-main { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-/* 首页标语（kicker）已下线：报头只保留大标题 + 统计，避免顶部堆三层小字 */
+.tech-home-head-main { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+/* 首页标语（kicker）已下线；统计药丸也一并去掉——
+   报头只保留「大标题 + 一行次级说明」，与子页 .tech-page-head 的
+   「.tech-page-title + .tech-page-desc」同构，全站页头从此只有一种结构 */
 .tech-home-title {
   margin: 0;
   font-size: 28px;
@@ -4550,88 +4553,43 @@ html.tech-external-open { overflow: hidden; }
   line-height: 1.25;
   letter-spacing: -.01em;
 }
-.tech-home-stats {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-  /* 间距统一交给父级 .tech-home-head-main 的 gap（8px）。
-     原先这里额外 +4px，会让「标题 → 药丸」比「kicker → 标题」多 4px（8 vs 12）；
-     药丸自身已有 4px 上下内边距，视觉呼吸足够，不再叠加外边距 */
-  margin-top: 0;
-}
-/* 与侧栏「热门标签」同一套药丸语言：无边框、全圆角、6% 浅底。
-   统计项不是链接，所以只统一形状，不加 hover/按压反馈，数字仍加粗突出 */
-.tech-home-stats span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1;
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-}
-.tech-home-stats b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-/* 一言作为报头「落款」：字号略低于标题、颜色降一档，形成头重脚轻的反向平衡 */
+/* 一言作为报头的次级说明行：字号 / 颜色对齐子页 .tech-page-desc（14px 次级色），
+   只是多了一个轮播和出处 */
 .tech-home-head .tech-quote {
-  margin-top: 4px;
+  margin-top: 0;
   justify-content: center;
-  font-size: 13.5px;
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--text-secondary);
+  padding-bottom: 0;
 }
-/* 多栏：报头式两列（左标题 / 右格言），左对齐。
-   底边沿用同一条细线；彩条改到左端，与左对齐的页头语言一致。
-   ≤920px 堆叠回居中版式时再把彩条移回中间（见下方断点） */
+.tech-home-head .tech-quote-src { font-size: 13px; }
+/* 多栏：单列左对齐，结构与子页页头一致（标题在上、说明在下）。
+   底边沿用同一条细线；彩条在左端，与左对齐的页头语言一致 */
 .tech-home-head--multi {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
-  gap: 24px;
-  align-items: center;
-  padding: 24px 0 30px;
+  display: block;
+  padding: 24px 0 16px;
   text-align: left;
   background: none;
   box-shadow: none;
 }
 .tech-home-head--multi::after { left: 0; transform: none; }
 .tech-home-head--multi .tech-home-head-main { align-items: flex-start; }
-.tech-home-head--multi .tech-home-stats { justify-content: flex-start; gap: 8px; }
-.tech-home-head--multi .tech-home-head-quote { min-width: 0; width: 100%; }
 .tech-home-head--multi .tech-quote {
-  margin-top: 0;
-  /* PC 端格言作为报头「落款」靠右收尾：与左侧标题形成左右分栏的平衡；
-     ≤920px 堆叠回居中版式时在下方断点重置为居中 */
-  justify-content: flex-end;
-  text-align: right;
-  flex-wrap: nowrap;
-  padding: 6px 0 0;
-  border-radius: 8px;
-  background: none;
-  border: none;
+  margin-top: 6px;
+  justify-content: flex-start;
+  text-align: left;
 }
+.tech-home-head--multi .tech-quote-text { flex: 1 1 auto; }
 @media (max-width: 920px) {
-  .tech-home-head--multi {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    text-align: center;
-    padding: 20px 0 10px;
-  }
-  .tech-home-head--multi .tech-home-head-main { align-items: center; }
-  .tech-home-head--multi .tech-home-stats,
-  .tech-home-head--multi .tech-quote { justify-content: center; }
-  /* 堆叠回居中版式：格言恢复居中，PC 的右对齐只在大屏两列时成立 */
-  .tech-home-head--multi .tech-quote { text-align: center; }
-  /* 堆叠后回到居中版式：彩条也回到中间，与单栏/子页页头一致 */
-  .tech-home-head--multi::after { left: 50%; transform: translateX(-50%); }
+  /* 多栏窄屏不回到居中：子页页头在窄屏同样是左对齐 */
+  .tech-home-head--multi { padding: 20px 0 14px; }
+  .tech-home-head--multi::after { left: 0; transform: none; }
 }
 @media (max-width: 640px) {
   .tech-home-head { padding: 20px 0 10px; margin-bottom: 12px; }
   /* 移动端首页标题不与子页倒挂：子页 .tech-page-title 是 26px，首页同为 26px */
   .tech-home-title { font-size: 26px; }
-  .tech-home-stats { gap: 6px; }
-  .tech-home-stats span { font-size: 11.5px; }
 }
 
 /* ── 首页报头显示范围（后台「主题配置 → 首页报头显示」）──
@@ -5414,19 +5372,15 @@ body::after {
   .tech-home-grid { gap: var(--home-gap); }
 }
 /* 报头外层还有 .tech-shell，用后代选择器而不是 >。
-   统计药丸改成 20px 高后，底部到报头细线的留白按区块间距 24px 收口
-   （原 42px 偏高：药丸只有 20px 高，下方空出两倍高度，整块报头显得头轻脚重）。
-   再加 4px 做视觉补偿，让「墨迹到墨迹」上下相等：
-     · 底部 64px 彩条 bottom:-1px / height:3px，上沿侵入 padding-bottom 2px；
-     · 顶部 kicker 字号 12px 落在 20.4px 行盒里，墨迹顶比行盒顶再低 2px。
-   于是 padding-bottom = 24 + 2 + 2 = 28px，肉眼量到的上下间距都是 26px。
-   外部 margin 仍由 --home-gap 控制 */
+   注意这段原来按「统计药丸 20px 高 + kicker 行盒 2px」做过 28px 的视觉补偿，
+   而药丸和 kicker 现在都已下线（报头收成「标题 + 一行格言」），补偿不再成立。
+   内容末尾就是格言那一行文字，底部留白对齐子页页头的 12px 节奏即可。 */
 .tech-main:has(.tech-home-grid) .tech-home-head {
   margin-bottom: var(--home-gap);
-  padding-bottom: 28px;   /* 24 + 彩条侵入 2px + 顶部行距 2px */
+  padding-bottom: 14px;
 }
 @media (max-width: 920px) {
-  .tech-main:has(.tech-home-grid) .tech-home-head { padding-bottom: 24px; } /* 20 + 4 */
+  .tech-main:has(.tech-home-grid) .tech-home-head { padding-bottom: 12px; }
 }
 .tech-home-grid .tech-post-item { margin-bottom: var(--home-gap); }
 .tech-home-grid .tech-post-item:last-child { margin-bottom: 0; }
@@ -5436,10 +5390,6 @@ body::after {
 }
 .tech-home-grid .tech-more-wrap { margin: var(--home-gap) 0 0; }
 .tech-home-grid .tech-sidebar { gap: var(--home-gap); }
-/* 分组标题下外距改为 14px，侧栏整体下移量同步改成 40px，保持两列首卡对齐 */
-@media (min-width: 1001px) {
-  .tech-home-grid:has(.tech-featured) .tech-sidebar { margin-top: 40px; }
-}
 
 
 /* ═══════════════════════════════════════════════

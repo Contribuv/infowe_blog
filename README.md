@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.8)
+[![version](https://img.shields.io/badge/version-3.9.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.9)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.8**
+当前版本：**v3.9.9**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.9
+
+- **首页报头收成「标题 + 一行格言」，与全站子页页头同构**：原来首页报头是「大标题 + 一排统计药丸（文章 / 标签 / 分类）+ 右侧格言」的三层堆叠，而「文章归档」「关于我」「项目」等子页都是「`.tech-page-title` + `.tech-page-desc`」的「一行大标题 + 一行次级说明」。现在删掉统计药丸（这些数字「文章归档」页已经有了，首页不必重复），把轮播格言移到标题下方作为次级说明行，首页报头从此与子页共用同一种信息层级
+- **多栏布局报头改为单列左对齐**：原先多栏（`multi`）在 PC 上是「左标题 / 右格言」的两列栅格，窄屏又堆叠回居中，与左对齐的子页页头两套语言。现在多栏报头同样是单列左对齐，彩条移到左端，PC 与移动端一致
+- **侧栏首张卡片与主列首张文章卡对齐（修复无精选时错位）**：原规则 `:has(.tech-featured) .tech-sidebar { margin-top }` 只在**开启精选**时才把侧栏下移，没有精选时侧栏首卡会贴到「最新文章」的**标题**上，比第一张文章卡高出 40px（标题 26px + 下外距 14px），两列基线错开。改为无条件 `margin-top: 40px`：有精选对齐首张精选卡，无精选对齐首张最新卡，两种情况首卡基线都一致；同时删掉文件末尾一条同值重复规则与过期注释
 
 ### v3.9.8
 
@@ -936,7 +942,7 @@ chown -R www:www var
 - **正文降到 16px / 行高 1.8**：17px 在 823px 版心下约 48 字/行，一屏容纳的信息量偏少、读起来字偏大。降到 16px（约 51 字/行），段距仍是 1.05em（16.8px），依然大于行内行距（12.8px），段落分界不受影响。同时删掉 `≤767px` 段里与基础规则完全相同的字号 / 行高 / 段距声明，恢复「正文排版只有一个来源」，避免以后只改 PC 忘了移动端
 
 <details>
-<summary><b>历史版本（v3.9.7 及更早，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.8 及更早，点击展开）</b></summary>
 
 ### v3.9.7
 

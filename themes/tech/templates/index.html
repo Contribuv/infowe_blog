@@ -19,20 +19,17 @@
 <div class="tech-home-head tech-home-head--{{ post_layout }}{% if head_display == 'pc' %} tech-home-head--pc-only{% elif head_display == 'mobile' %} tech-home-head--mobile-only{% elif head_display == 'none' %} tech-home-head--none{% endif %}">
     <div class="tech-home-head-main">
         <h1 class="tech-home-title">{{ home_title or blog_name }}</h1>
-        <div class="tech-home-stats">
-            <span><b>{{ total }}</b>篇文章</span>
-            <span><b>{{ all_tags|length }}</b>个标签</span>
-            <span><b>{{ total_categories }}</b>个分类</span>
-        </div>
-    </div>
-    <div class="tech-home-head-quote">
-        {% if home_quotes %}
-        <script type="application/json" id="tech-quotes-data">{{ home_quotes | tojson }}</script>
-        {% endif %}
-        <!-- 首页格言：后台自定义优先，否则使用主题内置句子库；交互逻辑见 theme.js -->
-        <div class="tech-quote">
-            <span class="tech-quote-text" id="tech-quote-text"></span>
-            <span class="tech-quote-src" id="tech-quote-src"></span>
+        {# 报头与其它页面的 .tech-page-head 同构：一行大标题 + 一行次级说明（轮播格言），
+           不再堆统计药丸——那些数字「文章归档」页已经有了，首页不必重复 #}
+        <div class="tech-home-head-quote">
+            {% if home_quotes %}
+            <script type="application/json" id="tech-quotes-data">{{ home_quotes | tojson }}</script>
+            {% endif %}
+            <!-- 首页格言：后台自定义优先，否则使用主题内置句子库；交互逻辑见 theme.js -->
+            <div class="tech-quote">
+                <span class="tech-quote-text" id="tech-quote-text"></span>
+                <span class="tech-quote-src" id="tech-quote-src"></span>
+            </div>
         </div>
     </div>
 </div>
