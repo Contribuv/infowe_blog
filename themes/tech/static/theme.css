@@ -2617,9 +2617,13 @@ html { touch-action: manipulation; }
   font-size: 15px; font-weight: 600; margin: 0 0 12px;
   display: flex; align-items: center; gap: 10px;
 }
+/* 监控明细里的药丸：底色用 --inset-bg（卡内嵌层）而不是 --bg-subtle。
+   深色下 --bg-subtle(#1b1f26) 比卡片 --card-bg(#1c2028) 还暗，贴在卡面上像一块
+   浮出来的暗色方框；--inset-bg(#262b34) 亮于卡面，读作卡内浮起的小药丸，
+   与代码块 / 表头 / 键盘键同一套「卡内嵌面板」语言。浅色下则为纸面凹槽。 */
 .svc-count {
   font-size: 12px; font-weight: 500; color: var(--text-secondary);
-  background: var(--bg-subtle); border-radius: 999px; padding: 2px 9px;
+  background: var(--inset-bg); border-radius: 999px; padding: 2px 9px;
 }
 .svc-list { border: 0; }
 .svc-row {
@@ -2642,13 +2646,15 @@ html { touch-action: manipulation; }
 .svc-metrics { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .svc-metric {
   font-size: 12.5px; color: var(--text-secondary); white-space: nowrap;
-  background: var(--bg-subtle); border-radius: 6px; padding: 3px 9px;
+  background: var(--inset-bg); border-radius: 6px; padding: 3px 9px;
   font-variant-numeric: tabular-nums;
 }
-/* 到期状态徽章：按行状态着色，而不是所有指标一个灰 */
-.svc-row.st-ok [data-expiry-field="badge"] { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
-.svc-row.st-warn [data-expiry-field="badge"] { color: var(--warning); background: color-mix(in srgb, var(--warning) 14%, transparent); }
-.svc-row.st-expired [data-expiry-field="badge"] { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+/* 到期状态徽章：按行状态着色，而不是所有指标一个灰。
+   底色在 --inset-bg 上混状态色（不再是「透明叠卡片」），与同区其它药丸同一底色语言，
+   避免深色下状态标签像一块浮灰的半透明贴片浮在卡面上 */
+.svc-row.st-ok [data-expiry-field="badge"] { color: var(--success); background: color-mix(in srgb, var(--success) 16%, var(--inset-bg)); }
+.svc-row.st-warn [data-expiry-field="badge"] { color: var(--warning); background: color-mix(in srgb, var(--warning) 18%, var(--inset-bg)); }
+.svc-row.st-expired [data-expiry-field="badge"] { color: var(--danger); background: color-mix(in srgb, var(--danger) 16%, var(--inset-bg)); }
 .svc-empty { padding: 26px 0; text-align: center; color: var(--text-secondary); font-size: 14px; }
 .svc-empty-sub { font-size: 13px; opacity: .8; margin-top: 4px; }
 .status-hint { font-size: 12.5px; color: var(--text-secondary); margin: 0; }
@@ -5005,11 +5011,16 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   border-top: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
 }
 
-/* 状态卡内部的 section 去重 */
+/* 状态卡内部的 section 去重。
+   注意必须一并清掉 box-shadow：上面「卡片基础」段把 .tech-status-section 和
+   .tech-about-section 一起列进了卡片样式（阴影 / 描边 / 圆角 / 底色），
+   而这里只清了底色与描边，漏掉的阴影会让卡内两个子分区各投一层卡片阴影，
+   在卡面上浮出「背景框」，看起来像与外层卡片重叠。 */
 .tech-status-card .tech-status-section {
   background: transparent;
   border: 0;
   border-radius: 0;
+  box-shadow: none;
   padding: 14px 0 0;
 }
 

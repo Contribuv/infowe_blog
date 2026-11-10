@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.12)
+[![version](https://img.shields.io/badge/version-3.9.13-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.13)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,17 +925,22 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.12**
+当前版本：**v3.9.13**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.13
+
+- **修复「站点状态」卡内明细浮出背景框、与外层卡片重叠**：`.tech-status-section` 被列进全站「卡片基础」样式段（描边 / 圆角 / 底色 / 阴影），而状态卡内部的去重规则只清了底色与描边，**漏掉 `box-shadow`**——卡内两个子分区各自投了一层卡片阴影，在卡面上浮出两块阴影方框，看起来像与外层卡片重叠。补 `box-shadow: none` 即可（外层状态卡自身的阴影不受影响）
+- **监控明细药丸底色改用 `--inset-bg`**：原先用 `--bg-subtle`，而深色下 `--bg-subtle`(#1b1f26) 比卡片 `--card-bg`(#1c2028) **更暗**，药丸贴在卡面上像一块暗色方块。改用项目里已有的「卡内嵌层」令牌 `--inset-bg`（深色 #262b34 亮于卡面、浅色 #eef1f6 暗于白卡），与代码块 / 表头 / 键盘键同一套语言；到期状态徽章也改成在 `--inset-bg` 上混状态色，不再是「透明叠卡片」的浮灰贴片
+
+<details>
+<summary><b>历史版本（v3.9.12 及更早，点击展开）</b></summary>
 
 ### v3.9.12
 
 - **修复楼中楼三级及以上嵌套时排序错位**：原 `render_replies` 递归嵌套渲染，父级的所有后代会插在同级回复之前，导致同级回复被挤到最后（如 412→[413,414]、413→[415]、415→[416] 会渲染成 413/415/416/414，414 比 415、416 都早却被排到末尾）。改为模型层把所有后代展平成一条 `created_at` 时间正序的列表（`flat_replies`），前台平铺渲染、缩进只做一级、回复关系由 `@提及` 表达，楼中楼内部与「时间正序」预期一致
 - **后台已拒绝评论可一键恢复通过**：评论管理页单条「通过」按钮原本只在 `status == pending` 时显示，已拒绝评论没有入口，无法从后台恢复。改为对非 `approved` 状态都显示「通过」按钮，并相应生成 `approveForm`；`admin_comment_approve` 后端本就支持 rejected→approved（会清掉旧的人工拒绝说明）。已通过评论不再显示「通过」按钮
-
-<details>
-<summary><b>历史版本（v3.9.11 及更早，点击展开）</b></summary>
 
 ### v3.9.11
 
