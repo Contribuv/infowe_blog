@@ -63,16 +63,12 @@
             {% for c in sidebar.side_comments %}
             <li>
                 <a class="tech-side-cmt" href="{{ c.source_url }}">
-                    <img class="tech-side-cmt-avatar" src="{{ c.avatar }}" alt="" loading="lazy"
-                         onerror="this.remove()">
-                    <span class="tech-side-cmt-main">
-                        <span class="tech-side-cmt-head">
-                            <b>{{ c.author }}</b>
-                            <time>{{ c.created_at[:10] }}</time>
-                        </span>
-                        <span class="tech-side-cmt-text">{{ c.text }}</span>
-                        <span class="tech-side-cmt-src">来自「{{ c.source_title }}」</span>
+                    <span class="tech-side-cmt-head">
+                        <b>{{ c.author }}</b>
+                        <time>{{ c.created_at[:10] }}</time>
                     </span>
+                    <span class="tech-side-cmt-text">{{ c.text }}</span>
+                    <span class="tech-side-cmt-src">来自「{{ c.source_title }}」</span>
                 </a>
             </li>
             {% endfor %}

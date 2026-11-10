@@ -4284,57 +4284,44 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   font-variant-numeric: tabular-nums;
   transition: color .18s ease;
 }
-/* 最新评论：与「热门标签 / 文章分类」同一套卡片骨架（标题 + 内容），
-   行内不套二级卡，靠一条淡分隔线分区，整栏保持安静。
+/* 最新评论：与「热门标签 / 文章分类 / 十年之约」同一套卡片骨架（标题 + 内容）。
+   这里刻意不放头像：侧栏其余卡片的内容都从卡片左内距起排，
+   加 26px 头像会把正文整体右推 35px，一栏里只有这张缩进，看着很别扭。
+   纯文字行 + 姓名做锚点，纵向节奏与「十年之约」的标题 / 副标题两级一致。
    每行整块可点 → 直达对应楼层。 */
 .tech-side-cmts {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .tech-side-cmt {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 0;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: color .18s ease, background-color .18s ease;
-}
-.tech-side-cmt-avatar {
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-subtle);
-}
-.tech-side-cmt-main {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  display: block;
   min-width: 0;
+  text-decoration: none;
 }
 .tech-side-cmt-head {
   display: flex;
   align-items: baseline;
   gap: 6px;
   min-width: 0;
+  margin-bottom: 2px;
 }
 .tech-side-cmt-head b {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
+  line-height: 1.5;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color .18s ease;
 }
 .tech-side-cmt-head time {
   flex: none;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   opacity: .8;
@@ -4350,14 +4337,19 @@ html[data-theme="dark"] .tech-podium-item--3 { --medal: #c99163; }
   line-height: 1.62;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
+  transition: color .18s ease;
 }
 .tech-side-cmt-src {
-  font-size: 10.5px;
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.5;
   color: var(--text-secondary);
   opacity: .72;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color .18s ease;
 }
 @media (hover: hover) and (pointer: fine) {
   /* 只让文字回应，不整块抬底色：侧栏卡本身不参与悬停，避免一栏都在闪 */
