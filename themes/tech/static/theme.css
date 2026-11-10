@@ -1237,17 +1237,15 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* 锚点定位留出 sticky nav（56px）+ 呼吸空间，防止点 TOC 后标题被导航遮住 */
 .tech-post-body :is(h1, h2, h3, h4, h5, h6) { scroll-margin-top: 72px; }
 
-/* 正文排版：PC / 移动分档。
-   原先 16.5px / 1.82 / 段距 0.65em（10.7px）——段距比行内行距（13.5px）还小，
-   段落之间看不出分界，整篇读起来像一大块黏在一起的文字，这是「别扭」的根因。
-   现在：行距收到 1.75（中文 1.7~1.8 最稳，1.82 已偏散），
-   段距放大到 1.05em（≈17.9px），段落分界明确；
-   中文正文比 16.5 略大一档到 17px，823px 版心下约 48 字/行，
-   处于中文舒适阅读区间（35~50 字/行）。
-   移动端排版见下方 ≤767px 段，两处保持单一来源，不要重复定义。 */
+/* 正文排版：全站单一来源，移动端不再重复定义字号。
+   历史问题：段距 0.65em（10.7px）比行内行距（13.5px）还小，段落黏连成一片；
+   已改为段距 1.05em，明确大于行内行距。
+   字号定为 16px / 行高 1.8：中文长文在这个字号下最稳，
+   823px 版心约 51 字/行（中文舒适区间 35~50 字/行的上沿）。
+   17px 虽然更"舒服"，但整篇读下来会显得字偏大、一屏容纳的信息太少。 */
 .tech-post-body,
 .tech-post-body.markdown-body {
-  font-size: 17px; line-height: 1.75; word-wrap: break-word;
+  font-size: 16px; line-height: 1.8; word-wrap: break-word;
 }
 .tech-post-body h1, .tech-post-body h2, .tech-post-body h3,
 .tech-post-body h4, .tech-post-body h5, .tech-post-body h6,
@@ -2704,17 +2702,13 @@ html { touch-action: manipulation; }
   .tech-skill-list { grid-template-columns: 1fr; }
 }
 
-/* ≤767px：文章页移动排版：
-   16px 正文 / 1.8 行高 / 1.05em 段距；标题梯度 20/18.5/17.5/16.5/16/15.5，
-   与 24px 页面标题拉开层级，避免移动端正文过小或标题挤在一起。
-   段距必须大于行内行距（16 × 0.8 = 12.8），否则段落会黏连成一片 */
+/* ≤767px：文章页移动排版（只保留与 PC 不同的部分）：
+   正文 16px / 1.8 段距 1.05em 已在基础规则里定义，这里不再重复；
+   仅标题梯度下压一档（20/18.5/17.5/16.5/16/15.5），
+   与 24px 页面标题拉开层级，避免移动端标题挤在一起。 */
 @media (max-width: 767px) {
   .tech-post-title { font-size: 16px; }
   .tech-post-excerpt { font-size: 15px; }
-  .tech-post-body, .tech-post-body.markdown-body {
-    /* 中文正文不加字间距：字间距在小屏上容易发「散」 */
-    font-size: 16px; line-height: 1.8; letter-spacing: normal;
-  }
   .tech-post-body h1, .tech-post-body.markdown-body h1 { font-size: 20px; padding-bottom: 0; border-bottom: 0; }
   .tech-post-body h2, .tech-post-body.markdown-body h2 {
     font-size: 18.5px; padding-bottom: 7px;
@@ -2723,7 +2717,6 @@ html { touch-action: manipulation; }
   .tech-post-body h4, .tech-post-body.markdown-body h4 { font-size: 16.5px; }
   .tech-post-body h5, .tech-post-body.markdown-body h5 { font-size: 16px; }
   .tech-post-body h6, .tech-post-body.markdown-body h6 { font-size: 15.5px; }
-  .tech-post-body p, .tech-post-body.markdown-body p { margin: 0 0 1.05em; }
   .tech-post-body h1, .tech-post-body.markdown-body h1,
   .tech-post-body h2, .tech-post-body.markdown-body h2,
   .tech-post-body h3, .tech-post-body.markdown-body h3,
