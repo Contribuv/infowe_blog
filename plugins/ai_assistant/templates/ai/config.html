@@ -60,11 +60,16 @@
                 </div>
                 <div class="form-group">
                     <label>最大输出 tokens</label>
-                    <input type="number" name="max_tokens" class="input-text" value="{{ cfg.max_tokens }}" min="100" max="8000">
+                    <input type="number" name="max_tokens" class="input-text" value="{{ cfg.max_tokens }}" min="8192" max="32768" step="1">
+                    <span class="form-hint">
+                        长文生成提示「输出超长被截断」时调大这里。常见模型上限：8192 / 16384 / 32768，
+                        填超过模型本身能力的值会被接口直接拒绝；调大后建议同时把下方「超时」提到 300 秒以上。
+                    </span>
                 </div>
                 <div class="form-group">
                     <label>超时（秒）</label>
-                    <input type="number" name="timeout" class="input-text" value="{{ cfg.timeout }}" min="10" max="300">
+                    <input type="number" name="timeout" class="input-text" value="{{ cfg.timeout }}" min="10" max="600">
+                    <span class="form-hint">整轮请求的等待上限；输出 tokens 越大、推理型模型越慢，耗时越长。</span>
                 </div>
                 <div class="form-group">
                     <label>每日调用上限</label>

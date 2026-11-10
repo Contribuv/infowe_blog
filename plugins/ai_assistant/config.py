@@ -165,12 +165,16 @@ def get() -> dict:
         data["timeout"] = 120
 
     # 旧版默认 1200 对长文章不够，升级到 8192：
-    # 实测 4096 时重构一篇 3750 字的文章，update_post 的 JSON 会被截断导致解析失败
+    # 实测 4096 时重构一篇 3750 字的文章，update_post 的 JSON 会被截断导致解析失败。
+    # 8192 只是地板不是天花板：写整篇长文（尤其带工具调用的 JSON）仍可能不够，
+    # 允许在「AI 配置」里调到 32768；超过模型自身上限的值接口会报错，由用户按模型能力选。
     try:
-        if int(data.get("max_tokens") or 0) < 8000:
-            data["max_tokens"] = 8192
+        value = int(data.get("max_tokens") or 0)
     except (TypeError, ValueError):
-        data["max_tokens"] = 8192
+        value = 0
+    if value < 8000:
+        value = 8192
+    data["max_tokens"] = min(value, 32768)
 
     data["providers"] = providers
     active = str(data.get("active") or "")
