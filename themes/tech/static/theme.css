@@ -1406,14 +1406,31 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-post-body .ck-done { color: var(--success); }
 .tech-post-body li:has(.ck) { list-style: none; margin-left: -1.2em; }
 
-/* 提示块（admonition 扩展） */
+/* 提示块（admonition 扩展）
+   排版对齐原版（Docusaurus / mkdocs-material）：
+     · 标题是独立紧凑标题行（14px / 700 / 行高约 1.35），不是正文段落
+     · 标题与正文之间只留 6px，正文行高回到 1.7（比正文 1.8 略紧，块内更聚气）
+     · 四边内边距 16px（原版 16px），不再用 10px 14px 的窄内边距
+   注意特异性：正文段落规则 .tech-post-body.markdown-body p 是 (0,2,1)，
+   而 :is(.tech-post-body, .tech-proj-readme-body) .admonition-title 只有 (0,2,0)，
+   会被正文 1.05em 段距覆盖（标题下距实测变成 16.8px）。
+   块内段落规则 .tech-post-body .admonition p 也是 (0,2,1)，且写在后面，
+   会把标题的 6px 下距再覆盖成 0.7em。这里用
+   .tech-post-body .admonition p.admonition-title（3 个 class + 1 元素 = (0,3,1)）
+   确保标题规则压过正文与块内段落两套规则。 */
 :is(.tech-post-body, .tech-proj-readme-body) .admonition {
-  padding: 10px 14px; border-radius: 8px; margin: 0 0 10px;
+  padding: 14px 16px; border-radius: 8px; margin: 0 0 1.05em;
   border-left: 4px solid var(--border-strong);
   background: var(--bg-subtle);
+  /* 块内正文比全文正文略紧：16px / 1.7 */
+  font-size: 16px; line-height: 1.7;
 }
-:is(.tech-post-body, .tech-proj-readme-body) .admonition-title {
-  font-weight: 700; margin: 0 0 6px;
+:is(.tech-post-body, .tech-proj-readme-body) .admonition-title,
+.tech-post-body .admonition p.admonition-title,
+.tech-proj-readme-body .admonition p.admonition-title {
+  /* 标题行：14px / 700 / 行高 1.35，与正文段落彻底脱钩 */
+  font-size: 14px; line-height: 1.35; font-weight: 700;
+  margin: 0 0 6px;
   /* 标题左侧类型图标：图标用 mask 绘制，颜色自动跟随标题色（深浅主题都适配） */
   display: flex; align-items: center; gap: 7px;
 }
@@ -1435,7 +1452,17 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23fff'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='12'%20cy='12'%20r='10'/%3E%3Cpath%20d='m15%209-6%206'/%3E%3Cpath%20d='m9%209%206%206'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%23fff'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='12'%20cy='12'%20r='10'/%3E%3Cpath%20d='m15%209-6%206'/%3E%3Cpath%20d='m9%209%206%206'/%3E%3C/svg%3E");
 }
-:is(.tech-post-body, .tech-proj-readme-body) .admonition p:last-child { margin-bottom: 0; }
+/* 块内正文段落：段距收紧到 0.7em（比全文正文的 1.05em 紧），
+   并同样抬特异性压过 .tech-post-body.markdown-body p 的 (0,2,1) */
+.tech-post-body .admonition p,
+.tech-proj-readme-body .admonition p { margin: 0 0 0.7em; }
+.tech-post-body .admonition > :last-child,
+.tech-proj-readme-body .admonition > :last-child { margin-bottom: 0; }
+/* 块内其它块级元素（列表 / 代码 / 引用）同样只留块内小间距 */
+.tech-post-body .admonition > :is(ul, ol, pre, blockquote, table),
+.tech-proj-readme-body .admonition > :is(ul, ol, pre, blockquote, table) {
+  margin-top: 0.5em; margin-bottom: 0.5em;
+}
 :is(.tech-post-body, .tech-proj-readme-body) .admonition.note { border-left-color: var(--accent); background: var(--accent-weak); }
 :is(.tech-post-body, .tech-proj-readme-body) .admonition.note .admonition-title { color: var(--accent); }
 :is(.tech-post-body, .tech-proj-readme-body) .admonition.tip { border-left-color: var(--success); background: color-mix(in srgb, var(--success) 8%, transparent); }
@@ -1444,6 +1471,17 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 :is(.tech-post-body, .tech-proj-readme-body) .admonition.warning .admonition-title { color: var(--warning); }
 :is(.tech-post-body, .tech-proj-readme-body) .admonition.danger { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 :is(.tech-post-body, .tech-proj-readme-body) .admonition.danger .admonition-title { color: var(--danger); }
+
+/* 窄屏适配：手机版心本来就窄，16px 左右内边距 + 4px 色条会明显压缩正文可用宽度。
+   收到 12px 13px、色条 3px，字号维持 16px（<14px 中文阅读吃力）。
+   宽度仍是撑满版心（与原版一致），但左右留白按版心自适应，不会显得内容被挤成一条 */
+@media (max-width: 640px) {
+  :is(.tech-post-body, .tech-proj-readme-body) .admonition {
+    padding: 12px 13px;
+    border-left-width: 3px;
+    border-radius: 7px;
+  }
+}
 
 /* 删除线 / 高亮 / 键盘键 */
 .tech-post-body del { color: var(--text-secondary); }

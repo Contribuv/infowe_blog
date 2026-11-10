@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.9-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.9)
+[![version](https://img.shields.io/badge/version-3.9.10-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.10)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.9**
+当前版本：**v3.9.10**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.10
+
+- **提示框（admonition）排版重做，上下不再隔一大截**：原来把标题当成正文段落 `<p class="admonition-title">` 排版，吃到了正文的**段距 1.05em（16.8px）** 和 **行高 1.8（28.8px）**，于是标题与正文之间空出一大截、整盒被撑到 94px。现在标题是独立紧凑标题行（**14px / 700 / 行高 1.35**，下距 **6px**），正文行高回到 1.7，整盒高度 94px → **80px**，与 markdown.cn / Docusaurus 原版观感一致
+- **特异性坑修复**：`.tech-post-body p.admonition-title` 其实是 (0,2,1)，与块内段落规则 `.tech-post-body .admonition p` **完全相同**，后者写在后面照样覆盖，标题下距实测仍是 9.8px。改用 `.tech-post-body .admonition p.admonition-title`（(0,3,1)）才真正压住正文与块内两套段落规则；块内正文段距也收紧到 0.7em，块内列表 / 代码 / 引用统一 0.5em
+- **宽高适配**：内边距从 10px 14px 提到 **14px 16px**（对齐原版 16px）；窄屏 `≤640px` 收成 **12px 13px**、色条 4px → 3px、圆角 8px → 7px，避免手机上左右留白把正文挤成一条细缝，字号仍保持 16px（低于 14px 中文阅读吃力）
+
+<details>
+<summary><b>历史版本（v3.9.9 及更早，点击展开）</b></summary>
 
 ### v3.9.9
 
@@ -940,9 +949,6 @@ chown -R www:www var
 - **AI 生成长文不再被 8000 tokens 卡断**：此前三处互相打架——输入框 `max=8000`、配置层把 `< 8000` 一律改写成 `8192`、而截断提示又写着「建议 8192」，等于用户无论怎么填都提不上去。现在输入框放到 `min=8192 / max=32768`（`step=1`，避免填非 1024 整数倍被 HTML 校验拦下），配置层补 32768 上限保护，避免手填越界值直接打到接口；「超时」上限 300 → 600 秒（输出越长、推理模型越慢）。截断提示改为可操作的指引，并补两处 `form-hint` 说明
 - **侧栏「最新评论」与其它卡片左对齐**：原来每行开头有 26px 头像，把姓名和正文整体右推 35px，一栏里只有这张缩进。改成与「十年之约」同构的两级纯文字（姓名 13px/600 + 日期 11px、正文 12.5px 两行截断、来源 11px），内容与卡片标题同一起点
 - **正文降到 16px / 行高 1.8**：17px 在 823px 版心下约 48 字/行，一屏容纳的信息量偏少、读起来字偏大。降到 16px（约 51 字/行），段距仍是 1.05em（16.8px），依然大于行内行距（12.8px），段落分界不受影响。同时删掉 `≤767px` 段里与基础规则完全相同的字号 / 行高 / 段距声明，恢复「正文排版只有一个来源」，避免以后只改 PC 忘了移动端
-
-<details>
-<summary><b>历史版本（v3.9.8 及更早，点击展开）</b></summary>
 
 ### v3.9.7
 
