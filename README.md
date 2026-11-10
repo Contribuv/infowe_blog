@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.10-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.10)
+[![version](https://img.shields.io/badge/version-3.9.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.11)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,22 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.10**
+当前版本：**v3.9.11**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.11
+
+- **移动端文章页顶部留白收紧（24px → 20px）**：原 `.tech-main:has(.tech-post-wrap) { padding-top: 24px }` 把文章页移动端上边距从默认 18px 提到 24px，实测比同屏列表页（18px）高出一截、顶得太高。改为 20px：外层 20px + 卡片 `--pad-y` 16px = 导航底到标题首字 36px，仍比列表页（34px）多 2px 保留阅读卡的呼吸感，又不再突兀。PC 端 `.tech-main` 的 24px 不变
+
+<details>
+<summary><b>历史版本（v3.9.10 及更早，点击展开）</b></summary>
 
 ### v3.9.10
 
 - **提示框（admonition）排版重做，上下不再隔一大截**：原来把标题当成正文段落 `<p class="admonition-title">` 排版，吃到了正文的**段距 1.05em（16.8px）** 和 **行高 1.8（28.8px）**，于是标题与正文之间空出一大截、整盒被撑到 94px。现在标题是独立紧凑标题行（**14px / 700 / 行高 1.35**，下距 **6px**），正文行高回到 1.7，整盒高度 94px → **80px**，与 markdown.cn / Docusaurus 原版观感一致
 - **特异性坑修复**：`.tech-post-body p.admonition-title` 其实是 (0,2,1)，与块内段落规则 `.tech-post-body .admonition p` **完全相同**，后者写在后面照样覆盖，标题下距实测仍是 9.8px。改用 `.tech-post-body .admonition p.admonition-title`（(0,3,1)）才真正压住正文与块内两套段落规则；块内正文段距也收紧到 0.7em，块内列表 / 代码 / 引用统一 0.5em
 - **宽高适配**：内边距从 10px 14px 提到 **14px 16px**（对齐原版 16px）；窄屏 `≤640px` 收成 **12px 13px**、色条 4px → 3px、圆角 8px → 7px，避免手机上左右留白把正文挤成一条细缝，字号仍保持 16px（低于 14px 中文阅读吃力）
-
-<details>
-<summary><b>历史版本（v3.9.9 及更早，点击展开）</b></summary>
 
 ### v3.9.9
 

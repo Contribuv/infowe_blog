@@ -2702,8 +2702,9 @@ html { touch-action: manipulation; }
   .tech-main:has(.tech-home-head) { padding-top: 0; }
   .tech-main:has(.tech-about-hero) { padding-top: 24px; }
   .tech-main:has(.tech-proj) { padding-top: 16px; }
-  /* 文章详情页：移动端顶部留白与底部对齐（默认 18px 上 / 24px 下不对称） */
-  .tech-main:has(.tech-post-wrap) { padding-top: 24px; }
+  /* 文章详情页：移动端顶部留白 20px（默认 18px 上 / 24px 下不对称，
+     文章页顶部是阅读卡，比普通列表页多一层卡面，留白比 18px 稍多但不必到 24px） */
+  .tech-main:has(.tech-post-wrap) { padding-top: 20px; }
   /* 移动端回到顶部按钮上移，避免遮挡页脚备案文字（缩小态同样覆盖） */
   .tech-top { bottom: calc(72px + env(safe-area-inset-bottom)); }
   .tech-post-title-lg { font-size: 23px; }
@@ -5454,3 +5455,4 @@ body::after {
      同时抵掉 .tech-home-title 原有的 -0.01em（负字距对衬线尤其伤） */
   letter-spacing: .01em;
 }
+
