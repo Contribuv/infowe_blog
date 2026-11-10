@@ -92,19 +92,20 @@
     </article>
     {% endmacro %}
 
-    {# 盖楼：全部后代在同一层平铺，回复关系由 @提及 表达，缩进只做一级 #}
-    {% macro render_replies(children, parent_name) %}
-        {% for ch in children %}
-        {{ render_item(ch, 'reply', parent_name) }}
-        {% if ch.children %}{{ render_replies(ch.children, ch.author) }}{% endif %}
-        {% endfor %}
-    {% endmacro %}
-
+    {# 盖楼：全部后代在同一层平铺，回复关系由 @提及 表达，缩进只做一级。
+       模型给每个 root 附加了 c.flat_replies（已按 created_at ASC 展平的所有后代，
+       含每项的 parent_author 用于 @提及），这里直接平铺渲染，避免三级及以上嵌套时
+       同级回复被父级后代推到最后（如 412→[413,414]、413→[415]、415→[416] 若递归嵌套会
+       变成 413/415/416/414，414 比 415、416 都早却被挤到最后） #}
     {% macro render_thread(c) %}
     <div class="cmt-thread" data-root="{{ c.id }}">
         {{ render_item(c, 'root', '') }}
-        {% if c.children %}
-        <div class="cmt-replies">{{ render_replies(c.children, '') }}</div>
+        {% if c.flat_replies %}
+        <div class="cmt-replies">
+            {% for ch in c.flat_replies %}
+            {{ render_item(ch, 'reply', ch.parent_author) }}
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
     {% endmacro %}

@@ -123,8 +123,12 @@
                     </td>
                     <td data-label="时间">{{ c.created_at [:16] }}</td>
                     <td class="actions-cell" data-label="操作">
-                        {% if c.status == 'pending' %}
+                        {# 单条「通过」按钮对非 approved 状态都显示（待审核、已拒绝都能一键恢复通过；
+                            已拒绝评论此前被隐藏按钮，无法从后台恢复，需放行） #}
+                        {% if c.status != 'approved' %}
                         <button type="submit" form="approveForm{{ c.id }}" class="btn btn-sm btn-success">通过</button>
+                        {% endif %}
+                        {% if c.status == 'pending' or c.status == 'rejected' %}
                         {# 拒绝：前台隐藏、后台保留记录（AI 转人工待审同样可拒绝） #}
                         <button type="submit" form="rejectForm{{ c.id }}" class="btn btn-sm btn-danger">拒绝</button>
                         {% endif %}
@@ -140,8 +144,10 @@
    嵌套时浏览器会忽略内层 action，按钮归属外层批量表单，
    导致点单条删除报「无效的批量操作」。 #}
 {% for c in comments %}
-    {% if c.status == 'pending' %}
+    {% if c.status != 'approved' %}
     <form id="approveForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_approve', comment_id=c.id) }}" class="hidden"><input type="hidden" name="page" value="{{ page }}"></form>
+    {% endif %}
+    {% if c.status == 'pending' or c.status == 'rejected' %}
     <form id="rejectForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_reject', comment_id=c.id) }}" class="hidden"><input type="hidden" name="page" value="{{ page }}"></form>
     {% endif %}
     <form id="delForm{{ c.id }}" method="POST" action="{{ url_for('admin_comment_delete', comment_id=c.id) }}" class="hidden" onsubmit="return confirm('确定删除这条评论？其全部回复将一并删除')"><input type="hidden" name="page" value="{{ page }}"></form>

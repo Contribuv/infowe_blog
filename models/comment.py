@@ -165,6 +165,22 @@ def load(
             c["parent_author"] = ""
             roots.append(c)
 
+    # 楼中楼展平：把每条根评论的全部后代（不限层级）收成一条时间正序的列表，
+    # 供前台「盖楼平铺」渲染——所有回复在同一层、缩进只做一级，回复关系由 @提及表达。
+    # 若不展平、直接递归嵌套，会出现三级及以上错位：父级的所有后代会插在同级回复之前
+    # （如 412→[413,414]、413→[415]、415→[416] 嵌套渲染成 413/415/416/414，
+    # 414 比 415、416 都早却被挤到最后）。flat_replies 已按 (created_at, id) 升序排列。
+    def flatten(node: dict, out: list) -> None:
+        for ch in node.get("children") or []:
+            out.append(ch)
+            flatten(ch, out)
+
+    for root in roots:
+        flat: list[dict] = []
+        flatten(root, flat)
+        flat.sort(key=lambda x: (str(x.get("created_at") or ""), int(x["id"])))
+        root["flat_replies"] = flat
+
     # 排序：根评论「最新优先」，楼中楼内部「时间正序」。
     # SQL 仍按 created_at ASC 取，保证 children 追加时是正序（一条对话要顺着读）；
     # 这里只反转顶层列表：新楼层排前面，读者打开评论区先看到最新讨论，

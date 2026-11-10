@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.11-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.11)
+[![version](https://img.shields.io/badge/version-3.9.12-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.12)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,16 +925,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.11**
+当前版本：**v3.9.12**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.12
+
+- **修复楼中楼三级及以上嵌套时排序错位**：原 `render_replies` 递归嵌套渲染，父级的所有后代会插在同级回复之前，导致同级回复被挤到最后（如 412→[413,414]、413→[415]、415→[416] 会渲染成 413/415/416/414，414 比 415、416 都早却被排到末尾）。改为模型层把所有后代展平成一条 `created_at` 时间正序的列表（`flat_replies`），前台平铺渲染、缩进只做一级、回复关系由 `@提及` 表达，楼中楼内部与「时间正序」预期一致
+- **后台已拒绝评论可一键恢复通过**：评论管理页单条「通过」按钮原本只在 `status == pending` 时显示，已拒绝评论没有入口，无法从后台恢复。改为对非 `approved` 状态都显示「通过」按钮，并相应生成 `approveForm`；`admin_comment_approve` 后端本就支持 rejected→approved（会清掉旧的人工拒绝说明）。已通过评论不再显示「通过」按钮
+
+<details>
+<summary><b>历史版本（v3.9.11 及更早，点击展开）</b></summary>
 
 ### v3.9.11
 
 - **移动端文章页顶部留白收紧（24px → 20px）**：原 `.tech-main:has(.tech-post-wrap) { padding-top: 24px }` 把文章页移动端上边距从默认 18px 提到 24px，实测比同屏列表页（18px）高出一截、顶得太高。改为 20px：外层 20px + 卡片 `--pad-y` 16px = 导航底到标题首字 36px，仍比列表页（34px）多 2px 保留阅读卡的呼吸感，又不再突兀。PC 端 `.tech-main` 的 24px 不变
-
-<details>
-<summary><b>历史版本（v3.9.10 及更早，点击展开）</b></summary>
 
 ### v3.9.10
 
