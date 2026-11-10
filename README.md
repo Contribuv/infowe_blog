@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.7-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.7)
+[![version](https://img.shields.io/badge/version-3.9.8-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.8)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.7**
+当前版本：**v3.9.8**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.8
+
+- **AI 生成长文不再被 8000 tokens 卡断**：此前三处互相打架——输入框 `max=8000`、配置层把 `< 8000` 一律改写成 `8192`、而截断提示又写着「建议 8192」，等于用户无论怎么填都提不上去。现在输入框放到 `min=8192 / max=32768`（`step=1`，避免填非 1024 整数倍被 HTML 校验拦下），配置层补 32768 上限保护，避免手填越界值直接打到接口；「超时」上限 300 → 600 秒（输出越长、推理模型越慢）。截断提示改为可操作的指引，并补两处 `form-hint` 说明
+- **侧栏「最新评论」与其它卡片左对齐**：原来每行开头有 26px 头像，把姓名和正文整体右推 35px，一栏里只有这张缩进。改成与「十年之约」同构的两级纯文字（姓名 13px/600 + 日期 11px、正文 12.5px 两行截断、来源 11px），内容与卡片标题同一起点
+- **正文降到 16px / 行高 1.8**：17px 在 823px 版心下约 48 字/行，一屏容纳的信息量偏少、读起来字偏大。降到 16px（约 51 字/行），段距仍是 1.05em（16.8px），依然大于行内行距（12.8px），段落分界不受影响。同时删掉 `≤767px` 段里与基础规则完全相同的字号 / 行高 / 段距声明，恢复「正文排版只有一个来源」，避免以后只改 PC 忘了移动端
+
+<details>
+<summary><b>历史版本（v3.9.7 及更早，点击展开）</b></summary>
 
 ### v3.9.7
 
@@ -943,9 +952,6 @@ chown -R www:www var
 - **标题衬线字体成体系并大幅瘦身**：衬线层从「只有文章大标题」扩展到页面标题（关于/归档/项目/友链/圈子/读者/标签）、首页报头与正文 h1~h3；导航、卡片标题、分组小标、评论、表单仍保持无衬线，维持「衬线 = 标题声音，无衬线 = 界面与正文」的二元分工。字体按全站用字做子集化（1407KB → 341KB），`@font-face` 增加 `local()` 优先，访客装了同名字体则完全免下载。新增 `tools/subset_title_font.py` 用于重新生成
 - **修复评论区 CSS 整段失效**：`comments-tech.css` 中 `content:"仅博主可见"` 的结尾引号丢失，导致 CSS 解析器从该行起吞掉后续三万多字节，`UA 图标` 失去尺寸约束被撑成 786×786px、楼层卡描边与圆角一起丢失。已从干净版本恢复并重新应用改动。评论徽章同步改为全站胶囊形状，并修掉它在浅色主题下沿用深色亮色值、对比只有 2:1 的问题（改后 5.3:1 以上）
 - **其他**：归档浮窗遮罩改为毛玻璃；页脚新增分层底色（浅色 ΔL 从 2.5 提到 4.3，此前几乎看不出）、链接改为胶囊悬停；「精选」徽章改为叠在文章卡右上角内的胶囊，绝不溢出，精选徽章在文内不再重复；文章 meta 行增加评论条数锚点；首页报头下线 kicker 小字并清掉对应设置项；侧栏「今天读什么」去掉多余阴影与卡片重叠；「精选推荐 / 最新文章」分组标题颜色上调一档
-
-<details>
-<summary><b>历史版本（v3.9.6 及更早，点击展开）</b></summary>
 
 ### v3.9.6
 
