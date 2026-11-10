@@ -11,26 +11,6 @@
 <form method="POST" class="theme-config-form" style="display:flex;flex-direction:column;gap:var(--sp-4);">
     <div class="card">
         <div class="card-header">
-            <h3>首页标题区</h3>
-            <span class="form-hint">标题上方那行小字，只在首页显示</span>
-        </div>
-        <div class="theme-config-body">
-            <div class="form-group" style="max-width:560px;">
-                <label class="form-label" for="home-kicker">标语 / 一句话介绍</label>
-                <input type="text" id="home-kicker" name="home_kicker" class="form-input"
-                       value="{{ home_kicker }}" maxlength="80"
-                       placeholder="{{ blog_subtitle or 'Python · Code · Life' }}">
-                <p class="form-hint">
-                    留空则自动使用「站点设置 → 博客副标题」的文案（当前：{{ blog_subtitle or 'Python · Code · Life' }}）。
-                    这里只改首页标题区，不影响分享卡片与 RSS 的描述。
-                </p>
-            </div>
-            <p class="form-hint theme-config-tip">首页大标题仍在「站点设置 → 首页标题」中配置。</p>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-header">
             <h3>首页报头显示</h3>
             <span class="form-hint">以 640px 为界区分 PC 与移动端</span>
         </div>
@@ -45,8 +25,30 @@
                 {% endfor %}
             </div>
             <p class="form-hint theme-config-tip">
-                控制首页顶部的报头（标语 + 大标题 + 统计 / 格言）。选「仅 PC」时手机端直接进入文章列表，
+                控制首页顶部的报头（大标题 + 统计 / 格言）。选「仅 PC」时手机端直接进入文章列表，
                 选「都不显示」则两端都不渲染这块视觉区域；隐藏后主内容区的上边距会自动补回，不会贴顶。
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>文章标题区底色</h3>
+            <span class="form-hint">文章页顶部「标题 + 日期」那条导览带的深浅</span>
+        </div>
+        <div class="theme-config-body">
+            <div class="theme-choice-row">
+                {% for value, label in [('off', '关闭'), ('soft', '淡'), ('normal', '标准'), ('strong', '明显')] %}
+                <label class="theme-choice">
+                    <input type="radio" name="post_head_tint" value="{{ value }}"
+                           {{ 'checked' if (post_head_tint or 'normal') == value else '' }}>
+                    <span>{{ label }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <p class="form-hint theme-config-tip">
+                标题区和正文同在一张卡片里，靠一层底色差分区。深浅主题会自动使用各自的色值，不需要分开配置；
+                选「关闭」时标题区与正文同色。
             </p>
         </div>
     </div>
@@ -94,6 +96,35 @@
             </div>
             <p class="form-hint theme-config-tip">
                 只影响文章列表的排列方式，不改文章正文排版。首页顶部的「精选」区块始终保持单栏。
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>侧栏：最新评论</h3>
+            <span class="form-hint">只在「多栏」布局下出现</span>
+        </div>
+        <div class="theme-config-body">
+            <div class="form-group" style="margin:0;">
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="sidebar_comments" value="1"
+                               {{ 'checked' if (sidebar_comments or '1') in ('1', 'on', 'true', 'yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">显示「最新评论」卡片</span>
+                </label>
+            </div>
+            <div class="form-group" style="margin-top:var(--sp-3);max-width:320px;">
+                <label class="form-label" for="sidebar-comments-count">显示条数</label>
+                <input type="number" id="sidebar-comments-count" name="sidebar_comments_count"
+                       value="{{ sidebar_comments_count or '5' }}" min="1" max="20" step="1" class="form-input">
+                <p class="form-hint">建议 3–8 条；单条留言会截断到两行，条数过多会把侧栏拉得很长。仅多栏布局生效。</p>
+            </div>
+            <p class="form-hint theme-config-tip">
+                卡片排在「文章分类」之后、始终最后一张的「十年之约」之前；
+                会自动过滤博主本人与 AI 的评论，只展示访客的公开留言，点击直达对应楼层。
             </p>
         </div>
     </div>

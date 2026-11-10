@@ -165,6 +165,12 @@ def load(
             c["parent_author"] = ""
             roots.append(c)
 
+    # 排序：根评论「最新优先」，楼中楼内部「时间正序」。
+    # SQL 仍按 created_at ASC 取，保证 children 追加时是正序（一条对话要顺着读）；
+    # 这里只反转顶层列表：新楼层排前面，读者打开评论区先看到最新讨论，
+    # 发完评论也不用翻到最后一页。page_of() 同步改为「按更新的根评论数」算页码。
+    roots.reverse()
+
     def set_depth(node: dict, depth: int) -> None:
         node["depth"] = depth
         for child in node["children"]:
@@ -224,16 +230,17 @@ def page_of(comment_id: int, per_page: int, include_private: bool = False) -> in
         if include_private
         else "(status = 'approved' AND is_private = 0)"
     )
-    earlier = int(
+    # 顶层列表是「最新优先」，所以页码按「比它更新的根评论数」推算
+    newer = int(
         db.scalar(
             f"SELECT COUNT(*) FROM comments WHERE {column} = ? AND parent_id IS NULL "
-            f"AND deleted_at IS NULL AND {visible} AND (created_at < ? OR (created_at = ? AND id < ?))",
+            f"AND deleted_at IS NULL AND {visible} AND (created_at > ? OR (created_at = ? AND id > ?))",
             (value, root.get("created_at"), root.get("created_at"), int(root["id"])),
             0,
         )
         or 0
     )
-    return earlier // per_page + 1
+    return newer // per_page + 1
 
 
 def count_pending(nodes: list[dict]) -> int:

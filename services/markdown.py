@@ -65,6 +65,77 @@ def _filter_toc(tokens: list[dict], min_level: int = 2) -> list[dict]:
     return out
 
 
+# ── Docusaurus / MkDocs 的 ::: 提示框兼容 ──
+# 本站渲染器是 Python-Markdown，原生只认 !!! type "标题" 语法；
+# 这里在解析前把 :::type[标题] ... ::: 转成 !!! 形式，方便直接粘贴外部文档。
+_ADMONITION_ALIASES = {
+    # 映射到现有的 4 套配色，避免出现没有样式的类型
+    "note": "note", "info": "note", "abstract": "note", "summary": "note",
+    "tldr": "note", "question": "note", "help": "note", "example": "note",
+    "quote": "note", "cite": "note", "secondary": "note",
+    "tip": "tip", "hint": "tip", "success": "tip", "check": "tip", "done": "tip",
+    "warning": "warning", "caution": "warning", "attention": "warning", "important": "warning",
+    "danger": "danger", "error": "danger", "failure": "danger", "fail": "danger",
+    "missing": "danger", "bug": "danger",
+}
+_ADMONITION_OPEN_RE = re.compile(
+    r"^[ \t]{0,3}:::[ \t]*([A-Za-z][\w-]*)(?:\[(.*?)\])?[ \t]*$"
+)
+_ADMONITION_CLOSE_RE = re.compile(r"^[ \t]{0,3}:::[ \t]*$")
+_FENCE_OPEN_RE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})")
+
+
+def _convert_colon_admonitions(text: str) -> str:
+    """把 ::: 提示框转成 Python-Markdown 的 !!! 语法。
+
+    逐行状态机，而不是简单正则替换，确保：
+    - 围栏代码块（``` / ~~~）里的 ::: 原样保留，不会被误转；
+    - 支持嵌套（每层内容多缩进 4 空格）；
+    - 未知类型保留原名（结构正确，只是复用不到配色）。
+    """
+    if ":::" not in text:
+        return text
+    out: list[str] = []
+    stack: list[str] = []   # 当前打开的提示框类型，length 即嵌套层数
+    fence: tuple[str, int] | None = None
+    for line in text.splitlines():
+        fence_match = _FENCE_OPEN_RE.match(line)
+        # 围栏代码块内：只补缩进，并检测闭合（同字符且长度不短于开启者）
+        if fence is not None:
+            out.append(("    " * len(stack) + line) if line.strip() else "")
+            if (
+                fence_match
+                and fence_match.group(1)[0] == fence[0]
+                and len(fence_match.group(1)) >= fence[1]
+            ):
+                fence = None
+            continue
+        if fence_match:
+            fence = (fence_match.group(1)[0], len(fence_match.group(1)))
+            out.append("    " * len(stack) + line)
+            continue
+        open_match = _ADMONITION_OPEN_RE.match(line)
+        if open_match:
+            kind = open_match.group(1).lower()
+            title = (open_match.group(2) or "").strip()
+            head = "    " * len(stack) + "!!! " + _ADMONITION_ALIASES.get(kind, kind)
+            if title:
+                # 标题用双引号包裹，内部引号转义成实体，避免提前闭合
+                head += ' "' + title.replace('"', "&quot;") + '"'
+            out.append(head)
+            stack.append(kind)
+            continue
+        if _ADMONITION_CLOSE_RE.match(line) and stack:
+            stack.pop()
+            out.append("")   # 与后文留空行，避免块粘连
+            continue
+        if stack:
+            out.append(("    " * len(stack) + line) if line.strip() else "")
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 _DANGEROUS_TAGS = re.compile(
     r"<\s*(script|style|object|embed|form|iframe)\b[^>]*>.*?<\s*/\s*\1\s*>",
     re.I | re.S,
@@ -135,6 +206,7 @@ def render_post(content: str) -> tuple[str, str]:
     if not (content or "").strip():
         return "", ""
     content = re.sub(r"^---.*?---\s*", "", content, count=1, flags=re.S)
+    content = _convert_colon_admonitions(content)
     content = re.sub(r"<(https?://[^>\s]+)>", r"[\1](\1)", content)
     content = content.replace("[x]", '<i class="ck ck-done">✓</i> ').replace(
         "[ ]", '<i class="ck ck-todo">☐</i> '
@@ -158,6 +230,7 @@ def render_page(content: str) -> str:
 def render_readme(text: str, slug: str = "", branch: str = "main") -> str:
     if not (text or "").strip():
         return ""
+    text = _convert_colon_admonitions(text)
     # GitHub README 常在 <details> 内写 Markdown；Python-Markdown 默认把块内当原始 HTML，
     # 显式加 markdown="1" 让 md_in_html 递归解析（与 GitHub / PHP 版一致）。
     text = re.sub(

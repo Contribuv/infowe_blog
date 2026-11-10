@@ -529,18 +529,74 @@
                 fig.appendChild(cap);
             }
         }
+        // Vditor 不认 Docusaurus 的 ::: 提示框语法，保存后由服务端转换；
+        // 预览区在这里做同样的 DOM 转换，保证「所见即所得」。
+        // 结构：<p>:::tip[标题]</p> … <p>:::</p> → <div class="admonition tip">
+        var ADMONITION_ALIAS = {
+            note: 'note', info: 'note', abstract: 'note', summary: 'note', tldr: 'note',
+            question: 'note', help: 'note', example: 'note', quote: 'note', cite: 'note', secondary: 'note',
+            tip: 'tip', hint: 'tip', success: 'tip', check: 'tip', done: 'tip',
+            warning: 'warning', caution: 'warning', attention: 'warning', important: 'warning',
+            danger: 'danger', error: 'danger', failure: 'danger', fail: 'danger', missing: 'danger', bug: 'danger'
+        };
+        var ADMONITION_OPEN = /^:::\s*([A-Za-z][\w-]*)(?:\[(.*?)\])?\s*$/;
+        var ADMONITION_CLOSE = /^:::\s*$/;
+        function decorateAdmonitions(scope) {
+            var paras = scope.querySelectorAll('p');
+            for (var i = 0; i < paras.length; i++) {
+                var p = paras[i];
+                var m = ADMONITION_OPEN.exec((p.textContent || '').trim());
+                if (!m) continue;
+                var end = null;
+                for (var j = i + 1; j < paras.length; j++) {
+                    if (paras[j].parentNode === p.parentNode &&
+                        ADMONITION_CLOSE.test((paras[j].textContent || '').trim())) {
+                        end = paras[j];
+                        break;
+                    }
+                }
+                if (!end) continue;
+                var box = document.createElement('div');
+                var type = ADMONITION_ALIAS[m[1].toLowerCase()] || m[1].toLowerCase();
+                box.className = 'admonition ' + type;
+                if (m[2]) {
+                    var title = document.createElement('p');
+                    title.className = 'admonition-title';
+                    title.textContent = m[2];
+                    box.appendChild(title);
+                }
+                var node = p.nextSibling;
+                while (node && node !== end) {
+                    var next = node.nextSibling;
+                    box.appendChild(node);
+                    node = next;
+                }
+                p.parentNode.insertBefore(box, p);
+                p.parentNode.removeChild(p);
+                end.parentNode.removeChild(end);
+                // DOM 变了，重新收集；嵌套提示框也能被后续轮次收进去
+                paras = scope.querySelectorAll('p');
+                i = -1;
+            }
+        }
         var timer = null;
         var observer = new MutationObserver(function () {
             if (timer) return;
             timer = setTimeout(function () {
                 timer = null;
                 var previews = root.querySelectorAll('.vditor-preview');
-                for (var i = 0; i < previews.length; i++) decorate(previews[i]);
+                for (var i = 0; i < previews.length; i++) {
+                    decorate(previews[i]);
+                    decorateAdmonitions(previews[i]);
+                }
             }, 80);
         });
         observer.observe(root, { childList: true, subtree: true });
         var previews = root.querySelectorAll('.vditor-preview');
-        for (var i = 0; i < previews.length; i++) decorate(previews[i]);
+        for (var i = 0; i < previews.length; i++) {
+            decorate(previews[i]);
+            decorateAdmonitions(previews[i]);
+        }
     }
 
     var vditor = new Vditor('editor', {

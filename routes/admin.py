@@ -874,14 +874,24 @@ def admin_theme_config():
         except ValueError:
             projects_pp = 12
         settings.set_value("projects_per_page", str(max(0, min(100, projects_pp))))
-        # 首页标题区的小字标语：独立配置，避免为了改首页一句文案而改动站点的 og 描述
-        kicker = " ".join((request.form.get("home_kicker") or "").split())
-        settings.set_value("home_kicker", kicker[:80])
         # 首页报头显示范围：两端都显示 / 仅 PC / 仅移动端 / 都不显示
         head_display = (request.form.get("home_head_display") or "all").strip()
         if head_display not in {"all", "pc", "mobile", "none"}:
             head_display = "all"
         settings.set_value("home_head_display", head_display)
+        # 文章页标题区底色强度：off / soft / normal / strong
+        head_tint = (request.form.get("post_head_tint") or "normal").strip()
+        if head_tint not in {"off", "soft", "normal", "strong"}:
+            head_tint = "normal"
+        settings.set_value("post_head_tint", head_tint)
+        # 侧栏「最新评论」卡片开关：多栏布局下才显示
+        settings.set_value("sidebar_comments", "1" if request.form.get("sidebar_comments") else "0")
+        # 显示条数：1~20，非法输入回退 5
+        try:
+            cmt_count = int((request.form.get("sidebar_comments_count") or "5").strip())
+        except ValueError:
+            cmt_count = 5
+        settings.set_value("sidebar_comments_count", str(max(1, min(20, cmt_count))))
         # 首页和列表页有整页缓存，保存后清掉，返回前台立刻能看到
         from services import page_cache
 
@@ -894,9 +904,10 @@ def admin_theme_config():
         post_layout=settings.get_str("post_layout", "single"),
         project_layout=settings.get_str("project_layout", "three"),
         projects_per_page=settings.get_str("projects_per_page", "12"),
-        home_kicker=settings.get_str("home_kicker", ""),
         home_head_display=settings.get_str("home_head_display", "all"),
-        blog_subtitle=settings.get_str("blog_subtitle", ""),
+        post_head_tint=settings.get_str("post_head_tint", "normal"),
+        sidebar_comments=settings.get_str("sidebar_comments", "1"),
+        sidebar_comments_count=settings.get_str("sidebar_comments_count", "5"),
     )
 
 

@@ -72,9 +72,13 @@ def data() -> dict:
     cats = [item for item in Category.stats() if int(item.get("post_count") or 0) > 0]
     all_tags = Post.tag_counts(9999)
     post_total = int(db.scalar("SELECT COUNT(*) FROM posts WHERE status = 'published' AND deleted_at IS NULL", (), 0) or 0)
+    # 「最新评论」卡片可在主题配置里关掉；关掉时连查询都不发
+    show_comments = settings.bool_of("sidebar_comments", True)
+    comment_count = max(1, min(20, settings.get_int("sidebar_comments_count", 5) or 5))
     return {
         "side_tags": all_tags[:12],
         "side_categories": cats,
+        "side_comments": _comments(comment_count) if show_comments else [],
         "side_widget": foreverblog.widget(),
         "side_post_total": post_total,
         "side_tag_total": len(all_tags),

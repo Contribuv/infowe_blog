@@ -66,8 +66,7 @@
 .cmt-thread{padding:18px 20px 15px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-hairline);transition:border-color .18s}
 /* 楼层间 18px > 卡内回复间距 14px：靠间距层级把「楼层边界」立起来，淡描边只做兜底提示 */
 .cmt-thread+.cmt-thread{margin-top:22px}
-@media (hover:hover) and (pointer:fine){.cmt-thread:hover{border-color:var(--c-border-h)}}
-/* 表单卡与独立 details 卡同享描边提亮反馈；.cmt-form.is-inline 无描边故无变化 */
+/* 楼层卡整张不可点，不做整卡悬停；表单卡与独立 details 卡同享描边提亮反馈 */
 @media (hover:hover) and (pointer:fine){.cmt-form:hover,.cmt-box:hover{border-color:var(--c-border-h)}}
 
 /* tech 皮肤楼层与 default 同构：每条根评论一张卡（楼中楼在卡内）。
@@ -110,13 +109,34 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-loc{font-size:11px;color:var(--c-text3);font-style:normal}
 /* 属地加显式前缀：裸地名易被误读为第二个时间或正文，与微博/知乎口径一致 */
 .cmt-loc::before{content:"·";margin-right:4px}
-/* 徽章与主题标签（tech-tag）同款方圆角，行高贴近同行小字，整排视觉更齐 */
-.cmt-badge{font-size:11px;line-height:1;padding:0 7px;height:17px;box-sizing:border-box;display:inline-flex;align-items:center;border-radius:3px;font-weight:500;border:1px solid transparent;position:relative;top:-1px}
-/* 标签用低饱和淡底 + 同色描边，三种身份仍可区分但不抢正文 */
-.cmt-badge--new{background:rgba(63,174,124,.11);color:#83c5a5;border-color:rgba(63,174,124,.20)}
-.cmt-badge--regular{background:rgba(139,111,224,.11);color:#a99ce2;border-color:rgba(139,111,224,.20)}
-.cmt-badge--returning{background:rgba(212,163,115,.11);color:#d4b08a;border-color:rgba(212,163,115,.20)}
-.cmt-badge--author{background:rgba(107,156,245,.11);color:#8fb0e8;border-color:rgba(107,156,245,.20)}
+/* 徽章：形状与全站标签 .tech-tag 统一（999px 胶囊）。
+   配色走 --badge-* 令牌：深色底取亮色、浅色底取深色，
+   原先写死的亮色在浅色卡片上只有 2:1，几乎读不清 */
+:root,
+[data-theme="light"] {
+  --badge-new: #1d6b46;
+  --badge-regular: #54409e;
+  --badge-returning: #855420;
+  --badge-author: #2b5da8;
+  --badge-ai: #2b6274;
+}
+[data-theme="dark"] {
+  --badge-new: #83c5a5;
+  --badge-regular: #a99ce2;
+  --badge-returning: #d4b08a;
+  --badge-author: #8fb0e8;
+  --badge-ai: #8fb8d0;
+}
+.cmt-badge{
+  font-size:11px;line-height:1;padding:0 8px;height:17px;box-sizing:border-box;
+  display:inline-flex;align-items:center;border-radius:999px;
+  font-weight:500;border:1px solid transparent;position:relative;top:-1px;
+}
+/* 低饱和淡底 + 同色描边：三种身份仍可区分，但不抢正文 */
+.cmt-badge--new{background:color-mix(in srgb,var(--badge-new) 12%,transparent);color:var(--badge-new);border-color:color-mix(in srgb,var(--badge-new) 30%,transparent)}
+.cmt-badge--regular{background:color-mix(in srgb,var(--badge-regular) 12%,transparent);color:var(--badge-regular);border-color:color-mix(in srgb,var(--badge-regular) 30%,transparent)}
+.cmt-badge--returning{background:color-mix(in srgb,var(--badge-returning) 12%,transparent);color:var(--badge-returning);border-color:color-mix(in srgb,var(--badge-returning) 30%,transparent)}
+.cmt-badge--author{background:color-mix(in srgb,var(--badge-author) 12%,transparent);color:var(--badge-author);border-color:color-mix(in srgb,var(--badge-author) 30%,transparent)}
 .cmt-badge--private{background:rgba(224,179,62,.16);color:var(--warning,#8a5a00)}
 .cmt-badge--pending{background:var(--c-reply);color:var(--c-text3);border-color:var(--c-border);border-style:dashed}
 /* 正文用一级色 --c-text：与三级灰的 time/属地/UA 拉开层级，提升可读性 */
@@ -149,7 +169,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
 /* 毛玻璃：底色在文件末尾「毛玻璃降级」段统一给出（默认实色 + 特性查询升级） */
 /* 扁平化：去掉毛玻璃，仅保留描边卡 */
-.cmt-form{margin-top:20px;border:0;border-radius:var(--c-radius);padding:14px 16px;scroll-margin:50px 0}
+.cmt-form{margin-top:20px;border:1px solid var(--card-border, var(--c-hairline));border-radius:var(--c-radius);padding:14px 16px;scroll-margin:50px 0}
 .cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
@@ -229,16 +249,17 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
 .cmt-form .kbd-hint{font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
-/* 提交按钮：与 tech 主题 .tech-btn.tech-btn-soft 共用一套视觉语言
-   （淡 accent 底 + accent 描边 + accent 字，深浅主题由 color-mix 自动适配）。
-   配色 / hover / disabled 只在这里定义一次，文件末尾不再叠加黑白配覆盖。 */
-.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;min-height:38px;box-sizing:border-box;padding:0 20px;border-radius:var(--card-radius,6px);font-size:14px;font-weight:600;cursor:pointer;background:color-mix(in srgb,var(--c-accent) 16%,transparent);border:1px solid color-mix(in srgb,var(--c-accent) 46%,transparent);color:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));transition:border-color .2s ease,color .2s ease,background-color .2s ease,transform .12s ease,opacity .15s ease}
+/* 提交按钮：与全站 .tech-btn 同一套纸面语言（不透明淡主色底 + 细描边）。
+   这是评论区唯一的主操作，用主色底让它比楼层卡更实一档；
+   配色 / hover / disabled 只在这里定义一次。 */
+.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;min-height:38px;box-sizing:border-box;padding:0 20px;border-radius:var(--card-radius,10px);font-size:14px;font-weight:600;cursor:pointer;background:color-mix(in srgb,var(--c-accent) 8%,var(--card-bg,#fff));border:1px solid color-mix(in srgb,var(--c-accent) 30%,var(--card-border,transparent));color:color-mix(in srgb,var(--c-accent) 70%,var(--c-text));box-shadow:var(--card-shadow,none);transition:border-color .2s ease,color .2s ease,background-color .2s ease,box-shadow .2s ease,transform .12s ease,opacity .15s ease}
 @media (hover:hover) and (pointer:fine){
-  /* 文字不降到纯 accent：底色加深后纯 accent 反而更糊，改为向正文色收一档 */
+  /* 悬停沿同一方向加深一档，不换色系 */
   .cmt-form .submit:not([disabled]):hover{
-    background:color-mix(in srgb,var(--c-accent) 32%,transparent);
-    border-color:color-mix(in srgb,var(--c-accent) 82%,transparent);
-    color:color-mix(in srgb,var(--c-accent) 60%,var(--c-text));
+    background:color-mix(in srgb,var(--c-accent) 14%,var(--card-bg,#fff));
+    border-color:color-mix(in srgb,var(--c-accent) 52%,var(--card-border,transparent));
+    color:color-mix(in srgb,var(--c-accent) 78%,var(--c-text));
+    box-shadow:var(--card-shadow-hover,none);
   }
 }
 .cmt-form .submit[disabled]{opacity:.6;cursor:not-allowed}
@@ -260,10 +281,12 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 /* ── 评论分页（按顶层评论分页，楼中楼跟随根评论） ── */
 .cmt-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin:20px 0 4px}
-/* 与 .tech-btn.tech-btn-soft / .tech-page-btn 同一套配色；评论区保留紧凑尺寸与 44px 热区 */
-.cmt-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 10px;font-size:13px;font-weight:600;line-height:1;text-decoration:none;border:1px solid color-mix(in srgb,var(--c-accent) 46%,transparent);border-radius:var(--card-radius,6px);background:color-mix(in srgb,var(--c-accent) 16%,transparent);color:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));transition:border-color .2s ease,color .2s ease,background-color .2s ease,transform .12s ease}
-@media (hover:hover) and (pointer:fine){.cmt-page-btn:not(.active):hover{background:color-mix(in srgb,var(--c-accent) 32%,transparent);border-color:color-mix(in srgb,var(--c-accent) 82%,transparent);color:color-mix(in srgb,var(--c-accent) 60%,var(--c-text))}}
-.cmt-page-btn.active{background:color-mix(in srgb,var(--c-accent) 84%,var(--c-text));border-color:transparent;color:var(--bg);font-weight:700;cursor:default}
+/* 与全站 .tech-page-btn 同一套纸面语言：普通页 = 卡片表面，
+   当前页 = 实心主色。评论区保留紧凑尺寸与 44px 热区 */
+.cmt-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 10px;font-size:13px;font-weight:600;line-height:1;text-decoration:none;border:1px solid var(--card-border,var(--c-border));border-radius:var(--card-radius,10px);background:var(--card-bg,var(--c-card));color:var(--text-secondary,var(--c-text2));box-shadow:var(--card-shadow,none);transition:border-color .2s ease,color .2s ease,background-color .2s ease,box-shadow .2s ease,transform .12s ease}
+@media (hover:hover) and (pointer:fine){.cmt-page-btn:not(.active):hover{background:var(--card-bg-hover,var(--c-card));border-color:var(--card-border-hover,var(--c-border-h));color:var(--text,var(--c-text));box-shadow:var(--card-shadow-hover,none)}}
+.cmt-page-btn.active{background:color-mix(in srgb,var(--c-accent) 88%,#0b1220);border-color:transparent;color:#fff;font-weight:700;cursor:default;box-shadow:none}
+[data-theme="dark"] .cmt-page-btn.active{background:var(--c-accent);color:#0f1629}
 .cmt-page-btn:not(.active):active{transform:translateY(1px)}
 /* 触控热区：视觉 32×32/30×30 不变，点击范围按 gap 6px 安全扩展到约 38×44 */
 .cmt-page-btn{position:relative}
@@ -393,11 +416,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
    注意 .cmt-form.is-inline 的 background:none 特异性更高，不受影响。 */
 .cmt-form{
   background:var(--card-bg, color-mix(in srgb,var(--c-text) 3%,transparent));
-  transition:background-color .18s ease;
+  transition:background-color .18s ease,border-color .18s ease;
 }
 
 /* AI 助手回复标识 */
-.cmt-badge--ai{background:rgba(90,150,190,.11);color:#8fb8d0;border-color:rgba(90,150,190,.20)}
+.cmt-badge--ai{background:color-mix(in srgb,var(--badge-ai) 12%,transparent);color:var(--badge-ai);border-color:color-mix(in srgb,var(--badge-ai) 30%,transparent)}
 
 
 
@@ -446,11 +469,12 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-ua-icon{width:13px;height:13px;flex:none}
 
 
-/* 评论入口 hover：整张表单卡提亮一档（和楼层卡同源），
+/* 评论入口 hover：整张表单卡提亮一档（和可点卡片同一套反馈），
    文字只保留「写评论」的强调，占位文案不再单独变亮 */
 @media (hover: hover) and (pointer: fine) {
   .cmt .cmt-form:not(.is-inline):hover {
     background: var(--card-bg-hover, color-mix(in srgb, var(--c-text) 5%, transparent));
+    border-color: var(--card-border-hover, var(--c-border-h));
   }
   .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle,
   .cmt-form.is-inline:has(.cmt-box:not([open])):hover .cmt-toggle {
@@ -548,25 +572,23 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 }
 
 /* ═══════════════════════════════════════════════
-   V6 评论列表重构：去卡片化，移动优先
-   参考知乎 / B站 / 小红书 / Reddit 的评论列表：
-   - 根评论不再每条一张描边卡，改用留白 + 细线分隔
+   V6 评论列表：楼层卡，移动优先
+   - 根评论每个楼层一张卡，与全站卡片共用同一套
+     底色 / 描边 / 圆角令牌（--card-*）
+   - 楼层卡整张不可点，因此不做悬停反馈
    - 作者、正文、操作保持单列，操作行在正文下方
    - 楼中楼只保留一级缩进 + 左侧细线，回复之间用留白分层
    - 移动端隐藏设备 UA，减少作者行换行
    ═══════════════════════════════════════════════ */
 .cmt-thread{
   padding:14px 16px 16px;
-  border:0;
-  border-radius:12px;
-  /* 与全站卡片同一令牌：文章卡、列表卡、评论楼层卡永远同色，
-     以后调深/调浅只改主题里的 --card-bg 一处 */
+  /* 与全站卡片同一套令牌：底色、描边、圆角都跟随主题，
+     以后调深/调浅只改主题里的 --card-* 一处 */
+  border:1px solid var(--card-border, var(--c-hairline));
+  border-radius:var(--card-radius, 10px);
   background:var(--card-bg, color-mix(in srgb,var(--c-text) 3%,transparent));
 }
 .cmt-thread+.cmt-thread{margin-top:12px}
-@media (hover:hover) and (pointer:fine){
-  .cmt-thread:hover{background:var(--card-bg-hover, color-mix(in srgb,var(--c-text) 4%,transparent))}
-}
 
 .cmt-main{display:block}
 .cmt-actions{
@@ -660,9 +682,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 }
 
 
-/* 评论卡片跟随全站色卡圆角 */
-.cmt { --c-radius: var(--card-radius, 6px); }
-.cmt-replies { border-radius: var(--card-radius, 6px); }
+/* 评论卡片跟随全站色卡圆角（默认值已随全站升级到 10px） */
+.cmt { --c-radius: var(--card-radius, 10px); }
+.cmt-replies { border-radius: var(--card-radius, 10px); }
 
-/* 评论楼层与表单卡直接跟随全站 6px 圆角 */
-.cmt-thread, .cmt-form { border-radius: var(--card-radius, 6px); }
+/* 评论楼层与表单卡直接跟随全站圆角 */
+.cmt-thread, .cmt-form { border-radius: var(--card-radius, 10px); }

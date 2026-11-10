@@ -16,12 +16,14 @@
     <!-- 文章头部收进阅读卡：标题与 meta 在卡内顶部，
          用 1px 细分隔线与下方内容分区（替代此前两张卡之间的缝隙） -->
     <header class="tech-post-header">
+        {% if post.is_featured %}<span class="tech-post-featured-pill">{{ icon('star', 12, 'tech-badge-icon') | safe }}精选</span>{% endif %}
         <h1 class="tech-post-title-lg">{{ post.title }}</h1>
         <div class="tech-post-meta-lg">
             <time datetime="{{ post.created_at [:10] }}">{{ post.created_at [:10] }}</time>
             {% if post.category_name %}<span>{{ post.category_name }}</span>{% endif %}
             <span>{{ post.read_time }} 分钟阅读</span>
             <span>{{ post.views }} 次浏览</span>
+            <a class="tech-post-meta-comments" href="#comments">{{ comment_total }} 条评论</a>
         </div>
     </header>
 

@@ -161,14 +161,8 @@
     pop.addEventListener('close', function () { pop.style.transform = ''; });
   }
 
-  /* 滚动条默认隐形：滚动时给弹窗挂 .is-scrolling 让滚动条淡入（样式在 comments-popup.css），
-     停手 1.2 秒后自动淡出，避免常驻粗滚动条干扰阅读 */
-  var scrollTimer;
-  body.addEventListener('scroll', function () {
-    pop.classList.add('is-scrolling');
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(function () { pop.classList.remove('is-scrolling'); }, 1200);
-  });
+  /* 滚动条已在 CSS 中彻底隐藏（不占布局宽度，保证左右留白对称），
+     弹窗不再需要 .is-scrolling 淡入逻辑 */
 
   /* 深链：#comment-N —— 页面加载即带 hash（提交后 302 回来 / 外部分享链接），
      以及运行中 hash 变化（页内 @提及 等）都开窗定位 */

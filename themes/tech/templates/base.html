@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-post-head="{{ post_head_tint or 'normal' }}">
 <head>
     <meta charset="UTF-8">
     <!-- 博主自定义：限制移动端缩放，maximum-scale=1 禁双指/双击整页缩放，user-scalable=no 兼容旧内核；
@@ -11,8 +11,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <!-- 防白屏闪烁：主题 CSS 加载前先给 html 上色，避免深色主题刷新/跳转时闪白 -->
     <style>
-      html { background: #181b21; color-scheme: dark; }
-      html[data-theme="light"] { background: #f4f6fa; color-scheme: light; }
+      html { background: #14171c; color-scheme: dark; }
+      html[data-theme="light"] { background: #f5f6f8; color-scheme: light; }
     </style>
     <!-- 主题初始化：三态（auto 跟随系统 / light / dark），默认 auto；同步写 data-theme-mode 供 UI 判断 -->
     <script>

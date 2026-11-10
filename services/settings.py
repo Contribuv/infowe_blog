@@ -13,10 +13,13 @@ DEFAULTS: dict[str, str] = {
     "blog_name": "infowe",
     "blog_subtitle": "Python · Code · Life",
     "home_title": "",
-    # 首页标题上方的小字标语（tech 主题 Kicker）；留空则回退到 blog_subtitle
-    "home_kicker": "",
     # 首页报头显示范围：all 两端都显示 / pc 仅 PC / mobile 仅移动端 / none 都不显示
     "home_head_display": "all",
+    # 文章页标题区底色：off 关闭 / soft 淡 / normal 标准 / strong 明显
+    "post_head_tint": "normal",
+    # 侧栏「最新评论」卡片：多栏布局下是否显示，以及显示条数
+    "sidebar_comments": "1",
+    "sidebar_comments_count": "5",
     "home_quotes": "",
     "home_posts_count": "6",
     "posts_per_page": "20",

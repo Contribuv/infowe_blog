@@ -555,6 +555,39 @@ window.techHighlightCode = techHighlightCode;
 })();
 
 
+/* ── 侧栏 sticky 自适应 ──
+   侧栏比视口高时（例如开启「最新评论」并设了较多条数），
+   若仍以 top:72px 吸附，侧栏下半部分会被永远挡在视口外，页面也「滚不下去」。
+   这里量出侧栏高度写到 .tech-home-grid 的 --sidebar-h，
+   CSS 用 top: min(72px, 100vh - var(--sidebar-h) - 16px)：
+   放得下就正常吸顶；放不下就把吸附点变成负值，
+   让侧栏先跟着页面滚到露出底部，再在那里固定。
+   刻意不给侧栏加 max-height + overflow-y（那会变成独立滚动容器、吞掉滚轮）。 */
+(function () {
+  'use strict';
+  var bar = document.querySelector('.tech-sidebar');
+  if (!bar) return;
+  var host = bar.closest('.tech-home-grid') || bar.parentElement;
+  if (!host) return;
+  var last = 0;
+  function sync() {
+    var h = Math.round(bar.getBoundingClientRect().height);
+    if (h && h !== last) {
+      last = h;
+      host.style.setProperty('--sidebar-h', h + 'px');
+    }
+  }
+  sync();
+  window.addEventListener('resize', sync, { passive: true });
+  // 图片加载、字体切换都会改变高度，用 ResizeObserver 兜住
+  if (window.ResizeObserver) {
+    new ResizeObserver(sync).observe(bar);
+  } else {
+    window.addEventListener('load', sync);
+  }
+})();
+
+
 /* ── 友链页「本站信息」点击复制 ──
    点击按钮复制 data-copy 内容（站点地址 / 头像 / 现成 HTML 代码），
    成功后按钮文字短暂切换为「已复制 ✓」。

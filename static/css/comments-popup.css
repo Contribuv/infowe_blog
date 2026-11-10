@@ -91,8 +91,19 @@ body:has(.cmt-pop[open]) .cmt-fab,
   display: flex;
   flex-direction: column;
 }
+/* 遮罩：与搜索浮窗 / 归档浮窗统一为「背景毛玻璃」——
+   模糊加在 ::backdrop 上，背后整页（nav / 正文 / 侧栏）统一糊掉，
+   与另外两个浮层的层次语言保持一致。
+   不支持 backdrop-filter 时回退为更实的纯色遮罩，避免只变暗没分层。 */
 .cmt-pop::backdrop {
-  background: var(--overlay, rgba(16, 27, 43, .45)); /* 扁平化：遮罩去模糊 */
+  background: var(--overlay, rgba(16, 27, 43, .45));
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .cmt-pop::backdrop {
+    background: var(--overlay, rgba(16, 27, 43, .45));
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    backdrop-filter: blur(10px) saturate(120%);
+  }
 }
 /* 原生 dialog 默认 margin:auto 居中；这里显式声明便于覆盖浏览器默认 */
 .cmt-pop { margin: auto; }
@@ -127,35 +138,38 @@ body:has(.cmt-pop[open]) .cmt-fab,
   background: var(--hover-bg, #eef2f7);
   color: var(--text, #161b24);
 }
+/* 移动端放大关闭钮：28px 低于 44px 触控热区标准，指头容易点空。
+   视觉仍是图标按钮，热区由宽高直接撑到 40px（配合头部 padding 约 44px 可点带） */
+@media (max-width: 640px), (pointer: coarse) {
+  .cmt-pop-close {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+  }
+  .cmt-pop-head { padding: 6px 10px 6px 14px; }
+}
 
 /* 内容区：唯一滚动容器（分页/定位都只滚这里，背后页面不动） */
 .cmt-pop-body {
   flex: 1 1 auto;
-  /* 博主自定义：浮窗内同样表单在上、评论内容在下——foot(表单) 提到 body(列表) 之前 */
-  order: 2;
+  /* 浮窗内「评论内容在上、输入框在下」：列表占据滚动区（order:1），
+     表单区落到它下方（order:2，见 .cmt-pop-foot）。
+     内嵌版仍是表单在上，由 comments-tech.css 的 .cmt>.cmt-form order 控制 */
+  order: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 16px;
+  /* 顶部内距与楼层卡之间的纵向间距（12px）对齐：
+     头部已有 border-bottom 分隔线，再加 16px 会显得内容被推得太远；
+     左右仍留 16px，保持楼层卡与滚动区边缘的呼吸 */
+  padding: 12px 16px 16px;
   -webkit-overflow-scrolling: touch;
-  /* 滚动条默认隐形、滚动时淡入（.is-scrolling 由 JS 滚动监听挂到弹窗上）：
-     粗细压到 6px，颜色走主题变量，亮暗自适应 */
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color .25s ease;
+  /* 不显示滚动条，滚动条轨道也不占布局宽度。
+     原因：原方案是「滚动时才淡入一条 6px 细条」，但它常驻占据 10px 布局宽度，
+     导致楼层卡右侧留白比左侧多 10px（16 / 26），肉眼看就是内容偏左。
+     隐藏后左右内距完全对称；列表在底部被表单区裁切，滚动性依然一眼可辨。 */
+  scrollbar-width: none;
 }
-.cmt-pop.is-scrolling .cmt-pop-body {
-  scrollbar-color: var(--border-strong, #c6ced9) transparent;
-}
-.cmt-pop-body::-webkit-scrollbar { width: 6px; }
-.cmt-pop-body::-webkit-scrollbar-track { background: transparent; }
-.cmt-pop-body::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 999px;
-  transition: background-color .25s ease;
-}
-.cmt-pop.is-scrolling .cmt-pop-body::-webkit-scrollbar-thumb {
-  background: var(--border-strong, #c6ced9);
-}
+.cmt-pop-body::-webkit-scrollbar { width: 0; height: 0; }
 /* 加载中：占位提示，避免开窗瞬间一片空白 */
 .cmt-pop[aria-busy="true"] .cmt-pop-body::before {
   content: "评论加载中…";
@@ -168,12 +182,13 @@ body:has(.cmt-pop[open]) .cmt-fab,
 .cmt-pop[aria-busy="true"] .cmt-pop-body { pointer-events: none; }
 
 /* 固定底部表单区：表单始终可见，不用滚到列表末尾才能写评论；
-   <details> 展开后过高时内部滚动（限 45dvh），不把评论列表挤没 */
+   <details> 展开后过高时内部滚动（限 45dvh），不把评论列表挤没。
+   位置在滚动区（.cmt-pop-body, order:1）下方——浮窗是「内容在上、输入在下」 */
 .cmt-pop-foot {
   flex: none;
-  order: 1; /* 表单区排到列表上方（见 .cmt-pop-body 的 order:2） */
+  order: 2; /* 表单区排在列表下方（见 .cmt-pop-body 的 order:1） */
+  /* 分隔线在表单上沿：滚动区在上，这条线就是列表与输入区的分界 */
   border-top: 1px solid var(--border, #e1e6ed);
-  border-bottom: 1px solid var(--border, #e1e6ed); /* 原在列表下方的分隔线改为表单下沿 */
   background: var(--bg, #fbfcfd);
   padding: 12px 16px;
   max-height: 45dvh;
@@ -189,10 +204,56 @@ body:has(.cmt-pop[open]) .cmt-fab,
 .cmt-pop-foot:empty { display: none; }
 
 /* ── 浮窗表单紧凑化（仅浮窗，内嵌不受影响）── */
-/* 1. 展开态隐藏「收起评论框」整行：右上角 × 已是关闭入口，避免双份退出 + 撑高表单；
-      收起态入口条（写评论）保留，重开浮窗保持展开态 */
-.cmt-pop-foot .cmt-box[open] > .cmt-toggle { display: none; }
-/* 2. 博主身份条改紧凑 chip：靠左自适应宽度，视觉权重让位给输入框 */
+/* 0. 收起态收紧双层内距。
+      原先 form 内距 14px + foot 内距 12px 两层叠加，把一条 27px 的占位条
+      撑到 81px；这条在浮窗里是常驻的，白白吃掉列表高度。
+      收起态收到 8px / 8px（总高约 60px），展开后再回到常规内距。 */
+.cmt-pop-foot:has(.cmt-box:not([open])) { padding: 8px 16px; }
+.cmt-pop-foot .cmt-form:has(.cmt-box:not([open])) { padding: 8px 14px; }
+
+/* 1. 展开态底部「工具行 + 操作行」合并成一行。
+      两行原本纵向堆叠占 92.7px（工具 32 + 间距 10 + 操作 50.7），
+      而浮窗表单宽 813px、两行内容合计约 454px，完全放得下。
+      合并后行高取 max(32, 38) = 38px，省下的约 55px 全部还给评论列表。
+      操作行原本的 border-top 是纵向排列时的分隔线，横排后取消。
+      窄屏（≤640px）仍保持纵向，避免挤成一团。 */
+@media (min-width: 641px) {
+  .cmt-pop-foot .cmt-form .foot {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cmt-pop-foot .cmt-form .cmt-foot-actions {
+    border-top: 0;
+    padding-top: 0;
+    margin-left: auto;
+  }
+}
+/* 2. 展开态保留「收起评论框」这一行作为折叠入口。
+      此前整行 display:none，导致表单一旦展开就无法再折叠（右上角 × 只关整个浮窗）。
+      占位条与「写评论」已在展开态自动隐藏，这里只需把 summary 压成一行右对齐小字，
+      去掉图标与占位条样式，不撑高表单。 */
+.cmt-pop-foot .cmt-box[open] > .cmt-toggle {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #5a6575);
+}
+.cmt-pop-foot .cmt-box[open] > .cmt-toggle > svg { display: none; }
+/* 「收起评论框」本身带 flex:1 1 auto，会撑满整行让右对齐失效；
+   这里收回自适应宽度，让它贴右显示成次级操作 */
+.cmt-pop-foot .cmt-box[open] > .cmt-toggle > .cmt-toggle-close {
+  flex: 0 0 auto;
+  color: var(--text-secondary, #5a6575);
+  transition: color .15s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cmt-pop-foot .cmt-box[open] > .cmt-toggle > .cmt-toggle-close:hover {
+    color: var(--accent);
+  }
+}
+/* 3. 博主身份条改紧凑 chip：靠左自适应宽度，视觉权重让位给输入框 */
 .cmt-pop-foot .cmt-admin {
   display: inline-flex; width: fit-content;
   padding: 4px 10px; gap: 7px;
@@ -200,11 +261,15 @@ body:has(.cmt-pop[open]) .cmt-fab,
   font-size: 12.5px;
 }
 .cmt-pop-foot .cmt-admin-avatar { width: 20px; height: 20px; }
-/* 3. 输入框限高：展开态压缩首屏高度，多露出下方楼层（超出内部滚动） */
+/* 4. 输入框限高：展开态压缩首屏高度，多露出下方楼层（超出内部滚动） */
 .cmt-pop-foot .cmt-form textarea { min-height: 64px; max-height: 96px; }
 
 /* 片段注入后复用 .cmt 体系配色（变量定义在 comments-tech.css 的 .cmt 块） */
 .cmt-pop-body .cmt { margin-top: 0; }
+/* 浮窗里表单已搬到底部（.cmt-pop-foot），列表上方没有内容，
+   #cmt-region 的 20px 上边距（内嵌版用来分隔「表单 / 列表」）在浮窗变成纯留白，
+   这里归零——顶部只保留滚动区的 16px 内距 */
+.cmt-pop-body #cmt-region { margin-top: 0; }
 /* 弹窗头部已有「评论 N」标题：隐藏片段自带的大标题，避免同一标题出现两次；
    总数变化由 comments-popup.js 的 syncTotal() 同步进头部的 .cmt-num */
 .cmt-pop-body .cmt-title { display: none; }
@@ -260,9 +325,11 @@ body:has(.cmt-pop[open]) .cmt-fab,
     border-radius: 16px 16px 0 0;
     border-bottom: none;
   }
-  /* 底部给 Home Indicator 留安全区；触屏由系统惯性滚动反馈，细滚动条不再显示 */
+  /* 底部安全区由表单区（.cmt-pop-foot，现位于弹窗最下方）负责，
+     滚动区回到常规内距——否则列表末尾会多出一大截空白。
+     顶部同样取 12px，与楼层卡之间的纵向间距对齐 */
   .cmt-pop-body {
-    padding: 14px 12px calc(28px + env(safe-area-inset-bottom));
+    padding: 12px 12px 14px;
     scrollbar-width: none;
   }
   .cmt-pop-body::-webkit-scrollbar { width: 0; }

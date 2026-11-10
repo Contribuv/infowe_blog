@@ -55,6 +55,32 @@
 
 
 
+    {# 最新评论：排在分类之后、十年之约之前（十年之约恒定是最后一张卡） #}
+    {% if sidebar.side_comments %}
+    <section class="tech-side-card">
+        <h3>最新评论</h3>
+        <ul class="tech-side-cmts">
+            {% for c in sidebar.side_comments %}
+            <li>
+                <a class="tech-side-cmt" href="{{ c.source_url }}">
+                    <img class="tech-side-cmt-avatar" src="{{ c.avatar }}" alt="" loading="lazy"
+                         onerror="this.remove()">
+                    <span class="tech-side-cmt-main">
+                        <span class="tech-side-cmt-head">
+                            <b>{{ c.author }}</b>
+                            <time>{{ c.created_at[:10] }}</time>
+                        </span>
+                        <span class="tech-side-cmt-text">{{ c.text }}</span>
+                        <span class="tech-side-cmt-src">来自「{{ c.source_title }}」</span>
+                    </span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endif %}
+
+    {# 十年之约：恒定排在侧栏最后一张，新增卡片请插在它上面 #}
     <section class="tech-side-card tech-side-widget">
         <h3>十年之约</h3>
         {% if sidebar.side_widget and sidebar.side_widget.articles %}
