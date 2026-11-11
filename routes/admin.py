@@ -708,7 +708,15 @@ def admin_orphan_clean():
     selected = list(dict.fromkeys(selected))
     results = []
     deleted = failed = 0
+    # 页面渲染到点击删除之间，内容可能刚被引用（例如同时开了编辑页）。
+    # 删除前重新扫一次引用，避免把已重新引用的文件误删。
+    still_referenced = upload.referenced_urls()
     for rel in selected:
+        url = "/uploads/" + str(rel or "").replace("\\", "/").lstrip("/")
+        if upload.unquote(url) in still_referenced:
+            failed += 1
+            results.append({"rel": rel, "ok": False, "reason": "文件已被内容引用，已跳过"})
+            continue
         reason = upload.delete_rel(rel)
         if reason:
             failed += 1

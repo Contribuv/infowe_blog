@@ -579,19 +579,25 @@ def circle():
     )
 
 
+def _site_card_vars() -> dict:
+    """本站名片用的站点地址与站标（友链申请页展示、复制用）。"""
+    base = site_url.base()
+    # 站标：固定用本站 favicon。
+    # 页面里展示走站内相对路径，本地开发也能正常加载；
+    # 复制给别人时再拼成绝对地址，对方拿去就能直接引用。
+    favicon_path = "/static/images/favicon.ico"
+    return {
+        "site_url": base,
+        "favicon_url": base + favicon_path,
+        "favicon_src": favicon_path,
+    }
+
+
 def links_page():
-    avatar_cfg = settings.get_str("avatar", "").strip()
-    if avatar_cfg and not avatar_cfg.startswith("http"):
-        avatar_url = site_url.base() + avatar_cfg
-    elif avatar_cfg:
-        avatar_url = avatar_cfg
-    else:
-        avatar_url = site_url.base() + "/static/images/favicon.ico"
     return render_template(
         "links.html",
         links=Link.load("approved"),
-        site_url=site_url.base(),
-        avatar_url=avatar_url,
+        **_site_card_vars(),
     )
 
 
@@ -602,17 +608,18 @@ def links_apply():
         name = (request.form.get("name") or "").strip()
         url = (request.form.get("url") or "").strip()
         description = (request.form.get("description") or "").strip()
-        avatar_url = (request.form.get("avatar") or "").strip()
+        # 表单里的头像是对方站的，改名避免与本站名片变量混淆
+        link_avatar = (request.form.get("avatar") or "").strip()
         if not name or not url:
             flash("请填写名称和网址", "error")
-            return render_template("links_apply.html", form=request.form)
+            return render_template("links_apply.html", form=request.form, **_site_card_vars())
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
         email = (request.form.get("email") or "").strip()
         rss = (request.form.get("rss") or "").strip()
         backlink_url = (request.form.get("backlink_url") or "").strip()
         link_id = Link.save(
-            {"name": name, "url": url, "description": description, "avatar": avatar_url, "rss": rss, "backlink_url": backlink_url, "sort_order": 0},
+            {"name": name, "url": url, "description": description, "avatar": link_avatar, "rss": rss, "backlink_url": backlink_url, "sort_order": 0},
             None,
             "pending",
         )
@@ -624,7 +631,7 @@ def links_apply():
         except Exception:
             pass
         return redirect(url_for("links_apply_success"))
-    return render_template("links_apply.html", form=None)
+    return render_template("links_apply.html", form=None, **_site_card_vars())
 
 
 def links_apply_success():

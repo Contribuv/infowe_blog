@@ -7,6 +7,33 @@
     <p class="tech-page-desc">交换友链，一起成长。请先添加本站链接，再提交申请。</p>
 </div>
 
+{# 本站信息放在表单前面：实际流程就是「先把我加进你的友链 → 再提交」，
+   顺序反了会让人先填表再回头找地址。
+   展示用站标（favicon）而不是头像：友链卡片里放圆形头像更常见，
+   而这里是要对方直接复制走的图标，站标更通用。 #}
+<div class="tech-apply-notes tech-apply-site">
+    <h2>本站信息</h2>
+    {% set site_title = home_title or blog_name %}
+    {% set site_bio = blog_subtitle or '记录折腾与思考' %}
+    <div class="tech-link-site">
+        {# 展示用站内相对路径，避免本地访问时去拉线上域名 #}
+        <img class="tech-link-site-avatar" src="{{ favicon_src }}" alt="{{ site_title }} 站标">
+        <div class="tech-link-site-main">
+            <div class="tech-link-site-head">
+                <span class="tech-link-site-name">{{ site_title }}</span>
+                <span class="tech-link-site-url">{{ site_url }}/</span>
+            </div>
+            <span class="tech-link-site-bio">{{ site_bio }}</span>
+        </div>
+    </div>
+    <div class="tech-links-copyrow">
+        <button type="button" class="tech-copy" data-copy='<a href="{{ site_url }}/" target="_blank">{{ site_title }}</a>'>复制友链 HTML</button>
+        <button type="button" class="tech-copy" data-copy="{{ site_url }}/">复制站点地址</button>
+        <button type="button" class="tech-copy" data-copy="{{ site_bio }}">复制介绍</button>
+        <button type="button" class="tech-copy" data-copy="{{ favicon_url }}">复制站标地址</button>
+    </div>
+</div>
+
 <div class="tech-form">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -18,8 +45,8 @@
 
     <form method="POST" action="/links/apply">
         <div class="tech-form-row">
-            <input type="text" name="name" class="tech-input" placeholder="网站名称 *" maxlength="50" required>
-            <input type="url" name="url" class="tech-input" placeholder="网站地址 https:// *" maxlength="200" required>
+            <input type="text" name="name" class="tech-input" placeholder="网站名称（必填）" maxlength="50" required>
+            <input type="url" name="url" class="tech-input" placeholder="网站地址 https://（必填）" maxlength="200" required>
         </div>
         <input type="url" name="avatar" class="tech-input" placeholder="头像地址（选填）" maxlength="500">
         <input type="email" name="email" class="tech-input" placeholder="联系邮箱（选填）" maxlength="100">
@@ -33,14 +60,28 @@
     </form>
 </div>
 
-<div class="tech-apply-notes">
-    <h2>申请须知</h2>
-    <ul>
-        <li>提交后先由 AI 做一轮内容与站点检查，通过后进入人工确认</li>
-        <li>同一站点或邮箱重复提交会被拦截，请勿反复提交</li>
-        <li>填写 RSS 后，最新文章会自动聚合到 <a href="/circle">圈子</a></li>
-        <li>一般 1–2 天内处理，通过后会出现在友链页</li>
-    </ul>
+{# 收录说明 + 提交流程左右双栏：两块都短，竖排会撑出很长的空白区，
+   并排后一眼扫完。「以下情况暂不收录」与「收录说明」内容重复，已合并掉。
+   两栏各 4 条，条目数一致，底部齐平。 #}
+<div class="tech-apply-notes tech-apply-cols" id="notes">
+    <div class="tech-apply-col">
+        <h2>收录说明</h2>
+        <ul>
+            <li>正常运营的个人小站，程序不限，年更也收</li>
+            <li>无违法侵权内容，不是采集 / 镜像站</li>
+            <li>填好头像和一句话介绍，卡片更好看</li>
+            <li>填了 RSS，文章会自动聚合到 <a href="/circle">圈子</a></li>
+        </ul>
+    </div>
+    <div class="tech-apply-col">
+        <h2>提交流程</h2>
+        <ul>
+            <li>提交后先由 AI 检查内容与站点，再人工确认</li>
+            <li>同站或同邮箱重复提交会被拦截</li>
+            <li>一般 1–2 天内处理完</li>
+            <li>通过后会出现在友链页</li>
+        </ul>
+    </div>
 </div>
 </div>
 {% endblock %}

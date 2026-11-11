@@ -12,7 +12,7 @@
 {% if not orphans %}
 <div class="empty-state">
     {{ icon('check-circle', 28) | safe }}
-    <p class="text-muted">没有孤儿文件，uploads 中的文件均被文章引用。</p>
+    <p class="text-muted">没有孤儿文件，uploads 中的文件均被有效内容引用。</p>
 </div>
 {% else %}
 <!-- 类型筛选 + 文件名搜索（纯前端即时生效） -->
@@ -29,8 +29,10 @@
 
 <div class="card">
     <div class="card-hint orphan-hint">
-        这里列出 <b>uploads</b> 中未被任何文章引用（标题/正文/摘要/标签）的上传文件。
-        例如：新建文章时传了图后放弃、删除文章时的漏网文件。
+        这里列出 <b>uploads</b> 中不再被任何有效内容引用的上传文件
+        （文章标题/正文/摘要/标签/封面、未删除的评论、友链、记忆、项目、时间线、站点设置）。
+        例如：新建文章时传了图后放弃、<b>已删除评论</b>的附件、彻底删除文章时的漏网文件。
+        已拒绝的评论图片会保留（随时可在后台恢复通过，不会缺图）。
         头像、项目文件与无痕原图目录（.originals）不在此列，不会误删。
     </div>
 

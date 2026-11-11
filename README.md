@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.13-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.13)
+[![version](https://img.shields.io/badge/version-3.9.14-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.14)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,17 +925,29 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.13**
+当前版本：**v3.9.14**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.14
+
+- **修复孤儿文件清理误删「被拒绝评论」的图片**：原引用扫描把所有 `rejected` 评论都当成「不引用」，后台一旦点清理，这些图片就被删掉——而评论本身还留在后台、随时可以恢复通过，恢复后就是一张裂图。现在只有**彻底删除**（`deleted_at` 非空）的评论才不计入引用，拒绝仅隐藏内容、图片继续保留
+- **文章封面纳入引用扫描**：`referenced_urls()` 原来只扫正文与图片字段，漏了 `cover`，带封面的文章会把自己的封面图判成孤儿。补上后清理不会再动封面；`Post._purge_rows` 彻底删除文章时也一并清掉封面文件
+- **uploads 根目录下的文件也能列出**：`orphans()` 原先要求路径至少两级，直接放在 `uploads/` 根下的文件永远扫不出来、也无法清理。去掉该限制后按真实目录遍历
+- **删除前二次复检引用**：`admin_orphan_clean` 在真正删文件前会重新扫一遍引用，如果这期间文件已被新内容引用，则跳过并返回「文件已被内容引用，已跳过」，避免刚上传就被清理掉
+- **友链列表页底部大幅瘦身**：原先「收录说明 + 暂不收录 + 本站信息卡 + 5 个复制按钮」全堆在 `/links`，底部高 **485px**，访客一进页面先撞一大段规矩和站长自荐卡。现在只留两行左对齐引导（与页头、友链网格同一基线），高度降到 **74px**；规则、名片、复制按钮整体挪到申请页
+- **友链列表页头去掉「申请友链」重复入口**：底部已有「先把本站加进贵站友链，再提交申请」，页头只保留「目前共 N 位 · 看看圈子动态」
+- **友链申请页重做**：顺序改为「页面头 → 本站信息卡 → 表单 → 收录说明/提交流程」——真实流程就是先把本站加进对方友链、再填表；删掉与「收录说明」重复的「以下情况暂不收录」；「收录说明」与「提交流程」改成左右双栏、各 4 条且底部齐平；必填标记由裸 `*` 统一为「（必填）」，与「（选填）」对齐
+- **本站信息卡（复制回链用）**：站标改用**站内相对路径** `/static/images/favicon.ico` 展示，本地开发不再去拉线上域名（之前浏览器里直接裂图），「复制站标地址」仍输出绝对地址；名片由三行堆叠改为两行——站名与地址共用首行、按基线对齐，地址退成 11.5px 等宽注脚，介绍独占第二行；图标 44px 垂直居中（原先用负 margin 硬凑，中心偏差 1px 内），外加 1px 暗描边，浅色站标在深色卡面上不再糊成一块白方块
+- **清理死代码**：`_site_card_vars()` 里的 `avatar_url` 全站模板已无引用，连同头像分支一并移除
+
+<details>
+<summary><b>历史版本（v3.9.13 及更早，点击展开）</b></summary>
 
 ### v3.9.13
 
 - **修复「站点状态」卡内明细浮出背景框、与外层卡片重叠**：`.tech-status-section` 被列进全站「卡片基础」样式段（描边 / 圆角 / 底色 / 阴影），而状态卡内部的去重规则只清了底色与描边，**漏掉 `box-shadow`**——卡内两个子分区各自投了一层卡片阴影，在卡面上浮出两块阴影方框，看起来像与外层卡片重叠。补 `box-shadow: none` 即可（外层状态卡自身的阴影不受影响）
 - **监控明细药丸底色改用 `--inset-bg`**：原先用 `--bg-subtle`，而深色下 `--bg-subtle`(#1b1f26) 比卡片 `--card-bg`(#1c2028) **更暗**，药丸贴在卡面上像一块暗色方块。改用项目里已有的「卡内嵌层」令牌 `--inset-bg`（深色 #262b34 亮于卡面、浅色 #eef1f6 暗于白卡），与代码块 / 表头 / 键盘键同一套语言；到期状态徽章也改成在 `--inset-bg` 上混状态色，不再是「透明叠卡片」的浮灰贴片
-
-<details>
-<summary><b>历史版本（v3.9.12 及更早，点击展开）</b></summary>
 
 ### v3.9.12
 

@@ -2558,43 +2558,54 @@ html { touch-action: manipulation; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* ── 友链页底部介绍区 ── */
-/* 上边距并入全站区块节奏 24px：与下方 padding-top 24 对称，
-   分隔线上下留白一致（原 28 / 24 略偏上） */
-.tech-links-extra { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
-.tech-links-intro p { margin: 0 0 12px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
-.tech-links-intro p:last-child { margin-bottom: 0; }
-.tech-links-intro a { color: var(--accent); text-decoration: none; }
-@media (hover: hover) and (pointer: fine) { .tech-links-intro a:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
-.tech-links-rules {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 40px;
-}
-.tech-links-rules .tech-links-section { min-width: 0; }
-.tech-links-section { margin-top: 24px; }
-.tech-links-section h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; color: var(--text); }
-.tech-links-section ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
-.tech-links-section li { overflow-wrap: anywhere; }
-/* 本站信息：名片式预览 + 复制动作（长 URL 不再展示成折行糊块） */
-.tech-links-card {
+/* ── 友链列表页底部：一行轻引导，不堆规则与自荐卡 ── */
+/* 列表页只放两行文字 + 一个申请入口；收录规则、本站信息卡、复制按钮
+   都挪到 /links/apply，访客点进去要加友链时才需要看。
+   左对齐跟页面头部、友链网格保持同一基线（居中会和上方网格错位）。 */
+.tech-links-foot { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.tech-links-foot-text { margin: 0 0 6px; font-size: 13.5px; line-height: 1.75; color: var(--text-secondary); }
+.tech-links-foot-cta { margin: 0; font-size: 13.5px; line-height: 1.75; color: var(--text-secondary); }
+.tech-links-foot-cta a { color: var(--accent); text-decoration: none; }
+@media (hover: hover) and (pointer: fine) { .tech-links-foot-cta a:hover { text-decoration: underline; } }
+
+/* ── 申请页「本站信息」名片（用于加友链时回链复制）── */
+/* 不再画内嵌面板：外层 .tech-apply-notes 已有卡面底色 + 1px 描边，
+   里面再垫一层 --inset-bg 会变成一个明显更亮的方块（深色下亮度 43 vs 32），
+   和旁边两张同色卡放一起很突兀。
+   改为名片直接坐在卡面上，靠分割线分区，整页三张卡保持同一套底色。 */
+/* 站标 + 站名/地址同排、介绍单独一行。
+   原来是三行堆叠（站名 / 介绍 / 地址），40px 图标旁边挂着一条像尾巴的裸地址，
+   视觉上散。改成两行：站名与地址共用首行、按基线对齐，地址退成小字注脚；
+   介绍独占第二行。图标垂直居中于整个文字块，重心才稳。 */
+.tech-link-site {
   display: flex; align-items: center; gap: 14px;
-  border: 1px solid var(--border); border-radius: 8px; padding: 16px;
+  padding: 0;
 }
-.tech-links-card-avatar {
-  width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%;
-  object-fit: cover; background: var(--bg-subtle);
+/* 站标自带浅色底，深色卡面上会糊成一块白方块，
+   用 1px 暗描边收边；方形图标给小圆角，不裁圆（圆形会切掉四角）。 */
+.tech-link-site-avatar {
+  width: 44px; height: 44px; flex-shrink: 0;
+  border-radius: 10px; object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .12);
 }
-.tech-links-card-main { min-width: 0; }
-.tech-links-card-name { display: block; font-size: 15px; font-weight: 600; color: var(--text); }
-.tech-links-card-bio { display: block; font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-.tech-links-card-url {
-  display: block; margin-top: 6px;
+.tech-link-site-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.tech-link-site-head {
+  display: flex; align-items: baseline; flex-wrap: wrap;
+  column-gap: 10px; row-gap: 2px; min-width: 0;
+}
+.tech-link-site-name { font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.5; }
+.tech-link-site-url {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px; color: var(--text-secondary);
+  font-size: 11.5px; color: var(--text-secondary); line-height: 1.5;
   overflow-wrap: anywhere;
 }
-.tech-links-copyrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.tech-link-site-bio { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+/* 复制按钮行：名片不再有底色后，用一条细分割线把「名片」与「操作」分开 */
+.tech-links-copyrow {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
 .tech-copy {
   appearance: none; margin: 0; padding: 5px 12px;
   background: transparent; border: 1px solid var(--border); border-radius: 8px;
@@ -2671,6 +2682,10 @@ html { touch-action: manipulation; }
   padding: 18px 20px;
   border: 1px solid var(--border);
   border-radius: 12px;
+  /* 与相邻卡片保持全站 24px 区块节奏：
+     .tech-apply-notes 用的是 margin-top 24px，自己没有 margin-bottom，
+     表单若也不带 margin，落在它下面时会贴成 0px 间距。 */
+  margin-top: 24px;
 }
 .tech-form-row { display: flex; gap: 10px; }
 .tech-form-row .tech-input { flex: 1; min-width: 0; }
@@ -3570,7 +3585,7 @@ html { touch-action: manipulation; }
 }
 
 @media (max-width: 640px) {
-  .tech-links-rules { grid-template-columns: 1fr; gap: 0; }
+  .tech-links-foot-text, .tech-links-foot-cta { font-size: 13px; }
   .tech-page-head--with-action { align-items: flex-start; }
 }
 
@@ -3937,6 +3952,17 @@ html { touch-action: manipulation; }
   color: var(--text-secondary);
 }
 .tech-apply-notes li { overflow-wrap: anywhere; }
+/* 左右双栏：两块内容都短，竖排会拖出一大片空白，并排后一眼扫完 */
+.tech-apply-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 32px;
+}
+.tech-apply-col { min-width: 0; }
+/* 窄屏回退单栏：双栏在 640px 以下每栏太窄，条目会挤成竖条 */
+@media (max-width: 640px) {
+  .tech-apply-cols { grid-template-columns: 1fr; gap: 20px; }
+}
 .tech-apply-notes a { color: var(--accent); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-apply-notes a:hover { color: color-mix(in srgb, var(--accent) 84%, var(--text)); } }
 

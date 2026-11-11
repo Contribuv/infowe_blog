@@ -351,16 +351,34 @@ def first_url(*texts: str) -> str:
 
 
 def referenced_urls() -> set[str]:
+    """收集仍被视为「有效引用」的上传文件 URL。
+
+    判断口径是「这条内容是否仍可能展示、或仍能在后台恢复编辑」：
+
+    - **文章**：回收站里的软删除文章仍可恢复，且彻底删除时由
+      `Post._purge_rows` 负责清图，所以这里全部统计。
+      字段必须覆盖 `cover`——只在封面用到的图若漏扫，会被孤儿清理误删。
+    - **评论**：只有已软删除（`deleted_at`）的评论才算孤儿——后台没有恢复
+      入口，图片交给孤儿清理。**已拒绝（`rejected`）的评论图片保留**：
+      拒绝态随时可能在后台恢复通过，若提前清理，恢复后就会缺图。
+      `pending` 同理保留（作者本人可见、管理员随时可通过）。
+    - **友链**：`rejected` 仍可在后台恢复通过，按「可恢复」处理，全部统计。
+    - **记忆 / 项目 / 时间线**：没有删除或审核标记，全部统计。
+    - **设置项**：头像、自定义 logo 等图片一并保护，避免被当成孤儿。
+    - 不扫描 `ai_messages` / `op_logs`：那是操作历史快照（例如 AI 调用参数
+      里带过的旧正文），不代表当前引用，否则清理过的图会被永久钉住。
+    """
     import db
 
     referenced: set[str] = set()
     sources = [
-        "SELECT title, content, excerpt, tags FROM posts",
-        "SELECT author, website, content FROM comments",
+        "SELECT title, content, excerpt, tags, cover FROM posts",
+        "SELECT author, website, content FROM comments WHERE deleted_at IS NULL",
         "SELECT name, url, description, avatar FROM links",
         "SELECT title, text, image FROM memories",
         "SELECT name, description, url FROM projects",
         "SELECT content FROM timeline",
+        "SELECT key, value FROM settings",
     ]
     for sql in sources:
         for row in db.query(sql):
@@ -379,9 +397,10 @@ def orphans() -> list[dict]:
             continue
         rel = path.relative_to(base).as_posix()
         parts = rel.split("/")
-        if len(parts) < 2:
-            continue
-        if parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects"}:
+        # 跳过保留目录（头像 / AI 头像 / 项目文件）与隐藏目录（.originals 等）。
+        # 不再要求至少两级路径：uploads 根下直接放置的文件同样可能是孤儿，
+        # 之前 len(parts) < 2 的过滤会让它们永远不显示、也永远清理不到。
+        if not parts or parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects"}:
             continue
         url = "/uploads/" + rel
         if url in referenced:

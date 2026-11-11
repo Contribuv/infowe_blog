@@ -462,8 +462,12 @@ def _purge_rows(rows: list) -> int:
 
     gone: set[str] = set()
     for row in rows:
+        keys = row.keys() if hasattr(row, "keys") else ()
+        # 封面图只在 cover 字段里，正文未必引用；漏掉会导致图残留在 uploads
+        cover = row["cover"] if "cover" in keys else ""
         gone |= upload.extract_urls(
-            (row["title"] or "", row["content"] or "", row["excerpt"] or "", row["tags"] or "")
+            (row["title"] or "", row["content"] or "", row["excerpt"] or "",
+             row["tags"] or "", cover or "")
         )
         db.execute("DELETE FROM posts WHERE id = ?", (row["id"],))
     if not gone:
@@ -478,7 +482,9 @@ def _purge_rows(rows: list) -> int:
 
 def purge(post_id: int) -> int:
     """彻底删除（回收站里的删除）：物理删行 + 清理不再被引用的上传文件。"""
-    row = db.one("SELECT id, title, content, excerpt, tags FROM posts WHERE id = ?", (post_id,))
+    row = db.one(
+        "SELECT id, title, content, excerpt, tags, cover FROM posts WHERE id = ?", (post_id,)
+    )
     return _purge_rows([row]) if row else 0
 
 
@@ -488,14 +494,18 @@ def purge_many(ids: list[int]) -> int:
     if not ids:
         return 0
     marks = ",".join("?" * len(ids))
-    rows = db.query(f"SELECT id, title, content, excerpt, tags FROM posts WHERE id IN ({marks})", ids)
+    rows = db.query(
+        f"SELECT id, title, content, excerpt, tags, cover FROM posts WHERE id IN ({marks})", ids
+    )
     _purge_rows(rows)
     return len(rows)
 
 
 def empty_trash() -> int:
     """清空回收站：真删全部软删文章并清理附件。"""
-    rows = db.query("SELECT id, title, content, excerpt, tags FROM posts WHERE deleted_at IS NOT NULL")
+    rows = db.query(
+        "SELECT id, title, content, excerpt, tags, cover FROM posts WHERE deleted_at IS NOT NULL"
+    )
     if not rows:
         return 0
     _purge_rows(rows)
