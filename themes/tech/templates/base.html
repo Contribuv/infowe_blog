@@ -90,6 +90,14 @@
     {% endif %}
     <a href="#main-content" class="skip-link">跳到主要内容</a>
 
+    {# 文章页：登录后「写作」直接进入当前文章编辑页；其它页面仍进入后台首页 #}
+    {% set writing_href = admin_prefix %}
+    {% set writing_label = '写作' %}
+    {% if is_admin and request.endpoint == 'post_detail' and post is defined and post %}
+        {% set writing_href = url_for('admin_post_edit', post_id=post.id) %}
+        {% set writing_label = '编辑本文' %}
+    {% endif %}
+
     <!-- 导航 -->
     <nav class="tech-nav" aria-label="主导航">
         <div class="tech-shell">
@@ -103,7 +111,7 @@
                 </div>
                 <div class="tech-nav-actions">
                     {% if is_admin %}
-                    <a href="{{ admin_prefix }}" class="tech-icon-btn {% if request.path.startswith(admin_prefix) %}active{% endif %}" aria-label="写作" title="写作">
+                    <a href="{{ writing_href }}" class="tech-icon-btn {% if request.path.startswith(admin_prefix) %}active{% endif %}" aria-label="{{ writing_label }}" title="{{ writing_label }}">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-4.5L17 3z"/></svg>
                     </a>
                     {% endif %}
@@ -151,7 +159,7 @@
         <a href="{{ item.href }}" class="tech-drawer-link {% if request.path == item.href %}active{% endif %}">{{ item.label }}</a>
         {% endfor %}
         {% if is_admin %}
-        <a href="{{ admin_prefix }}" class="tech-drawer-link {% if request.path.startswith(admin_prefix) %}active{% endif %}">写作</a>
+        <a href="{{ writing_href }}" class="tech-drawer-link {% if request.path.startswith(admin_prefix) %}active{% endif %}">{{ writing_label }}</a>
         {% endif %}
     </aside>
 

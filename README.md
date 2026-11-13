@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.15-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.15)
+[![version](https://img.shields.io/badge/version-3.9.16-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.16)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.15**
+当前版本：**v3.9.16**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.16
+
+- **文章页「写作」直达编辑**：登录状态下，在文章详情页点击导航栏的「写作」图标，不再跳转到后台首页，而是直接进入当前文章的编辑页；图标提示文案同步变为「编辑本文」
+- **移动端抽屉同步**：手机端展开菜单后的「写作」入口也指向当前文章编辑页，与桌面端行为一致
+- **其它页面保持不变**：首页、友链、归档等页面的「写作」仍进入后台首页；未登录时不显示该入口。判断依据是 `request.endpoint == 'post_detail'` 且路由已传入 `post`，因此只在文章详情页生效
+
+<details>
+<summary><b>历史版本（v3.9.15 及更早，点击展开）</b></summary>
 
 ### v3.9.15
 
@@ -940,9 +949,6 @@ chown -R www:www var
 - **摘要生成剥离提示块围栏**：`:::tip`、`:::note`、`:::warning`、`:::danger` 等 Markdown 提示块标记不再进入自动摘要
 - **历史文章清理工具**：新增 `tools/fix_ai_posts.py`，默认只预览，`--apply` 写入前自动备份数据库，可用 `--set-tags` 修正语义不合理的标签，便于线上处理存量 AI 文章
 - **修复 Windows 下友链审核线程不启动**：原先 `import fcntl` 失败会直接结束整个定时任务线程，导致 Windows 上友链审核永远不执行；现在降级为单进程直接运行
-
-<details>
-<summary><b>历史版本（v3.9.14 及更早，点击展开）</b></summary>
 
 ### v3.9.14
 
