@@ -111,11 +111,15 @@
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="link_moderation" {% if cfg.link_moderation %}checked{% endif %}>
-                    <span><strong>友链回链自动审核</strong><small>对方页面出现本站链接后自动通过并发信通知</small></span>
+                    <span><strong>友链自动体检</strong><small>定时抓取对方首页，检查域名、成人/赌博/诈骗内容、链接农场与访问速度；不合格直接拒绝或转人工</small></span>
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="link_ai_audit" {% if cfg.link_ai_audit|default(true) %}checked{% endif %}>
-                    <span><strong>友链 AI 内容审核</strong><small>抓取对方首页标题与正文，判断色情、赌博、诈骗、采集等风险；未配置模型时自动跳过，不影响回链检测</small></span>
+                    <span><strong>友链 AI 内容审核</strong><small>在本地规则之外，再让 AI 判断色情、赌博、诈骗、采集等风险；未配置模型时本轮跳过，只有明确判定安全才会自动通过</small></span>
+                </label>
+                <label class="ai-switch">
+                    <input type="checkbox" name="link_auto_approve" {% if cfg.link_auto_approve %}checked{% endif %}>
+                    <span><strong>友链自动通过</strong><small>体检与 AI 全部通过、且检测到对方回链时直接收录；关闭则一律转人工确认（推荐关闭）</small></span>
                 </label>
                 <div class="ai-identity span-2">
                     <img class="ai-identity-avatar" id="ai-avatar-preview" alt="AI 头像"
@@ -168,7 +172,36 @@
                 <div class="form-group">
                     <label>友链复查时长（小时）</label>
                     <input type="number" name="link_check_hours" class="input-text" value="{{ cfg.link_check_hours }}" min="1" max="720">
-                    <span class="form-hint">仅在「友链回链自动审核」定时任务启用时生效</span>
+                    <span class="form-hint">超过该时长仍未检测到回链，转人工处理</span>
+                </div>
+                <div class="form-group">
+                    <label>首字节上限（毫秒）</label>
+                    <input type="number" name="link_max_ttfb_ms" class="input-text" value="{{ cfg.link_max_ttfb_ms|default(4000) }}" min="500" max="30000" step="500">
+                    <span class="form-hint">超过即标记「响应偏慢」并转人工，默认 4000</span>
+                </div>
+                <div class="form-group">
+                    <label>总耗时上限（毫秒）</label>
+                    <input type="number" name="link_max_total_ms" class="input-text" value="{{ cfg.link_max_total_ms|default(10000) }}" min="1000" max="60000" step="500">
+                    <span class="form-hint">整页下载超过该时长视为过慢，默认 10000</span>
+                </div>
+                <div class="form-group">
+                    <label>页面体积上限（字节）</label>
+                    <input type="number" name="link_max_bytes" class="input-text" value="{{ cfg.link_max_bytes|default(5242880) }}" min="102400" max="52428800" step="102400">
+                    <span class="form-hint">默认 5242880（5 MB），只读取前 5 MB 用于检测</span>
+                </div>
+                <label class="ai-switch">
+                    <input type="checkbox" name="link_recheck_enabled" {% if cfg.link_recheck_enabled|default(true) %}checked{% endif %}>
+                    <span><strong>已通过友链定期复检</strong><small>按周期抽检已收录友链，发现违规或站点变脏时自动转为待审核并邮件提醒；变慢只记录不下线</small></span>
+                </label>
+                <div class="form-group">
+                    <label>复检周期（天）</label>
+                    <input type="number" name="link_recheck_days" class="input-text" value="{{ cfg.link_recheck_days|default(7) }}" min="1" max="365">
+                    <span class="form-hint">每条友链两次复检的最短间隔，默认 7 天</span>
+                </div>
+                <div class="form-group">
+                    <label>每轮复检条数</label>
+                    <input type="number" name="link_recheck_batch" class="input-text" value="{{ cfg.link_recheck_batch|default(8) }}" min="1" max="50">
+                    <span class="form-hint">每 10 分钟一轮，每轮最多检查几条，默认 8，避免集中请求</span>
                 </div>
             </div>
         </div>

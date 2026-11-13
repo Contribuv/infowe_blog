@@ -38,8 +38,10 @@ DEFAULTS: dict = {
         "- get_project：项目详情。args {id}\n"
         "- get_stats：站点统计。args {}\n\n"
         "## 写工具\n"
-        "- create_post：args {title, content, tags:[], status:draft|published, category:分类名}\n"
-        "- update_post：args {id, title, content, status, category}\n"
+        "- create_post：args {title, content, tags:[], status:draft|published, category:分类名}。"
+        "content 只写正文：不要重复 title，不要 YAML front matter，不要写「**标签**：」这类元信息；"
+        "tags 用 2-5 个短词数组，不带 # 前缀\n"
+        "- update_post：args {id, title, content, tags:[], status, category}（content 同样只写正文，tags 省略则保留原标签）\n"
         "- delete_post：args {id}\n"
         "- create_category：args {name, slug}\n"
         "- update_category：args {id, name, slug}\n"
@@ -64,6 +66,7 @@ DEFAULTS: dict = {
         "- 写具体：时间、版本、报错原文、当时怎么判断的；少用空泛总结。\n"
         "- 句子长短交错，允许口语和一点自嘲；不要排比、不要“综上所述”。\n"
         "- 标题直接，不堆形容词；正文用 Markdown 小标题、列表、代码块。\n"
+        "- 正文不要再写一遍文章标题（页面会自动显示），也不要加 YAML 头或标签说明。\n"
         "- 不要出现“作为 AI”“本文由 AI 生成”之类的话。\n\n"
         "## 常见请求对应\n"
         "- 最新 10 篇文章 -> list_posts {limit:10}\n"
@@ -96,6 +99,17 @@ DEFAULTS: dict = {
     "link_moderation": True,
     "link_ai_audit": True,
     "link_check_hours": 72,
+    # 自动通过：默认关闭。体检 + AI 全通过且检测到回链时，
+    # 仍需人工点头才收录；想全自动再打开。
+    "link_auto_approve": False,
+    # 访问速度门槛：超过即转人工（不直接拒绝，避免一次网络抖动误杀）
+    "link_max_ttfb_ms": 4000,
+    "link_max_total_ms": 10000,
+    "link_max_bytes": 5242880,
+    # 已通过友链定期复检：默认每 7 天一轮，每轮最多 8 条
+    "link_recheck_enabled": True,
+    "link_recheck_days": 7,
+    "link_recheck_batch": 8,
     "daily_call_limit": 300,
     "auto_execute": True,
     "extra_blocked_words": "",

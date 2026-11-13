@@ -11,7 +11,7 @@
 <div class="tech-links">
     <div class="tech-links-grid">
         {% for link in links %}
-        <a href="{{ link.url }}" target="_blank" rel="noopener" class="tech-link-card">
+        <a href="{{ link.url }}" target="_blank" rel="noopener nofollow ugc" class="tech-link-card">
             {% if link.avatar %}
             <img class="tech-link-avatar" src="{{ link.avatar }}" alt="{{ link.name }}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             <span class="tech-link-avatar hidden">{{ link.name[0] | upper }}</span>

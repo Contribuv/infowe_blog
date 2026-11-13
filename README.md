@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.14-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.14)
+[![version](https://img.shields.io/badge/version-3.9.15-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.15)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,24 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.14**
+当前版本：**v3.9.15**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.15
+
+- **友链合规与速度审核**：新增 `plugins/ai_assistant/site_audit.py`，从域名后缀 / 页面内容 / 页面结构 / 访问速度四层做本地体检——成人或博彩专用后缀、成人分级标签、多个强违规词、链接农场、`meta refresh` 跳转、内网地址直接判违规并拒绝；内容可疑、页面跳转、TTFB 超过 4s、总耗时超过 10s、体积超过 5MB 转人工。体检不依赖 AI，未配置模型时也能生效
+- **自动通过收紧**：只有「体检无风险 + AI 明确判定安全 + 检测到回链」同时满足，且后台打开「友链自动通过」才收录；AI 超时、未配置或返回不确定一律转人工，不再默认放行
+- **已通过友链定期复检**：默认每 7 天抽检一次，每轮最多 8 条；发现违规自动转为待审核并邮件提醒，变慢或轻度可疑只记录不下线。后台已通过列表新增「复检」列，转待审的文章在「体检结论」列直接显示违规徽标与原因
+- **友链提交限流与去重**：同一地址在已通过或审核中时不再重复入库；同一 IP 每小时默认最多 3 次，可在「后台 → 设置 → 友链申请」调整。`links` 表新增 `ip_text` 字段，启动时自动补列并先备份数据库
+- **友链链接加 `nofollow`**：前台友链外链统一为 `rel="noopener nofollow ugc"`，避免垃圾站靠友链获取 SEO 权重
+- **AI 发文标题与标签清洗**：正文开头重复的标题、YAML front matter、`**标签**：` 等元信息会被自动剥离，页面不再出现两个 H1；标签支持数组、JSON 数组字符串、中英文逗号 / 顿号 / 分号、`#话题` 等写法，自动去 `#` 与引号、大小写去重、最多 8 个，模型忘传标签时还会从正文 YAML 头兜底提取；`update_post` 现在也支持修改标签
+- **摘要生成剥离提示块围栏**：`:::tip`、`:::note`、`:::warning`、`:::danger` 等 Markdown 提示块标记不再进入自动摘要
+- **历史文章清理工具**：新增 `tools/fix_ai_posts.py`，默认只预览，`--apply` 写入前自动备份数据库，可用 `--set-tags` 修正语义不合理的标签，便于线上处理存量 AI 文章
+- **修复 Windows 下友链审核线程不启动**：原先 `import fcntl` 失败会直接结束整个定时任务线程，导致 Windows 上友链审核永远不执行；现在降级为单进程直接运行
+
+<details>
+<summary><b>历史版本（v3.9.14 及更早，点击展开）</b></summary>
 
 ### v3.9.14
 
@@ -940,9 +955,6 @@ chown -R www:www var
 - **友链申请页重做**：顺序改为「页面头 → 本站信息卡 → 表单 → 收录说明/提交流程」——真实流程就是先把本站加进对方友链、再填表；删掉与「收录说明」重复的「以下情况暂不收录」；「收录说明」与「提交流程」改成左右双栏、各 4 条且底部齐平；必填标记由裸 `*` 统一为「（必填）」，与「（选填）」对齐
 - **本站信息卡（复制回链用）**：站标改用**站内相对路径** `/static/images/favicon.ico` 展示，本地开发不再去拉线上域名（之前浏览器里直接裂图），「复制站标地址」仍输出绝对地址；名片由三行堆叠改为两行——站名与地址共用首行、按基线对齐，地址退成 11.5px 等宽注脚，介绍独占第二行；图标 44px 垂直居中（原先用负 margin 硬凑，中心偏差 1px 内），外加 1px 暗描边，浅色站标在深色卡面上不再糊成一块白方块
 - **清理死代码**：`_site_card_vars()` 里的 `avatar_url` 全站模板已无引用，连同头像分支一并移除
-
-<details>
-<summary><b>历史版本（v3.9.13 及更早，点击展开）</b></summary>
 
 ### v3.9.13
 

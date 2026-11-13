@@ -22,7 +22,7 @@ from config import CACHE_DIR
 from models import Comment, Link, Post, Project
 from services import mail_template, notify, plugins, settings, site_url
 
-from . import ai_client, config
+from . import ai_client, config, site_audit
 
 KEY = "ai_assistant"
 _lock = threading.Lock()
@@ -643,19 +643,25 @@ def _review(link_id: int, meta: dict, attempts: int, reason: str) -> None:
 
 
 def check_pending_links() -> None:
-    """友链审核：可达性 + 敏感词 + AI 内容判断 + 回链检测。"""
+    """友链审核：站点体检（合规 + 速度）→ AI 内容判断 → 回链检测。
+
+    体检是本地规则，不依赖 AI：即使没配模型，违规站与慢站也拦得住。
+    自动通过需要同时满足「体检无风险 + AI 明确判定安全 + 检测到回链」，
+    且后台打开 link_auto_approve；否则一律转人工，宁可漏过不误放。
+    """
     if not _enabled() or not config.get().get("link_moderation"):
         return
     host = _site_host()
     if not host:
         return
+    cfg = config.get()
     rows = db.query(
         "SELECT * FROM links WHERE status='pending' AND ai_state NOT IN ('done','review') "
         "ORDER BY id ASC LIMIT 10"
     )
     for row in rows:
         link = dict(row)
-        site_url = str(link.get("url") or "")
+        site_url_value = str(link.get("url") or "")
         backlink_url = str(link.get("backlink_url") or "").strip()
         meta = {}
         try:
@@ -664,28 +670,53 @@ def check_pending_links() -> None:
             meta = {}
         attempts = int(meta.get("attempts") or 0) + 1
         # 内容审核看首页，回链检测优先看申请人填写的友链页
-        audit_url = site_url or backlink_url
-        html, error = _fetch(audit_url)
-        if not html:
-            _review(link["id"], meta, attempts, error or "站点无法访问")
+        audit_url = site_url_value or backlink_url
+
+        # ── 1. 站点体检：域名 / 内容 / 结构 / 速度 ──────────
+        report = site_audit.audit(audit_url, cfg)
+        meta["audit"] = {
+            "level": report["level"],
+            "reasons": report["reasons"][:8],
+            "metrics": report["metrics"],
+        }
+        reason_text = "；".join(report["reasons"][:2])
+
+        if report["level"] == "blocked":
+            meta.update({
+                "checked": True,
+                "attempts": attempts,
+                "backlink": False,
+                "reason": f"站点体检不通过：{reason_text}",
+            })
+            db.execute(
+                "UPDATE links SET status='rejected', ai_state='done', ai_meta=? WHERE id=?",
+                (json.dumps(meta, ensure_ascii=False), link["id"]),
+            )
             continue
-        title, text, links = _page_text(html)
-        hit = _blocked_word(text)
-        if hit:
-            _review(link["id"], meta, attempts, f"页面内容命中敏感词：{hit}")
+
+        if report["level"] == "review":
+            _review(link["id"], meta, attempts, reason_text or "站点体检需人工确认")
             continue
-        ai_ok, ai_reason = _ai_site_audit(title, text)
-        if ai_ok is False:
-            _review(link["id"], meta, attempts, f"AI 内容风险：{ai_reason}")
+
+        # ── 2. AI 内容判断：只有明确 safe 才继续 ────────────
+        page = report.get("page") or {}
+        ai_ok, ai_reason = _ai_site_audit(page.get("title", ""), page.get("text", ""))
+        if ai_ok is not True:
+            _review(link["id"], meta, attempts, f"AI 未能确认安全：{ai_reason}")
             continue
-        found, source = _find_backlink(site_url, backlink_url, links, host, html)
-        if found:
+
+        # ── 3. 回链检测 ─────────────────────────────────────
+        found, found_source = _find_backlink(
+            site_url_value, backlink_url, page.get("links") or [], host,
+            report.get("html", ""),
+        )
+        if found and cfg.get("link_auto_approve"):
             meta.update({
                 "checked": True,
                 "attempts": attempts,
                 "backlink": True,
                 "reason": ai_reason or "审核通过",
-                "source": source,
+                "source": found_source,
             })
             db.execute(
                 "UPDATE links SET status='approved', ai_state='done', ai_meta=? WHERE id=?",
@@ -713,7 +744,12 @@ def check_pending_links() -> None:
                 )
                 notify.send(email, "[友链] 已通过审核", link_text, link_page)
             continue
-        hours = int(config.get().get("link_check_hours") or 72)
+
+        if found:
+            _review(link["id"], meta, attempts, "已检测到回链且未发现风险，待人工确认")
+            continue
+
+        hours = int(cfg.get("link_check_hours") or 72)
         if attempts * 10 >= hours * 60:
             _review(link["id"], meta, attempts, "未在站点中发现本站友链")
         else:
@@ -721,12 +757,95 @@ def check_pending_links() -> None:
                 "checked": True,
                 "attempts": attempts,
                 "backlink": False,
-                "reason": ai_reason or "暂未检测到友链",
+                "reason": f"{ai_reason or '内容正常'}；暂未检测到友链",
             })
             db.execute(
                 "UPDATE links SET ai_meta=? WHERE id=?",
                 (json.dumps(meta, ensure_ascii=False), link["id"]),
             )
+
+
+# ── 已通过友链定期复检 ────────────────────────────────────
+def check_approved_links() -> None:
+    """已通过友链定期复检：站点卖掉 / 被黑 / 换内容后不能继续挂着。
+
+    只有判定 blocked 才自动下线（转 pending 等人工），
+    变慢或轻度可疑只写进 ai_meta，不打扰。
+    """
+    if not _enabled():
+        return
+    cfg = config.get()
+    if not cfg.get("link_recheck_enabled", True):
+        return
+    days = int(cfg.get("link_recheck_days") or 7)
+    batch = int(cfg.get("link_recheck_batch") or 8)
+    rows = db.query("SELECT * FROM links WHERE status='approved' ORDER BY id ASC")
+    now = time.time()
+    due: list[tuple[dict, dict]] = []
+    for row in rows:
+        link = dict(row)
+        try:
+            meta = json.loads(link.get("ai_meta") or "{}")
+        except (TypeError, ValueError):
+            meta = {}
+        last = float(meta.get("recheck_at") or 0)
+        if last and now - last < days * 86400:
+            continue
+        due.append((link, meta))
+        if len(due) >= batch:
+            break
+    if not due:
+        return
+
+    flagged: list[tuple[str, list[str]]] = []
+    for link, meta in due:
+        report = site_audit.audit(link.get("url") or "", cfg)
+        meta["recheck_at"] = now
+        meta["recheck"] = {
+            "level": report["level"],
+            "reasons": report["reasons"][:6],
+            "metrics": report["metrics"],
+            "at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+        if report["level"] == "blocked":
+            meta["reason"] = "定期复检不通过：" + "；".join(report["reasons"][:2])
+            # 同步写一份 audit：转待审后后台「体检结论」列直接显示违规徽标与原因
+            meta["audit"] = {
+                "level": report["level"],
+                "reasons": report["reasons"][:6],
+                "metrics": report["metrics"],
+            }
+            db.execute(
+                "UPDATE links SET status='pending', ai_state='review', ai_meta=? WHERE id=?",
+                (json.dumps(meta, ensure_ascii=False), link["id"]),
+            )
+            flagged.append((str(link.get("name") or ""), report["reasons"][:2]))
+        else:
+            db.execute(
+                "UPDATE links SET ai_meta=? WHERE id=?",
+                (json.dumps(meta, ensure_ascii=False), link["id"]),
+            )
+
+    if flagged:
+        _notify_recheck(flagged)
+
+
+def _notify_recheck(items: list[tuple[str, list[str]]]) -> None:
+    email = settings.get_str("notify_email", "").strip()
+    if not email:
+        return
+    lines = [f"- {name}：{'；'.join(reasons)}" for name, reasons in items]
+    body = "以下友链在定期复检中被判定为违规，已自动转为待审核：\n\n" + "\n".join(lines)
+    html = ("<p>以下友链在定期复检中被判定为违规，已自动转为待审核：</p><ul>"
+            + "".join(
+                f"<li>{mail_template.esc(name)}：{mail_template.esc('；'.join(reasons))}</li>"
+                for name, reasons in items
+            )
+            + "</ul>")
+    try:
+        notify.send(email, "[友链] 定期复检发现异常", body, html)
+    except Exception:
+        pass
 
 
 # ── 定时任务 ──────────────────────────────────────────────
@@ -738,23 +857,32 @@ def start_scheduler(app) -> None:
         _thread_started = True
 
     def loop() -> None:
+        # fcntl 只用于多进程互斥；Windows 没有 fcntl，
+        # 单进程博客直接跑即可，不能因为缺库就把整个线程退出（原实现直接 return，
+        # 导致 Windows 上友链审核永远不执行）。
         try:
             import fcntl
         except ImportError:
-            return
+            fcntl = None
         time.sleep(30)
         while True:
             try:
-                lock_path = Path(CACHE_DIR) / "ai_link_check.lock"
-                lock_path.parent.mkdir(parents=True, exist_ok=True)
-                with app.app_context():
-                    with open(lock_path, "w") as fh:
-                        try:
-                            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                        except OSError:
-                            pass
-                        else:
-                            check_pending_links()
+                if fcntl is None:
+                    with app.app_context():
+                        check_pending_links()
+                        check_approved_links()
+                else:
+                    lock_path = Path(CACHE_DIR) / "ai_link_check.lock"
+                    lock_path.parent.mkdir(parents=True, exist_ok=True)
+                    with app.app_context():
+                        with open(lock_path, "w") as fh:
+                            try:
+                                fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                            except OSError:
+                                pass
+                            else:
+                                check_pending_links()
+                                check_approved_links()
             except Exception:
                 app.logger.exception("ai link check failed")
             time.sleep(600)

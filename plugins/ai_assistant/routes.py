@@ -169,14 +169,14 @@ def register(app) -> None:
     def ai_config_save():
         old = config.get()
         data = dict(old)
-        for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_reply_rate", "comment_daily_limit", "link_check_hours", "daily_call_limit"):
+        for key in ("temperature", "max_tokens", "timeout", "comment_min_length", "comment_reply_rate", "comment_daily_limit", "link_check_hours", "daily_call_limit", "link_max_ttfb_ms", "link_max_total_ms", "link_max_bytes", "link_recheck_days", "link_recheck_batch"):
             if key in request.form:
                 try:
                     data[key] = float(request.form.get(key)) if key == "temperature" else int(request.form.get(key))
                 except (TypeError, ValueError):
                     pass
         for key in ("comment_moderation", "comment_reply", "comment_reply_notify", "link_moderation",
-                    "link_ai_audit", "auto_execute"):
+                    "link_ai_audit", "link_auto_approve", "link_recheck_enabled", "auto_execute"):
             data[key] = str(request.form.get(key, "")).lower() in {"1", "on", "true", "yes"}
         if "comment_reply_time_mode" in request.form:
             mode = str(request.form.get("comment_reply_time_mode") or "all").strip().lower()

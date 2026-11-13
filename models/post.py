@@ -330,6 +330,7 @@ def _auto_excerpt(content: str, limit: int = 200) -> str:
     text = content or ""
     text = re.sub(r"```.*?```", " ", text, flags=re.S)  # 围栏代码块整体剔除
     text = re.sub(r"`[^`\n]*`", " ", text)  # 行内代码
+    text = re.sub(r"^\s*:::[^\r\n]*(?=\r?\n|\Z)", " ", text, flags=re.M)  # 提示块围栏 :::tip[标题]
     text = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", text)  # 图片：连 URL 一起剔除
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # 链接只留文字
     text = strip_markdown(text)

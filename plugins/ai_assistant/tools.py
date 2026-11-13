@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import db
 from models import Category, Comment, Link, Post, Project
@@ -24,8 +25,8 @@ READ_TOOLS = {
 }
 
 WRITE_TOOLS = {
-    "create_post": "创建文章。参数：title、content（Markdown）、tags（数组或逗号分隔）、status（published/draft）、category（分类名称）",
-    "update_post": "修改文章。参数：id、title、content、status、category（分类名称）",
+    "create_post": "创建文章。参数：title、content（Markdown，只写正文不要重复标题）、tags（数组或逗号分隔）、status（published/draft）、category（分类名称）",
+    "update_post": "修改文章。参数：id、title、content、tags（数组或逗号分隔，省略则保持原标签）、status、category（分类名称）",
     "delete_post": "删除文章（连带清理未被引用的上传图）。参数：id",
     "create_category": "新建文章分类。参数：name、slug（可选）",
     "update_category": "修改文章分类。参数：id、name、slug（可选）",
@@ -109,6 +110,123 @@ def _resolve_category(args: dict) -> tuple[int | None, str]:
             return int(cat["id"]), ""
     names = "、".join(str(c.get("name")) for c in categories)
     return None, f"分类「{name}」不存在，现有分类：{names}"
+
+
+# 标签分隔符：中英文逗号、顿号、分号、竖线、换行
+_TAG_SPLIT = re.compile(r"[,，、;；|\r\n]+")
+# 行首一级标题：正文里再写一次标题会导致页面出现两个 H1
+_LEADING_H1 = re.compile(r"\A\s*#\s+(.+?)\s*(?:\r?\n|\Z)")
+# YAML front matter（有些模型习惯把 title/tags 塞进正文开头）
+_FRONT_MATTER = re.compile(r"\A\s*---\s*\r?\n.*?\r?\n---\s*(?:\r?\n|\Z)", re.S)
+# 正文开头的元信息行：**标签**：xxx / 作者：xxx / tags: xxx
+_META_LINE = re.compile(
+    r"\A\s*(?:[-*]\s*)?(?:\*\*)?\s*"
+    r"(?:标签|作者|分类|日期|tags?|author|category|date)\s*(?:\*\*)?\s*[:：].*(?:\r?\n|\Z)",
+    re.I,
+)
+# front matter 里的 tags 行：模型有时把标签写在这里而不是 args
+_FM_TAGS = re.compile(r"^\s*tags?\s*[:：]\s*(.+)$", re.I | re.M)
+
+
+def _front_matter_tags(content: str) -> str:
+    """从 YAML 头里取 tags，模型忘传 args.tags 时兜底。"""
+    text = (content or "").lstrip("\ufeff \t\r\n")
+    fm = _FRONT_MATTER.match(text)
+    if not fm:
+        return ""
+    match = _FM_TAGS.search(fm.group(0))
+    if not match:
+        return ""
+    return match.group(1).strip().strip("[]")
+
+
+def _normalize_tags(raw) -> str:
+    """把模型传来的标签收拾成 Post.save 需要的逗号串。
+
+    模型常见写法：数组、`["a", "b"]` 字符串、`#a #b`、中文逗号分隔、
+    甚至整段话。这里统一拆开、去 # 和引号、去重，最多保留 8 个。
+    """
+    if raw is None:
+        return ""
+    if isinstance(raw, (list, tuple, set)):
+        parts: list = list(raw)
+    else:
+        text = str(raw).strip()
+        text = re.sub(r"^(?:标签|tags?)\s*[:：]\s*", "", text, flags=re.I)
+        # JSON 数组字符串优先按 JSON 解析，失败再退回普通拆分
+        if text.startswith("[") and text.endswith("]"):
+            try:
+                parsed = json.loads(text)
+                parts = parsed if isinstance(parsed, list) else [parsed]
+            except (TypeError, ValueError):
+                parts = _TAG_SPLIT.split(text[1:-1])
+        else:
+            # #标签 写法统一转成逗号，避免整个 #a #b 成为一个标签
+            parts = _TAG_SPLIT.split(text.replace("#", ","))
+            # 纯中文空格分隔（“生活 随笔”）也拆开；含英文的「AI 助手」保持原样
+            if len(parts) == 1 and re.search(r"[\u4e00-\u9fa5]\s+[\u4e00-\u9fa5]", text):
+                parts = re.split(r"\s+", text)
+
+    tags: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        for piece in _TAG_SPLIT.split(str(part)):
+            tag = piece.strip().strip("\"'“”‘’`").lstrip("#").strip()
+            tag = re.sub(r"\s+", " ", tag)
+            if not tag or len(tag) > 20 or re.search(r"[。！？!?]", tag):
+                continue
+            key = tag.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
+            if len(tags) >= 8:
+                return ",".join(tags)
+    return ",".join(tags)
+
+
+def _strip_title_from_content(title: str, content: str) -> str:
+    """清掉正文里重复的标题与模型自带的 front matter。
+
+    页面模板已经把 title 渲染成 H1，正文再以 `# 标题` 开头就会出现两个标题；
+    部分模型还会在开头写 YAML 头或「**标签**：」元信息，这些都不该进正文。
+    """
+    text = (content or "").lstrip("\ufeff \t\r\n")
+    if not text:
+        return text
+
+    # 只删除「看起来像元信息」的头部块，避免把以 --- 分隔线开头的正文误删
+    cleaned_head = False
+    fm = _FRONT_MATTER.match(text)
+    if fm and re.search(r"^[^\r\n]*[:：]", fm.group(0), re.M):
+        text = text[fm.end():].lstrip()
+        cleaned_head = True
+
+    match = _LEADING_H1.match(text)
+    if match:
+        heading = match.group(1)
+        # 标题相同（忽略空格/标点/大小写）或高度相似时才删，避免误删作者写的小标题
+        def squash(value: str) -> str:
+            return re.sub(r"[\s:：,，.。!！?？\-—_·|/]+", "", value).lower()
+
+        left, right = squash(heading), squash(title)
+        similar = left == right or (
+            len(left) >= 6 and (left in right or right in left) and min(len(left), len(right)) / max(len(left), len(right)) >= 0.6
+        )
+        if similar:
+            text = text[match.end():].lstrip()
+            cleaned_head = True
+
+    # 去掉紧跟标题的元信息行和分隔线
+    while True:
+        meta = _META_LINE.match(text)
+        if not meta:
+            break
+        text = text[meta.end():].lstrip()
+        cleaned_head = True
+    if cleaned_head:
+        text = re.sub(r"\A---+\s*(?:\r?\n|\Z)", "", text).lstrip()
+    return text
 
 
 def _brief_post(row) -> dict:
@@ -288,15 +406,14 @@ def _dispatch(name: str, args: dict) -> dict:
 
     if name == "create_post":
         title = str(args.get("title") or "").strip()
-        content = str(args.get("content") or "").strip()
+        raw_content = str(args.get("content") or "")
+        content = _strip_title_from_content(title, raw_content)
         if not title or not content:
             return {"ok": False, "error": "标题和正文不能为空"}
         category_id, cat_error = _resolve_category(args)
         if cat_error:
             return {"ok": False, "error": cat_error}
-        tags = args.get("tags") or ""
-        if isinstance(tags, list):
-            tags = ",".join(str(t) for t in tags)
+        tags = _normalize_tags(args.get("tags") or _front_matter_tags(raw_content))
         status = "draft" if str(args.get("status") or "") == "draft" else "published"
         pid = Post.save({
             "title": title,
@@ -317,10 +434,14 @@ def _dispatch(name: str, args: dict) -> dict:
             category_id, cat_error = _resolve_category(args)
             if cat_error:
                 return {"ok": False, "error": cat_error}
+        title = str(args.get("title") or post["title"]).strip()
+        content = _strip_title_from_content(
+            title, str(args.get("content") or post.get("content") or "")
+        )
         form = {
-            "title": str(args.get("title") or post["title"]),
-            "content": str(args.get("content") or post.get("content") or ""),
-            "tags": ",".join(post.get("tags") or []),
+            "title": title,
+            "content": content,
+            "tags": _normalize_tags(args.get("tags")) or ",".join(post.get("tags") or []),
             "status": str(args.get("status") or post["status"]),
             "category_id": str(category_id) if category_id else "",
             "excerpt": post.get("excerpt") or "",

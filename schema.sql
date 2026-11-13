@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS links (
     feed_count INTEGER DEFAULT 0,
     ai_state TEXT DEFAULT 'idle',
     ai_meta TEXT DEFAULT '',
+    ip_text TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 

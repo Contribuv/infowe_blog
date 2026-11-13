@@ -615,6 +615,25 @@ def links_apply():
             return render_template("links_apply.html", form=request.form, **_site_card_vars())
         if not url.startswith(("http://", "https://")):
             url = "http://" + url
+        # 同一地址不重复入库：已通过或审核中的都算重复，避免刷列表
+        duplicate = db.one(
+            "SELECT id FROM links WHERE url = ? AND status IN ('approved','pending') LIMIT 1",
+            (url,),
+        )
+        if duplicate:
+            flash("该站点已在友链列表或正在审核中，无需重复提交", "error")
+            return render_template("links_apply.html", form=request.form, **_site_card_vars())
+        # 同一 IP 每小时最多提交 N 次：挡批量刷申请，正常访客不会触发
+        ip = comments_service.request_ip()
+        hour_limit = int(settings.get_str("links_hour_limit", "3") or 3)
+        recent = int(db.scalar(
+            "SELECT COUNT(*) FROM links WHERE ip_text = ? "
+            "AND created_at > datetime('now','-1 hour','localtime')",
+            (ip,), 0,
+        ))
+        if recent >= hour_limit:
+            flash("提交过于频繁，请稍后再试", "error")
+            return render_template("links_apply.html", form=request.form, **_site_card_vars())
         email = (request.form.get("email") or "").strip()
         rss = (request.form.get("rss") or "").strip()
         backlink_url = (request.form.get("backlink_url") or "").strip()
@@ -623,8 +642,8 @@ def links_apply():
             None,
             "pending",
         )
-        if email:
-            db.execute("UPDATE links SET email=? WHERE id=?", (email, link_id))
+        if email or ip:
+            db.execute("UPDATE links SET email=?, ip_text=? WHERE id=?", (email, ip, link_id))
         try:
             from services import hooks
             hooks.emit("link.applied", {"id": link_id, "name": name, "url": url, "email": email})

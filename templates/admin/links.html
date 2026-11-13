@@ -33,7 +33,7 @@
                 <th>头像</th>
                 <th>URL</th>
                 <th>验证页</th>
-                <th>AI 审核</th>
+                <th>体检结论</th>
                 <th>描述</th>
                 <th>操作</th>
             </tr>
@@ -51,9 +51,22 @@
                     {% if l.backlink_url %}<a href="{{ l.backlink_url }}" target="_blank" class="link-url">{{ l.backlink_url[:40] }}</a>
                     {% else %}<span class="muted">自动查找</span>{% endif %}
                 </td>
-                <td data-label="AI 审核">
-                    {% if l.review_reason %}<span class="badge badge-warn" title="{{ l.review_reason }}">{{ l.review_reason[:16] }}</span>
-                    {% else %}<span class="muted">检查中</span>{% endif %}
+                <td data-label="体检结论">
+                    {% if l.audit_level == 'blocked' %}
+                    <span class="badge badge-danger" title="{{ l.audit_reasons|join('；') }}">违规</span>
+                    {% elif l.audit_level == 'review' %}
+                    <span class="badge badge-warn" title="{{ l.audit_reasons|join('；') }}">可疑</span>
+                    {% elif l.audit_level == 'ok' %}
+                    <span class="badge badge-success" title="{{ l.audit_reasons|join('；') or '未发现风险' }}">正常</span>
+                    {% else %}
+                    <span class="badge badge-info">待检</span>
+                    {% endif %}
+                    {% if l.audit_ttfb is not none %}
+                    <span class="muted" style="font-size:12px;white-space:nowrap">{{ (l.audit_ttfb / 1000)|round(1) }}s</span>
+                    {% endif %}
+                    {% if l.review_reason %}
+                    <div class="muted" style="font-size:12px;margin-top:2px">{{ l.review_reason[:36] }}</div>
+                    {% endif %}
                 </td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
                 <td class="actions-cell" data-label="操作">
@@ -99,6 +112,7 @@
                 <th>头像</th>
                 <th>URL</th>
                 <th>描述</th>
+                <th>复检</th>
                 <th>操作</th>
             </tr>
         </thead>
@@ -113,6 +127,18 @@
                 <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}">{% else %}{{ l.name[0] }}{% endif %}</span></td>
                 <td data-label="URL"><a href="{{ l.url }}" target="_blank" class="link-url">{{ l.url[:60] }}</a></td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
+                <td data-label="复检">
+                    {% if l.recheck_level == 'blocked' %}
+                    <span class="badge badge-danger" title="{{ l.recheck_reasons|join('；') }}">违规</span>
+                    {% elif l.recheck_level == 'review' %}
+                    <span class="badge badge-warn" title="{{ l.recheck_reasons|join('；') }}">可疑</span>
+                    {% elif l.recheck_level == 'ok' %}
+                    <span class="badge badge-success" title="{{ l.recheck_reasons|join('；') or '未发现风险' }}">正常</span>
+                    {% else %}
+                    <span class="muted">未检</span>
+                    {% endif %}
+                    {% if l.recheck_at %}<div class="muted" style="font-size:12px;margin-top:2px">{{ l.recheck_at }}</div>{% endif %}
+                </td>
                 <td class="actions-cell" data-label="操作">
                     <a href="{{ url_for('admin_link_edit', link_id=l.id) }}" class="btn btn-sm">编辑</a>
                     <button type="submit" form="delForm{{ l.id }}" class="btn btn-sm btn-danger">删除</button>

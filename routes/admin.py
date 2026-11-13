@@ -407,8 +407,26 @@ def admin_links():
         except (TypeError, ValueError):
             meta = {}
         link["review_reason"] = str(meta.get("reason") or "")
+        # 站点体检结果：域名 / 内容 / 结构 / 速度
+        audit = meta.get("audit") or {}
+        link["audit_level"] = str(audit.get("level") or "")
+        link["audit_reasons"] = [str(x) for x in (audit.get("reasons") or [])][:6]
+        metrics = audit.get("metrics") or {}
+        link["audit_ttfb"] = metrics.get("ttfb_ms")
+        link["audit_total"] = metrics.get("total_ms")
+    approved = Link.load("approved")
+    for link in approved:
+        try:
+            meta = json.loads(link.get("ai_meta") or "{}")
+        except (TypeError, ValueError):
+            meta = {}
+        # 已通过友链的最近一次定期复检结果
+        recheck = meta.get("recheck") or {}
+        link["recheck_level"] = str(recheck.get("level") or "")
+        link["recheck_reasons"] = [str(x) for x in (recheck.get("reasons") or [])][:6]
+        link["recheck_at"] = str(recheck.get("at") or "")
     return render_template(
-        "admin/links.html", links=Link.load("approved"), pending=pending
+        "admin/links.html", links=approved, pending=pending
     )
 
 
@@ -946,7 +964,7 @@ TEXT_KEYS = [
     "home_posts_count", "posts_per_page",
     "smtp_host", "smtp_sender_name", "smtp_port", "smtp_user", "smtp_pass",
     "notify_email", "footer_copyright_year", "footer_copyright_owner",
-    "footer_powered_by", "stats_code", "sensitive_words",
+    "footer_powered_by", "stats_code", "sensitive_words", "links_hour_limit",
 ]
 
 
@@ -974,6 +992,7 @@ def _settings_view() -> dict:
         "comment_image_upload": settings.get_str("comment_image_upload", "1"),
         "sensitive_filter_enabled": settings.get_str("sensitive_filter_enabled", "0"),
         "sensitive_words": settings.get_str("sensitive_words", ""),
+        "links_hour_limit": settings.get_str("links_hour_limit", "3"),
         "watermark_enabled": settings.get_str("watermark_enabled", "1"),
         "watermark_text": settings.get_str("watermark_text", ""),
         "watermark_position": settings.get_str("watermark_position", "br"),
@@ -1060,6 +1079,14 @@ def _save_settings():
         except ValueError:
             archive_per_page = 20
         settings.set_value("archive_per_page", str(max(1, min(100, archive_per_page))))
+
+    # 友链申请限流：同一 IP 每小时最多提交几次（1–50）
+    if "links_hour_limit" in request.form:
+        try:
+            links_limit = int((request.form.get("links_hour_limit") or "3").strip())
+        except ValueError:
+            links_limit = 3
+        settings.set_value("links_hour_limit", str(max(1, min(50, links_limit))))
 
     if "circle_per_page" in request.form:
         try:

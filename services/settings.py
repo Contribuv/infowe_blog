@@ -77,6 +77,8 @@ DEFAULTS: dict[str, str] = {
     "nav_tags": "1",
     "nav_projects": "1",
     "nav_links": "1",
+    # 同一 IP 每小时最多提交几次友链申请（防批量刷待审列表）
+    "links_hour_limit": "3",
     "nav_circle": "1",
     "nav_readers": "1",
     "nav_interactions": "1",

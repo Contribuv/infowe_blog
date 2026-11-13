@@ -289,6 +289,19 @@
                 <span class="form-hint">一行一个敏感词；<b>#</b> 开头的行是注释会被忽略。词库会下发到浏览器做实时过滤，页面源码中可见，请勿放入不希望公开的内容。开源中文词库可参考 GitHub 项目：konsheng/Sensitive-lexicon、houbb/sensitive-word、fighting41love/funNLP，自行筛选拷贝即可。</span>
             </div>
         </div>
+        <!-- 友链申请：提交端限流，挡批量刷待审列表 -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>友链申请</h3>
+                <span class="card-hint">提交端防刷</span>
+            </div>
+            <div class="form-group">
+                <label>同一 IP 每小时提交上限</label>
+                <input type="number" name="links_hour_limit" class="input-text"
+                       value="{{ links_hour_limit|default('3') }}" min="1" max="50">
+                <span class="form-hint">同一 IP 一小时内的友链申请次数上限（默认 3，范围 1–50）；同一站点地址重复提交会直接提示已在列表或审核中。</span>
+            </div>
+        </div>
         <!-- 首页一言：后台可自定义；留空使用主题内置文案 -->
         <div class="card">
             <div class="card-header card-header--hint">
