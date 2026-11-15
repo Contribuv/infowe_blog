@@ -134,13 +134,36 @@ $branch = (& git rev-parse --abbrev-ref HEAD).Trim()
 if ($branch -ne "main") { Stop-Release "当前分支是 $branch，发版请在 main 上执行" }
 Write-Ok "当前分支 main"
 
-$existingTag = & git rev-parse -q --verify "refs/tags/$tag" 2>$null
-if ($existingTag) { Stop-Release "本地已存在标签 $tag，请先删除或换版本号" }
-if (Test-RemoteTag $GithubRemote $tag) { Stop-Release "$GithubRemote 已存在标签 $tag" }
-if (-not $SkipGitee -and (Test-RemoteTag $GiteeRemote $tag)) {
-    Stop-Release "$GiteeRemote 已存在标签 $tag"
+$headCommit = (& git rev-parse HEAD).Trim()
+$skipTag = $false
+
+# 本地已有同名标签：只有指向当前 HEAD 才允许继续（补发 Release 的场景）。
+# 指向别的提交说明版本号被复用或提交没跟上，必须人工处理，不能静默覆盖。
+$localTagCommit = (& git rev-parse -q --verify "refs/tags/$tag^{commit}" 2>$null | Out-String).Trim()
+if ($localTagCommit) {
+    if ($localTagCommit -ne $headCommit) {
+        Stop-Release "本地标签 $tag 指向 $($localTagCommit.Substring(0, 7))，与当前 HEAD $($headCommit.Substring(0, 7)) 不一致"
+    }
+    $skipTag = $true
+    Write-Ok "本地标签 $tag 已指向当前提交，跳过重新打标签"
 }
-Write-Ok "标签 $tag 未被占用"
+$localHasTag = [bool]$localTagCommit
+
+# 远端已有同名标签：同样要求指向当前 HEAD，否则中止
+$tagRemotes = @($GithubRemote)
+if (-not $SkipGitee) { $tagRemotes += $GiteeRemote }
+foreach ($remote in $tagRemotes) {
+    $remoteOut = (& git ls-remote $remote "refs/tags/$tag^{}" 2>$null | Out-String).Trim()
+    if (-not $remoteOut) { $remoteOut = (& git ls-remote $remote "refs/tags/$tag" 2>$null | Out-String).Trim() }
+    if (-not $remoteOut) { continue }
+    $remoteCommit = ($remoteOut -split "\s+")[0]
+    if ($remoteCommit -ne $headCommit) {
+        Stop-Release "$remote 的标签 $tag 指向 $($remoteCommit.Substring(0, 7))，与当前 HEAD $($headCommit.Substring(0, 7)) 不一致"
+    }
+    $skipTag = $true
+    Write-Ok "$remote 已有指向当前提交的标签 $tag"
+}
+if (-not $skipTag) { Write-Ok "标签 $tag 未被占用" }
 
 # ── 3. 重建压缩样式 ──
 if (-not $DryRun) {
@@ -187,13 +210,17 @@ if ($dirty.Count -gt 0) {
 # ── 5. DryRun 预览 ──
 if ($DryRun) {
     Write-Step "DryRun 预览"
-    Write-Host "  git tag -a $tag -m `"$tag`""
+    if ($skipTag) {
+        Write-Host "  (跳过 git tag：$tag 已存在且指向当前提交)"
+    } else {
+        Write-Host "  git tag -a $tag -m `"$tag`""
+    }
     if (-not $NoPush) {
         Write-Host "  git push $GithubRemote $branch"
-        Write-Host "  git push $GithubRemote $tag"
+        if ($localHasTag) { Write-Host "  git push $GithubRemote $tag" }
         if (-not $SkipGitee) {
             Write-Host "  git push $GiteeRemote $branch"
-            Write-Host "  git push $GiteeRemote $tag"
+            if ($localHasTag) { Write-Host "  git push $GiteeRemote $tag" }
         }
         Write-Host "  gh release create $tag --title $tag --notes-file <README 提取的发布说明>"
         if (-not $SkipGitee) {
@@ -205,9 +232,15 @@ if ($DryRun) {
 }
 
 # ── 6. 打标签 ──
-Write-Step "创建标签 $tag"
-Invoke-Git -Arguments @("tag", "-a", $tag, "-m", $tag)
-Write-Ok "已创建本地标签 $tag"
+if ($skipTag) {
+    Write-Step "复用已有标签 $tag"
+    Write-Ok "$tag 已存在且指向当前提交，跳过打标签"
+} else {
+    Write-Step "创建标签 $tag"
+    Invoke-Git -Arguments @("tag", "-a", $tag, "-m", $tag)
+    $localHasTag = $true
+    Write-Ok "已创建本地标签 $tag"
+}
 
 if ($NoPush) {
     Write-Warn "已指定 -NoPush：标签只留在本地"
@@ -218,13 +251,13 @@ if ($NoPush) {
 # ── 7. 推送代码与标签 ──
 Write-Step "推送到 $GithubRemote"
 Invoke-Git -Arguments @("push", $GithubRemote, $branch)
-Invoke-Git -Arguments @("push", $GithubRemote, $tag)
+if ($localHasTag) { Invoke-Git -Arguments @("push", $GithubRemote, $tag) }
 Write-Ok "GitHub 代码与标签已推送"
 
 if (-not $SkipGitee) {
     Write-Step "推送到 $GiteeRemote"
     Invoke-Git -Arguments @("push", $GiteeRemote, $branch)
-    Invoke-Git -Arguments @("push", $GiteeRemote, $tag)
+    if ($localHasTag) { Invoke-Git -Arguments @("push", $GiteeRemote, $tag) }
     Write-Ok "Gitee 代码与标签已推送"
 }
 
