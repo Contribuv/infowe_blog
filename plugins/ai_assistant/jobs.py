@@ -465,8 +465,7 @@ def on_link(payload: dict) -> None:
 
 
 def _site_host() -> str:
-    from services import settings
-    raw = settings.get_str("site_url", "").strip() or site_url.base()
+    raw = site_url.base()
     host = urlparse(raw).hostname or ""
     return host.lower().removeprefix("www.")
 
