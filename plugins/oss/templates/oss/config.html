@@ -9,11 +9,12 @@
     </div>
 </div>
 
-<div class="card" style="margin-bottom:16px;">
+<div class="card">
     <div class="card-header"><h3>当前状态</h3></div>
     <div style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px 26px;font-size:13px;">
         <span>插件：<b>{{ '已启用' if enabled else '未启用' }}</b></span>
         <span>配置：<b>{{ '完整' if configured else '不完整' }}</b></span>
+        <span>桶策略：<b>{{ '私有（预签名直链）' if policy == 'private' else '公共读' }}</b></span>
         <span>本地文件：<b>{{ local_files }}</b> 个</span>
         <span>数据库引用：本地 <b>{{ local_refs }}</b> 处 / OSS <b>{{ remote_refs }}</b> 处</span>
         {% if migrated_at %}<span>最近迁移：<b>{{ migrated_at }}</b></span>{% endif %}
@@ -31,9 +32,9 @@
     {% endif %}
 </div>
 
-<form method="POST" action="{{ url_for('admin_plugin_oss_save') }}" class="card" style="margin-bottom:16px;">
+<form method="POST" action="{{ url_for('admin_plugin_oss_save') }}" class="card">
     <div class="card-header"><h3>连接配置</h3></div>
-    <div style="padding:16px 18px;">
+    <div class="card-body">
         <div class="form-group">
             <label class="form-label">S3 Endpoint</label>
             <input type="text" name="endpoint" class="input-text" value="{{ cfg.get('endpoint', '') }}"
@@ -77,6 +78,15 @@
                    placeholder="uploads" autocomplete="off">
             <p class="form-hint">默认 <code>uploads</code>，让对象 key 与站内路径一一对应，停用时才能无损改回。</p>
         </div>
+        <div class="form-group">
+            <label class="form-label">预签名有效期（秒）</label>
+            <input type="number" name="presign_expires" class="input-text" min="60" max="604800"
+                   value="{{ cfg.get('presign_expires', 900) }}" placeholder="900">
+            <p class="form-hint">
+                私有桶专用：每次打开页面由后端现场签名，浏览器直接访问 OSS，不经过本站带宽。
+                建议 300~900 秒，最长 7 天。公共读桶不使用这个值。
+            </p>
+        </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button type="submit" class="btn btn-primary">保存配置</button>
             <button type="button" class="btn btn-secondary" id="ossTest">测试连接</button>
@@ -86,20 +96,21 @@
 </form>
 
 <div class="card">
-    <div class="card-header"><h3>存量文件迁移</h3></div>
-    <div style="padding:16px 18px;">
-        <p class="form-hint" style="margin-top:0;">
-            把 <code>var/uploads/</code> 里已有的文件上传到对象存储，并把文章、评论、友链、头像等
-            内容中的 <code>/uploads/...</code> 地址改写成 OSS 地址。对象 key 与本地路径完全一致，所以停用插件时可以无损改回。
+    <div class="card-header"><h3>存量文件同步</h3></div>
+    <div class="card-body">
+        <p class="form-hint" style="margin:0 0 8px;">
+            把 <code>var/uploads/</code> 里已有的文件上传到对象存储。
+            <b>只上传，不改数据库里的地址</b>——数据库始终只存 <code>/uploads/...</code>，
+            页面输出时再按当前策略自动换成 OSS 直链或站点代理，因此切换策略不需要回写。
         </p>
-        <p class="form-hint">
+        <p class="form-hint" style="margin:0;">
             <b>本地文件不会被删除</b>，它们是停用插件后的回退副本；因此插件启用期间「文件清理」会暂停，避免误删。
         </p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 12px;">
             <button type="button" class="btn btn-primary" id="ossMigrate"
-                    {{ 'disabled' if not enabled or not configured else '' }}>迁移本地文件到 OSS</button>
+                    {{ 'disabled' if not enabled or not configured else '' }}>同步本地文件到 OSS</button>
             <button type="button" class="btn btn-secondary" id="ossRewriteLocal"
-                    title="兜底：把数据库里的 OSS 地址立刻改回 /uploads/...">立即回写本地地址</button>
+                    title="把历史内容里的 OSS 直链或代理地址统一改回 /uploads/...">归一化为本地路径</button>
         </div>
         <div id="ossProgress" style="display:none;">
             <div style="height:8px;border-radius:999px;background:var(--bg-subtle);overflow:hidden;">
@@ -108,6 +119,25 @@
             <p class="form-hint" id="ossProgressText" style="margin-top:8px;"></p>
         </div>
         <div id="ossLog" class="form-hint" style="white-space:pre-wrap;"></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3>OSS 孤儿对象</h3></div>
+    <div class="card-body">
+        <p class="form-hint" style="margin:0 0 8px;">
+            只扫描<b>本插件上传过</b>的对象（记录在 <code>oss_objects</code> 表），不会遍历整个桶，
+            因此你直接传到 OSS 的其它文件不会被误列、更不会被删。
+            删除前会重新核对一次数据库引用，仍被文章、评论、友链、头像等使用的对象会自动跳过。
+        </p>
+        <p class="form-hint" style="margin:0;">
+            <b>只删 OSS 对象，不动本地回退副本。</b>OSS 删除不可恢复，删除前请确认这些对象确实没人用了。
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 12px;">
+            <button type="button" class="btn btn-secondary" id="ossOrphanScan">扫描 OSS 孤儿</button>
+            <button type="button" class="btn btn-danger" id="ossOrphanDelete" disabled>删除选中</button>
+        </div>
+        <div id="ossOrphanResult"></div>
     </div>
 </div>
 
@@ -178,14 +208,9 @@
             migrateBtn.disabled = false;
             return;
           }
-          text.textContent += '，正在改写内容地址…';
-          return post(rewriteUrl, { direction: 'remote' }).then(function (r2) {
-            var s = r2.data || {};
-            text.textContent += ' 完成：改写 ' + (s.rows || 0) + ' 行 / ' + (s.refs || 0) + ' 处引用';
-            log.textContent = '数据库已备份：' + (s.backup || '无');
-            log.style.color = '';
-            migrateBtn.disabled = false;
-          });
+          text.textContent += '。页面输出会自动使用对象存储地址，无需回写。';
+          migrateBtn.disabled = false;
+          return;
         }
         offset = data.next || 0;
         return step();
@@ -199,7 +224,7 @@
   });
 
   document.getElementById('ossRewriteLocal').addEventListener('click', function () {
-    if (!confirm('把数据库里的 OSS 地址改回 /uploads/...？本地文件必须还在；缺失的文件会保留 OSS 地址以避免裂图。')) return;
+    if (!confirm('把历史内容里的 OSS 直链或代理地址统一改回 /uploads/...？\n这是修复工具，正常情况下不需要执行——数据库本来就只存 /uploads/...。')) return;
     var btn = this;
     btn.disabled = true;
     log.textContent = '正在回写…';
@@ -212,6 +237,94 @@
       log.textContent = '回写失败：' + err.message;
       log.style.color = 'var(--danger)';
     }).finally(function () { btn.disabled = false; });
+  });
+
+  // ── OSS 孤儿对象：扫描 → 勾选 → 输确认词删除 ──
+  var orphanScanUrl = {{ url_for('admin_plugin_oss_orphans_scan') | tojson }};
+  var orphanDeleteUrl = {{ url_for('admin_plugin_oss_orphans_delete') | tojson }};
+  var orphanScanBtn = document.getElementById('ossOrphanScan');
+  var orphanDeleteBtn = document.getElementById('ossOrphanDelete');
+  var orphanBox = document.getElementById('ossOrphanResult');
+
+  function orphanSelected() {
+    return Array.prototype.slice.call(orphanBox.querySelectorAll('input.oss-orphan-check:checked'))
+      .map(function (el) { return el.value; });
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  orphanScanBtn.addEventListener('click', function () {
+    orphanScanBtn.disabled = true;
+    orphanBox.textContent = '正在扫描（只查本插件上传过的对象）…';
+    post(orphanScanUrl, {}).then(function (res) {
+      var data = res.data || {};
+      if (data.error) { throw new Error(data.error); }
+      if (!data.count) {
+        orphanBox.textContent = '没有发现 OSS 孤儿对象。';
+        orphanDeleteBtn.disabled = true;
+        return;
+      }
+      var rows = data.items.map(function (item) {
+        var key = escapeHtml(item.key);
+        var preview = item.is_image
+          ? '<img class="orphan-thumb" src="' + escapeHtml(item.url) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+          : '<span class="orphan-ext">' + escapeHtml((item.ext || 'FILE').slice(0, 4).toUpperCase()) + '</span>';
+        return '<tr>'
+          + '<td><input type="checkbox" class="oss-orphan-check" value="' + key + '"></td>'
+          + '<td>' + preview + '</td>'
+          + '<td style="word-break:break-all;"><a href="' + escapeHtml(item.url)
+          + '" target="_blank" rel="noopener" class="post-link orphan-file-link" title="在新窗口打开 / 另存为">'
+          + key + '</a></td>'
+          + '<td>' + escapeHtml(item.size_text) + '</td>'
+          + '<td>' + (item.has_local ? '有' : '无') + '</td>'
+          + '<td>' + escapeHtml(item.uploaded_at) + '</td>'
+          + '</tr>';
+      }).join('');
+      orphanBox.innerHTML = '<p class="form-hint" style="margin:0 0 10px;">共 ' + data.count + ' 个，合计 ' + escapeHtml(data.total_size)
+        + '。图标与文件名可直接点击，在新窗口预览或另存；本地副本一列表示停用插件后能否恢复。</p>'
+        + '<div class="table-wrap"><table class="table"><thead><tr>'
+        + '<th style="width:44px;"><input type="checkbox" id="ossOrphanAll" aria-label="全选"></th>'
+        + '<th style="width:72px;">预览</th><th>对象 key</th><th>大小</th><th>本地副本</th><th>上传时间</th>'
+        + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+      orphanDeleteBtn.disabled = false;
+      var all = document.getElementById('ossOrphanAll');
+      all.addEventListener('change', function () {
+        Array.prototype.forEach.call(orphanBox.querySelectorAll('input.oss-orphan-check'), function (el) {
+          el.checked = all.checked;
+        });
+      });
+    }).catch(function (err) {
+      orphanBox.textContent = '扫描失败：' + err.message;
+    }).finally(function () { orphanScanBtn.disabled = false; });
+  });
+
+  orphanDeleteBtn.addEventListener('click', function () {
+    var keys = orphanSelected();
+    if (!keys.length) { alert('请先勾选要删除的对象'); return; }
+    var typed = prompt('将删除 ' + keys.length + ' 个 OSS 对象，删除不可恢复。\n输入「删除」确认：');
+    if (typed !== '删除') return;
+    orphanDeleteBtn.disabled = true;
+    var body = new FormData();
+    keys.forEach(function (key) { body.append('keys[]', key); });
+    fetch(orphanDeleteUrl, { method: 'POST', body: body, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) { throw new Error(data.error); }
+        var text = '已删除 ' + (data.deleted || 0) + ' 个';
+        if ((data.skipped || []).length) {
+          text += '，跳过 ' + data.skipped.length + ' 个（仍被引用或不在前缀内）';
+        }
+        if ((data.failed || []).length) {
+          text += '，失败 ' + data.failed.length + ' 个';
+        }
+        orphanBox.textContent = text + '。可重新扫描确认。';
+      })
+      .catch(function (err) { orphanBox.textContent = '删除失败：' + err.message; })
+      .finally(function () { orphanDeleteBtn.disabled = false; });
   });
 })();
 </script>

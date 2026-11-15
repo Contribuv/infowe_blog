@@ -78,6 +78,65 @@ def publish(local_path, rel_url: str) -> str:
             return str(url)
     return ""
 
+
+def remote_url(rel_url: str) -> str:
+    """只取远端地址、不上传；用于「文件已经存在」的场景。
+
+    例如项目 README 图片缓存：文件可能早就在本地了，
+    但页面仍然应该展示远端地址，没必要每次渲染都重传一遍。
+    """
+    for func in list(_remote_publishers):
+        getter = getattr(func, "url_for", None)
+        if getter is None:
+            continue
+        try:
+            url = getter(rel_url)
+        except Exception:  # noqa: BLE001
+            continue
+        if url:
+            return str(url)
+    return ""
+
+
+def ensure_remote(local_path, rel_url: str) -> str:
+    """确保文件已经在远端（本地已存在但从未上传的历史文件）。
+
+    发布器可以提供 `ensure`：先检查远端是否存在，不存在才上传。
+    没有这份能力时退回 `publish`。
+    """
+    for func in list(_remote_publishers):
+        ensure = getattr(func, "ensure", None)
+        if ensure is None:
+            continue
+        try:
+            url = ensure(local_path, rel_url)
+        except Exception:  # noqa: BLE001
+            logger.exception("远端补传失败：%s", rel_url)
+            continue
+        if url:
+            return str(url)
+    return publish(local_path, rel_url)
+
+
+def rewrite_html(html: str) -> str:
+    """把 HTML 里的规范上传路径按当前存储策略改写成最终地址。
+
+    由 app.after_request 在页面缓存写入之后调用：
+    - 页面缓存里存的是 /uploads/...，切换策略后旧缓存依然正确；
+    - 停用插件后没有改写器，输出自然回到 /uploads/...。
+    """
+    if not html:
+        return html
+    for func in list(_remote_publishers):
+        rewriter = getattr(func, "rewrite_html", None)
+        if rewriter is None:
+            continue
+        try:
+            html = rewriter(html)
+        except Exception:  # noqa: BLE001
+            logger.exception("远端地址改写失败")
+    return html
+
 # HEIC/HEIF 浏览器支持面窄，上传后统一转成 WebP 再落盘
 HEIC_EXTS = {".heic", ".heif"}
 
@@ -315,9 +374,12 @@ def save(
             pass
         _apply_watermark(dest)
     rel_url = f"/uploads/{sub}/{filename}"
-    # 远端存储（如对象存储插件）启用时，额外传一份并返回公网地址；
-    # 未启用或上传失败时 remote 为空串，行为与原来完全一致。
-    return (publish(dest, rel_url) or rel_url), ""
+    # 远端存储（如对象存储插件）只负责「额外上传一份」，
+    # 返回给调用方的永远是规范路径 /uploads/...。
+    # 数据库里只存这一种形式，页面输出时再按当前策略换成直链或代理地址，
+    # 这样切换策略不需要回写内容。
+    publish(dest, rel_url)
+    return rel_url, ""
 
 
 def resolve(filename: str) -> Path | None:
@@ -382,13 +444,20 @@ def share_thumb(filename: str) -> Path | None:
         return None
 
 
+def _normalize_upload_path(url: str) -> str:
+    """私有桶的代理路径 /oss-media/uploads/... 与站内 /uploads/... 等价。"""
+    if url.startswith("/oss-media/"):
+        return "/" + url[len("/oss-media/"):]
+    return url
+
+
 def extract_urls(*texts: str) -> set[str]:
     urls: set[str] = set()
     for text in texts:
         if not text:
             continue
-        for match in re.finditer(r"/uploads/[/\w%.\-]+", str(text), re.U):
-            urls.add(unquote(match.group(0)))
+        for match in re.finditer(r"/(?:uploads|oss-media)/[/\w%.\-]+", str(text), re.U):
+            urls.add(unquote(_normalize_upload_path(match.group(0))))
     return urls
 
 
@@ -396,9 +465,9 @@ def first_url(*texts: str) -> str:
     for text in texts:
         if not text:
             continue
-        match = re.search(r"/uploads/[/\w%.\-]+", str(text), re.U)
+        match = re.search(r"/(?:uploads|oss-media)/[/\w%.\-]+", str(text), re.U)
         if match:
-            return unquote(match.group(0))
+            return unquote(_normalize_upload_path(match.group(0)))
     return ""
 
 

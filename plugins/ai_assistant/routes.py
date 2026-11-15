@@ -50,8 +50,9 @@ def _save_ai_avatar(file) -> tuple[str, str]:
         from services import upload as upload_service
 
         rel = f"/uploads/ai-avatar/{name}"
-        # 对象存储插件启用时返回远端地址；未启用时行为与原来一致
-        return (upload_service.publish(folder / name, rel) or rel), ""
+        # 只上传，库里存规范路径；展示时由 after_request 统一改写
+        upload_service.publish(folder / name, rel)
+        return rel, ""
     except Exception:
         return "", "不是有效的图片文件"
 

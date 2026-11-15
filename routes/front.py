@@ -319,10 +319,11 @@ def post_detail(post_id: int):
     content, toc = markdown.render_post(post.get("content") or "")
 
     share = (post.get("cover") or "").strip() or upload.first_url(post.get("content") or "")
-    if share.startswith("/uploads/"):
+    if share.startswith(("/uploads/", "/oss-media/uploads/")):
         from urllib.parse import quote
 
-        og_path = "/share-thumb/" + quote(share[len("/uploads/"):])
+        rel = share.replace("/oss-media/uploads/", "", 1).replace("/uploads/", "", 1)
+        og_path = "/share-thumb/" + quote(rel)
     elif share:
         og_path = share
     else:
@@ -729,6 +730,8 @@ def project_detail(project_id: int):
     else:
         gh = {"gh": None, "readme": "", "branch": "", "ts": 0, "error": "", "cached": False}
     gh["age_text"] = _age_text(float(gh.get("ts") or 0))
+    # README 缓存里写死的是 /uploads/...，启用对象存储后在这里补一次转换
+    gh["readme"] = github.resolve_readme_urls(str(gh.get("readme") or ""))
     toc = markdown.toc_from_html(str(gh.get("readme") or ""))
 
     return render_template(

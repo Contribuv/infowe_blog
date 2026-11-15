@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from flask import jsonify, redirect, render_template, request, url_for
+from flask import abort, jsonify, redirect, render_template, request, send_file, url_for
 
 from services import auth
 from services import plugins as plugins_service
@@ -50,7 +50,27 @@ def _form_config() -> dict:
         "region": (request.form.get("region") or "us-east-1").strip() or "us-east-1",
         "public_base": (request.form.get("public_base") or "").strip().rstrip("/"),
         "prefix": (request.form.get("prefix") or "uploads").strip().strip("/") or "uploads",
+        "presign_expires": (request.form.get("presign_expires") or "900").strip() or "900",
     }
+
+
+def oss_media(filename: str):
+    """图片代理：浏览器不能直连私有对象时，由站点读本地副本（必要时回源 OSS）。
+
+    路由由插件守卫包一层：插件停用后这里直接 404，不会留下任何可用入口。
+    不限制当前策略——从私有切回公共时，内容里可能还留着代理地址，
+    这时仍应能正常显示，等用户回写后再统一换成直链。
+    """
+    if not storage.is_enabled():
+        abort(404)
+    rel = str(filename or "").lstrip("/")
+    if not rel.startswith("uploads/"):
+        abort(404)
+    # 本地有副本直接返回；没有就带签名从 OSS 回源并缓存
+    path = storage.ensure_local("/" + rel)
+    if path is None or not path.is_file():
+        abort(404)
+    return send_file(path, conditional=True, max_age=604800)
 
 
 def register(app) -> None:
@@ -70,6 +90,8 @@ def register(app) -> None:
             local_files=len(storage.list_local_files()),
             local_refs=storage.count_local_refs(),
             remote_refs=storage.count_remote_refs(),
+            policy=storage.bucket_policy(),
+            proxy_private=storage.proxy_enabled(),
             migrated_at=str(cfg.get("migrated_at") or ""),
         )
 
@@ -92,6 +114,8 @@ def register(app) -> None:
             data["public_base_prev"] = old["public_base"]
         elif old.get("public_base_prev"):
             data["public_base_prev"] = old["public_base_prev"]
+        # 桶策略由「测试连接」探测后写入，保存表单时不覆盖
+        data["policy"] = str(old.get("policy") or "public")
         # 继承自动探测出的签名模式，避免保存配置时把它丢掉
         if old.get("sign_host") is not None:
             data["sign_host"] = old["sign_host"]
@@ -124,11 +148,21 @@ def register(app) -> None:
         except Exception as exc:  # noqa: BLE001
             return jsonify({"ok": False, "error": f"测试失败：{exc}"}), 400
         if not result["public_read"]:
-            return jsonify({
-                "ok": False,
-                "error": "上传成功，但匿名读取被拒绝：请把桶策略设为 public-read，否则文章里的图片会 403",
-            }), 400
-        message = "上传、匿名读取、删除三步均通过"
+            policy = "private"
+            old = storage.raw_config()
+            policy_changed = old.get("policy") != policy
+            old["policy"] = policy
+            plugins_service.save_config(KEY, old)
+            message = "上传、删除通过；桶是私有策略，页面将使用预签名直链，浏览器直接访问 OSS"
+        else:
+            old = storage.raw_config()
+            policy_changed = old.get("policy") == "private"
+            if old.get("policy") != "public":
+                old["policy"] = "public"
+                plugins_service.save_config(KEY, old)
+            message = "上传、匿名读取、删除三步均通过（桶为公共读）"
+        if policy_changed:
+            message += "；桶策略已变化，页面输出会自动切换地址，无需回写；若历史内容仍是旧地址，可点「归一化为本地路径」修复"
         if not result["sign_host"]:
             # 记住探测结果：之后的上传直接走兼容模式，不再先失败一次
             old = storage.raw_config()
@@ -178,9 +212,34 @@ def register(app) -> None:
             "migrated_at": str(cfg.get("migrated_at") or ""),
         })
 
+    @auth.admin_required
+    def oss_orphans_scan():
+        if not plugins_service.enabled(KEY) or storage.get_cfg() is None:
+            return jsonify({"error": "请先启用插件并完成配置"}), 400
+        items = storage.scan_orphans()
+        total = sum(item["size"] for item in items)
+        return jsonify({
+            "count": len(items),
+            "total_size": storage._fmt_size(total),
+            "items": items,
+        })
+
+    @auth.admin_required
+    def oss_orphans_delete():
+        if not plugins_service.enabled(KEY):
+            return jsonify({"error": "请先启用插件"}), 400
+        keys = request.form.getlist("keys[]") or request.form.getlist("keys")
+        if not keys:
+            return jsonify({"error": "没有选中任何对象"}), 400
+        return jsonify(storage.delete_orphans(keys))
+
     app.add_url_rule(prefix + "/plugins/oss", "admin_plugin_oss_config", oss_config, methods=["GET"])
     app.add_url_rule(prefix + "/plugins/oss/save", "admin_plugin_oss_save", oss_save, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/oss/test", "admin_plugin_oss_test", oss_test, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/oss/migrate", "admin_plugin_oss_migrate", oss_migrate, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/oss/rewrite", "admin_plugin_oss_rewrite", oss_rewrite, methods=["POST"])
     app.add_url_rule(prefix + "/plugins/oss/status", "admin_plugin_oss_status", oss_status, methods=["GET"])
+    app.add_url_rule(prefix + "/plugins/oss/orphans/scan", "admin_plugin_oss_orphans_scan", oss_orphans_scan, methods=["POST"])
+    app.add_url_rule(prefix + "/plugins/oss/orphans/delete", "admin_plugin_oss_orphans_delete", oss_orphans_delete, methods=["POST"])
+    # 私有桶的图片代理：前台路由，未启用时由插件守卫统一返回 404
+    app.add_url_rule("/oss-media/<path:filename>", "oss_media", oss_media, methods=["GET"])

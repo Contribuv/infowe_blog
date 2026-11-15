@@ -32,15 +32,58 @@ def _is_active() -> bool:
 _publish.is_active = _is_active
 
 
+def _url_for(rel_url: str) -> str:
+    """只生成目标 URL，不上传；供核心代码把已存在的文件换成远端地址。"""
+    from . import storage
+
+    return storage.url_for(rel_url)
+
+
+_publish.url_for = _url_for
+
+
+def _ensure(local_path, rel_url: str) -> str:
+    """本地已有文件时，确保远端也有一份（不存在才传）。"""
+    from . import storage
+
+    return storage.ensure_remote(local_path, rel_url)
+
+
+_publish.ensure = _ensure
+
+
+def _rewrite_html(html: str) -> str:
+    """把页面里的 /uploads/... 换成当前策略的最终地址。"""
+    from . import storage
+
+    return storage.rewrite_html(html)
+
+
+_publish.rewrite_html = _rewrite_html
+
+
 def register(app) -> None:
     from . import routes
 
     routes.register(app)
 
 
+def _ensure_schema() -> None:
+    """建对象清单表（幂等）。迁移与上传都会往里记，孤儿扫描只认这里。"""
+    from pathlib import Path
+
+    from db import get_db
+
+    sql = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
+    conn = get_db()
+    conn.executescript(sql)
+    conn.commit()
+
+
 def on_enable(app) -> None:
     from services import upload
 
+    _ensure_schema()
     upload.register_remote(_publish)
     app.logger.info("对象存储插件已启用：新上传会同步到 OSS")
 

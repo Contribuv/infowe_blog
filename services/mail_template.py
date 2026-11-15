@@ -29,7 +29,7 @@ _CARD_BG = "#f6f9fb"
 _FOOT_BG = "#fafcfd"
 _PAGE_BG = "#eef3f7"
 
-_IMAGE_RE = re.compile(r"!\[[^\]]*\]\((/uploads/[^)\s]+)\)")
+_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(((?:/uploads/|/oss-media/uploads/)[^)\s]+)\)")
 
 
 @functools.lru_cache(maxsize=8)

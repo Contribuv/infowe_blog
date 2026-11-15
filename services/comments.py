@@ -44,7 +44,10 @@ def render_content(content: str) -> Markup:
             return match.group(0)
         return f'<img class="cmt-img" src="{path}" alt="{alt}" loading="lazy">'
 
-    return Markup(re.sub(r"!\[([^\]]*)\]\((/uploads/[^\s()<>\"']+)\)", repl, escaped))
+    return Markup(re.sub(
+        r"!\[([^\]]*)\]\(((?:/uploads/|/oss-media/uploads/)[^\s()<>\"']+)\)",
+        repl, escaped,
+    ))
 
 
 _NICKNAME_URL_RE = re.compile(r"^(?:https?://|www\.)", re.I)
@@ -100,11 +103,14 @@ def merge_images(content: str, raw: str) -> str:
     urls: list[str] = []
     for line in re.split(r"[\r\n]+", raw):
         url = line.strip()
-        if not url or not re.fullmatch(r"/uploads/comment/\d{4}/\d{2}/[A-Za-z0-9_.\-]+", url):
+        if not url or not re.fullmatch(
+            r"/(?:uploads|oss-media/uploads)/comment/\d{4}/\d{2}/[A-Za-z0-9_.\-]+", url
+        ):
             continue
         if Path(url).suffix.lower() not in _IMG_EXTS:
             continue
-        if upload.resolve(url[len("/uploads/"):]) is None:
+        rel = url.replace("/oss-media/uploads/", "", 1).replace("/uploads/", "", 1)
+        if upload.resolve(rel) is None:
             continue
         if url not in urls:
             urls.append(url)

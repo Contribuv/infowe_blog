@@ -1267,8 +1267,9 @@ def _save_avatar(file) -> None:
         img.save(folder / name, "JPEG", quality=85)
         old = settings.get_str("avatar", "").strip()
         rel = f"/uploads/avatar/{name}"
-        # 对象存储插件启用时返回远端地址，未启用时仍是站内路径
-        settings.set_value("avatar", upload.publish(folder / name, rel) or rel)
+        # 数据库里只存规范路径；页面输出时由 after_request 按策略换成直链/代理
+        upload.publish(folder / name, rel)
+        settings.set_value("avatar", rel)
         if "/uploads/avatar/" in old:
             old_name = old.split("/uploads/avatar/", 1)[1].split("?", 1)[0]
             if old_name and old_name != name:

@@ -191,8 +191,12 @@ def _cache_readme_image(url: str, repo: str, ext: str) -> str:
     """与 PHP 版一致：md5(url) 命名，落到 uploads/projects/<slug>/readme/。"""
     name = hashlib.md5(url.encode("utf-8")).hexdigest() + ext
     dest = Path(UPLOADS_DIR) / "projects" / repo / "readme" / name
+    rel = f"/uploads/projects/{repo}/readme/{name}"
+    from services import upload
+
     if dest.is_file() and dest.stat().st_size > 0:
-        return f"/uploads/projects/{repo}/readme/{name}"
+        # 文件已经在本地：确保远端也有（历史缓存可能从未上传过）
+        return upload.ensure_remote(dest, rel) or rel
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     site = settings.get_str("site_url", "").strip().rstrip("/")
@@ -204,8 +208,39 @@ def _cache_readme_image(url: str, repo: str, ext: str) -> str:
         data = _download_bytes(candidate)
         if data:
             dest.write_bytes(data)
-            return f"/uploads/projects/{repo}/readme/{name}"
+            return upload.publish(dest, rel) or rel
     return ""
+
+
+def resolve_readme_urls(html: str) -> str:
+    """把缓存 README 里的本地图片地址换成当前存储地址。
+
+    README 缓存是「拉取时就把图片路径写死」的，历史缓存里存的是
+    /uploads/projects/...；启用对象存储后需要在这里补一次转换，
+    并把从未上传过的历史缓存图补传到远端。
+    """
+    from services import upload
+
+    if not html or "/uploads/" not in html:
+        return html
+
+    published: set[str] = getattr(resolve_readme_urls, "_done", set())
+    resolve_readme_urls._done = published
+
+    def repl(match: re.Match) -> str:
+        rel = match.group(0)
+        if rel in published:
+            return upload.remote_url(rel) or rel
+        local = Path(UPLOADS_DIR) / rel[len("/uploads/"):]
+        if not local.is_file():
+            return rel
+        url = upload.ensure_remote(local, rel)
+        if url:
+            published.add(rel)
+            return url
+        return rel
+
+    return re.sub(r"(?<![\w:/.])/uploads/[^\s\"'<>()\[\]]+", repl, html)
 
 
 def localize_readme_images(html: str, repo: str, branch: str) -> str:

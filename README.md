@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.18-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.18)
+[![version](https://img.shields.io/badge/version-3.9.19-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.19)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,23 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.18**
+当前版本：**v3.9.19**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.19
+
+- **对象存储改为「单一真相」架构**：数据库永远只存规范路径 `/uploads/...`，页面输出时按当前桶策略改写。之前把 URL 形式写进内容、靠批量回写切换，公共直链 / 私有代理 / 本地路径三种形式会互相打架；现在切换策略零回写，停用插件天然恢复到本地，页面缓存里存的也是规范地址，切换后旧缓存依然正确
+- **私有桶改用预签名直链**：不再通过站点代理读文件（那会把 OSS 流量绕回服务器，拖垮带宽）。改为后端现场 HMAC 签名，浏览器直接访问 `https://.../uploads/x.jpg?X-Amz-Signature=...`，图片不经过本站。签名时间按 5 分钟窗口取整，同一窗口内 URL 稳定，浏览器缓存可以命中；有效期可配，默认 900 秒
+- **修复评论图片不显示**：评论 Markdown 渲染与图片合并校验只认 `/uploads/`，OSS 代理或预签名地址的评论图不会渲染成图片。现在两种前缀都识别
+- **项目 README 图片**：README 缓存是「拉取时写死路径」的，历史缓存里存的是本地路径，之前启用对象存储后仍是本地。现在渲染时统一转换，并把从未上传过的历史缓存图补传到 OSS
+- **邮件与分享图兼容新地址**：邮件正文图片、文章分享缩略图都能识别新的上传路径形式
+- **OSS 孤儿对象扫描**：只扫描插件自己的上传清单（`oss_objects`），绝不遍历整个桶，因此你直接传到 OSS 的其它文件不会被误列、更不会被删；删除前重新核对数据库引用，仍被使用的自动跳过；支持缩略图预览与另存；单次最多 200 个，需输入确认词
+- **配置页状态增强**：显示当前桶策略（公共读 / 私有预签名）、预签名有效期；私有桶自动探测
+- **修复回写正则误匹配**：之前会把完整 URL 里的 `/uploads/` 也替换一次，拼出 `https://host/infowe/oss-media/...` 这种脏地址，现在站内路径前面不能是 URL 字符
+
+<details>
+<summary><b>历史版本（v3.9.18 及更早，点击展开）</b></summary>
 
 ### v3.9.18
 
@@ -939,9 +953,6 @@ chown -R www:www var
 - **签名兼容模式**：标准 SigV4 会把 Host 纳入签名，如果前面挂了反向代理且代理改写了 Host，服务端算出的签名会与客户端不一致并返回 `SignatureDoesNotMatch`。测试连接会自动探测并降级为「不签 host」模式，把结果记进配置，之后上传不再重试
 - **配置自检**：测试连接真实执行「上传 → 匿名读取 → 删除」三步，桶不是 `public-read` 会直接提示；Access Key 变更但 Secret 留空时拦截保存，避免配成「新 AK + 旧 SK」
 - **核心改动**：`services/upload.py` 新增通用远端存储钩子，核心代码不出现任何具体插件名；站点头像与 AI 头像也接入同一钩子
-
-<details>
-<summary><b>历史版本（v3.9.17 及更早，点击展开）</b></summary>
 
 ### v3.9.17
 

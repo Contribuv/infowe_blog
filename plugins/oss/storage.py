@@ -43,8 +43,11 @@ TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("plugins", ("config",)),
 )
 
-# 站内上传路径：排除引号、括号、尖括号与空白，避免把 Markdown 语法吃进去
-_REL_RE = re.compile(r"/uploads/[^\s\"'<>()\[\]]+")
+# 站内上传路径：排除引号、括号、尖括号与空白；同时要求前面不是 URL 字符，
+# 避免把 https://host/uploads/x 这种完整地址再替换一次。
+_REL_RE = re.compile(r"(?<![\w:/.])/uploads/[^\s\"'<>()\[\]]+")
+# 私有桶的站点代理路径
+_MEDIA_RE = re.compile(r"/oss-media/[^\s\"'<>()\[\]]+")
 _URL_RE = re.compile(r"https?://[^\s\"'<>()\[\]]+")
 # 迁移时跳过的目录：原图备份不对外，隐藏目录一律不传
 _SKIP_DIRS = {".originals", ".trash", ".tmp"}
@@ -86,6 +89,77 @@ def is_enabled() -> bool:
     from services import plugins as plugins_service
 
     return plugins_service.enabled(KEY) and get_cfg() is not None
+
+
+def bucket_policy() -> str:
+    """桶策略：public（匿名可读）或 private（必须经站点代理）。
+
+    由测试连接时自动探测后写入；没探测过时按 public 处理，
+    与 v3.9.18 的行为保持一致。
+    """
+    return "private" if str(raw_config().get("policy") or "public") == "private" else "public"
+
+
+def proxy_enabled() -> bool:
+    """兼容旧配置：私有桶优先用预签名直链，不再默认走站点代理。"""
+    return False
+
+
+def presign_expires() -> int:
+    """预签名有效期（秒），文档建议 300~900。"""
+    try:
+        value = int(raw_config().get("presign_expires") or 900)
+    except (TypeError, ValueError):
+        value = 900
+    return max(60, min(value, 604800))
+
+
+def url_for(rel: str) -> str:
+    """生成对外 URL：公共桶直链；私有桶现场签一个临时 GET 链接。
+
+    私有桶不再走站点代理——那会把 OSS 的流量绕回服务器，
+    既拖带宽又失去对象存储的意义。
+    """
+    cfg = get_cfg()
+    if cfg is None:
+        return rel
+    if bucket_policy() == "private":
+        return s3.presign(cfg, rel, presign_expires())
+    return cfg.url_of(rel)
+
+
+def rewrite_html(html: str) -> str:
+    """把 HTML 里的 /uploads/... 换成当前策略对应的最终地址。
+
+    这是「单一真相」的关键：数据库永远只存 /uploads/...，
+    页面输出时才决定是 OSS 直链还是站点代理，
+    所以切换策略不需要回写任何内容。
+    """
+    if not html or "/uploads/" not in html:
+        return html
+    cfg = get_cfg()
+    if cfg is None:
+        return html
+    if bucket_policy() == "private":
+        # 私有：逐张现场签名，浏览器直接去 OSS 取图，不经过本站带宽
+        expires = presign_expires()
+
+        def _sign(match: re.Match) -> str:
+            raw = match.group(0)
+            rel = unquote(raw.split("?", 1)[0])
+            return s3.presign(cfg, rel, expires)
+
+        return _REL_RE.sub(_sign, html)
+
+    # 公共读：只把本地确实存在的换成直链，避免历史死链被改成 OSS 地址
+    def _sub(match: re.Match) -> str:
+        raw = match.group(0)
+        rel = unquote(raw.split("?", 1)[0])
+        if not _local_exists(rel):
+            return raw
+        return cfg.url_of(rel)
+
+    return _REL_RE.sub(_sub, html)
 
 
 def public_bases() -> list[str]:
@@ -156,7 +230,52 @@ def publish(local_path: str | Path, rel_url: str) -> str:
         # 上传失败不能让文章插入死链：记日志，返回空串，调用方继续用本地地址
         logger.warning("OSS 上传失败 %s：%s", rel_url, exc)
         return ""
-    return cfg.url_of(rel_url)
+    _record_object(cfg.key_of(rel_url), len(data))
+    return url_for(rel_url)
+
+
+def ensure_remote(local_path: str | Path, rel_url: str) -> str:
+    """本地已有文件：远端存在就只返回 URL，不存在才补传一次。
+
+    项目 README 图片是「先下载到本地、再渲染」的，历史缓存从未上传过 OSS，
+    所以不能只取 URL，否则私有桶下代理回源会失败。
+    """
+    cfg = get_cfg()
+    if cfg is None:
+        return ""
+    try:
+        if s3.head(cfg, cfg.key_of(rel_url)):
+            return url_for(rel_url)
+    except Exception:  # noqa: BLE001
+        pass
+    return publish(local_path, rel_url)
+
+
+# ── 对象清单（孤儿扫描的唯一数据来源） ──────────────
+
+def _record_object(key: str, size: int = 0) -> None:
+    """记录「本插件上传过」的对象。孤儿扫描只在这张表里找候选。"""
+    try:
+        import db
+
+        db.execute(
+            "INSERT INTO oss_objects (key, size, uploaded_at) "
+            "VALUES (?, ?, datetime('now','localtime')) "
+            "ON CONFLICT(key) DO UPDATE SET size = excluded.size, "
+            "uploaded_at = excluded.uploaded_at",
+            (key, int(size or 0)),
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("记录 OSS 对象失败：%s", key)
+
+
+def _forget_object(key: str) -> None:
+    try:
+        import db
+
+        db.execute("DELETE FROM oss_objects WHERE key = ?", (key,))
+    except Exception:  # noqa: BLE001
+        logger.exception("移除 OSS 对象记录失败：%s", key)
 
 
 def delete_remote(rel_url: str) -> None:
@@ -186,10 +305,92 @@ def _local_exists(rel: str) -> bool:
     return path.is_file()
 
 
-def to_remote_text(text: str) -> tuple[str, int]:
-    """把文本里的站内上传路径换成 OSS 公网地址。"""
+# HEAD 结果缓存：回写时同一对象可能被多篇文章引用，避免重复请求 OSS
+_head_cache: dict[str, bool] = {}
+
+
+def _remote_exists(rel: str) -> bool:
+    key = str(rel or "").lstrip("/")
+    if key in _head_cache:
+        return _head_cache[key]
     cfg = get_cfg()
-    if cfg is None or not text or "/uploads/" not in text:
+    if cfg is None:
+        return False
+    try:
+        ok = s3.head(cfg, key)
+    except Exception:  # noqa: BLE001
+        ok = False
+    _head_cache[key] = ok
+    return ok
+
+
+def ensure_local(rel: str) -> Path | None:
+    """返回本地副本；没有就带签名从 OSS 拉一份并缓存下来。
+
+    私有桶里的对象可能是用户直接传到 OSS 的（本地从来就没有），
+    站点代理必须能回源，否则这类图片在私有模式下必然 404。
+    """
+    rel = "/" + str(rel or "").lstrip("/")
+    if not rel.startswith("/uploads/"):
+        return None
+    local = (Path(UPLOADS_DIR) / rel[len("/uploads/"):]).resolve()
+    try:
+        local.relative_to(Path(UPLOADS_DIR).resolve())
+    except ValueError:
+        return None
+    if local.is_file():
+        return local
+    cfg = get_cfg()
+    if cfg is None:
+        return None
+    try:
+        data = s3.fetch(cfg, rel)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("OSS 回源失败 %s：%s", rel, exc)
+        return None
+    if data is None:
+        return None
+    try:
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_bytes(data)
+    except OSError:
+        return None
+    logger.info("已从 OSS 回源并缓存：%s", rel)
+    return local
+
+
+def _normalize_for_remote(text: str) -> str:
+    """把 OSS 直链与代理路径统一成 /uploads/...（不判断本地是否存在）。
+
+    用于迁移回写：只要对象在 OSS 上，私有模式就能通过代理回源，
+    不该因为本地缺副本而漏改。
+    """
+    bases = sorted(public_bases(), key=len, reverse=True)
+    for base in bases:
+        # 兼容历史脏数据：base/oss-media/uploads/...（之前回写拼错的形式）
+        text = re.sub(
+            re.escape(base) + r"/oss-media/(uploads/[^\s\"'<>()\[\]]+)",
+            lambda m: "/" + m.group(1),
+            text,
+        )
+        text = re.sub(
+            re.escape(base) + r"/(uploads/[^\s\"'<>()\[\]]+)",
+            lambda m: "/" + m.group(1),
+            text,
+        )
+    text = _MEDIA_RE.sub(lambda m: "/" + m.group(0)[len("/oss-media/"):], text)
+    return text
+
+
+def to_remote_text(text: str) -> tuple[str, int]:
+    """把文本里的站内上传路径换成目标地址（公共桶直链 / 私有桶代理）。"""
+    cfg = get_cfg()
+    if cfg is None or not text:
+        return text, 0
+    # 先把已有的 OSS 直链和代理路径归一到 /uploads/，
+    # 否则「在已经是指链的 URL 里再替换一次」会拼出重复地址。
+    text = _normalize_for_remote(text)
+    if "/uploads/" not in text:
         return text, 0
     replaced = 0
 
@@ -199,24 +400,25 @@ def to_remote_text(text: str) -> tuple[str, int]:
         rel_path, sep, query = raw.partition("?")
         rel = unquote(rel_path)
         if not _local_exists(rel):
-            return raw
+            # 私有模式下，本地没有但 OSS 上确实存在的对象也可以回写：
+            # 代理路由会带签名回源并缓存，图片照样能显示。
+            if not (bucket_policy() == "private" and proxy_enabled() and _remote_exists(rel)):
+                return raw
         replaced += 1
-        url = cfg.url_of(rel)
+        url = url_for(rel)
         return url + (sep + query if sep else "")
 
     return _REL_RE.sub(_sub, text), replaced
 
 
 def to_local_text(text: str) -> tuple[str, int]:
-    """把文本里的 OSS 公网地址换回站内上传路径（仅当本地文件确实存在）。"""
+    """把文本里的 OSS 地址 / 私有代理路径换回站内上传路径（本地文件必须存在）。"""
     if not text:
         return text, 0
     bases = public_bases()
-    if not bases:
-        return text, 0
     replaced = 0
 
-    def _sub(match: re.Match) -> str:
+    def _sub_url(match: re.Match) -> str:
         nonlocal replaced
         url = match.group(0)
         # 从长到短匹配：改了 public_base 之后，短前缀可能只是长前缀的一段，
@@ -236,7 +438,21 @@ def to_local_text(text: str) -> tuple[str, int]:
             return rel + query
         return url
 
-    return _URL_RE.sub(_sub, text), replaced
+    def _sub_media(match: re.Match) -> str:
+        nonlocal replaced
+        raw = match.group(0)
+        # raw 形如 /oss-media/uploads/2026/11/a.jpg，去掉前缀后就是 uploads/...
+        rel = unquote(raw[len("/oss-media/"):])
+        if not _local_exists("/" + rel):
+            return raw
+        replaced += 1
+        return "/" + rel
+
+    if bases:
+        text = _URL_RE.sub(_sub_url, text)
+    # 私有桶的站点代理路径也要能回退（不依赖 public_base）
+    text = _MEDIA_RE.sub(_sub_media, text)
+    return text, replaced
 
 
 # ── 数据库回写 ────────────────────────────────────────
@@ -265,6 +481,8 @@ def rewrite_db(direction: str) -> dict:
     stats = {"rows": 0, "refs": 0, "backup": "", "tables": {}}
     if direction not in {"remote", "local"}:
         return stats
+
+    _head_cache.clear()
 
     stats["backup"] = _backup_db(f"oss_rewrite_{direction}")
     for table, columns in TARGETS:
@@ -379,10 +597,17 @@ def migrate_batch(offset: int, limit: int) -> dict:
                 continue
             data = path.read_bytes()
             _call_s3(cfg, lambda c: s3.put(c, rel, data, _content_type(path)))
+            _record_object(cfg.key_of(rel), len(data))
             uploaded += 1
         except Exception as exc:  # noqa: BLE001
             failed.append({"rel": rel, "error": str(exc)[:160]})
     next_offset = max(0, offset) + len(chunk)
+    done = next_offset >= total
+    if done:
+        try:
+            mark_migrated()
+        except Exception:  # noqa: BLE001
+            logger.warning("记录迁移时间失败")
     return {
         "total": total,
         "offset": max(0, offset),
@@ -391,7 +616,7 @@ def migrate_batch(offset: int, limit: int) -> dict:
         "skipped": skipped,
         "failed": failed,
         "next": next_offset,
-        "done": next_offset >= total,
+        "done": done,
     }
 
 
@@ -404,3 +629,137 @@ def mark_migrated() -> None:
     data = raw_config()
     data["migrated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     plugins_service.save_config(KEY, data)
+
+
+# ── OSS 孤儿扫描 ──────────────────────────────────────
+# 安全边界（比本地清理严格得多，因为 OSS 删除不可恢复）：
+#   1. 候选只来自 oss_objects——本插件上传过的对象；绝不遍历桶，
+#      不会碰用户直接传到 OSS 的其它文件；
+#   2. 删除前重新算一遍数据库引用，仍被引用的直接跳过；
+#   3. 只允许删除配置前缀（默认 uploads/）下的 key；
+#   4. 只删 OSS 对象，不动本地回退副本，停用后图还能回来；
+#   5. 单次最多 200 个，且必须在前端输入确认词。
+
+def referenced_keys() -> set[str]:
+    """收集数据库里仍被引用的对象 key（本地路径与 OSS 地址都识别）。"""
+    import db
+
+    cfg = get_cfg()
+    if cfg is None:
+        return set()
+    prefix = cfg.prefix.strip("/")
+    bases = public_bases()
+    keys: set[str] = set()
+
+    for table, columns in TARGETS:
+        try:
+            rows = db.query(f"SELECT {', '.join(columns)} FROM {table}")
+        except Exception:
+            continue
+        for row in rows:
+            for column in columns:
+                value = row[column]
+                if not isinstance(value, str):
+                    continue
+                # 站内路径：/uploads/2026/11/a.jpg -> uploads/2026/11/a.jpg
+                for match in _REL_RE.finditer(value):
+                    rel = unquote(match.group(0).split("?", 1)[0])
+                    if rel.startswith("/uploads/"):
+                        keys.add(f"{prefix}/{rel[len('/uploads/'):]}")
+                # OSS 地址：{base}/uploads/2026/11/a.jpg -> 同一个 key
+                for base in bases:
+                    marker = f"{base}/{prefix}/"
+                    start = 0
+                    while True:
+                        index = value.find(marker, start)
+                        if index < 0:
+                            break
+                        end = index + len(marker)
+                        while end < len(value) and value[end] not in " \t\r\n\"'<>()[]":
+                            end += 1
+                        keys.add(unquote(value[index + len(base) + 1:end]))
+                        start = end
+    return keys
+
+
+def scan_orphans(limit: int = 500) -> list[dict]:
+    """列出「插件上传过、但数据库已不再引用」的对象。
+
+    只查 oss_objects，不遍历桶；每个候选再 HEAD 一次确认对象还在。
+    """
+    import db
+
+    cfg = get_cfg()
+    if cfg is None:
+        return []
+    prefix = cfg.prefix.strip("/")
+    referenced = referenced_keys()
+    rows = db.query(
+        "SELECT key, size, uploaded_at FROM oss_objects ORDER BY uploaded_at DESC, key ASC LIMIT ?",
+        (limit,),
+    )
+    result: list[dict] = []
+    for row in rows:
+        key = str(row["key"] or "").lstrip("/")
+        if not key or not key.startswith(prefix + "/"):
+            continue
+        if key in referenced:
+            continue
+        try:
+            if not s3.head(cfg, key):
+                continue
+        except Exception:
+            # 网络或权限问题时不列出来，避免用户基于不完整数据删除
+            continue
+        local = Path(UPLOADS_DIR) / key[len(prefix) + 1:]
+        name = key.rsplit("/", 1)[-1]
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+        result.append(
+            {
+                "key": key,
+                "url": url_for("/" + key),
+                "size": int(row["size"] or 0),
+                "size_text": _fmt_size(int(row["size"] or 0)),
+                "uploaded_at": str(row["uploaded_at"] or ""),
+                "has_local": local.is_file(),
+                "ext": ext,
+                "is_image": ext in {"jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "avif", "ico"},
+            }
+        )
+    return result
+
+
+def _fmt_size(num: int) -> str:
+    value = float(num)
+    for unit in ("B", "KB", "MB", "GB"):
+        if value < 1024 or unit == "GB":
+            return f"{int(value)} B" if unit == "B" else f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} TB"
+
+
+def delete_orphans(keys: list[str]) -> dict:
+    """删除指定的 OSS 孤儿对象；删除前重新校验引用与前缀。"""
+    cfg = get_cfg()
+    if cfg is None:
+        return {"error": "配置不完整"}
+    prefix = cfg.prefix.strip("/")
+    referenced = referenced_keys()
+    deleted = 0
+    skipped: list[dict] = []
+    failed: list[dict] = []
+    for raw in keys[:200]:
+        key = str(raw or "").lstrip("/")
+        if not key or not key.startswith(prefix + "/"):
+            skipped.append({"key": key, "reason": "不在配置前缀内"})
+            continue
+        if key in referenced:
+            skipped.append({"key": key, "reason": "仍被内容引用"})
+            continue
+        try:
+            s3.delete(cfg, key)
+            _forget_object(key)
+            deleted += 1
+        except Exception as exc:  # noqa: BLE001
+            failed.append({"key": key, "error": str(exc)[:160]})
+    return {"deleted": deleted, "skipped": skipped, "failed": failed}

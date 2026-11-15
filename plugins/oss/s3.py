@@ -183,6 +183,77 @@ def delete(cfg: S3Config, rel: str) -> None:
         raise S3Error("删除对象失败", resp.status_code, resp.text)
 
 
+def fetch(cfg: S3Config, rel: str, max_bytes: int = 20 * 1024 * 1024) -> bytes | None:
+    """带签名读取对象；不存在返回 None。只用于私有桶的图片代理回源。"""
+    resp = _request(cfg, "GET", rel)
+    if resp.status_code == 404:
+        return None
+    if resp.status_code != 200:
+        raise S3Error("读取对象失败", resp.status_code, resp.text)
+    if len(resp.content) > max_bytes:
+        raise S3Error("对象过大，无法代理", 0, f"{len(resp.content)} bytes")
+    return resp.content
+
+
+def presign(cfg: S3Config, rel: str, expires: int = 900) -> str:
+    """生成 GET 预签名 URL（SigV4 query 签名）。
+
+    文档要求：
+    - 只签 host，路径与查询参数都参与签名
+    - endpoint 必须是浏览器实际访问的地址（含端口）
+    - 有效期 1~604800 秒
+
+    这里把签名时间按时间窗取整（默认 5 分钟），让同一窗口内生成的 URL
+    保持一致，浏览器缓存才能命中；预签名在服务端按 X-Amz-Expires 判断过期，
+    取整带来的几分钟偏差不会触发 RequestTimeTooSkewed。
+    """
+    expires = max(1, min(int(expires or 900), 604800))
+    key = cfg.key_of(rel)
+    path = _encode_path(f"/{cfg.bucket.strip('/')}/{key}")
+    host = urlsplit(cfg.endpoint).netloc
+
+    window = min(300, max(0, expires // 3))
+    stamp = int(datetime.now(timezone.utc).timestamp())
+    if window:
+        stamp -= stamp % window
+    moment = datetime.fromtimestamp(stamp, timezone.utc)
+    amz_date = moment.strftime("%Y%m%dT%H%M%SZ")
+    date = amz_date[:8]
+    scope = f"{date}/{cfg.region}/s3/aws4_request"
+
+    params = {
+        "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+        "X-Amz-Credential": f"{cfg.access_key}/{scope}",
+        "X-Amz-Date": amz_date,
+        "X-Amz-Expires": str(expires),
+        "X-Amz-SignedHeaders": "host",
+    }
+    canonical_query = "&".join(
+        f"{quote(name, safe='-_.~')}={quote(value, safe='-_.~')}"
+        for name, value in sorted(params.items())
+    )
+    canonical_request = "\n".join(
+        ["GET", path, canonical_query, f"host:{host}\n", "host", "UNSIGNED-PAYLOAD"]
+    )
+    string_to_sign = "\n".join(
+        [
+            "AWS4-HMAC-SHA256",
+            amz_date,
+            scope,
+            _sha256(canonical_request.encode("utf-8")),
+        ]
+    )
+    signature = hmac.new(
+        _signing_key(cfg.secret_key, date, cfg.region),
+        string_to_sign.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return (
+        f"{cfg.endpoint.rstrip('/')}{path}?{canonical_query}"
+        f"&X-Amz-Signature={signature}"
+    )
+
+
 def head(cfg: S3Config, rel: str) -> bool:
     resp = _request(cfg, "HEAD", rel)
     if resp.status_code == 200:

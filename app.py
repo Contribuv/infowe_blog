@@ -366,6 +366,29 @@ def _register_hooks(app: Flask) -> None:
         return response
 
     @app.after_request
+    def _rewrite_media_urls(response):
+        """把 HTML 里的 /uploads/... 按当前对象存储策略换成最终地址。
+
+        执行顺序很关键：这个钩子注册在页面缓存之后、gzip 之前，
+        Flask 逆序执行 after_request，因此写缓存时拿到的仍是规范 HTML，
+        返回给浏览器的才是替换后的地址。切换策略后旧缓存也依然正确。
+        """
+        if response.mimetype != "text/html" or response.direct_passthrough:
+            return response
+        from services import upload
+
+        if not upload.remote_active():
+            return response
+        try:
+            html = response.get_data(as_text=True)
+            rewritten = upload.rewrite_html(html)
+        except Exception:  # noqa: BLE001
+            return response
+        if rewritten != html:
+            response.set_data(rewritten)
+        return response
+
+    @app.after_request
     def _security_headers(response):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
