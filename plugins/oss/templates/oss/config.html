@@ -1,0 +1,218 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}对象存储{% endblock %}
+
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('database', 20) | safe }} 对象存储</h2>
+    <div class="page-actions">
+        <a href="{{ url_for('admin_plugins') }}" class="btn btn-secondary">返回插件管理</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><h3>当前状态</h3></div>
+    <div style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px 26px;font-size:13px;">
+        <span>插件：<b>{{ '已启用' if enabled else '未启用' }}</b></span>
+        <span>配置：<b>{{ '完整' if configured else '不完整' }}</b></span>
+        <span>本地文件：<b>{{ local_files }}</b> 个</span>
+        <span>数据库引用：本地 <b>{{ local_refs }}</b> 处 / OSS <b>{{ remote_refs }}</b> 处</span>
+        {% if migrated_at %}<span>最近迁移：<b>{{ migrated_at }}</b></span>{% endif %}
+    </div>
+    {% if not enabled %}
+    <div class="card-hint" style="margin:0 18px 16px;">
+        插件当前未启用，上传走本地规则。到
+        <a href="{{ url_for('admin_plugins') }}">插件管理</a> 启用后，新上传才会同步到对象存储。
+    </div>
+    {% endif %}
+    {% if enabled and not configured %}
+    <div class="card-hint" style="margin:0 18px 16px;color:var(--danger);">
+        配置不完整：Endpoint、桶、Access Key、Secret Key 必须全部填写，否则上传会自动回退本地。
+    </div>
+    {% endif %}
+</div>
+
+<form method="POST" action="{{ url_for('admin_plugin_oss_save') }}" class="card" style="margin-bottom:16px;">
+    <div class="card-header"><h3>连接配置</h3></div>
+    <div style="padding:16px 18px;">
+        <div class="form-group">
+            <label class="form-label">S3 Endpoint</label>
+            <input type="text" name="endpoint" class="input-text" value="{{ cfg.get('endpoint', '') }}"
+                   placeholder="http://192.168.1.10:9100" autocomplete="off">
+            <p class="form-hint">fnos-oss 的 S3 API 地址，带协议和端口，不要带桶名。</p>
+        </div>
+        <div class="form-group">
+            <label class="form-label">桶（Bucket）</label>
+            <input type="text" name="bucket" class="input-text" value="{{ cfg.get('bucket', '') }}"
+                   placeholder="blog" autocomplete="off">
+            <p class="form-hint">需要先在 fnos-oss 管理端把桶策略设为 <b>public-read</b>，否则文章里的图片会 403。</p>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Access Key</label>
+            <input type="text" name="access_key" class="input-text" value="{{ cfg.get('access_key', '') }}"
+                   autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Secret Key</label>
+            <input type="password" name="secret_key" class="input-text" value=""
+                   placeholder="{{ secret_mask or '留空表示不修改' }}" autocomplete="new-password">
+            <p class="form-hint">已保存的密钥不会回显；留空提交表示保持原值。</p>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Region</label>
+            <input type="text" name="region" class="input-text" value="{{ cfg.get('region', 'us-east-1') }}"
+                   placeholder="us-east-1" autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label class="form-label">公网访问基址（可选）</label>
+            <input type="text" name="public_base" class="input-text" value="{{ cfg.get('public_base', '') }}"
+                   placeholder="https://oss.example.com/blog" autocomplete="off">
+            <p class="form-hint">
+                浏览器访问图片的地址。留空则使用「Endpoint/桶」；如果通过反向代理暴露 OSS，就填代理后的地址。
+                {% if public_root %}当前生效：<code>{{ public_root }}</code>{% endif %}
+            </p>
+        </div>
+        <div class="form-group">
+            <label class="form-label">对象前缀</label>
+            <input type="text" name="prefix" class="input-text" value="{{ cfg.get('prefix', 'uploads') }}"
+                   placeholder="uploads" autocomplete="off">
+            <p class="form-hint">默认 <code>uploads</code>，让对象 key 与站内路径一一对应，停用时才能无损改回。</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary">保存配置</button>
+            <button type="button" class="btn btn-secondary" id="ossTest">测试连接</button>
+        </div>
+        <p class="form-hint" id="ossTestResult" style="margin-top:10px;"></p>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-header"><h3>存量文件迁移</h3></div>
+    <div style="padding:16px 18px;">
+        <p class="form-hint" style="margin-top:0;">
+            把 <code>var/uploads/</code> 里已有的文件上传到对象存储，并把文章、评论、友链、头像等
+            内容中的 <code>/uploads/...</code> 地址改写成 OSS 地址。对象 key 与本地路径完全一致，所以停用插件时可以无损改回。
+        </p>
+        <p class="form-hint">
+            <b>本地文件不会被删除</b>，它们是停用插件后的回退副本；因此插件启用期间「文件清理」会暂停，避免误删。
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0;">
+            <button type="button" class="btn btn-primary" id="ossMigrate"
+                    {{ 'disabled' if not enabled or not configured else '' }}>迁移本地文件到 OSS</button>
+            <button type="button" class="btn btn-secondary" id="ossRewriteLocal"
+                    title="兜底：把数据库里的 OSS 地址立刻改回 /uploads/...">立即回写本地地址</button>
+        </div>
+        <div id="ossProgress" style="display:none;">
+            <div style="height:8px;border-radius:999px;background:var(--bg-subtle);overflow:hidden;">
+                <div id="ossProgressBar" style="height:100%;width:0;background:var(--accent);transition:width .2s;"></div>
+            </div>
+            <p class="form-hint" id="ossProgressText" style="margin-top:8px;"></p>
+        </div>
+        <div id="ossLog" class="form-hint" style="white-space:pre-wrap;"></div>
+    </div>
+</div>
+
+<script>
+(function () {
+  var testUrl = {{ url_for('admin_plugin_oss_test') | tojson }};
+  var migrateUrl = {{ url_for('admin_plugin_oss_migrate') | tojson }};
+  var rewriteUrl = {{ url_for('admin_plugin_oss_rewrite') | tojson }};
+
+  function post(url, data) {
+    var body = new FormData();
+    Object.keys(data || {}).forEach(function (k) { body.append(k, data[k]); });
+    return fetch(url, { method: 'POST', body: body, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, data: j }; }); });
+  }
+
+  var testBtn = document.getElementById('ossTest');
+  var testOut = document.getElementById('ossTestResult');
+  testBtn.addEventListener('click', function () {
+    var form = testBtn.closest('form');
+    var data = {};
+    ['endpoint', 'bucket', 'access_key', 'secret_key', 'region', 'public_base', 'prefix'].forEach(function (name) {
+      data[name] = form.elements[name] ? form.elements[name].value : '';
+    });
+    testBtn.disabled = true;
+    testOut.textContent = '正在测试…';
+    testOut.style.color = '';
+    post(testUrl, data).then(function (res) {
+      testOut.textContent = res.data.ok ? ('✓ ' + res.data.message) : ('✗ ' + (res.data.error || '测试失败'));
+      testOut.style.color = res.data.ok ? 'var(--success)' : 'var(--danger)';
+    }).catch(function (err) {
+      testOut.textContent = '✗ ' + err;
+      testOut.style.color = 'var(--danger)';
+    }).finally(function () { testBtn.disabled = false; });
+  });
+
+  var migrateBtn = document.getElementById('ossMigrate');
+  var box = document.getElementById('ossProgress');
+  var bar = document.getElementById('ossProgressBar');
+  var text = document.getElementById('ossProgressText');
+  var log = document.getElementById('ossLog');
+
+  function setProgress(done, total) {
+    box.style.display = 'block';
+    var pct = total ? Math.round(done / total * 100) : 0;
+    bar.style.width = pct + '%';
+    text.textContent = done + ' / ' + total + '（' + pct + '%）';
+  }
+
+  migrateBtn && migrateBtn.addEventListener('click', function () {
+    if (!confirm('开始把本地文件上传到对象存储？过程中可以继续使用网站，上传完成后会自动改写内容地址。')) return;
+    migrateBtn.disabled = true;
+    log.textContent = '';
+    var offset = 0, uploaded = 0, skipped = 0, failed = [];
+    function step() {
+      post(migrateUrl, { offset: offset, limit: 10 }).then(function (res) {
+        var data = res.data || {};
+        if (data.error) { throw new Error(data.error); }
+        uploaded += data.uploaded || 0;
+        skipped += data.skipped || 0;
+        (data.failed || []).forEach(function (f) { failed.push(f.rel + '：' + f.error); });
+        setProgress(data.next || 0, data.total || 0);
+        if (data.done) {
+          text.textContent = '上传完成：新传 ' + uploaded + ' 个，跳过 ' + skipped + ' 个，失败 ' + failed.length + ' 个';
+          if (failed.length) {
+            log.textContent = '失败文件（可修好网络后重试，已成功的会跳过）：\n' + failed.join('\n');
+            log.style.color = 'var(--danger)';
+            migrateBtn.disabled = false;
+            return;
+          }
+          text.textContent += '，正在改写内容地址…';
+          return post(rewriteUrl, { direction: 'remote' }).then(function (r2) {
+            var s = r2.data || {};
+            text.textContent += ' 完成：改写 ' + (s.rows || 0) + ' 行 / ' + (s.refs || 0) + ' 处引用';
+            log.textContent = '数据库已备份：' + (s.backup || '无');
+            log.style.color = '';
+            migrateBtn.disabled = false;
+          });
+        }
+        offset = data.next || 0;
+        return step();
+      }).catch(function (err) {
+        text.textContent = '迁移中断：' + err.message;
+        text.style.color = 'var(--danger)';
+        migrateBtn.disabled = false;
+      });
+    }
+    step();
+  });
+
+  document.getElementById('ossRewriteLocal').addEventListener('click', function () {
+    if (!confirm('把数据库里的 OSS 地址改回 /uploads/...？本地文件必须还在；缺失的文件会保留 OSS 地址以避免裂图。')) return;
+    var btn = this;
+    btn.disabled = true;
+    log.textContent = '正在回写…';
+    post(rewriteUrl, { direction: 'local' }).then(function (res) {
+      var s = res.data || {};
+      if (s.error) { throw new Error(s.error); }
+      log.textContent = '已回写 ' + (s.rows || 0) + ' 行 / ' + (s.refs || 0) + ' 处引用，数据库备份：' + (s.backup || '无');
+      log.style.color = '';
+    }).catch(function (err) {
+      log.textContent = '回写失败：' + err.message;
+      log.style.color = 'var(--danger)';
+    }).finally(function () { btn.disabled = false; });
+  });
+})();
+</script>
+{% endblock %}

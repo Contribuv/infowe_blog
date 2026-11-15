@@ -716,11 +716,20 @@ def admin_upload_file():
 def admin_orphans():
     items = upload.orphans()
     total = sum(item["size_bytes"] for item in items)
-    return render_template("admin/orphans.html", orphans=items, total_size=upload.fmt_size(total))
+    return render_template(
+        "admin/orphans.html",
+        orphans=items,
+        total_size=upload.fmt_size(total),
+        remote_active=upload.remote_active(),
+    )
 
 
 @LOGIN
 def admin_orphan_clean():
+    # 远端存储启用时本地文件是回退副本，禁止批量删除：
+    # 删掉之后停用插件、地址改回本地就会全部裂图。
+    if upload.remote_active():
+        return jsonify({"deleted": 0, "failed": 0, "results": [], "error": "对象存储启用中，本地文件作为回退副本保留，暂不能清理"}), 409
     # 前端批量删除使用 path[]；兼容旧表单的 path
     selected = request.form.getlist("path") + request.form.getlist("path[]")
     selected = list(dict.fromkeys(selected))
@@ -1257,7 +1266,9 @@ def _save_avatar(file) -> None:
         name = f"avatar_{int(_time.time())}.jpg"
         img.save(folder / name, "JPEG", quality=85)
         old = settings.get_str("avatar", "").strip()
-        settings.set_value("avatar", f"/uploads/avatar/{name}")
+        rel = f"/uploads/avatar/{name}"
+        # 对象存储插件启用时返回远端地址，未启用时仍是站内路径
+        settings.set_value("avatar", upload.publish(folder / name, rel) or rel)
         if "/uploads/avatar/" in old:
             old_name = old.split("/uploads/avatar/", 1)[1].split("?", 1)[0]
             if old_name and old_name != name:

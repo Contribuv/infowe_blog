@@ -1,0 +1,8 @@
+{
+  "key": "oss",
+  "name": "对象存储",
+  "version": "1.0.0",
+  "description": "把上传文件同步到 S3 兼容对象存储（fnos-oss），可一键迁移历史文件；停用后自动恢复本地地址与本地上传规则",
+  "entry": "plugins.oss:register",
+  "admin_menu": { "group": "system", "label": "插件管理", "url": "admin_plugins" }
+}

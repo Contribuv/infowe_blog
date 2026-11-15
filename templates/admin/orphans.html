@@ -11,8 +11,13 @@
 
 {% if not orphans %}
 <div class="empty-state">
+    {% if remote_active %}
+    {{ icon('cloud', 28) | safe }}
+    <p class="text-muted">对象存储插件启用中：本地 uploads 文件作为「停用后的回退副本」完整保留，因此不参与孤儿清理。停用插件后，这里会恢复正常扫描。</p>
+    {% else %}
     {{ icon('check-circle', 28) | safe }}
     <p class="text-muted">没有孤儿文件，uploads 中的文件均被有效内容引用。</p>
+    {% endif %}
 </div>
 {% else %}
 <!-- 类型筛选 + 文件名搜索（纯前端即时生效） -->

@@ -29,6 +29,55 @@ BLOCKED_EXTS = {
 
 logger = logging.getLogger(__name__)
 
+# ── 远端存储钩子 ──────────────────────────────────────
+# 插件（对象存储等）通过 register_remote() 注册发布函数：
+#   入参 (本地文件路径, 站内相对 URL)，返回公网 URL；返回空串表示失败、回退本地。
+# 核心代码不认识任何具体插件：没有注册时，下面这些函数等同于不存在。
+_remote_publishers: list = []
+
+
+def register_remote(func) -> None:
+    """注册一个远端发布函数（插件启用时调用）。"""
+    if func not in _remote_publishers:
+        _remote_publishers.append(func)
+
+
+def unregister_remote(func) -> None:
+    """注销远端发布函数（插件停用时调用），停用后立即恢复本地规则。"""
+    if func in _remote_publishers:
+        _remote_publishers.remove(func)
+
+
+def remote_active() -> bool:
+    """当前是否有「真正可用」的远端存储接管上传。
+
+    发布函数可以挂 ``is_active`` 属性做二次判断（例如插件已启用但配置不完整）。
+    没有任何远端时返回 False，孤儿清理等逻辑保持原样。
+    """
+    for func in list(_remote_publishers):
+        checker = getattr(func, "is_active", None)
+        if checker is None:
+            return True
+        try:
+            if checker():
+                return True
+        except Exception:  # noqa: BLE001
+            continue
+    return False
+
+
+def publish(local_path, rel_url: str) -> str:
+    """把刚写入本地的文件交给远端存储；没有可用远端时返回空串。"""
+    for func in list(_remote_publishers):
+        try:
+            url = func(local_path, rel_url)
+        except Exception:  # noqa: BLE001
+            logger.exception("远端发布失败：%s", rel_url)
+            continue
+        if url:
+            return str(url)
+    return ""
+
 # HEIC/HEIF 浏览器支持面窄，上传后统一转成 WebP 再落盘
 HEIC_EXTS = {".heic", ".heif"}
 
@@ -265,7 +314,10 @@ def save(
         except OSError:
             pass
         _apply_watermark(dest)
-    return f"/uploads/{sub}/{filename}", ""
+    rel_url = f"/uploads/{sub}/{filename}"
+    # 远端存储（如对象存储插件）启用时，额外传一份并返回公网地址；
+    # 未启用或上传失败时 remote 为空串，行为与原来完全一致。
+    return (publish(dest, rel_url) or rel_url), ""
 
 
 def resolve(filename: str) -> Path | None:
@@ -387,6 +439,10 @@ def referenced_urls() -> set[str]:
 
 
 def orphans() -> list[dict]:
+    # 远端存储可用时，本地文件是「停用后的回退副本」，不能当孤儿清理：
+    # 一旦删掉，停用插件把地址改回本地就会全部裂图。
+    if remote_active():
+        return []
     referenced = referenced_urls()
     base = root()
     result: list[dict] = []

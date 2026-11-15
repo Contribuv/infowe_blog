@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.17-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.17)
+[![version](https://img.shields.io/badge/version-3.9.18-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.18)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,23 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.17**
+当前版本：**v3.9.18**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.18
+
+- **新增「对象存储」插件**：`plugins/oss/`，把上传文件同步到 S3 兼容对象存储（fnos-oss）。后台「插件管理」启用后填写 Endpoint、桶、Access Key / Secret Key、公网基址即可；签名用 SigV4 + path-style 手写实现，不引入 boto3，依赖零新增
+- **上传双写、失败回退**：启用后先按原有逻辑把文件写进 `var/uploads/`（水印、HEIC 转 WebP、原图备份全部照旧），再额外传一份到 OSS，接口返回 OSS 地址；上传失败自动回退本地地址，文章里不会插入失效链接
+- **存量文件一键迁移**：配置页可把历史文件分批上传（每批 10 个，带进度条），完成后自动把文章、评论、友链、记忆、项目、时间线、设置里的 `/uploads/...` 批量改写成 OSS 地址；对象 key 与站内路径一一对应，回写不会错位
+- **停用即完全恢复**：停用插件时先摘掉上传钩子（下一个上传立刻回到本地规则），再把数据库里的 OSS 地址批量改回 `/uploads/...`，写库前自动备份数据库。实测 75 篇文章 + 100 条设置，停用后与启用前逐字节对比零差异
+- **本地文件始终保留**：迁移只上传不删除，它们是停用后的回退副本；插件启用期间「孤儿文件清理」自动暂停并显示说明，避免把回退副本当垃圾清掉
+- **签名兼容模式**：标准 SigV4 会把 Host 纳入签名，如果前面挂了反向代理且代理改写了 Host，服务端算出的签名会与客户端不一致并返回 `SignatureDoesNotMatch`。测试连接会自动探测并降级为「不签 host」模式，把结果记进配置，之后上传不再重试
+- **配置自检**：测试连接真实执行「上传 → 匿名读取 → 删除」三步，桶不是 `public-read` 会直接提示；Access Key 变更但 Secret 留空时拦截保存，避免配成「新 AK + 旧 SK」
+- **核心改动**：`services/upload.py` 新增通用远端存储钩子，核心代码不出现任何具体插件名；站点头像与 AI 头像也接入同一钩子
+
+<details>
+<summary><b>历史版本（v3.9.17 及更早，点击展开）</b></summary>
 
 ### v3.9.17
 
@@ -940,9 +954,6 @@ chown -R www:www var
 - **文章页「写作」直达编辑**：登录状态下，在文章详情页点击导航栏的「写作」图标，不再跳转到后台首页，而是直接进入当前文章的编辑页；图标提示文案同步变为「编辑本文」
 - **移动端抽屉同步**：手机端展开菜单后的「写作」入口也指向当前文章编辑页，与桌面端行为一致
 - **其它页面保持不变**：首页、友链、归档等页面的「写作」仍进入后台首页；未登录时不显示该入口。判断依据是 `request.endpoint == 'post_detail'` 且路由已传入 `post`，因此只在文章详情页生效
-
-<details>
-<summary><b>历史版本（v3.9.16 及更早，点击展开）</b></summary>
 
 ### v3.9.15
 

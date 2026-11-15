@@ -47,7 +47,11 @@ def _save_ai_avatar(file) -> tuple[str, str]:
             old_name = old_url.split("/uploads/ai-avatar/", 1)[1].split("?", 1)[0]
             if old_name and old_name != name:
                 (folder / old_name).unlink(missing_ok=True)
-        return f"/uploads/ai-avatar/{name}", ""
+        from services import upload as upload_service
+
+        rel = f"/uploads/ai-avatar/{name}"
+        # 对象存储插件启用时返回远端地址；未启用时行为与原来一致
+        return (upload_service.publish(folder / name, rel) or rel), ""
     except Exception:
         return "", "不是有效的图片文件"
 
