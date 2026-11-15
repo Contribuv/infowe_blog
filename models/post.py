@@ -366,6 +366,10 @@ def save(form: dict, post_id: int | None = None) -> int:
 
     content = form.get("content") or ""
     content = re.sub(r"<(https?://[^>\s]+)>", r"[\1](\1)", content)
+    # 编辑器里可能粘贴了带签名的临时地址，落库前统一剥回 /uploads/...
+    from services import upload as _upload
+
+    content = _upload.normalize_text(content)
     read_time = max(1, word_count(strip_markdown(content)) // 200) if content else 3
     is_featured = 1 if str(form.get("is_featured", "")) == "1" else 0
 
@@ -385,6 +389,7 @@ def save(form: dict, post_id: int | None = None) -> int:
         created_at = None
     status = normalize_status(str(form.get("status") or "published"))
     cover = (form.get("cover") or "").strip()
+    cover = _upload.normalize_text(cover)
 
     now = db.now()
     if post_id is not None:

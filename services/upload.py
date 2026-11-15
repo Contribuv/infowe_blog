@@ -137,6 +137,26 @@ def rewrite_html(html: str) -> str:
             logger.exception("远端地址改写失败")
     return html
 
+
+def normalize_text(text: str) -> str:
+    """把各种远端地址归一化回 /uploads/...，用于保存前清洗。
+
+    编辑器和剪贴板里可能带进 OSS 直链、预签名 URL 或代理路径；
+    这些都带有效期或与当前策略绑定，落库后会过期。
+    保存前统一剥回规范路径，展示时再按当前策略重新生成。
+    """
+    if not text:
+        return text
+    for func in list(_remote_publishers):
+        normalizer = getattr(func, "normalize", None)
+        if normalizer is None:
+            continue
+        try:
+            text = normalizer(text)
+        except Exception:  # noqa: BLE001
+            logger.exception("远端地址归一化失败")
+    return text
+
 # HEIC/HEIF 浏览器支持面窄，上传后统一转成 WebP 再落盘
 HEIC_EXTS = {".heic", ".heif"}
 

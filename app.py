@@ -372,8 +372,14 @@ def _register_hooks(app: Flask) -> None:
         执行顺序很关键：这个钩子注册在页面缓存之后、gzip 之前，
         Flask 逆序执行 after_request，因此写缓存时拿到的仍是规范 HTML，
         返回给浏览器的才是替换后的地址。切换策略后旧缓存也依然正确。
+
+        后台页面不改写：编辑器里如果显示带签名的临时 URL，
+        用户一保存就会把过期链接写进文章，所以后台必须保持 /uploads/。
         """
         if response.mimetype != "text/html" or response.direct_passthrough:
+            return response
+        admin_prefix = app.config.get("ADMIN_PREFIX", "/admin")
+        if request.path == admin_prefix or request.path.startswith(admin_prefix + "/"):
             return response
         from services import upload
 

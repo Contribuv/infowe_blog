@@ -162,6 +162,28 @@ def rewrite_html(html: str) -> str:
     return _REL_RE.sub(_sub, html)
 
 
+def normalize_text(text: str) -> str:
+    """把 OSS 直链 / 预签名 URL / 代理路径剥回 /uploads/...。
+
+    保存文章或评论前调用：编辑器里可能粘贴了带签名的临时链接，
+    直接落库会在有效期后变成死链。
+    """
+    if not text:
+        return text
+    cfg = get_cfg()
+    if cfg is None:
+        return text
+    bases = sorted(public_bases(), key=len, reverse=True)
+    for base in bases:
+        text = re.sub(
+            re.escape(base) + r"/(uploads/[^\s\"'<>()\[\]]+)",
+            lambda m: "/" + m.group(1).split("?", 1)[0].split("#", 1)[0],
+            text,
+        )
+    text = _MEDIA_RE.sub(lambda m: "/" + m.group(0)[len("/oss-media/"):], text)
+    return text
+
+
 def public_bases() -> list[str]:
     """当前与历史公网基址。改过 public_base 之后，旧地址也要能回写。"""
     data = raw_config()

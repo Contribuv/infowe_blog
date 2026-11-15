@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.19-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.19)
+[![version](https://img.shields.io/badge/version-3.9.20-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.20)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.19**
+当前版本：**v3.9.20**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.20
+
+- **修复后台编辑器显示临时签名 URL**：v3.9.19 的输出改写没有排除后台页面，编辑器和后台里的图片地址会变成 `?X-Amz-Signature=...` 的预签名链接。用户保存时会把这段 15 分钟后就过期的地址写进文章，导致图片永久 403。现在后台一律保持 `/uploads/...`，只有前台公开页面才按策略生成签名或直链
+- **保存时统一归一化图片地址**：文章正文、封面、评论正文在落库前会把三种形式（OSS 直链、预签名 URL、`/oss-media/` 代理路径）统统剥回 `/uploads/...`。即使从别处粘贴了带签名的链接，也不会写死到数据库
+- **对象存储上传仍是双写**：文件先落本地（水印、HEIC 转 WebP、原图备份照旧），再额外传一份 OSS；数据库只存规范路径，前台读取时由浏览器直连 OSS，不占站点带宽
+
+<details>
+<summary><b>历史版本（v3.9.19 及更早，点击展开）</b></summary>
 
 ### v3.9.19
 
@@ -939,9 +948,6 @@ chown -R www:www var
 - **OSS 孤儿对象扫描**：只扫描插件自己的上传清单（`oss_objects`），绝不遍历整个桶，因此你直接传到 OSS 的其它文件不会被误列、更不会被删；删除前重新核对数据库引用，仍被使用的自动跳过；支持缩略图预览与另存；单次最多 200 个，需输入确认词
 - **配置页状态增强**：显示当前桶策略（公共读 / 私有预签名）、预签名有效期；私有桶自动探测
 - **修复回写正则误匹配**：之前会把完整 URL 里的 `/uploads/` 也替换一次，拼出 `https://host/infowe/oss-media/...` 这种脏地址，现在站内路径前面不能是 URL 字符
-
-<details>
-<summary><b>历史版本（v3.9.18 及更早，点击展开）</b></summary>
 
 ### v3.9.18
 

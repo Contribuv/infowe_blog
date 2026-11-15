@@ -62,6 +62,16 @@ def _rewrite_html(html: str) -> str:
 _publish.rewrite_html = _rewrite_html
 
 
+def _normalize_text(text: str) -> str:
+    """保存前把 OSS 直链 / 预签名 URL / 代理路径剥回 /uploads/...。"""
+    from . import storage
+
+    return storage.normalize_text(text)
+
+
+_publish.normalize = _normalize_text
+
+
 def register(app) -> None:
     from . import routes
 
