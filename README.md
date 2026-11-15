@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.16-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.16)
+[![version](https://img.shields.io/badge/version-3.9.17-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.17)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.16**
+当前版本：**v3.9.17**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.17
+
+- **修复「AI 助手配置」点保存没反应**：`页面体积上限（字节）` 输入框的 `step` 是 102400，而默认值 5242880 不是它的整数倍，浏览器原生校验在提交前就拦下表单，弹出「请输入有效值。两个最接近的有效值分别为 5222400 和 5324800」，后端根本收不到请求。改为 1 KB 粒度的 `step="1024"`，默认值与常见体积值都能正常保存
+- **修复「最大输出 tokens」旧配置无法保存**：v3.9.15 把输入框下限写成 8192，但后端归一化只把小于 8000 的值抬到 8192，数据库里存 8000 的旧配置会一直提示「值必须大于或等于 8192」。下限调回 8000，与后端阈值保持一致
+- **修复友链定时审核整轮崩溃**：`site_url.base()` 兜底时直接读 `request.url_root`，而定时线程只有 `app_context` 没有请求上下文，只要后台没填「站点地址」就每轮抛 `RuntimeError: Working outside of request context`，待审检测与定期复检全部中止。现在按「博客设置 → 站点地址」→ 环境变量 `BLOG_SITE_URL` → 当前请求地址的顺序取值，后台线程用 `has_request_context()` 判断，缺失时返回空串由调用方降级，定时任务恢复正常
 
 ### v3.9.16
 
@@ -936,7 +942,7 @@ chown -R www:www var
 - **其它页面保持不变**：首页、友链、归档等页面的「写作」仍进入后台首页；未登录时不显示该入口。判断依据是 `request.endpoint == 'post_detail'` 且路由已传入 `post`，因此只在文章详情页生效
 
 <details>
-<summary><b>历史版本（v3.9.15 及更早，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.16 及更早，点击展开）</b></summary>
 
 ### v3.9.15
 
