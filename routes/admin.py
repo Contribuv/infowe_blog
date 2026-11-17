@@ -735,6 +735,26 @@ def admin_preview_upload(filename: str):
 
 
 @LOGIN
+def admin_preview_media(filename: str):
+    """编辑器预览的音视频地址：远端可用就 302 过去，否则回落本地副本。
+
+    图片能缩略，视频不能（转码比带宽还贵），所以换个思路：别让它走本站。
+    配合前端的 preload="none"，浏览器只有在用户真的点播放时才来请求这个地址，
+    302 与签名都发生在那一刻 —— 预签名窗口正好覆盖播放期，
+    不会因为页面开着半小时、签名先过期而黑屏。
+
+    每次 seek 会重新走一次 302（302 本身不缓存），拿到的签名始终是新鲜的。
+    """
+    rel = "/uploads/" + filename.lstrip("/")
+    if upload.remote_active() and upload.remote_exists(rel):
+        remote = upload.remote_url(rel)
+        # 只接受绝对地址：插件没配好时 url_for 会原样返回 /uploads/...，那走本地
+        if remote and remote.startswith(("http://", "https://")):
+            return redirect(remote, code=302)
+    return redirect(url_for("uploaded_file", filename=filename), code=302)
+
+
+@LOGIN
 def admin_orphans():
     items = upload.orphans()
     total = sum(item["size_bytes"] for item in items)
@@ -1503,6 +1523,7 @@ def register(app) -> None:
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),
         ("/admin/upload/file", "admin_upload_file", admin_upload_file, ["POST"]),
         ("/admin/preview/uploads/<path:filename>", "admin_preview_upload", admin_preview_upload, ["GET"]),
+        ("/admin/preview/media/<path:filename>", "admin_preview_media", admin_preview_media, ["GET"]),
         ("/admin/orphans", "admin_orphans", admin_orphans, ["GET"]),
         ("/admin/orphans/clean", "admin_orphan_clean", admin_orphan_clean, ["POST"]),
         ("/admin/status", "admin_status", admin_status, ["GET", "POST"]),

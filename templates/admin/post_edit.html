@@ -642,6 +642,40 @@
             var imgs = scope.querySelectorAll('img[src*="/uploads/"]');
             for (var i = 0; i < imgs.length; i++) maybeThumb(imgs[i]);
         }
+        // 音视频没法缩略（转码比带宽还贵），思路是「别走本站」：
+        // 后端 302 到对象存储（私有桶现签，签名窗口正好覆盖播放期），远端没有就回落本地。
+        // 同时把 preload 设成 none——编辑时只是确认「插入成功了」，不该预载整段视频。
+        var MEDIA_URL = "{{ url_for('admin_preview_media', filename='__path__') }}";
+        var MEDIA_TAGS = { VIDEO: 1, AUDIO: 1, SOURCE: 1 };
+        function maybeProxyMedia(el) {
+            if (!el) return;
+            var tag = el.tagName;
+            if (tag !== 'VIDEO' && tag !== 'AUDIO' && tag !== 'SOURCE') return;
+            if (el.getAttribute('data-proxied') === '1') return;
+            var raw = el.getAttribute('src') || '';
+            if (raw.indexOf('/uploads/') < 0) return;
+            var rel = raw.slice(raw.indexOf('/uploads/') + '/uploads/'.length);
+            rel = rel.split('?')[0].split('#')[0];
+            if (!rel) return;
+            el.setAttribute('data-full-src', raw);
+            el.setAttribute('data-proxied', '1');
+            if (tag === 'VIDEO' || tag === 'AUDIO') {
+                el.setAttribute('preload', 'none');
+                el.addEventListener('error', function () {
+                    // 远端直链不通（历史文件没迁移、桶权限变了）时退回本地副本
+                    if (this.getAttribute('data-fellback') === '1') return;
+                    var full = this.getAttribute('data-full-src');
+                    if (!full) return;
+                    this.setAttribute('data-fellback', '1');
+                    this.setAttribute('src', full);
+                });
+            }
+            el.setAttribute('src', MEDIA_URL.replace('__path__', rel));
+        }
+        function applyMedia(scope) {
+            var items = scope.querySelectorAll('video[src*="/uploads/"], audio[src*="/uploads/"], source[src*="/uploads/"]');
+            for (var i = 0; i < items.length; i++) maybeProxyMedia(items[i]);
+        }
         var EMPTY = /^(?:|null|none|undefined|false|为空|为空null|空)$/i;
         function captionOf(img) {
             var alt = (img.getAttribute('alt') || '').trim();
@@ -730,6 +764,7 @@
                 var previews = root.querySelectorAll('.vditor-preview');
                 for (var i = 0; i < previews.length; i++) {
                     applyThumbs(previews[i]);
+                    applyMedia(previews[i]);
                     decorate(previews[i]);
                     decorateAdmonitions(previews[i]);
                 }
@@ -749,8 +784,13 @@
                         maybeThumb(node);
                         continue;
                     }
-                    var imgs = node.querySelectorAll ? node.querySelectorAll('img[src*="/uploads/"]') : [];
-                    for (var i = 0; i < imgs.length; i++) maybeThumb(imgs[i]);
+                    if (MEDIA_TAGS[node.tagName]) maybeProxyMedia(node);
+                    if (!node.querySelectorAll) continue;
+                    var found = node.querySelectorAll('img[src*="/uploads/"], video[src*="/uploads/"], audio[src*="/uploads/"], source[src*="/uploads/"]');
+                    for (var i = 0; i < found.length; i++) {
+                        if (found[i].tagName === 'IMG') maybeThumb(found[i]);
+                        else maybeProxyMedia(found[i]);
+                    }
                 }
             }
             // figure 包裹与提示框转换会改结构，延后执行，避免频繁重排
@@ -760,6 +800,7 @@
         var previews = root.querySelectorAll('.vditor-preview');
         for (var i = 0; i < previews.length; i++) {
             applyThumbs(previews[i]);
+            applyMedia(previews[i]);
             decorate(previews[i]);
             decorateAdmonitions(previews[i]);
         }

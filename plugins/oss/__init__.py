@@ -52,6 +52,16 @@ def _ensure(local_path, rel_url: str) -> str:
 _publish.ensure = _ensure
 
 
+def _exists(rel_url: str) -> bool:
+    """远端有没有这个对象；编辑器音视频预览用它决定 302 还是走本地。"""
+    from . import storage
+
+    return storage.exists(rel_url)
+
+
+_publish.exists = _exists
+
+
 def _rewrite_html(html: str) -> str:
     """把页面里的 /uploads/... 换成当前策略的最终地址。"""
     from . import storage

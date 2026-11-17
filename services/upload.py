@@ -7,6 +7,7 @@ import logging
 import re
 import secrets
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -115,6 +116,42 @@ def ensure_remote(local_path, rel_url: str) -> str:
         if url:
             return str(url)
     return publish(local_path, rel_url)
+
+
+_remote_exists_cache: dict[str, tuple[float, bool]] = {}
+_REMOTE_EXISTS_TTL = 300.0
+
+
+def remote_exists(rel_url: str) -> bool:
+    """远端是否已有这个对象（插件未提供检查能力时按「有」处理）。
+
+    编辑器预览会把音视频 302 到远端地址。历史文件可能从没迁到对象存储，
+    直接跳过去就是一次 404 + 播放器报错 + 再回退本地，
+    所以先问一句「远端有没有」，没有就老老实实走本地。
+
+    结果缓存 5 分钟：一次播放会发多次 Range 请求，不该每次都去 HEAD。
+    """
+    now = time.time()
+    cached = _remote_exists_cache.get(rel_url)
+    if cached and now - cached[0] < _REMOTE_EXISTS_TTL:
+        return cached[1]
+
+    result = True  # 乐观：插件没实现存在性检查，就相信上传时的双写
+    for func in list(_remote_publishers):
+        checker = getattr(func, "exists", None)
+        if checker is None:
+            continue
+        try:
+            result = bool(checker(rel_url))
+        except Exception:  # noqa: BLE001
+            logger.warning("远端存在性检查失败，按不存在处理：%s", rel_url)
+            result = False
+        break
+
+    if len(_remote_exists_cache) > 500:
+        _remote_exists_cache.clear()
+    _remote_exists_cache[rel_url] = (now, result)
+    return result
 
 
 # 代码区域：README / 文章里经常贴 `location ~ ^/uploads/...`、

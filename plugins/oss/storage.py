@@ -286,6 +286,23 @@ def ensure_remote(local_path: str | Path, rel_url: str) -> str:
     return publish(local_path, rel_url)
 
 
+def exists(rel_url: str) -> bool:
+    """远端是否已有这个对象。
+
+    不做长期缓存，由调用方（编辑器音视频预览）自己控制频率：
+    文件可能刚补传过，永久缓存会把「后来才有」判定成没有。
+    """
+    if not is_enabled():
+        return False
+    cfg = get_cfg()
+    if cfg is None:
+        return False
+    try:
+        return bool(s3.head(cfg, cfg.key_of(rel_url)))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 # ── 对象清单（孤儿扫描的唯一数据来源） ──────────────
 
 def _record_object(key: str, size: int = 0) -> None:
