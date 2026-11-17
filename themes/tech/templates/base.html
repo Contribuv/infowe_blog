@@ -176,23 +176,20 @@
             <div class="tech-footer-inner">
                 <p class="tech-footer-copy">{% include '_footer_text.html' %}</p>
                 <div class="tech-footer-links">
-                    {% if nav_on.projects %}<a href="/projects">开源项目</a>{% endif %}
-                    {% if nav_on.links %}<a href="/links">友情链接</a>{% endif %}
+                    {# 顺序与顶部导航一致（项目 → 友链 → 标签 → 关于），再以 RSS 前的间距
+                       分成「站内页面 ｜ 订阅 + 外站成员」两组，视觉上有停顿。
+                       小屏取舍：≤480px 收起「开源项目」，≤360px 再收起「友情链接」，
+                       链接行在手机上保持单行；两者在移动端抽屉菜单里仍有入口 #}
+                    {% if nav_on.projects %}<a class="tech-footer-link--projects" href="/projects">开源项目</a>{% endif %}
+                    {% if nav_on.links %}<a class="tech-footer-link--links" href="/links">友情链接</a>{% endif %}
                     <a href="/tags">标签</a>
                     {% if nav_on.about %}<a href="/about">关于我</a>{% endif %}
-                    <a href="/feed.xml">RSS</a>
-                    <!-- 十年之约成员标识：跟在链接行末尾当「一员」，不做独立展位——
-                         链接行 flex-wrap，窄屏自然换行不溢出；双色图按当前主题切换；
+                    <a class="tech-footer-rss" href="/feed.xml">RSS</a>
+                    <!-- 十年之约成员标识：文字形式跟在行尾当「一员」，不做独立展位——
+                         与站内链接同一套胶囊反馈，只靠透明度弱化一档，读作外站成员；
                          关于页正中有完整虫洞区块，用 :has 隐藏避免同页重复 -->
                     <a class="tech-footer-member" href="https://www.foreverblog.cn/" target="_blank" rel="noopener"
-                       title="十年之约成员博客" aria-label="十年之约成员博客">
-                        <img class="tech-footer-member-logo tech-footer-member-logo--light"
-                             src="{{ url_for('theme_static', filename=active_theme ~ '/static/images/foreverblog-logo-light.png', t=theme_asset_ver) }}"
-                             alt="十年之约" width="125" height="32" decoding="async">
-                        <img class="tech-footer-member-logo tech-footer-member-logo--dark"
-                             src="{{ url_for('theme_static', filename=active_theme ~ '/static/images/foreverblog-logo-dark.png', t=theme_asset_ver) }}"
-                             alt="" aria-hidden="true" width="125" height="32" decoding="async">
-                    </a>
+                       title="十年之约成员博客">十年之约</a>
                 </div>
                 {# 备案号整行独占（第二个 flex 行），窄屏折行 #}
                 {% if icp_beian or police_beian %}

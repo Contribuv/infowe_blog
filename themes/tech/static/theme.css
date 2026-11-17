@@ -447,36 +447,29 @@ html.page-enter .tech-main {
   padding: 5px 9px; border-radius: 6px;
   transition: color .18s ease, background-color .18s ease;
 }
-/* 「十年之约」成员标识是图片链接，不吃文字链接的胶囊内距，
-   否则 18px 的 logo 会被撑到 28px，页脚行高被顶起来 */
-.tech-footer-links .tech-footer-member {
-  padding: 0; border-radius: 0;
-}
 @media (hover: hover) and (pointer: fine) {
   /* 与导航链接同一套反馈：淡蓝底 + 主色字 */
   .tech-footer-links a:hover { color: var(--accent); background: var(--accent-weak); }
 }
 .tech-footer-copy { margin: 0; }
+/* 页脚链接分组：RSS 前的额外间距把「站内页面」与「订阅 + 外站成员」分开，
+   4px 的链接间隙之上再留 8px，视觉上是一个停顿而不是新的一排。
+   小屏隐藏条目的规则不会动这一层间隔，分组关系在手机上依然成立。 */
+.tech-footer-rss { margin-left: 8px; }
 /* 备案号整行独占（inner 第二个 flex 行），窄屏折行 */
 .tech-footer-beian { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
 .tech-footer-beian a { color: var(--text-secondary); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-footer-beian a:hover { color: var(--accent); } }
-/* 十年之约成员标识：跟在链接行 RSS 后面，当链接行的一员而非独立展位。
-   20px 高 + .55 透明度，与 14px 链接文字同排不突兀；links 行 flex-wrap，
-   窄屏放不下就整体换行，永远不会溢出。双色图按 data-theme 切换；
+/* 十年之约成员标识：文字形式，跟在链接行末尾当「一员」而非独立展位——
+   与站内链接共用同一套胶囊内距与 hover 反馈，只靠透明度弱化一档，
+   读作「外站成员」而不是又一个站内页面；窄屏随链接行一起换行。
    关于页正中有完整虫洞区块，用 :has 隐藏页脚标识，避免同页重复。 */
 .tech-footer-member {
-  display: inline-flex; align-items: center;
-  max-width: 100%;
-  opacity: .55;
+  opacity: .7;
   transition: opacity .18s ease;
   -webkit-tap-highlight-color: transparent;
 }
-@media (hover: hover) and (pointer: fine) { .tech-footer-member:hover { opacity: .85; } }
-.tech-footer-member-logo { display: block; width: auto; height: 18px; }
-.tech-footer-member-logo--dark { display: none; }
-[data-theme="dark"] .tech-footer-member-logo--light { display: none; }
-[data-theme="dark"] .tech-footer-member-logo--dark { display: block; }
+@media (hover: hover) and (pointer: fine) { .tech-footer-member:hover { opacity: 1; } }
 .tech-main:has(.tech-about-fb) + .tech-footer .tech-footer-member { display: none; }
 
 /* ── 回到顶部 ── */
@@ -2830,8 +2823,16 @@ html { touch-action: manipulation; }
   .tech-links-grid { grid-template-columns: 1fr; }
   .tech-project-grid { grid-template-columns: 1fr; }
 
-  /* 页脚：居中规则已由 ≤768 统一处理，这里只收标识高度 */
-  .tech-footer-member-logo { height: 16px; }
+  /* 页脚链接取舍：小屏收起「开源项目」，让 标签/关于我/友情链接/RSS/十年之约
+     收成一行（≤768 已居中，隐藏后居中依然成立）。
+     它只是页脚快捷入口，移动端抽屉菜单里仍有完整导航，不损失可达性。 */
+  .tech-footer-link--projects { display: none; }
+}
+
+@media (max-width: 360px) {
+  /* 超窄屏（320px 级）再收起「友情链接」：
+     单靠隐藏一项在 320px 下仍会折成两排，这里保证手机页脚始终单行。 */
+  .tech-footer-link--links { display: none; }
 }
 
 /* 打印：正文全宽 */

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.20-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.20)
+[![version](https://img.shields.io/badge/version-3.9.21-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.21)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.20**
+当前版本：**v3.9.21**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.21
+
+- **页脚链接重新排版**：顺序对齐顶部导航（开源项目 → 友情链接 → 标签 → 关于我 → RSS → 十年之约），并在 RSS 前留出 8px 分组间距，把「站内页面」与「订阅 + 外站成员」分成两组，页脚不再是一串等距链接
+- **「十年之约」标识改为文字**：原来页脚放双色图片 logo，深色/浅色主题各一张，宽度和行高都要单独打补丁。现在直接是文字链接，与站内链接共用同一套胶囊内距与 hover 反馈，只用透明度弱化一档；页脚行高回归 32px，图片资源和主题切换规则一并移除
+- **小尺寸设备页脚取舍**：≤480px 收起「开源项目」，≤360px 再收起「友情链接」，手机上页脚链接始终单行，不再折成两三排。这两项在移动端抽屉菜单里仍有入口，不影响可达性
+- **错误页同步**：403 / 404 / 50x 静态错误页的页脚样式与主站保持一致
 
 ### v3.9.20
 

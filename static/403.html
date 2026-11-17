@@ -302,6 +302,8 @@ html[data-theme-mode="auto"] #theme-toggle::after {
   align-items: center; justify-content: space-between;
 }
 .tech-footer-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+@media (max-width: 480px) { .tech-footer-link--projects { display: none; } }
+@media (max-width: 360px) { .tech-footer-link--links { display: none; } }
 .tech-footer-links a { color: var(--text-secondary); text-decoration: none; }
 @media (hover: hover) and (pointer: fine) { .tech-footer-links a:hover { color: var(--accent); } }
 .tech-footer-copy { margin: 0; }
@@ -1863,8 +1865,8 @@ X-CSRF: <span class="hl-error">rejected</span></pre>
                 <p class="tech-footer-copy">Powered by Haozi © 2026 infowe.site
 </p>
                 <div class="tech-footer-links">
-                    <a href="/projects">开源项目</a>
-                    <a href="/links">友情链接</a>
+                    <a class="tech-footer-link--projects" href="/projects">开源项目</a>
+                    <a class="tech-footer-link--links" href="/links">友情链接</a>
                     <a href="/about">关于我</a>
                     <a href="/feed.xml">RSS</a>
                 </div>
