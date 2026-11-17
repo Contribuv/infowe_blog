@@ -12,7 +12,6 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from werkzeug.datastructures import FileStorage
-from werkzeug.utils import secure_filename
 
 from config import (
     CACHE_DIR, COMMENT_IMAGE_MAX_SIZE, FILE_EXTS, FONTS_DIR, IMAGE_EXTS,
@@ -254,8 +253,21 @@ def fmt_size(num: int) -> str:
 
 
 def safe_stem(filename: str) -> str:
+    """把原始文件名清洗成可用的文件名主干，**保留中文**。
+
+    这里以前还会再走一遍 secure_filename()，它会把非 ASCII 字符全部删掉：
+    「水果店花生.png」最终落成 file.png，图注、下载名全变成无意义的 file。
+    现在只在本地清洗，替换掉路径分隔符、Windows 保留字符、URL 里有特殊含义的字符，
+    中文、日文、韩文等直接保留。
+    """
     stem = Path(filename).stem
-    stem = re.sub(r'[\\/:*?"<>|]', "-", stem).strip()
+    # 路径分隔符（防目录穿越）、Windows 保留字符、URL 里会截断或改变含义的字符
+    stem = re.sub(r'[\\/:*?"<>|#%&]', "-", stem)
+    stem = re.sub(r"[\x00-\x1f\x7f]", "", stem)   # 控制字符
+    stem = re.sub(r"\s+", "-", stem)              # 空白换成连字符，避免 URL 里出现空格
+    stem = re.sub(r"\.{2,}", ".", stem)           # 连续的 . 收成一个，避免出现 .. 片段
+    stem = re.sub(r"-{2,}", "-", stem)
+    stem = stem.strip("-. ")
     return stem[:80] or "file"
 
 
@@ -384,7 +396,7 @@ def save(
     folder = root() / sub
     folder.mkdir(parents=True, exist_ok=True)
 
-    stem = random_stem() if randomize else secure_filename(safe_stem(original)) or "file"
+    stem = random_stem() if randomize else safe_stem(original)
     filename = f"{stem}{ext}"
     i = 1
     while (folder / filename).exists():

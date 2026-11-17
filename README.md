@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.23-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.23)
+[![version](https://img.shields.io/badge/version-3.9.24-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.24)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.23**
+当前版本：**v3.9.24**
 
-> 最近一次更新完整展开；更早的 122 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 123 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.24
+
+- **修复编辑器上传后插入不完整**：图片与视频现在各自独占段落，图片的文件名会稳定渲染成图注（`figcaption`），视频在分屏源码模式下不再「上传成功却消失在编辑器里」。源码模式改为直接写入文本节点再触发解析，避开 `insertValue` 丢弃真实 DOM 和 `execCommand` 规范化换行两个坑
+- **批量上传改为排队插入**：多张图片、多个视频一次选中时依次进入编辑器，进度浮窗等全部插入完成才收起，不会出现内容晚一拍冒出来
+- **上传文件名保留中文**：此前一律经过 `secure_filename()`，中文名被整段删光后退化成 `file.png` / `file.mp4`；现在只替换路径分隔符、Windows 保留字符和 URL 特殊字符，中文、日文、韩文原样保留，图注与下载名都可读
+- **工具栏上传按钮提示补全**：按钮的 `aria-label` / `title` 由「上传图片或文件」改为「上传图片 / 视频 / 音频 / 附件」，与实际支持的格式一致
+
+<details>
+<summary><b>历史版本（v3.9.23 及更早，共 123 个版本，点击展开）</b></summary>
 
 ### v3.9.23
 
 - **修复更新日志里泄露对象存储地址**：项目页 README 中的 Nginx 配置示例 `location ~ ^/uploads/\.` 被页面输出改写当成真实资源，替换成带 OSS 端点、Access Key ID 与签名的预签名地址，等于把这些信息一起公开。现在代码区域（`<pre>` / `<code>` / `<script>` / `<style>` / `<textarea>`）不参与地址改写，示例文本原样展示，真实图片照旧按策略签名
 - **README 渲染链路同步修复**：`services/github.py` 的 README 图片地址转换同样跳过代码块。它在视图里执行，改写结果会写入页面缓存，不修的话缓存里的示例也会变成预签名链接
 - **更新日志调整**：只展开最新版本，更早的版本统一收进 `<details>` 折叠区，页面不再一屏铺开几十个版本
-
-<details>
-<summary><b>历史版本（v3.9.22 及更早，共 122 个版本，点击展开）</b></summary>
 
 ### v3.9.22
 

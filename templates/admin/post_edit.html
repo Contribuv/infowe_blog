@@ -442,18 +442,23 @@
         });
     }
 
-    // 按类别分流到对应接口
-    function resolve(file, onProgress) {
-        var kind = kindOf(file);
-        if (kind === '') {
-            return Promise.reject(new Error('不支持的文件类型：' + extOf(file.name)));
-        }
+    // 上传单个文件到指定类别的接口
+    function uploadAs(kind, file, onProgress) {
         var endpoint = kind === 'image' ? "{{ url_for('admin_upload_image') }}"
             : (kind === 'media' ? "{{ url_for('admin_upload_media') }}" : "{{ url_for('admin_upload_file') }}");
         var field = kind === 'image' ? 'image' : 'file';
         return uploadOne(endpoint, field, file, onProgress).then(function (d) {
             return { type: kind, url: d.url, name: d.name };
         });
+    }
+
+    // 按扩展名自动分流到对应接口
+    function resolve(file, onProgress) {
+        var kind = kindOf(file);
+        if (kind === '') {
+            return Promise.reject(new Error('不支持的文件类型：' + extOf(file.name)));
+        }
+        return uploadAs(kind, file, onProgress);
     }
 
     // -- 上传进度浮窗：屏幕居中，全部完成后淡出 --
@@ -487,14 +492,129 @@
     }
 
     // 构造插入内容（wysiwyg 模式接受 HTML）
+    // 保留原始文件名后，文件名里可能带括号、方括号，直接塞进链接文字/图注会把 Markdown 拆坏
+    function mdSafe(s) {
+        return String(s || '').replace(/[\[\]()\\]/g, '');
+    }
+
     function buildContent(r) {
-        // 图片用文件名做 alt：正文与灯箱都会把它当图注；空 alt 则不显示图注
-        if (r.type === 'image') return '![' + String(r.name || '').replace(/[\[\]]/g, '') + '](' + r.url + ')';
+        // 图片用文件名（去掉扩展名）做 alt：正文与灯箱都会把它当图注；空 alt 则不显示图注
+        if (r.type === 'image') {
+            return '![' + mdSafe(String(r.name || '').replace(/\.[^.]+$/, '')) + '](' + r.url + ')';
+        }
         if (r.type === 'media') {
-            if (/\.(mp3|wav|m4a|aac|ogg)$/i.test(r.url)) return '<audio src="' + r.url + '" controls></audio>';
+            // 用文件名判断音视频：URL 以后若带查询参数，正则匹配扩展名会失配
+            if (/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(r.name || r.url)) {
+                return '<audio src="' + r.url + '" controls></audio>';
+            }
             return '<video src="' + r.url + '" controls style="max-width:100%"></video>';
         }
-        return '[' + r.name + '](' + r.url + ')';
+        return '[' + mdSafe(r.name) + '](' + r.url + ')';
+    }
+
+    // 上传完成后写入编辑器。
+    // 1) 前后留空行：图片 / 视频独立成段。图片只有独占段落时，alt 才会被当成图注渲染；
+    //    图文同段时前端预览与服务端渲染都会跳过，这就是「图片没有备注」的原因。
+    // 2) sv（分屏源码）模式不能走 insertValue：它插入的是真实 DOM 节点，
+    //    Vditor 从源码区提取 Markdown 时会把节点丢掉、只留下换行，
+    //    于是视频「上传成功却没出现在编辑器里」。
+    //
+    // 下面这个函数负责把一段内容写进 sv 源码区。
+    // 坑：execCommand('insertText') 插入的换行会被 Vditor 规范化掉，标签会和上一段文字
+    // 黏在同一个段落里；前台渲染时 Markdown 会把整块 HTML 吞掉，视频就「传上去了但不显示」。
+    // 这里直接插入文本节点：sv 模式的取值口径是 textContent（不是 innerHTML），
+    // 纯文本节点里的 \n 和标签原文都会原样进入 Markdown，再由 Vditor 重新解析成块。
+    function insertIntoSv(text) {
+        var sv = document.querySelector('#editor .vditor-sv');
+        if (!sv) {
+            vditor.insertValue(text);
+            return Promise.resolve();
+        }
+        vditor.focus();
+        var sel = window.getSelection();
+        var range;
+        if (sel && sel.rangeCount && sv.contains(sel.anchorNode)) {
+            range = sel.getRangeAt(0).cloneRange();
+            // 选中文字时不覆盖，当作在选区末尾插入
+            range.collapse(false);
+        } else {
+            // 焦点丢了（例如文件选择框关闭后）：退化为追加到源码区末尾
+            range = document.createRange();
+            range.selectNodeContents(sv);
+            range.collapse(false);
+        }
+        var node = document.createTextNode('\n\n' + text + '\n\n');
+        range.insertNode(node);
+        range.setStartAfter(node);
+        range.collapse(true);
+        if (sel) {
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+        // 通知 Vditor 重新解析：sv 的 input 处理会读取 textContent 生成 Markdown
+        sv.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
+        // 等它把 DOM 重建完，批量插入时下一个才不会落在旧节点上
+        return new Promise(function (done) { setTimeout(done, 350); });
+    }
+
+    // 多个文件批量上传时依次插入，排队执行，避免互相打断 Vditor 的解析
+    var insertQueue = Promise.resolve();
+    function insertUploaded(r) {
+        var text = buildContent(r);
+        insertQueue = insertQueue.then(function () {
+            var mode = vditor.getCurrentMode ? vditor.getCurrentMode() : '';
+            if (mode === 'sv') return insertIntoSv(text);
+            vditor.insertValue('\n\n' + text + '\n\n');
+        }).catch(function (err) {
+            console.error('插入上传内容失败', err);
+            try { vditor.insertValue('\n\n' + text + '\n\n'); } catch (e) { /* 忽略：不能再抛错打断后续插入 */ }
+        });
+        return insertQueue;
+    }
+
+    // 批量上传：聚合进度，全部完成后逐个插入编辑器。
+    function uploadBatch(list) {
+        var accepted = [];
+        var rejected = [];
+        for (var i = 0; i < list.length; i++) {
+            if (kindOf(list[i])) accepted.push(list[i]);
+            else rejected.push(list[i]);
+        }
+        if (rejected.length) {
+            alert('以下文件类型不支持，已跳过：\n' + rejected.map(function (f) { return f.name; }).join('\n'));
+        }
+        if (!accepted.length) {
+            return Promise.reject(new Error('没有可上传的文件'));
+        }
+        // 聚合进度：总字节为各文件之和，进行中的文件按已上传字节累加
+        var totalBytes = accepted.reduce(function (s, f) { return s + (f.size || 0); }, 0) || 1;
+        var loaded = accepted.map(function () { return 0; });
+        var finished = 0;
+        function paint() {
+            var sum = 0;
+            for (var j = 0; j < loaded.length; j++) sum += loaded[j];
+            paintUploadProgress(sum / totalBytes, finished, accepted.length);
+        }
+        showUploadProgress(accepted.length);
+        return Promise.all(accepted.map(function (f, idx) {
+            var onBytes = function (bytes) { loaded[idx] = bytes; paint(); };
+            return resolve(f, onBytes).then(function (r) {
+                finished++;
+                loaded[idx] = f.size || 0;   // 完成态以文件总大小计，避免进度条卡在 99%
+                paint();
+                return r;
+            });
+        })).then(function (results) {
+            // 等插入完成再收起进度浮窗：插入要等 Vditor 解析，否则用户会看到内容「晚一拍」出现
+            return Promise.all(results.map(function (r) { return insertUploaded(r); })).then(function () {
+                paintUploadProgress(1, accepted.length, accepted.length);
+                hideUploadProgress();
+                return results;
+            });
+        }).catch(function (err) {
+            hideUploadProgress();
+            throw err;
+        });
     }
 
     // -- 编辑器预览里的图片备注：Vditor 每次重渲染后重新包 figure --
@@ -633,39 +753,9 @@
             handler: function (files) {
                 var list = Array.prototype.slice.call(files);
                 if (!list.length) return Promise.resolve({ code: 0, data: { errFiles: [], succMap: {} } });
-                // 前置拦截白名单外的类型，避免发无效请求
-                var bad = list.filter(function (f) { return !kindOf(f); });
-                if (bad.length) {
-                    alert('以下文件类型不支持：' + bad.map(function (f) { return f.name; }).join('、'));
-                    return Promise.resolve({ code: 1, msg: '不支持的文件类型', data: { errFiles: bad.map(function (f) { return f.name; }), succMap: {} } });
-                }
-                // 聚合进度：总字节为各文件之和，进行中的文件按已上传字节累加
-                var totalBytes = list.reduce(function (s, f) { return s + (f.size || 0); }, 0) || 1;
-                var loaded = list.map(function () { return 0; });
-                var finished = 0;
-                function paint() {
-                    var sum = 0;
-                    for (var i = 0; i < loaded.length; i++) sum += loaded[i];
-                    paintUploadProgress(sum / totalBytes, finished, list.length);
-                }
-                showUploadProgress(list.length);
-                return Promise.all(list.map(function (f, idx) {
-                    return resolve(f, function (bytes) { loaded[idx] = bytes; paint(); })
-                        .then(function (r) {
-                            finished++;
-                            loaded[idx] = f.size || 0;   // 完成态以文件总大小计，避免进度条卡在 99%
-                            paint();
-                            return r;
-                        });
-                })).then(function (results) {
-                    results.forEach(function (r) {
-                        vditor.insertValue('\n' + buildContent(r) + '\n');
-                    });
-                    paintUploadProgress(1, list.length, list.length);
-                    hideUploadProgress();
+                return uploadBatch(list).then(function () {
                     return { code: 0, data: { errFiles: [], succMap: {} } };
                 }).catch(function (err) {
-                    hideUploadProgress();
                     alert('上传失败：' + (err.message || err));
                     return { code: 1, msg: err.message || '上传失败', data: { errFiles: list.map(function (f) { return f.name; }), succMap: {} } };
                 });
@@ -675,6 +765,14 @@
             // 初始同步内容区/代码高亮主题（setTheme 幂等：href 相同则不重复加载）
             vditor.setTheme(currentTheme(), currentContentTheme(), currentCodeTheme());
             renderChips();  // 编辑器就绪后初始化标签建议
+            // 工具栏通用上传按钮的提示写清楚能传什么：默认只有「上传图片或文件」，
+            // 用户看不出它同时支持视频、音频和附件
+            var uploadBtn = document.querySelector('#editor .vditor-toolbar [data-type="upload"]');
+            if (uploadBtn) {
+                var uploadTip = '上传图片 / 视频 / 音频 / 附件';
+                uploadBtn.setAttribute('aria-label', uploadTip);
+                uploadBtn.setAttribute('title', uploadTip);
+            }
             // 预览区图片备注：Vditor 重渲染后重新包 figure
             setupPreviewCaptions(document.body);
             // 标题、标签输入变化时同步更新建议
