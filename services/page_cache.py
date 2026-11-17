@@ -83,10 +83,15 @@ def _cacheable() -> bool:
 
 
 def _asset_signature() -> int:
-    """模板 / 主题 CSS / favicon 的最新 mtime。
+    """模板 / 主题 CSS / static 资源 / favicon 的最新 mtime。
 
     页面缓存只按 URL 命中，改模板或换图标后会继续返回旧 HTML，
     表现为「改了样式刷新没变化」。签名变化即视为旧缓存失效。
+
+    static 下的 css/js 必须参与签名：它们同样通过 ?t= 版本号下发，
+    而 ?t= 的值就写在被缓存的 HTML 里。漏掉 static 会让 #comments、
+    markdown、toast 这类独立样式表改了之后，页面仍返回旧 ?t=，
+    浏览器继续命中自己的旧缓存（踩过：改了评论卡阴影看不到变化）。
     """
     now = time.time()
     if now - _ASSET_SIG["ts"] < 30:
@@ -96,6 +101,9 @@ def _asset_signature() -> int:
         for path in root.rglob("*"):
             if path.suffix.lower() in {".html", ".css"} and path.is_file():
                 latest = max(latest, path.stat().st_mtime)
+    for path in STATIC_DIR.rglob("*"):
+        if path.suffix.lower() in {".css", ".js"} and path.is_file():
+            latest = max(latest, path.stat().st_mtime)
     icon = STATIC_DIR / "images" / "favicon.ico"
     if icon.is_file():
         latest = max(latest, icon.stat().st_mtime)

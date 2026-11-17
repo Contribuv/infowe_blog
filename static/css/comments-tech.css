@@ -582,11 +582,14 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
    ═══════════════════════════════════════════════ */
 .cmt-thread{
   padding:14px 16px 16px;
-  /* 与全站卡片同一套令牌：底色、描边、圆角都跟随主题，
-     以后调深/调浅只改主题里的 --card-* 一处 */
+  /* 与全站卡片同一套令牌：底色、描边、圆角、阴影都跟随主题，
+     以后调深/调浅只改主题里的 --card-* 一处。
+     阴影此前遗漏：评论楼层只有底色和描边，边缘比上方「相关推荐」等
+     .tech-related-card 少一层浮起感，同屏看会显得扁平。 */
   border:1px solid var(--card-border, var(--c-hairline));
   border-radius:var(--card-radius, 10px);
   background:var(--card-bg, color-mix(in srgb,var(--c-text) 3%,transparent));
+  box-shadow:var(--card-shadow, none);
 }
 .cmt-thread+.cmt-thread{margin-top:12px}
 
@@ -686,5 +689,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt { --c-radius: var(--card-radius, 10px); }
 .cmt-replies { border-radius: var(--card-radius, 10px); }
 
-/* 评论楼层与表单卡直接跟随全站圆角 */
-.cmt-thread, .cmt-form { border-radius: var(--card-radius, 10px); }
+/* 评论楼层与表单卡直接跟随全站圆角与阴影：同屏的「相关推荐」卡片用
+   --card-shadow，评论区若不跟上，边缘会显得比上方卡片平一档 */
+.cmt-thread, .cmt-form {
+  border-radius: var(--card-radius, 10px);
+  box-shadow: var(--card-shadow, none);
+}

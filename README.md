@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.21-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.21)
+[![version](https://img.shields.io/badge/version-3.9.22-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.22)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,14 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.21**
+当前版本：**v3.9.22**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.22
+
+- **评论区卡片补齐阴影**：楼层卡与评论表单卡此前只跟随主题的 `--card-bg` / `--card-border` / `--card-radius`，漏了 `--card-shadow`，同屏看边缘比上方「相关推荐」等 `.tech-related-card` 平一档。现在四件套对齐，深浅主题自动跟随，不再单独写色值
+- **修复改 static 样式后页面不刷新**：页面缓存（`services/page_cache.py`）的资源签名只扫 `templates/` 与 `themes/`，不含 `static/`。改 `comments-tech.css`、`markdown-body.css`、`toast.css` 这类独立样式表时，缓存 HTML 里仍是旧的 `?t=`，浏览器继续命中自己的旧 CSS——改完刷新看不到变化。现在 `static/**/*.css|js` 参与签名，改文件即失效
 
 ### v3.9.21
 
