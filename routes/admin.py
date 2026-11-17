@@ -244,17 +244,22 @@ def admin_posts_empty_trash():
     return redirect(url_for("admin_posts_trash"))
 
 
+def _preview_base() -> str:
+    """编辑器预览中转地址的前缀（跟随可配置的后台前缀）。"""
+    return url_for("admin_preview_asset", filename="__path__").replace("__path__", "").rstrip("/")
+
+
 @LOGIN
 def admin_post_preview(post_id: int):
     post = Post.get(post_id)
     html, _ = markdown.render_post(post.get("content") or "") if post else ("", "")
-    return jsonify({"html": html})
+    return jsonify({"html": upload.preview_assets(html, _preview_base())})
 
 
 @LOGIN
 def admin_preview_content():
     html, _ = markdown.render_post(request.form.get("content", ""))
-    return jsonify({"html": html})
+    return jsonify({"html": upload.preview_assets(html, _preview_base())})
 
 
 # ── 分类 ──────────────────────────────────────────────
@@ -712,45 +717,41 @@ def admin_upload_file():
     return jsonify({"url": url, "name": Path(url).name})
 
 
-@LOGIN
-def admin_preview_upload(filename: str):
-    """编辑器预览用的缩略图：/admin/preview/uploads/<path>?w=960。
-
-    后台预览保持读本地副本（不走 OSS），但没必要加载原图：
-    按固定档位缩放后缓存，既省后台等待时间也省出站带宽。
-    无法缩小时（GIF 动图、非位图、文件缺失）回退到原图。
-    """
-    try:
-        width = int(request.args.get("w") or 960)
-    except (TypeError, ValueError):
-        width = 960
-    path = upload.preview_thumb(filename, width)
-    if path is None:
-        return redirect(url_for("uploaded_file", filename=filename))
-    response = send_file(path, conditional=True, max_age=604800)
-    # 后台预览图不该进共享代理缓存（send_file 默认会带 public，这里换成 private）
-    response.cache_control.public = False
-    response.cache_control.private = True
-    return response
+# 预览可以缩略的静态位图后缀（gif 动图不缩，避免丢帧）
+_PREVIEW_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
 @LOGIN
-def admin_preview_media(filename: str):
-    """编辑器预览的音视频地址：远端可用就 302 过去，否则回落本地副本。
+def admin_preview_asset(filename: str):
+    """编辑器预览统一入口：图片 / 视频 / 音频 / 附件都从这里取。
 
-    图片能缩略，视频不能（转码比带宽还贵），所以换个思路：别让它走本站。
-    配合前端的 preload="none"，浏览器只有在用户真的点播放时才来请求这个地址，
-    302 与签名都发生在那一刻 —— 预签名窗口正好覆盖播放期，
-    不会因为页面开着半小时、签名先过期而黑屏。
+    规则只有一条——**按当前策略决定此刻从哪儿读**：
+      - 未启用对象存储：本地副本；
+      - 启用且远端有对象：302 到对象存储（公有桶直链 / 私有桶现签）；
+      - 远端没有（历史文件没迁）：回落本地。
+    图片在回落本地时会转 960 宽 WebP，避免为一个版式预览拉几 MB 原图。
 
-    每次 seek 会重新走一次 302（302 本身不缓存），拿到的签名始终是新鲜的。
+    这里只做 302 或直接出文件，不写库；浏览器每次请求都重新决策，
+    所以签名永远新鲜，DOM 里留的稳定中转地址也不会过期。
     """
     rel = "/uploads/" + filename.lstrip("/")
-    if upload.remote_active() and upload.remote_exists(rel):
-        remote = upload.remote_url(rel)
-        # 只接受绝对地址：插件没配好时 url_for 会原样返回 /uploads/...，那走本地
-        if remote and remote.startswith(("http://", "https://")):
-            return redirect(remote, code=302)
+    remote = upload.remote_preview(rel)
+    if remote:
+        return redirect(remote, code=302)
+
+    # 远端没有这个对象：图片用本地缩略图兜底，其余直接回原文件
+    if Path(filename).suffix.lower() in _PREVIEW_IMAGE_EXTS:
+        try:
+            width = int(request.args.get("w") or 960)
+        except (TypeError, ValueError):
+            width = 960
+        path = upload.preview_thumb(filename, width)
+        if path is not None:
+            response = send_file(path, conditional=True, max_age=604800)
+            # 后台预览图不该进共享代理缓存（send_file 默认带 public）
+            response.cache_control.public = False
+            response.cache_control.private = True
+            return response
     return redirect(url_for("uploaded_file", filename=filename), code=302)
 
 
@@ -1522,8 +1523,7 @@ def register(app) -> None:
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),
         ("/admin/upload/file", "admin_upload_file", admin_upload_file, ["POST"]),
-        ("/admin/preview/uploads/<path:filename>", "admin_preview_upload", admin_preview_upload, ["GET"]),
-        ("/admin/preview/media/<path:filename>", "admin_preview_media", admin_preview_media, ["GET"]),
+        ("/admin/preview/asset/<path:filename>", "admin_preview_asset", admin_preview_asset, ["GET"]),
         ("/admin/orphans", "admin_orphans", admin_orphans, ["GET"]),
         ("/admin/orphans/clean", "admin_orphan_clean", admin_orphan_clean, ["POST"]),
         ("/admin/status", "admin_status", admin_status, ["GET", "POST"]),

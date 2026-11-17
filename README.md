@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.25-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.25)
+[![version](https://img.shields.io/badge/version-3.9.26-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.26)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.25**
+当前版本：**v3.9.26**
 
-> 最近一次更新完整展开；更早的 124 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 125 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.26
+
+- **编辑器预览合并成一条通道**：图片、视频、音频、附件统一走 `/admin/preview/asset/`，由后端按当前策略实时决定「此刻从哪儿取」——未启用对象存储读本地，启用且远端有对象就 302 过去（公有桶直链、私有桶现签），远端没有则回落本地。此前图片和视频各有一套逻辑，行为还对不上
+- **上传时多存一份预览副本**：图片额外转一份 960 宽 WebP 推到对象存储的 `previews/` 前缀，预览直接取它。实测原图 521KB 的截图副本只有 34KB，既走对象存储又不用等原图。副本跟着原图走，原图仍被引用时孤儿扫描不会单独删它
+- **签名在请求时现算，不写进正文**：DOM 里只放稳定中转地址，浏览器真正来取时才 302 并现场签名，页面开一小时也不会失效；落库前 `normalize_text()` 还会把中转地址剥回 `/uploads/...`，双保险
+- **视频签名放宽到 1 小时**：点播放才加载（`preload="none"`），签名窗口覆盖一整集，避免长视频播到一半断流
+- **「预览文章」接口同步改写**：返回的 HTML 里图片、视频、附件全部走中转，预览效果与发布后一致；远端对象缺失或权限变化时，播放器/图片报错会自动退回本地副本
+
+<details>
+<summary><b>历史版本（v3.9.25 及更早，共 125 个版本，点击展开）</b></summary>
 
 ### v3.9.25
 
@@ -938,9 +949,6 @@ chown -R www:www var
 - **固定档位防刷**：`?w=` 只接受 480 / 960 / 1440，其余一律按 960 处理；缓存目录按文件数上限自动清理，响应带 `Cache-Control: private`
 - **编辑器里的视频改成「点了才加载」**：预览区 `video` / `audio` 加 `preload="none"`，插入视频不再自动拉流；点播放才向 `/admin/preview/media/` 要地址，后端 302 到对象存储（私有桶现签，签名窗口正好覆盖播放期），本站零字节
 - **远端没有就回落本地**：历史文件可能没迁到对象存储，所以中转前先确认远端有没有（结果缓存 5 分钟），避免先 302 到 404 再回退；直链不可达时播放器报错，前端自动换回 `/uploads/`
-
-<details>
-<summary><b>历史版本（v3.9.24 及更早，共 124 个版本，点击展开）</b></summary>
 
 ### v3.9.24
 

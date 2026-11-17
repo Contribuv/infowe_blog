@@ -154,6 +154,80 @@ def remote_exists(rel_url: str) -> bool:
     return result
 
 
+def publish_preview(local_path, rel_url: str) -> str:
+    """上传后把预览副本交给远端存储；没有可用远端时返回空串。"""
+    for func in list(_remote_publishers):
+        publisher = getattr(func, "publish_preview", None)
+        if publisher is None:
+            continue
+        try:
+            result = publisher(local_path, rel_url)
+        except Exception:  # noqa: BLE001
+            logger.exception("预览副本发布失败：%s", rel_url)
+            continue
+        if result:
+            return str(result)
+    return ""
+
+
+_remote_preview_cache: dict[tuple[str, int], tuple[float, str]] = {}
+_REMOTE_PREVIEW_TTL = 300.0
+
+
+def remote_preview(rel_url: str, expires: int = 3600) -> str:
+    """编辑器预览该用的远端地址；没有远端或远端没有对象时返回空串。
+
+    预览地址只在浏览器真正来取时才现算，所以签名永远新鲜，
+    DOM 里留的是稳定的中转地址，不会把过期链接写进正文。
+
+    结果缓存 5 分钟：一次预览会连续请求多个资源，
+    没必要每次都去 HEAD 一遍对象存储。
+    """
+    cache_key = (rel_url, expires)
+    now = time.time()
+    cached = _remote_preview_cache.get(cache_key)
+    if cached and now - cached[0] < _REMOTE_PREVIEW_TTL:
+        return cached[1]
+
+    url = ""
+    for func in list(_remote_publishers):
+        getter = getattr(func, "preview_url", None)
+        if getter is None:
+            continue
+        try:
+            url = str(getter(rel_url, expires) or "")
+        except Exception:  # noqa: BLE001
+            logger.warning("预览地址生成失败：%s", rel_url)
+            url = ""
+        break
+
+    if len(_remote_preview_cache) > 500:
+        _remote_preview_cache.clear()
+    _remote_preview_cache[cache_key] = (now, url)
+    return url
+
+
+def preview_assets(html: str, base: str) -> str:
+    """后台预览专用：把 HTML 里的 /uploads/... 换成中转地址。
+
+    只用于编辑器预览弹层这类「看一眼效果」的 HTML，不落库：
+    中转地址每次请求都会重新决定从本地还是对象存储取，签名不会过期。
+    代码块里的路径是说明文字，保持原样。
+    """
+    if not html or "/uploads/" not in html or not base:
+        return html
+    prefix = str(base).rstrip("/")
+
+    def _one(text: str) -> str:
+        return re.sub(
+            r"(?<![\w:/.])/uploads/[^\s\"'<>()\[\]]+",
+            lambda m: prefix + m.group(0)[len("/uploads"):],
+            text,
+        )
+
+    return rewrite_outside_code(html, _one)
+
+
 # 代码区域：README / 文章里经常贴 `location ~ ^/uploads/...`、
 # `curl https://host/uploads/x` 这类示例。它们必须原样展示，
 # 一旦被改写成带签名的真实地址，等于把存储端点、Access Key 与签名全部公开。
@@ -210,6 +284,9 @@ def normalize_text(text: str) -> str:
     """
     if not text:
         return text
+    # 编辑器预览中转地址是后台路由，前台访客打不开，落库前必须剥掉。
+    # 形如 /manage/preview/asset/uploads/2026/11/a.png → /uploads/2026/11/a.png
+    text = re.sub(r"/[^/\s\"'<>()\[\]]*/preview/asset/uploads/", "/uploads/", text)
     for func in list(_remote_publishers):
         normalizer = getattr(func, "normalize", None)
         if normalizer is None:
@@ -475,6 +552,7 @@ def save(
     # 数据库里只存这一种形式，页面输出时再按当前策略换成直链或代理地址，
     # 这样切换策略不需要回写内容。
     publish(dest, rel_url)
+    _store_preview(dest, rel_url)
     return rel_url, ""
 
 
@@ -549,6 +627,31 @@ def preview_thumb(filename: str, width: int = 960) -> Path | None:
 
     cachefs.cap(cache_dir, 1200)
     return out
+
+
+_PREVIEW_WIDTH = 960
+_PREVIEW_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+
+def _store_preview(path: Path, rel_url: str) -> None:
+    """给远端存储准备一份 960 宽预览副本，失败不影响上传结果。
+
+    预览副本让「编辑器里走对象存储」和「预览要快」不再二选一：
+    原图 500KB 的截图，副本只有 30KB 左右。
+    """
+    if not remote_active() or not rel_url.startswith("/uploads/"):
+        return
+    if path.suffix.lower() not in _PREVIEW_EXTS:
+        return
+    rel = rel_url[len("/uploads/"):]
+    try:
+        thumb = preview_thumb(rel, _PREVIEW_WIDTH)
+    except Exception:  # noqa: BLE001
+        logger.warning("预览副本生成失败：%s", rel_url)
+        return
+    if thumb is None:
+        return
+    publish_preview(thumb, rel_url)
 
 
 def image_dims(rel_url: str) -> tuple[int, int] | None:

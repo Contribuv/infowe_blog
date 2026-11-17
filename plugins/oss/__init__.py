@@ -62,6 +62,26 @@ def _exists(rel_url: str) -> bool:
 _publish.exists = _exists
 
 
+def _publish_preview(local_path, rel_url: str) -> str:
+    """上传时额外推一份 960 宽预览副本，编辑器预览直接取它。"""
+    from . import storage
+
+    return storage.publish_preview(local_path, rel_url)
+
+
+_publish.publish_preview = _publish_preview
+
+
+def _preview_url(rel_url: str, expires: int | None = None) -> str:
+    """编辑器预览地址：优先预览副本，其次原图；没有则空串。"""
+    from . import storage
+
+    return storage.preview_url(rel_url, expires)
+
+
+_publish.preview_url = _preview_url
+
+
 def _rewrite_html(html: str) -> str:
     """把页面里的 /uploads/... 换成当前策略的最终地址。"""
     from . import storage

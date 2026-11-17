@@ -619,62 +619,55 @@
 
     // -- 编辑器预览里的图片备注：Vditor 每次重渲染后重新包 figure --
     function setupPreviewCaptions(root) {
-        // 预览区图片换成后台缩略图：预览只用来看版式，原图动辄几 MB，
-        // 一次插入十几张会把后台拖慢、也把出站带宽全花在本地副本上。
-        // 只改 .vditor-preview 里的 img；编辑区（ir / wysiwyg）的 img 会被写回正文，绝不能碰。
-        var THUMB_URL = "{{ url_for('admin_preview_upload', filename='__path__') }}";
+        // 预览资源统一走后台中转：图片 / 视频 / 音频 / 附件都交给后端，
+        // 由它按当前策略决定「此刻从本地还是对象存储取」——
+        //   未启用对象存储 → 本地；启用且远端有对象 → 直链或现签；远端没有 → 回落本地。
+        // DOM 里只放稳定地址，签名在浏览器请求时才算，所以地址即使进了正文也不会过期
+        // （落库前还会再归一化一次）。只改 .vditor-preview，编辑区会被写回正文，绝不能碰。
+        var PREVIEW_URL = "{{ url_for('admin_preview_asset', filename='__path__') }}";
         var THUMB_WIDTH = 960;
-        function maybeThumb(img) {
-            if (!img || img.tagName !== 'IMG') return;
-            if (img.getAttribute('data-thumb') === '1') return;
-            var raw = img.getAttribute('src') || '';
-            if (raw.indexOf('/uploads/') < 0) return;
-            // 只缩静态位图：动图（gif）缩放会丢帧，视频本来就不走 img
-            if (!/\.(?:png|jpe?g|webp|bmp)(?:[?#]|$)/i.test(raw)) return;
-            var rel = raw.slice(raw.indexOf('/uploads/') + '/uploads/'.length);
-            rel = rel.split('?')[0].split('#')[0];
-            if (!rel) return;
-            img.setAttribute('data-full-src', raw);
-            img.setAttribute('src', THUMB_URL.replace('__path__', rel) + '?w=' + THUMB_WIDTH);
-            img.setAttribute('data-thumb', '1');
+        function previewSrc(raw) {
+            var at = raw.indexOf('/uploads/');
+            if (at < 0) return '';
+            var rel = raw.slice(at + '/uploads/'.length).split('?')[0].split('#')[0];
+            return rel ? PREVIEW_URL.replace('__path__', rel) : '';
         }
-        function applyThumbs(scope) {
-            var imgs = scope.querySelectorAll('img[src*="/uploads/"]');
-            for (var i = 0; i < imgs.length; i++) maybeThumb(imgs[i]);
-        }
-        // 音视频没法缩略（转码比带宽还贵），思路是「别走本站」：
-        // 后端 302 到对象存储（私有桶现签，签名窗口正好覆盖播放期），远端没有就回落本地。
-        // 同时把 preload 设成 none——编辑时只是确认「插入成功了」，不该预载整段视频。
-        var MEDIA_URL = "{{ url_for('admin_preview_media', filename='__path__') }}";
-        var MEDIA_TAGS = { VIDEO: 1, AUDIO: 1, SOURCE: 1 };
-        function maybeProxyMedia(el) {
-            if (!el) return;
+        function maybePreviewAsset(el) {
+            if (!el || el.getAttribute('data-preview') === '1') return;
             var tag = el.tagName;
-            if (tag !== 'VIDEO' && tag !== 'AUDIO' && tag !== 'SOURCE') return;
-            if (el.getAttribute('data-proxied') === '1') return;
-            var raw = el.getAttribute('src') || '';
-            if (raw.indexOf('/uploads/') < 0) return;
-            var rel = raw.slice(raw.indexOf('/uploads/') + '/uploads/'.length);
-            rel = rel.split('?')[0].split('#')[0];
-            if (!rel) return;
-            el.setAttribute('data-full-src', raw);
-            el.setAttribute('data-proxied', '1');
+            // 附件是链接，改 href；其余改 src
+            var attr = tag === 'A' ? 'href' : 'src';
+            var raw = el.getAttribute(attr) || '';
+            var url = previewSrc(raw);
+            if (!url) return;
+            if (tag === 'IMG') {
+                // 动图缩放会丢帧，留在原图；静态位图走 960 宽的缩略版本
+                if (!/\.(?:png|jpe?g|webp|bmp)(?:[?#]|$)/i.test(raw)) return;
+                url += '?w=' + THUMB_WIDTH;
+            }
+            el.setAttribute('data-full-' + attr, raw);
+            el.setAttribute('data-preview', '1');
             if (tag === 'VIDEO' || tag === 'AUDIO') {
+                // 不点播放就不拉流：编辑时只是确认「插入成功了」
                 el.setAttribute('preload', 'none');
+            }
+            el.setAttribute(attr, url);
+            if (tag === 'IMG' || tag === 'VIDEO' || tag === 'AUDIO') {
                 el.addEventListener('error', function () {
-                    // 远端直链不通（历史文件没迁移、桶权限变了）时退回本地副本
+                    // 远端对象缺失或权限变化时退回原始地址（本地副本还在）
                     if (this.getAttribute('data-fellback') === '1') return;
-                    var full = this.getAttribute('data-full-src');
+                    var full = this.getAttribute('data-full-' + attr);
                     if (!full) return;
                     this.setAttribute('data-fellback', '1');
-                    this.setAttribute('src', full);
+                    this.setAttribute(attr, full);
                 });
             }
-            el.setAttribute('src', MEDIA_URL.replace('__path__', rel));
         }
-        function applyMedia(scope) {
-            var items = scope.querySelectorAll('video[src*="/uploads/"], audio[src*="/uploads/"], source[src*="/uploads/"]');
-            for (var i = 0; i < items.length; i++) maybeProxyMedia(items[i]);
+        var PREVIEW_SELECTOR = 'img[src*="/uploads/"], video[src*="/uploads/"], ' +
+            'audio[src*="/uploads/"], source[src*="/uploads/"], a[href*="/uploads/"]';
+        function applyPreviewAssets(scope) {
+            var items = scope.querySelectorAll(PREVIEW_SELECTOR);
+            for (var i = 0; i < items.length; i++) maybePreviewAsset(items[i]);
         }
         var EMPTY = /^(?:|null|none|undefined|false|为空|为空null|空)$/i;
         function captionOf(img) {
@@ -763,15 +756,14 @@
                 timer = null;
                 var previews = root.querySelectorAll('.vditor-preview');
                 for (var i = 0; i < previews.length; i++) {
-                    applyThumbs(previews[i]);
-                    applyMedia(previews[i]);
+                    applyPreviewAssets(previews[i]);
                     decorate(previews[i]);
                     decorateAdmonitions(previews[i]);
                 }
             }, 80);
         }
         var observer = new MutationObserver(function (records) {
-            // 缩略图必须抢在浏览器发请求之前换掉，所以这里同步处理、不做防抖：
+            // 预览地址必须抢在浏览器发请求之前换掉，所以这里同步处理、不做防抖：
             // 等 80ms 再换，原图早就开始下载了，等于白忙。
             for (var r = 0; r < records.length; r++) {
                 var added = records[r].addedNodes;
@@ -780,17 +772,13 @@
                     if (node.nodeType !== 1) continue;
                     var inPreview = node.closest ? node.closest('.vditor-preview') : null;
                     if (!inPreview) continue;
-                    if (node.tagName === 'IMG') {
-                        maybeThumb(node);
-                        continue;
+                    var tag = node.tagName;
+                    if (tag === 'IMG' || tag === 'VIDEO' || tag === 'AUDIO' || tag === 'SOURCE' || tag === 'A') {
+                        maybePreviewAsset(node);
                     }
-                    if (MEDIA_TAGS[node.tagName]) maybeProxyMedia(node);
                     if (!node.querySelectorAll) continue;
-                    var found = node.querySelectorAll('img[src*="/uploads/"], video[src*="/uploads/"], audio[src*="/uploads/"], source[src*="/uploads/"]');
-                    for (var i = 0; i < found.length; i++) {
-                        if (found[i].tagName === 'IMG') maybeThumb(found[i]);
-                        else maybeProxyMedia(found[i]);
-                    }
+                    var found = node.querySelectorAll(PREVIEW_SELECTOR);
+                    for (var i = 0; i < found.length; i++) maybePreviewAsset(found[i]);
                 }
             }
             // figure 包裹与提示框转换会改结构，延后执行，避免频繁重排
@@ -799,8 +787,7 @@
         observer.observe(root, { childList: true, subtree: true });
         var previews = root.querySelectorAll('.vditor-preview');
         for (var i = 0; i < previews.length; i++) {
-            applyThumbs(previews[i]);
-            applyMedia(previews[i]);
+            applyPreviewAssets(previews[i]);
             decorate(previews[i]);
             decorateAdmonitions(previews[i]);
         }

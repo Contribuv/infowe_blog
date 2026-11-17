@@ -303,6 +303,72 @@ def exists(rel_url: str) -> bool:
         return False
 
 
+# ── 编辑器预览副本 ────────────────────────────────────
+# 预览只用于判断版式，用不到原图分辨率。上传时额外转一份 960 宽 WebP 存进
+# previews/ 前缀，编辑器预览直接取它：既走对象存储，又只有几十 KB。
+# 命名沿用原相对路径再补 .webp，删原图时能反查出对应副本。
+
+PREVIEW_WIDTH = 960
+
+
+def preview_rel(rel_url: str) -> str:
+    """站内规范路径 → 预览副本的虚拟路径（/previews/2026/11/a.png.webp）。"""
+    rel = str(rel_url or "").lstrip("/")
+    if rel.startswith("uploads/"):
+        rel = rel[len("uploads/"):]
+    return f"/previews/{rel}.webp"
+
+
+def preview_of_key(key: str) -> str:
+    """previews/ 下的副本 key → 对应原图 key；不是副本则返回空串。"""
+    parts = str(key or "").lstrip("/").split("/")
+    if "previews" not in parts:
+        return ""
+    idx = parts.index("previews")
+    rest = parts[idx + 1:]
+    if not rest or not rest[-1].endswith(".webp"):
+        return ""
+    rest[-1] = rest[-1][: -len(".webp")]
+    return "/".join(parts[:idx] + ["uploads"] + rest)
+
+
+def publish_preview(local_path: str | Path, rel_url: str) -> str:
+    """把预览副本推一份到对象存储；失败返回空串（不影响上传主流程）。"""
+    if not is_enabled():
+        return ""
+    cfg = get_cfg()
+    if cfg is None:
+        return ""
+    path = Path(local_path)
+    try:
+        data = path.read_bytes()
+        target = preview_rel(rel_url)
+        s3.put(cfg, target, data, "image/webp")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("预览副本上传失败 %s：%s", rel_url, exc)
+        return ""
+    _record_object(cfg.key_of(target), len(data))
+    return target
+
+
+def preview_url(rel_url: str, expires: int | None = None) -> str:
+    """编辑器预览该用的远端地址：优先预览副本，其次原图；都没有返回空串。"""
+    cfg = get_cfg()
+    if cfg is None:
+        return ""
+    ttl = expires or presign_expires()
+    for candidate in (preview_rel(rel_url), rel_url):
+        try:
+            if not s3.head(cfg, cfg.key_of(candidate)):
+                continue
+        except Exception:  # noqa: BLE001
+            return ""
+        if bucket_policy() == "private":
+            return s3.presign(cfg, candidate, ttl)
+        return cfg.url_of(candidate)
+    return ""
+
+
 # ── 对象清单（孤儿扫描的唯一数据来源） ──────────────
 
 def _record_object(key: str, size: int = 0) -> None:
@@ -757,6 +823,10 @@ def scan_orphans(limit: int = 500) -> list[dict]:
             continue
         if key in referenced:
             continue
+        origin = preview_of_key(key)
+        if origin and origin in referenced:
+            # 预览副本属于原图的附属对象：原图还被引用时不算孤儿
+            continue
         try:
             if not s3.head(cfg, key):
                 continue
@@ -807,6 +877,11 @@ def delete_orphans(keys: list[str]) -> dict:
             continue
         if key in referenced:
             skipped.append({"key": key, "reason": "仍被内容引用"})
+            continue
+        origin = preview_of_key(key)
+        if origin and origin in referenced:
+            # 预览副本跟着原图走：原图还被引用，副本就不能单独删
+            skipped.append({"key": key, "reason": "对应原图仍被内容引用"})
             continue
         try:
             s3.delete(cfg, key)
