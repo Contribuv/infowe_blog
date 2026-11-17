@@ -619,6 +619,29 @@
 
     // -- 编辑器预览里的图片备注：Vditor 每次重渲染后重新包 figure --
     function setupPreviewCaptions(root) {
+        // 预览区图片换成后台缩略图：预览只用来看版式，原图动辄几 MB，
+        // 一次插入十几张会把后台拖慢、也把出站带宽全花在本地副本上。
+        // 只改 .vditor-preview 里的 img；编辑区（ir / wysiwyg）的 img 会被写回正文，绝不能碰。
+        var THUMB_URL = "{{ url_for('admin_preview_upload', filename='__path__') }}";
+        var THUMB_WIDTH = 960;
+        function maybeThumb(img) {
+            if (!img || img.tagName !== 'IMG') return;
+            if (img.getAttribute('data-thumb') === '1') return;
+            var raw = img.getAttribute('src') || '';
+            if (raw.indexOf('/uploads/') < 0) return;
+            // 只缩静态位图：动图（gif）缩放会丢帧，视频本来就不走 img
+            if (!/\.(?:png|jpe?g|webp|bmp)(?:[?#]|$)/i.test(raw)) return;
+            var rel = raw.slice(raw.indexOf('/uploads/') + '/uploads/'.length);
+            rel = rel.split('?')[0].split('#')[0];
+            if (!rel) return;
+            img.setAttribute('data-full-src', raw);
+            img.setAttribute('src', THUMB_URL.replace('__path__', rel) + '?w=' + THUMB_WIDTH);
+            img.setAttribute('data-thumb', '1');
+        }
+        function applyThumbs(scope) {
+            var imgs = scope.querySelectorAll('img[src*="/uploads/"]');
+            for (var i = 0; i < imgs.length; i++) maybeThumb(imgs[i]);
+        }
         var EMPTY = /^(?:|null|none|undefined|false|为空|为空null|空)$/i;
         function captionOf(img) {
             var alt = (img.getAttribute('alt') || '').trim();
@@ -700,20 +723,43 @@
             }
         }
         var timer = null;
-        var observer = new MutationObserver(function () {
+        function scheduleDecorate() {
             if (timer) return;
             timer = setTimeout(function () {
                 timer = null;
                 var previews = root.querySelectorAll('.vditor-preview');
                 for (var i = 0; i < previews.length; i++) {
+                    applyThumbs(previews[i]);
                     decorate(previews[i]);
                     decorateAdmonitions(previews[i]);
                 }
             }, 80);
+        }
+        var observer = new MutationObserver(function (records) {
+            // 缩略图必须抢在浏览器发请求之前换掉，所以这里同步处理、不做防抖：
+            // 等 80ms 再换，原图早就开始下载了，等于白忙。
+            for (var r = 0; r < records.length; r++) {
+                var added = records[r].addedNodes;
+                for (var a = 0; a < added.length; a++) {
+                    var node = added[a];
+                    if (node.nodeType !== 1) continue;
+                    var inPreview = node.closest ? node.closest('.vditor-preview') : null;
+                    if (!inPreview) continue;
+                    if (node.tagName === 'IMG') {
+                        maybeThumb(node);
+                        continue;
+                    }
+                    var imgs = node.querySelectorAll ? node.querySelectorAll('img[src*="/uploads/"]') : [];
+                    for (var i = 0; i < imgs.length; i++) maybeThumb(imgs[i]);
+                }
+            }
+            // figure 包裹与提示框转换会改结构，延后执行，避免频繁重排
+            scheduleDecorate();
         });
         observer.observe(root, { childList: true, subtree: true });
         var previews = root.querySelectorAll('.vditor-preview');
         for (var i = 0; i < previews.length; i++) {
+            applyThumbs(previews[i]);
             decorate(previews[i]);
             decorateAdmonitions(previews[i]);
         }

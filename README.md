@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.24-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.24)
+[![version](https://img.shields.io/badge/version-3.9.25-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.25)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.24**
+当前版本：**v3.9.25**
 
-> 最近一次更新完整展开；更早的 123 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 124 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.25
+
+- **编辑器预览改用缩略图**：后台分屏预览原来直接加载本地原图（手机原图动辄 4000px、几 MB），一次插入十几张既卡后台又占出站带宽。现在预览区图片走 `/admin/preview/uploads/` 按 960 宽转 WebP 并缓存，实测 521KB 的截图降到 34KB、231KB 降到 12KB，二次访问直接读缓存
+- **只改预览区，不碰正文**：缩略图替换限定在 `.vditor-preview` 内，编辑区（ir / wysiwyg）的 `img` 原样保留，保存时写进正文的仍是 `/uploads/...` 规范路径；原图地址存在 `data-full-src`，随时可查
+- **抢在请求前替换**：识别新增预览节点后同步换 `src`，不走防抖——否则原图早已开始下载；实测插入后只有一条缩略图请求，没有原图请求
+- **后台预览仍读本地副本**：对象存储启用时访客走 OSS，后台预览为了不让预签名地址写进正文，继续读本地；这次只是把「读本地」的成本压到最小
+- **固定档位防刷**：`?w=` 只接受 480 / 960 / 1440，其余一律按 960 处理；缓存目录按文件数上限自动清理，响应带 `Cache-Control: private`
+
+<details>
+<summary><b>历史版本（v3.9.24 及更早，共 124 个版本，点击展开）</b></summary>
 
 ### v3.9.24
 
@@ -935,9 +946,6 @@ chown -R www:www var
 - **批量上传改为排队插入**：多张图片、多个视频一次选中时依次进入编辑器，进度浮窗等全部插入完成才收起，不会出现内容晚一拍冒出来
 - **上传文件名保留中文**：此前一律经过 `secure_filename()`，中文名被整段删光后退化成 `file.png` / `file.mp4`；现在只替换路径分隔符、Windows 保留字符和 URL 特殊字符，中文、日文、韩文原样保留，图注与下载名都可读
 - **工具栏上传按钮提示补全**：按钮的 `aria-label` / `title` 由「上传图片或文件」改为「上传图片 / 视频 / 音频 / 附件」，与实际支持的格式一致
-
-<details>
-<summary><b>历史版本（v3.9.23 及更早，共 123 个版本，点击展开）</b></summary>
 
 ### v3.9.23
 

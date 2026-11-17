@@ -455,6 +455,65 @@ def resolve(filename: str) -> Path | None:
     return path
 
 
+# 后台编辑器预览允许的宽度档位：固定几档，避免 ?w=1..9999 把缓存刷爆
+PREVIEW_WIDTHS = (480, 960, 1440)
+
+
+def preview_thumb(filename: str, width: int = 960) -> Path | None:
+    """后台编辑器预览用的缩略图，返回缓存文件路径；不能缩小时返回 None。
+
+    预览区只用来判断版式，用不到原图分辨率：手机原图动辄 4000px、几 MB，
+    一次插入十几张会让后台卡顿，也把出站带宽全吃在本地副本上。
+    这里按固定宽度缩放成 WebP 并缓存，源文件更新后自动失效。
+
+    GIF 动图、SVG、视频不处理，由调用方回退原图。
+    """
+    if width not in PREVIEW_WIDTHS:
+        width = 960
+    src = resolve(filename)
+    if src is None or not src.is_file():
+        return None
+    if src.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
+        return None
+
+    from services import cachefs
+
+    cache_dir = Path(CACHE_DIR) / "previews"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1(f"{unquote(filename)}|{width}".encode()).hexdigest()
+    out = cache_dir / f"{key}-{width}.webp"
+    try:
+        if out.is_file() and out.stat().st_mtime >= src.stat().st_mtime:
+            return out
+    except OSError:
+        return None
+
+    tmp = cache_dir / f"{key}-{width}-{secrets.token_hex(4)}.tmp"
+    try:
+        from PIL import Image, ImageOps
+
+        with Image.open(src) as img:
+            if getattr(img, "n_frames", 1) > 1:
+                return None  # 动图缩放会丢帧，直接回退原图
+            if img.format in {"JPEG", "MPO"}:
+                # 让解码器直接按 2 倍目标宽度出图，省内存也更快
+                img.draft("RGB", (width * 2, width * 2))
+            img = ImageOps.exif_transpose(img)
+            img.thumbnail((width, width * 8), Image.LANCZOS)
+            if img.mode not in {"RGB", "RGBA"}:
+                img = img.convert("RGBA" if "A" in img.getbands() else "RGB")
+            img.save(tmp, "WEBP", quality=82, method=4)
+        tmp.replace(out)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("preview thumb failed for %s: %s", src, exc)
+        return None
+    finally:
+        tmp.unlink(missing_ok=True)
+
+    cachefs.cap(cache_dir, 1200)
+    return out
+
+
 def image_dims(rel_url: str) -> tuple[int, int] | None:
     rel = rel_url
     if "/uploads/" in rel:

@@ -713,6 +713,28 @@ def admin_upload_file():
 
 
 @LOGIN
+def admin_preview_upload(filename: str):
+    """编辑器预览用的缩略图：/admin/preview/uploads/<path>?w=960。
+
+    后台预览保持读本地副本（不走 OSS），但没必要加载原图：
+    按固定档位缩放后缓存，既省后台等待时间也省出站带宽。
+    无法缩小时（GIF 动图、非位图、文件缺失）回退到原图。
+    """
+    try:
+        width = int(request.args.get("w") or 960)
+    except (TypeError, ValueError):
+        width = 960
+    path = upload.preview_thumb(filename, width)
+    if path is None:
+        return redirect(url_for("uploaded_file", filename=filename))
+    response = send_file(path, conditional=True, max_age=604800)
+    # 后台预览图不该进共享代理缓存（send_file 默认会带 public，这里换成 private）
+    response.cache_control.public = False
+    response.cache_control.private = True
+    return response
+
+
+@LOGIN
 def admin_orphans():
     items = upload.orphans()
     total = sum(item["size_bytes"] for item in items)
@@ -1480,6 +1502,7 @@ def register(app) -> None:
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),
         ("/admin/upload/file", "admin_upload_file", admin_upload_file, ["POST"]),
+        ("/admin/preview/uploads/<path:filename>", "admin_preview_upload", admin_preview_upload, ["GET"]),
         ("/admin/orphans", "admin_orphans", admin_orphans, ["GET"]),
         ("/admin/orphans/clean", "admin_orphan_clean", admin_orphan_clean, ["POST"]),
         ("/admin/status", "admin_status", admin_status, ["GET", "POST"]),
