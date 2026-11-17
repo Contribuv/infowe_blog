@@ -118,6 +118,33 @@ def ensure_remote(local_path, rel_url: str) -> str:
     return publish(local_path, rel_url)
 
 
+# 代码区域：README / 文章里经常贴 `location ~ ^/uploads/...`、
+# `curl https://host/uploads/x` 这类示例。它们必须原样展示，
+# 一旦被改写成带签名的真实地址，等于把存储端点、Access Key 与签名全部公开。
+_PROTECTED_RE = re.compile(
+    r"<(pre|code|script|style|textarea)\b[^>]*>.*?</\1\s*>",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def rewrite_outside_code(html: str, rewrite) -> str:
+    """只对代码区域（pre / code / script / style / textarea）之外的 HTML 执行改写。
+
+    代码块里的路径是「给人看的文本」，不是要加载的资源，
+    改写它既破坏示例、又会泄露真实地址。
+    """
+    if not html:
+        return html
+    parts: list[str] = []
+    pos = 0
+    for match in _PROTECTED_RE.finditer(html):
+        parts.append(rewrite(html[pos:match.start()]))
+        parts.append(match.group(0))
+        pos = match.end()
+    parts.append(rewrite(html[pos:]))
+    return "".join(parts)
+
+
 def rewrite_html(html: str) -> str:
     """把 HTML 里的规范上传路径按当前存储策略改写成最终地址。
 

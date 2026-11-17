@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.22-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.22)
+[![version](https://img.shields.io/badge/version-3.9.23-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.23)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,14 +925,23 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.22**
+当前版本：**v3.9.23**
 
 > 这里只展开最新版本；更早的日志在下方折叠区，点开查看。
+
+### v3.9.23
+
+- **修复更新日志里泄露对象存储地址**：项目页 README 中的 Nginx 配置示例 `location ~ ^/uploads/\.` 被页面输出改写当成真实资源，替换成带 OSS 端点、Access Key ID 与签名的预签名地址，等于把这些信息一起公开。现在代码区域（`<pre>` / `<code>` / `<script>` / `<style>` / `<textarea>`）不参与地址改写，示例文本原样展示，真实图片照旧按策略签名
+- **README 渲染链路同步修复**：`services/github.py` 的 README 图片地址转换同样跳过代码块。它在视图里执行，改写结果会写入页面缓存，不修的话缓存里的示例也会变成预签名链接
+- **更新日志调整**：只展开最新版本，更早的版本统一收进 `<details>` 折叠区，页面不再一屏铺开几十个版本
 
 ### v3.9.22
 
 - **评论区卡片补齐阴影**：楼层卡与评论表单卡此前只跟随主题的 `--card-bg` / `--card-border` / `--card-radius`，漏了 `--card-shadow`，同屏看边缘比上方「相关推荐」等 `.tech-related-card` 平一档。现在四件套对齐，深浅主题自动跟随，不再单独写色值
 - **修复改 static 样式后页面不刷新**：页面缓存（`services/page_cache.py`）的资源签名只扫 `templates/` 与 `themes/`，不含 `static/`。改 `comments-tech.css`、`markdown-body.css`、`toast.css` 这类独立样式表时，缓存 HTML 里仍是旧的 `?t=`，浏览器继续命中自己的旧 CSS——改完刷新看不到变化。现在 `static/**/*.css|js` 参与签名，改文件即失效
+
+<details>
+<summary><b>历史版本（v3.9.22 及更早，点击展开）</b></summary>
 
 ### v3.9.21
 
@@ -946,9 +955,6 @@ chown -R www:www var
 - **修复后台编辑器显示临时签名 URL**：v3.9.19 的输出改写没有排除后台页面，编辑器和后台里的图片地址会变成 `?X-Amz-Signature=...` 的预签名链接。用户保存时会把这段 15 分钟后就过期的地址写进文章，导致图片永久 403。现在后台一律保持 `/uploads/...`，只有前台公开页面才按策略生成签名或直链
 - **保存时统一归一化图片地址**：文章正文、封面、评论正文在落库前会把三种形式（OSS 直链、预签名 URL、`/oss-media/` 代理路径）统统剥回 `/uploads/...`。即使从别处粘贴了带签名的链接，也不会写死到数据库
 - **对象存储上传仍是双写**：文件先落本地（水印、HEIC 转 WebP、原图备份照旧），再额外传一份 OSS；数据库只存规范路径，前台读取时由浏览器直连 OSS，不占站点带宽
-
-<details>
-<summary><b>历史版本（v3.9.19 及更早，点击展开）</b></summary>
 
 ### v3.9.19
 

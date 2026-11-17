@@ -134,32 +134,45 @@ def rewrite_html(html: str) -> str:
     这是「单一真相」的关键：数据库永远只存 /uploads/...，
     页面输出时才决定是 OSS 直链还是站点代理，
     所以切换策略不需要回写任何内容。
+
+    代码块（<pre> / <code> 等）不参与改写：README 与文章里的
+    `location ~ ^/uploads/...`、`curl .../uploads/x` 是示例文本，
+    改写后会变成带 Access Key 与签名的真实地址。
     """
     if not html or "/uploads/" not in html:
         return html
     cfg = get_cfg()
     if cfg is None:
         return html
+
+    from services.upload import rewrite_outside_code
+
     if bucket_policy() == "private":
         # 私有：逐张现场签名，浏览器直接去 OSS 取图，不经过本站带宽
         expires = presign_expires()
 
-        def _sign(match: re.Match) -> str:
-            raw = match.group(0)
-            rel = unquote(raw.split("?", 1)[0])
-            return s3.presign(cfg, rel, expires)
+        def _sign(text: str) -> str:
+            def _one(match: re.Match) -> str:
+                raw = match.group(0)
+                rel = unquote(raw.split("?", 1)[0])
+                return s3.presign(cfg, rel, expires)
 
-        return _REL_RE.sub(_sign, html)
+            return _REL_RE.sub(_one, text)
+
+        return rewrite_outside_code(html, _sign)
 
     # 公共读：只把本地确实存在的换成直链，避免历史死链被改成 OSS 地址
-    def _sub(match: re.Match) -> str:
-        raw = match.group(0)
-        rel = unquote(raw.split("?", 1)[0])
-        if not _local_exists(rel):
-            return raw
-        return cfg.url_of(rel)
+    def _sub(text: str) -> str:
+        def _one(match: re.Match) -> str:
+            raw = match.group(0)
+            rel = unquote(raw.split("?", 1)[0])
+            if not _local_exists(rel):
+                return raw
+            return cfg.url_of(rel)
 
-    return _REL_RE.sub(_sub, html)
+        return _REL_RE.sub(_one, text)
+
+    return rewrite_outside_code(html, _sub)
 
 
 def normalize_text(text: str) -> str:

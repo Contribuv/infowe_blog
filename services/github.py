@@ -218,6 +218,9 @@ def resolve_readme_urls(html: str) -> str:
     README 缓存是「拉取时就把图片路径写死」的，历史缓存里存的是
     /uploads/projects/...；启用对象存储后需要在这里补一次转换，
     并把从未上传过的历史缓存图补传到远端。
+
+    代码块不参与转换：README 里的 Nginx / curl 示例是给人看的文本，
+    改写后会变成带 Access Key 与签名的真实地址。
     """
     from services import upload
 
@@ -240,7 +243,10 @@ def resolve_readme_urls(html: str) -> str:
             return url
         return rel
 
-    return re.sub(r"(?<![\w:/.])/uploads/[^\s\"'<>()\[\]]+", repl, html)
+    def _rewrite(text: str) -> str:
+        return re.sub(r"(?<![\w:/.])/uploads/[^\s\"'<>()\[\]]+", repl, text)
+
+    return upload.rewrite_outside_code(html, _rewrite)
 
 
 def localize_readme_images(html: str, repo: str, branch: str) -> str:
