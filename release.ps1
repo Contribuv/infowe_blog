@@ -266,14 +266,19 @@ Write-Step "创建 GitHub Release"
 $notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "infowe-release-$version.md"
 [System.IO.File]::WriteAllText($notesFile, "$notes`n", (New-Object System.Text.UTF8Encoding($false)))
 
-& gh release view $tag *> $null
+# 先试编辑再试创建：Release 已存在的补发场景是常态，而 gh release view
+# 偶尔会因瞬时网络/限流返回非 0，导致误判成「不存在」并在 create 时撞 422。
+# 以 edit 成功与否作为唯一判断，天然幂等，也不再依赖上一次探测命令的退出码。
+& gh release edit $tag --title $tag --notes-file $notesFile *> $null
 if ($LASTEXITCODE -eq 0) {
-    & gh release edit $tag --title $tag --notes-file $notesFile
-    if ($LASTEXITCODE -ne 0) { Stop-Release "更新 GitHub Release 失败" }
     Write-Ok "GitHub Release 已更新"
 } else {
     & gh release create $tag --title $tag --notes-file $notesFile --verify-tag
-    if ($LASTEXITCODE -ne 0) { Stop-Release "创建 GitHub Release 失败" }
+    if ($LASTEXITCODE -ne 0) {
+        # 极端竞态：上一步 create 略慢，Release 其实已经建好
+        & gh release edit $tag --title $tag --notes-file $notesFile
+        if ($LASTEXITCODE -ne 0) { Stop-Release "创建 GitHub Release 失败" }
+    }
     Write-Ok "GitHub Release 已创建"
 }
 
@@ -303,7 +308,16 @@ if (-not $SkipGitee) {
             prerelease       = $false
         }
         $json = $payload | ConvertTo-Json -Depth 5
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+        # PowerShell 5.1 发请求时对非 ASCII 的处理不可靠：-Body 传 byte[] 会被当 Latin-1、
+        # curl --data-binary 传原始 UTF-8 会被 Gitee 按 GBK 解，两种都把 Release 说明打成乱码。
+        # 统一把中文转成 JSON 的 \uXXXX 转义，请求体变成纯 ASCII，服务端按规范还原。
+        $sb = New-Object System.Text.StringBuilder
+        foreach ($ch in $json.ToCharArray()) {
+            $code = [int]$ch
+            if ($code -lt 128) { [void]$sb.Append($ch) } else { [void]$sb.Append(("\u{0:x4}" -f $code)) }
+        }
+        $asciiJson = $sb.ToString()
+        $headers = @{ "Content-Type" = "application/json" }
 
         try {
             $existing = Invoke-RestMethod -Method Get -Uri "$api/tags/$tag`?access_token=$token" -ErrorAction Stop
@@ -313,10 +327,10 @@ if (-not $SkipGitee) {
 
         try {
             if ($existing -and $existing.id) {
-                $null = Invoke-RestMethod -Method Patch -Uri "$api/$($existing.id)" -Headers $headers -Body $bytes -ErrorAction Stop
+                $null = Invoke-RestMethod -Method Patch -Uri "$api/$($existing.id)" -Headers $headers -Body $asciiJson -ErrorAction Stop
                 Write-Ok "Gitee Release 已更新"
             } else {
-                $null = Invoke-RestMethod -Method Post -Uri $api -Headers $headers -Body $bytes -ErrorAction Stop
+                $null = Invoke-RestMethod -Method Post -Uri $api -Headers $headers -Body $asciiJson -ErrorAction Stop
                 Write-Ok "Gitee Release 已创建"
             }
             $giteeUrl = "https://gitee.com/$($giteeSlug.Owner)/$($giteeSlug.Repo)/releases/tag/$tag"
