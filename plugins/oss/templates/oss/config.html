@@ -1,6 +1,35 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}对象存储{% endblock %}
 
+{% block admin_head %}
+<style>
+/* 扫描中的加载态：16px 小转环，比一行纯文本更明确地在「动」 */
+.oss-scan-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 2px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.oss-spinner {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    animation: oss-spin .8s linear infinite;
+}
+@keyframes oss-spin { to { transform: rotate(360deg); } }
+/* 删除确认浮窗：复用后台详情弹窗的骨架，正文恢复普通换行 */
+.oss-confirm-dialog .admin-detail-body { white-space: normal; word-break: normal; }
+.oss-confirm-dialog .input-text { margin: 12px 0 16px; }
+.oss-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.oss-inline-warn { margin: 0 0 10px; font-size: 12.5px; color: var(--danger); }
+</style>
+{% endblock %}
+
 {% block admin_content %}
 <div class="page-header">
     <h2>{{ icon('database', 20) | safe }} 对象存储</h2>
@@ -141,6 +170,23 @@
     </div>
 </div>
 
+<!-- 删除确认：自定义浮窗，不用原生 window.prompt -->
+<dialog id="ossDeleteDialog" class="admin-detail-dialog oss-confirm-dialog">
+    <div class="admin-detail-head">
+        <strong>删除 OSS 对象</strong>
+        <button type="button" class="admin-detail-close" id="ossDeleteCancelX" aria-label="关闭">×</button>
+    </div>
+    <div class="admin-detail-body">
+        <p id="ossDeleteDesc" style="margin:0 0 6px;"></p>
+        <p class="form-hint" style="margin:0;">删除不可恢复，本地回退副本不受影响。输入「删除」确认：</p>
+        <input type="text" id="ossDeleteConfirmInput" class="input-text" autocomplete="off" placeholder="删除">
+        <div class="oss-dialog-actions">
+            <button type="button" class="btn btn-secondary" id="ossDeleteCancel">取消</button>
+            <button type="button" class="btn btn-danger" id="ossDeleteConfirm" disabled>确认删除</button>
+        </div>
+    </div>
+</dialog>
+
 <script>
 (function () {
   var testUrl = {{ url_for('admin_plugin_oss_test') | tojson }};
@@ -259,7 +305,7 @@
 
   orphanScanBtn.addEventListener('click', function () {
     orphanScanBtn.disabled = true;
-    orphanBox.textContent = '正在扫描（只查本插件上传过的对象）…';
+    orphanBox.innerHTML = '<div class="oss-scan-loading"><span class="oss-spinner" aria-hidden="true"></span>正在扫描（只查本插件上传过的对象）…</div>';
     post(orphanScanUrl, {}).then(function (res) {
       var data = res.data || {};
       if (data.error) { throw new Error(data.error); }
@@ -302,11 +348,50 @@
     }).finally(function () { orphanScanBtn.disabled = false; });
   });
 
-  orphanDeleteBtn.addEventListener('click', function () {
-    var keys = orphanSelected();
-    if (!keys.length) { alert('请先勾选要删除的对象'); return; }
-    var typed = prompt('将删除 ' + keys.length + ' 个 OSS 对象，删除不可恢复。\n输入「删除」确认：');
-    if (typed !== '删除') return;
+  var deleteDialog = document.getElementById('ossDeleteDialog');
+  var deleteDesc = document.getElementById('ossDeleteDesc');
+  var deleteInput = document.getElementById('ossDeleteConfirmInput');
+  var deleteConfirmBtn = document.getElementById('ossDeleteConfirm');
+  var deleteKeys = [];
+
+  function closeDeleteDialog() {
+    if (deleteDialog && deleteDialog.open) deleteDialog.close();
+    deleteKeys = [];
+  }
+
+  function openDeleteDialog(keys) {
+    deleteKeys = keys;
+    deleteDesc.textContent = '将删除 ' + keys.length + ' 个 OSS 对象。';
+    deleteInput.value = '';
+    deleteConfirmBtn.disabled = true;
+    if (typeof deleteDialog.showModal === 'function') deleteDialog.showModal();
+    else deleteDialog.setAttribute('open', '');
+    setTimeout(function () { deleteInput.focus(); }, 30);
+  }
+
+  // 未勾选时用行内提示，避免再弹一个原生 alert
+  function warnNoSelection() {
+    var el = document.getElementById('ossOrphanWarn');
+    if (!el) {
+      el = document.createElement('p');
+      el.id = 'ossOrphanWarn';
+      el.className = 'oss-inline-warn';
+      orphanBox.parentNode.insertBefore(el, orphanBox);
+    }
+    el.textContent = '请先勾选要删除的对象';
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 2600);
+  }
+
+  deleteInput.addEventListener('input', function () {
+    deleteConfirmBtn.disabled = deleteInput.value.trim() !== '删除';
+  });
+  document.getElementById('ossDeleteCancel').addEventListener('click', closeDeleteDialog);
+  document.getElementById('ossDeleteCancelX').addEventListener('click', closeDeleteDialog);
+  deleteDialog.addEventListener('click', function (event) {
+    if (event.target === deleteDialog) closeDeleteDialog();  // 点遮罩关闭
+  });
+
+  function runDelete(keys) {
     orphanDeleteBtn.disabled = true;
     var body = new FormData();
     keys.forEach(function (key) { body.append('keys[]', key); });
@@ -325,6 +410,18 @@
       })
       .catch(function (err) { orphanBox.textContent = '删除失败：' + err.message; })
       .finally(function () { orphanDeleteBtn.disabled = false; });
+  }
+
+  deleteConfirmBtn.addEventListener('click', function () {
+    var keys = deleteKeys.slice();
+    closeDeleteDialog();
+    if (keys.length) runDelete(keys);
+  });
+
+  orphanDeleteBtn.addEventListener('click', function () {
+    var keys = orphanSelected();
+    if (!keys.length) { warnNoSelection(); return; }
+    openDeleteDialog(keys);
   });
 })();
 </script>

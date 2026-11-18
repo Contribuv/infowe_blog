@@ -80,6 +80,144 @@ def publish(local_path, rel_url: str) -> str:
     return ""
 
 
+# ── 后台发布 ──────────────────────────────────────────
+# 上传请求只等「本地落盘 + 校验」，远端上传放后台，编辑器拿回 URL 就能立刻插入。
+# 一致性靠保存前的 sync_remote_urls() 兜底：先等后台传完，再确认远端是否真有对象。
+
+_publish_guard = threading.Lock()
+_publish_locks: dict[str, threading.RLock] = {}
+_pending_events: dict[str, threading.Event] = {}
+_failed_uploads: set[str] = set()
+
+
+def _lock_for(rel_url: str) -> threading.RLock:
+    """同一个文件只允许一个线程在传（后台 publish 与保存前补传可能撞车）。"""
+    with _publish_guard:
+        lock = _publish_locks.get(rel_url)
+        if lock is None:
+            lock = _publish_locks[rel_url] = threading.RLock()
+        return lock
+
+
+def wait_remote(rel_url: str, timeout: float = 30.0) -> None:
+    """等这个文件的后台发布结束（已在跑才等，没记录立即返回）。"""
+    with _publish_guard:
+        event = _pending_events.get(rel_url)
+    if event is not None:
+        event.wait(timeout)
+
+
+def defer_publish(local_path, rel_url: str) -> None:
+    """后台把文件推到远端，并顺手生成预览副本。
+
+    原图仍会完整上传，只是不再阻塞 HTTP 响应；保存文章/评论时
+    sync_remote_urls() 会等它结束并在必要时补传，前台不会拿到死链。
+    线程里要用 settings 与插件配置，所以带着创建时的应用上下文跑。
+    """
+    try:
+        if not remote_active():
+            return
+    except Exception:  # noqa: BLE001
+        # 没有应用上下文（CLI 迁移等）：退回同步发布，行为与旧版一致
+        try:
+            publish(local_path, rel_url)
+        except Exception:  # noqa: BLE001
+            logger.warning("同步发布失败：%s", rel_url, exc_info=True)
+        return
+
+    event = threading.Event()
+    with _publish_guard:
+        _pending_events[rel_url] = event
+
+    try:
+        from flask import current_app, has_app_context
+
+        app = current_app._get_current_object() if has_app_context() else None
+    except Exception:  # noqa: BLE001
+        app = None
+
+    def run() -> None:
+        ok = False
+        try:
+            if app is not None:
+                with app.app_context():
+                    ok = _publish_and_preview(local_path, rel_url, event)
+            else:
+                ok = _publish_and_preview(local_path, rel_url, event)
+        except Exception:  # noqa: BLE001
+            logger.warning("后台上传失败：%s", rel_url, exc_info=True)
+        finally:
+            event.set()
+            with _publish_guard:
+                _pending_events.pop(rel_url, None)
+                if ok:
+                    _failed_uploads.discard(rel_url)
+                else:
+                    # 失败留个记号：保存文章时只对这些补传，不用每张图都去 HEAD
+                    if len(_failed_uploads) > 1000:
+                        _failed_uploads.clear()
+                    _failed_uploads.add(rel_url)
+            _forget_preview_cache(rel_url)
+
+    threading.Thread(target=run, daemon=True, name="upload-publish").start()
+
+
+def _publish_and_preview(local_path, rel_url: str, done: threading.Event | None = None) -> bool:
+    """上传原图 + 预览副本，返回远端是否拿到原图。
+
+    原图一传完就 set(done)，让正在保存文章的那个请求先走；
+    副本（PIL 缩放 + 小文件 PUT）继续在后台跑，不必拖住保存。
+    """
+    with _lock_for(rel_url):
+        url = publish(local_path, rel_url)
+    if done is not None:
+        done.set()
+    if url:
+        _store_preview(Path(local_path), rel_url)
+    return bool(url)
+
+
+def _forget_preview_cache(rel_url: str) -> None:
+    """上传完成后清掉「远端没有」的预览缓存，下一次预览就能直接走对象存储。"""
+    with _publish_guard:
+        for key in [k for k in _remote_preview_cache if k[0] == rel_url]:
+            _remote_preview_cache.pop(key, None)
+
+
+def sync_remote_urls(text: str) -> None:
+    """保存前兜住「上传已返回、远端还没传完」的那几张。
+
+    只处理两种：后台还在传的（等它结束）和传失败的（补传一次）。
+    不逐个 HEAD 历史文件——对象存储一次 HEAD 就要几百毫秒，
+    十张图就把保存拖慢好几秒，而历史文件在 v3.9.28 之前都是同步传上去的。
+    """
+    if not text:
+        return
+    try:
+        if not remote_active():
+            return
+    except Exception:  # noqa: BLE001
+        return
+    for rel_url in extract_urls(text):
+        if not rel_url.startswith("/uploads/"):
+            continue
+        # 后台可能还在传：等它结束（最多 30 秒），避免保存时远端还缺文件
+        wait_remote(rel_url)
+        with _publish_guard:
+            failed = rel_url in _failed_uploads
+        if not failed:
+            continue
+        path = resolve(rel_url[len("/uploads/"):])
+        if path is None or not path.is_file():
+            continue
+        try:
+            if ensure_remote(path, rel_url):
+                with _publish_guard:
+                    _failed_uploads.discard(rel_url)
+        except Exception:  # noqa: BLE001
+            logger.warning("保存前补传失败：%s", rel_url)
+
+
 def remote_url(rel_url: str) -> str:
     """只取远端地址、不上传；用于「文件已经存在」的场景。
 
@@ -104,19 +242,21 @@ def ensure_remote(local_path, rel_url: str) -> str:
 
     发布器可以提供 `ensure`：先检查远端是否存在，不存在才上传。
     没有这份能力时退回 `publish`。
+    同一文件与后台发布共用一把锁，避免两个线程同时 PUT 同一个 key。
     """
-    for func in list(_remote_publishers):
-        ensure = getattr(func, "ensure", None)
-        if ensure is None:
-            continue
-        try:
-            url = ensure(local_path, rel_url)
-        except Exception:  # noqa: BLE001
-            logger.exception("远端补传失败：%s", rel_url)
-            continue
-        if url:
-            return str(url)
-    return publish(local_path, rel_url)
+    with _lock_for(rel_url):
+        for func in list(_remote_publishers):
+            ensure = getattr(func, "ensure", None)
+            if ensure is None:
+                continue
+            try:
+                url = ensure(local_path, rel_url)
+            except Exception:  # noqa: BLE001
+                logger.exception("远端补传失败：%s", rel_url)
+                continue
+            if url:
+                return str(url)
+        return publish(local_path, rel_url)
 
 
 _remote_exists_cache: dict[str, tuple[float, bool]] = {}
@@ -552,8 +692,9 @@ def save(
     # 返回给调用方的永远是规范路径 /uploads/...。
     # 数据库里只存这一种形式，页面输出时再按当前策略换成直链或代理地址，
     # 这样切换策略不需要回写内容。
-    publish(dest, rel_url)
-    defer_preview(dest, rel_url)
+    # 本地落盘完成就返回；远端上传与预览副本放后台，
+    # 保存文章/评论时由 sync_remote_urls() 等它结束并兜底补传。
+    defer_publish(dest, rel_url)
     return rel_url, ""
 
 
@@ -653,36 +794,6 @@ def _store_preview(path: Path, rel_url: str) -> None:
     if thumb is None:
         return
     publish_preview(thumb, rel_url)
-
-
-def defer_preview(path: Path, rel_url: str) -> None:
-    """把预览副本的生成与上传放到后台线程。
-
-    副本只是为了让编辑器预览走对象存储时还能秒开，晚到或失败都不影响上传结果：
-    预览中转发现远端没有副本，会自动回落本地缩略图。
-    原图仍然同步传完才返回，所以「请求返回 = 远端一定有原文件」这个保证不变。
-    """
-    if not remote_active():
-        return
-    # 线程里要用 settings/插件配置，必须带上应用上下文；save() 通常在请求内调用
-    try:
-        from flask import current_app, has_app_context
-
-        app = current_app._get_current_object() if has_app_context() else None
-    except Exception:  # noqa: BLE001
-        app = None
-
-    def run() -> None:
-        try:
-            if app is not None:
-                with app.app_context():
-                    _store_preview(path, rel_url)
-            else:
-                _store_preview(path, rel_url)
-        except Exception:  # noqa: BLE001
-            logger.warning("预览副本后台生成失败：%s", rel_url, exc_info=True)
-
-    threading.Thread(target=run, daemon=True, name="upload-preview").start()
 
 
 def image_dims(rel_url: str) -> tuple[int, int] | None:

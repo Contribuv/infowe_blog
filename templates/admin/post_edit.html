@@ -470,11 +470,16 @@
     var uploadHideTimer = null;
     function paintUploadProgress(ratio, done, total) {
         var pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-        if (uploadBarFill) uploadBarFill.style.width = pct + '%';
-        if (uploadPct) uploadPct.textContent = pct + '%';
+        // 字节都发完了，但服务端还在往对象存储推 / 生成副本：进度条改成不确定态，
+        // 否则停在 100% 会像卡死。这里的文案只说「在保存」，不说百分比。
+        var syncing = !!(total && done < total && ratio >= 1);
+        if (uploadBarFill) {
+            uploadBarFill.style.width = syncing ? '' : pct + '%';
+            uploadBarFill.classList.toggle('is-indeterminate', syncing);
+        }
+        if (uploadPct) uploadPct.textContent = syncing ? '同步中' : pct + '%';
         if (uploadCount) uploadCount.textContent = total ? done + '/' + total : '';
-        // 字节已传完但服务端仍在处理（压缩/水印/落盘）时，提示「正在处理」，避免进度条停在 100% 让人以为卡住
-        if (uploadTitle) uploadTitle.textContent = (total && done < total && ratio >= 1) ? '正在处理' : '正在上传';
+        if (uploadTitle) uploadTitle.textContent = syncing ? '正在保存到云端' : '正在上传';
     }
     function showUploadProgress(total) {
         if (!uploadMask) return;

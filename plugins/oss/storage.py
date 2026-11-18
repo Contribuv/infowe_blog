@@ -49,8 +49,10 @@ _REL_RE = re.compile(r"(?<![\w:/.])/uploads/[^\s\"'<>()\[\]]+")
 # 私有桶的站点代理路径
 _MEDIA_RE = re.compile(r"/oss-media/[^\s\"'<>()\[\]]+")
 _URL_RE = re.compile(r"https?://[^\s\"'<>()\[\]]+")
-# 迁移时跳过的目录：原图备份不对外，隐藏目录一律不传
-_SKIP_DIRS = {".originals", ".trash", ".tmp"}
+# 迁移时跳过的目录：原图备份不对外，隐藏目录一律不传；
+# avatar 是站点头像（`/uploads/avatar/`），属于后台品牌资源，不参与对象存储——
+# 它由设置页直接覆盖写入，进了 OSS 反而会出现「本地已换、远端还是旧图」。
+_SKIP_DIRS = {".originals", ".trash", ".tmp", "avatar"}
 
 
 # ── 配置 ──────────────────────────────────────────────
@@ -155,6 +157,8 @@ def rewrite_html(html: str) -> str:
             def _one(match: re.Match) -> str:
                 raw = match.group(0)
                 rel = unquote(raw.split("?", 1)[0])
+                if rel.startswith("/uploads/avatar/"):
+                    return raw  # 站点头像留在本地
                 return s3.presign(cfg, rel, expires)
 
             return _REL_RE.sub(_one, text)
@@ -166,6 +170,8 @@ def rewrite_html(html: str) -> str:
         def _one(match: re.Match) -> str:
             raw = match.group(0)
             rel = unquote(raw.split("?", 1)[0])
+            if rel.startswith("/uploads/avatar/"):
+                return raw  # 站点头像留在本地
             if not _local_exists(rel):
                 return raw
             return cfg.url_of(rel)
@@ -252,6 +258,8 @@ def _call_s3(cfg: s3.S3Config, func):
 
 def publish(local_path: str | Path, rel_url: str) -> str:
     """把本地文件额外传一份到 OSS，返回公网 URL；失败返回空串由调用方回退。"""
+    if str(rel_url or "").lstrip("/").startswith("uploads/avatar/"):
+        return ""  # 站点头像始终留在本地，不进对象存储
     if not is_enabled():
         return ""
     cfg = get_cfg()
@@ -517,6 +525,8 @@ def to_remote_text(text: str) -> tuple[str, int]:
         raw = match.group(0)
         rel_path, sep, query = raw.partition("?")
         rel = unquote(rel_path)
+        if rel.startswith("/uploads/avatar/"):
+            return raw  # 站点头像留在本地，不参与回写
         if not _local_exists(rel):
             # 私有模式下，本地没有但 OSS 上确实存在的对象也可以回写：
             # 代理路由会带签名回源并缓存，图片照样能显示。

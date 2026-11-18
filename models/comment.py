@@ -293,6 +293,7 @@ def save(
     from services import upload as _upload
 
     content = _upload.normalize_text(content)
+    _upload.sync_remote_urls(content)
     return db.insert(
         "INSERT INTO comments (post_id, project_id, parent_id, author, email, email_hash, "
         "website, content, status, is_private, notify, qq, ip_text, ip_location, is_ai, is_owner, "

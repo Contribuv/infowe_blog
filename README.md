@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.28-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.28)
+[![version](https://img.shields.io/badge/version-3.9.29-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.29)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,27 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.28**
+当前版本：**v3.9.29**
 
-> 最近一次更新完整展开；更早的 127 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 128 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.29
+
+- **上传立即返回，不再等对象存储**：本地落盘 + 校验完就把 URL 交给编辑器，远端上传和预览副本挪到后台。端到端（选文件 → 内容出现在编辑器）实测 1107ms → 162ms，服务端 `save()` 1393ms → 128ms
+- **一致性靠保存时兜底**：保存文章/评论时 `sync_remote_urls()` 只处理「后台还在传」和「传失败过」的文件——还在传就等它结束（最多 30 秒），失败过就补传一次；历史文件直接跳过。实测正常保存 0ms，上传后立刻保存 978ms，失败补传 832ms
+- **同一文件不会并发上传**：按 URL 的 `RLock` 包住发布与补传，后到的线程等前一个完成后再走 HEAD 命中
+- **进度条说清楚在等什么**：字节发完后切成不确定态流动动画，标题改「正在保存到云端」，百分比位置显示「同步中」，不再停在 100% 假装卡死
+- **头像目录不进对象存储**：`/uploads/avatar/` 在存量迁移、上传发布、页面地址改写、批量回写四处全部跳过。头像是站点品牌资源，进了 OSS 反而会出现「本地已换、远端还是旧图」
+- **OSS 插件页两处体验**：扫描中的纯文本换成小转环加载态；删除确认从原生 `prompt()` 换成自定义浮窗（输入「删除」才启用确认按钮，未勾选时改用行内提示）
+
+<details>
+<summary><b>历史版本（v3.9.28 及更早，共 128 个版本，点击展开）</b></summary>
 
 ### v3.9.28
 
 - **预览副本改后台生成**：960 宽 WebP 副本原来在上传请求里同步做（PIL 缩放 + 推对象存储，约 0.8 秒），请求被它拖住，进度条停在 100% 干等。现在挪到后台线程，**原图仍然同步传完才返回**，所以「请求返回 = 远端有原文件」的保证不变；副本晚到或失败只影响预览回落本地缩略图。231KB 图片服务端耗时 1.84s → 1.39s
 - **插入编辑器不再固定等 350ms**：实测 Vditor 的 input 处理是同步重建，连续插入 5 段总耗时 37ms，原来的 350ms/张完全是过度保守。改成零等待，只在源码区长度没增长时退化为 80ms 兜底（防止将来升级后改成异步渲染）。没有用 `requestAnimationFrame`——后台标签页会被浏览器暂停，反而卡住
 - **批量上传感知明显**：一次传 8 张图，光排队插入就从 2.8s 降到几乎为 0；端到端（选文件到内容出现在编辑器）实测 2.2s → 1.1s
-
-<details>
-<summary><b>历史版本（v3.9.27 及更早，共 127 个版本，点击展开）</b></summary>
 
 ### v3.9.27
 

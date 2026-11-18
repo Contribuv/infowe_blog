@@ -370,6 +370,8 @@ def save(form: dict, post_id: int | None = None) -> int:
     from services import upload as _upload
 
     content = _upload.normalize_text(content)
+    # 后台发布可能还没传完：保存前等它结束，缺失就补传，避免前台拿到死链
+    _upload.sync_remote_urls(content)
     read_time = max(1, word_count(strip_markdown(content)) // 200) if content else 3
     is_featured = 1 if str(form.get("is_featured", "")) == "1" else 0
 
@@ -390,6 +392,7 @@ def save(form: dict, post_id: int | None = None) -> int:
     status = normalize_status(str(form.get("status") or "published"))
     cover = (form.get("cover") or "").strip()
     cover = _upload.normalize_text(cover)
+    _upload.sync_remote_urls(cover)
 
     now = db.now()
     if post_id is not None:
