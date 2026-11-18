@@ -753,12 +753,26 @@ window.initComments = function (root) {
   }
 
   /* ── 5. 记住信息：点「修改」展开昵称等字段 ── */
+  var moreFields = byId('comment-more-fields');
+  var websiteField = byId('comment-website-field');
   if (editBtn && fields) {
     editBtn.addEventListener('click', function () {
       fields.hidden = false;
       if (remember) remember.hidden = true;
+      // 网址仍收着时，把入口一并放出来，否则「修改」后没地方填网址
+      if (moreFields && websiteField && websiteField.hidden) moreFields.hidden = false;
       var first = fields.querySelector('input');
       if (first) first.focus();
+    });
+  }
+
+  /* ── 5.1 网址默认收起：点「＋ 网址」再展开第三列 ── */
+  if (moreFields && websiteField) {
+    moreFields.addEventListener('click', function () {
+      websiteField.hidden = false;
+      moreFields.hidden = true;
+      var input = websiteField.querySelector('input');
+      if (input) input.focus();
     });
   }
 

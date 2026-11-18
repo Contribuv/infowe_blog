@@ -169,7 +169,7 @@
             {% else %}
             {% if commenter.author %}
             <div class="cmt-remember" id="comment-remember">
-                <span>已记住你的信息（{{ commenter.author }}{% if commenter.email %} · {{ commenter.email }}{% endif %}），直接输入内容即可评论</span>
+                <span>{{ commenter.author }}{% if commenter.email %} · {{ commenter.email }}{% endif %}</span>
                 <button type="button" id="comment-remember-edit">修改</button>
             </div>
             {% endif %}
@@ -194,7 +194,7 @@
                     <div class="cmt-suggest" id="cmt-email-suggest" hidden></div>
                 </div>
                 {# 网址：type=text 避免原生 url 校验把 www.demo.com 拦掉；缺协议时由 comments.js 下拉补全 http/https，后端再兜底补 https #}
-                <div class="cmt-field">
+                <div class="cmt-field" id="comment-website-field"{% if not commenter.website %} hidden{% endif %}>
                     <input type="text" name="website" id="comment-website" inputmode="url" autocomplete="off"
                            placeholder="网址（选填）" maxlength="200"
                            title="你的博客或个人主页地址"
@@ -202,6 +202,9 @@
                     <div class="cmt-suggest" id="cmt-website-suggest" hidden></div>
                 </div>
             </div>
+            {# 网址默认收起：多数访客不填，留一个轻量入口，点了才展开第三列 #}
+            <button type="button" class="cmt-more-fields" id="comment-more-fields"
+                    {%- if commenter.author or commenter.website %} hidden{% endif %}>＋ 网址（选填）</button>
             {% endif %}
             {# 已上传图片的缩略图条：上传后立即显示，可单独删除；正文保持纯文字，图片提交时合并 #}
             <div class="cmt-imgup-list" id="cmt-imgup-list" hidden></div>

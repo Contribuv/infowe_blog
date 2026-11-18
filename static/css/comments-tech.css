@@ -181,7 +181,12 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-box-body{padding:14px 16px}
 /* 卡内的 details 不再自带内距，统一由 .cmt-form 的 padding 收口 */
 .cmt-form .cmt-toggle{padding:0}
-.cmt-form .cmt-box[open] .cmt-toggle{padding-bottom:12px}
+/* 展开态的上下间距只给一方：这里再加 padding-bottom，会和
+   .cmt-box-body 的 padding-top 叠成 24px，summary 与输入框之间显得空一截 */
+.cmt-form .cmt-box[open] .cmt-toggle{padding-bottom:0}
+/* 内联回复展开后收起 summary：顶部已有「回复 @xx 取消」，
+   「收起评论框」这一行既重复又白占 33px；主评论框保留它作为唯一收起入口 */
+.cmt-form.is-inline .cmt-box[open] .cmt-toggle{display:none}
 /* 展开态：flex 列布局，间距只由 --cmt-gap 提供。
    选择器必须带 [open]：上面的 .cmt-box[open] .cmt-box-body{display:block} 是 (0,3,0)，
    不带 [open] 的两 class 选择器压不过，flex 与 gap 会静默失效。 */
@@ -231,6 +236,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 展开态内容区的 flex 布局见上方 .cmt-form .cmt-box[open] .cmt-box-body；
    tech 主题只加载本文件（不加载 comments.css），令牌必须在本文件定义 */
 .cmt-form .row{display:flex;gap:9px}
+/* 网址默认收起：露出一个轻量入口，展开后恢复三列（flex:1 自动均分）。
+   已记住身份或回填过网址时，模板直接不给这个按钮 */
+.cmt-form .cmt-more-fields{align-self:flex-start;padding:0;margin-top:-4px;border:0;background:none;font-size:12px;line-height:1.6;color:var(--c-text3);cursor:pointer}
+@media (hover:hover) and (pointer:fine){.cmt-form .cmt-more-fields:hover{color:var(--c-accent)}}
 /* 只作用于文本类输入框：复选框保留原生外观（否则勾选态没有对勾），由 .chk input 单独控制 */
 .cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
 .cmt-form textarea{min-height:76px;resize:vertical}
@@ -268,11 +277,17 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-hint{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px;color:var(--c-accent)}
 .cmt-hint button{font-size:11.5px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer}
 @media (hover:hover) and (pointer:fine){ .cmt-hint button:hover{color:var(--c-text2)} }
-.cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--c-hairline);font-size:12.5px;color:var(--c-text3)}
-.cmt-remember button{flex:none;font-size:11.5px;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
-/* 博主身份条用徽章同款蓝色左边框+头像描边：语义是「将以博主身份发言」的状态警示，与普通信息条区分 */
-.cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--bg-subtle);border:1px solid var(--c-hairline);font-size:13px;color:var(--c-text);border-left:3px solid rgba(107,156,245,.55)}
-.cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px rgba(107,156,245,.35)}
+/* 游客「已记住」条：与上方博主身份条同一套轻量语言——
+   只留「昵称 · 邮箱」摘要和右侧「修改」，去掉底色、边框与那句解释文案。
+   高度 40px → 25px，不再占掉一整行视觉重量。 */
+.cmt-remember{display:flex;align-items:center;gap:8px;padding:2px 0;margin-bottom:0;border-radius:0;background:none;border:0;font-size:12.5px;color:var(--c-text3)}
+.cmt-remember button{flex:none;margin-left:auto;font-size:12px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
+@media (hover:hover) and (pointer:fine){ .cmt-remember button:hover{color:var(--c-accent)} }
+/* 博主身份条：保留头像作为「以谁的身份」的锚点，但降为辅助信息——
+   去掉底色、边框和头像光环，高度从 47px 收到 24px 左右，
+   不再和输入框抢视线；提交后的「博主」徽章仍会标出来。 */
+.cmt-admin{display:flex;align-items:center;gap:6px;padding:2px 0;margin-bottom:0;border-radius:0;background:none;border:0;font-size:12.5px;color:var(--c-text3)}
+.cmt-admin-avatar{width:20px;height:20px;border-radius:50%;object-fit:cover;flex:none;box-shadow:none}
 /* 私密评论勾选后直接显示提示：移动端无 hover，title 提示不可见 */
 .cmt-form .chk:has(#comment-private:checked)::after{content:"仅博主可见";font-size:11px;color:var(--c-text3)}
 
@@ -689,9 +704,14 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt { --c-radius: var(--card-radius, 10px); }
 .cmt-replies { border-radius: var(--card-radius, 10px); }
 
-/* 评论楼层与表单卡直接跟随全站圆角与阴影：同屏的「相关推荐」卡片用
-   --card-shadow，评论区若不跟上，边缘会显得比上方卡片平一档 */
-.cmt-thread, .cmt-form {
+/* 评论楼层跟随全站圆角与阴影；表单卡只留圆角，不再套阴影——
+   表单是嵌在楼层里的内容，透明底 + 一层阴影会在回复区里多出一个「框」，
+   看起来像浮着的一块玻璃。 */
+.cmt-thread {
   border-radius: var(--card-radius, 10px);
   box-shadow: var(--card-shadow, none);
+}
+.cmt-form {
+  border-radius: var(--card-radius, 10px);
+  box-shadow: none;
 }

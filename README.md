@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.26-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.26)
+[![version](https://img.shields.io/badge/version-3.9.27-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.27)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.26**
+当前版本：**v3.9.27**
 
-> 最近一次更新完整展开；更早的 125 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 126 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.27
+
+- **评论表单不再有「浮起来」的框**：楼层卡和表单卡共用同一条 `box-shadow`，而表单是透明底，最后只剩一圈阴影，看起来像蒙了层玻璃。现在楼层卡保留阴影，表单卡单独去掉
+- **展开时间距只给一方**：「收起评论框」的下内距和内容区上内距都是 12px，叠成 24px；去掉前者后回到 12px
+- **博主身份条降为辅助信息**：47px 的实底条 + 3px 蓝色左边框 + 头像光环，压成 25px 一行——保留 20px 头像作为「以谁的身份」的锚点，去掉底色、边框和光环
+- **游客「已记住」条同样瘦身**：40px 的提示条压成 25px 一行「昵称 · 邮箱」，去掉「直接输入内容即可评论」这句解释，与博主身份条同一套语言
+- **网址输入默认收起**：未记住的游客只看到昵称 + 邮箱两列，网址收进「＋ 网址（选填）」，点了才展开第三列；已记住或填过网址时按原样显示
+- **内联回复不再显示「收起评论框」**：顶部已有「回复 @xx 取消」，展开态再留一行 summary 既重复又白占 33px；主评论框保留它作为唯一收起入口
+
+<details>
+<summary><b>历史版本（v3.9.26 及更早，共 126 个版本，点击展开）</b></summary>
 
 ### v3.9.26
 
@@ -936,9 +948,6 @@ chown -R www:www var
 - **签名在请求时现算，不写进正文**：DOM 里只放稳定中转地址，浏览器真正来取时才 302 并现场签名，页面开一小时也不会失效；落库前 `normalize_text()` 还会把中转地址剥回 `/uploads/...`，双保险
 - **视频签名放宽到 1 小时**：点播放才加载（`preload="none"`），签名窗口覆盖一整集，避免长视频播到一半断流
 - **「预览文章」接口同步改写**：返回的 HTML 里图片、视频、附件全部走中转，预览效果与发布后一致；远端对象缺失或权限变化时，播放器/图片报错会自动退回本地副本
-
-<details>
-<summary><b>历史版本（v3.9.25 及更早，共 125 个版本，点击展开）</b></summary>
 
 ### v3.9.25
 
