@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.29-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.29)
+[![version](https://img.shields.io/badge/version-3.9.30-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.30)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.29**
+当前版本：**v3.9.30**
 
-> 最近一次更新完整展开；更早的 128 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 129 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.30
+
+- **删除 OSS 孤儿对象有进度了**：原来点「删除选中」只发一个 POST，服务端逐个 `s3.delete`（每个 500~800ms），50 个要等 40 秒且毫无反馈。现在前端每批 5 个调用同一接口，进度条实时显示 `X / Y（N%）`，**成功的行直接从表格消失**，跳过的（仍被引用）和失败的保留在列表里可重试
+- **删除期间禁用扫描**：避免中途重新扫描把列表替换掉、进度对不上；结束后自动恢复
+- **中途失败可续**：进度停在当前位置，提示「已处理 X / Y，未处理的可重新勾选后再删」，按钮恢复可用
+
+<details>
+<summary><b>历史版本（v3.9.29 及更早，共 129 个版本，点击展开）</b></summary>
 
 ### v3.9.29
 
@@ -937,9 +946,6 @@ chown -R www:www var
 - **进度条说清楚在等什么**：字节发完后切成不确定态流动动画，标题改「正在保存到云端」，百分比位置显示「同步中」，不再停在 100% 假装卡死
 - **头像目录不进对象存储**：`/uploads/avatar/` 在存量迁移、上传发布、页面地址改写、批量回写四处全部跳过。头像是站点品牌资源，进了 OSS 反而会出现「本地已换、远端还是旧图」
 - **OSS 插件页两处体验**：扫描中的纯文本换成小转环加载态；删除确认从原生 `prompt()` 换成自定义浮窗（输入「删除」才启用确认按钮，未勾选时改用行内提示）
-
-<details>
-<summary><b>历史版本（v3.9.28 及更早，共 128 个版本，点击展开）</b></summary>
 
 ### v3.9.28
 

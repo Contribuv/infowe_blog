@@ -166,6 +166,12 @@
             <button type="button" class="btn btn-secondary" id="ossOrphanScan">扫描 OSS 孤儿</button>
             <button type="button" class="btn btn-danger" id="ossOrphanDelete" disabled>删除选中</button>
         </div>
+        <div id="ossDeleteProgress" style="display:none;margin:0 0 12px;">
+            <div style="height:8px;border-radius:999px;background:var(--bg-subtle);overflow:hidden;">
+                <div id="ossDeleteBar" style="height:100%;width:0;background:var(--accent);transition:width .2s;"></div>
+            </div>
+            <p class="form-hint" id="ossDeleteText" style="margin:8px 0 0;"></p>
+        </div>
         <div id="ossOrphanResult"></div>
     </div>
 </div>
@@ -305,6 +311,7 @@
 
   orphanScanBtn.addEventListener('click', function () {
     orphanScanBtn.disabled = true;
+    deleteProgressBox.style.display = 'none';   // 清掉上一次的删除汇总，避免和新扫描混在一起
     orphanBox.innerHTML = '<div class="oss-scan-loading"><span class="oss-spinner" aria-hidden="true"></span>正在扫描（只查本插件上传过的对象）…</div>';
     post(orphanScanUrl, {}).then(function (res) {
       var data = res.data || {};
@@ -391,25 +398,78 @@
     if (event.target === deleteDialog) closeDeleteDialog();  // 点遮罩关闭
   });
 
+  var deleteProgressBox = document.getElementById('ossDeleteProgress');
+  var deleteBar = document.getElementById('ossDeleteBar');
+  var deleteText = document.getElementById('ossDeleteText');
+  var DELETE_BATCH = 5;
+
+  function paintDeleteProgress(done, total, note) {
+    deleteProgressBox.style.display = 'block';
+    var pct = total ? Math.round(done / total * 100) : 0;
+    deleteBar.style.width = pct + '%';
+    if (note) deleteText.textContent = note;
+    else deleteText.textContent = '正在删除 ' + done + ' / ' + total + '（' + pct + '%）';
+  }
+
+  function removeDeletedRows(keys) {
+    if (!keys.length) return;
+    var gone = new Set(keys);
+    Array.prototype.forEach.call(orphanBox.querySelectorAll('input.oss-orphan-check'), function (cb) {
+      if (gone.has(cb.value)) {
+        var tr = cb.closest('tr');
+        if (tr) tr.remove();
+      }
+    });
+    var left = orphanBox.querySelectorAll('input.oss-orphan-check').length;
+    if (!left) {
+      orphanBox.textContent = '列表已清空，可重新扫描确认。';
+    }
+  }
+
   function runDelete(keys) {
+    var total = keys.length;
+    var done = 0, deleted = 0, skipped = 0, failed = 0;
+    orphanScanBtn.disabled = true;   // 删除期间不许重新扫描，否则列表会被替换
     orphanDeleteBtn.disabled = true;
-    var body = new FormData();
-    keys.forEach(function (key) { body.append('keys[]', key); });
-    fetch(orphanDeleteUrl, { method: 'POST', body: body, credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.error) { throw new Error(data.error); }
-        var text = '已删除 ' + (data.deleted || 0) + ' 个';
-        if ((data.skipped || []).length) {
-          text += '，跳过 ' + data.skipped.length + ' 个（仍被引用或不在前缀内）';
-        }
-        if ((data.failed || []).length) {
-          text += '，失败 ' + data.failed.length + ' 个';
-        }
-        orphanBox.textContent = text + '。可重新扫描确认。';
-      })
-      .catch(function (err) { orphanBox.textContent = '删除失败：' + err.message; })
-      .finally(function () { orphanDeleteBtn.disabled = false; });
+    paintDeleteProgress(0, total);
+
+    function step() {
+      if (done >= total) {
+        var summary = '删除完成：已删 ' + deleted + ' 个';
+        if (skipped) summary += '，跳过 ' + skipped + ' 个（仍被引用）';
+        if (failed) summary += '，失败 ' + failed + ' 个（保留在列表中，可重试）';
+        paintDeleteProgress(done, total, summary);
+        orphanScanBtn.disabled = false;
+        orphanDeleteBtn.disabled = orphanSelected().length === 0;
+        return;
+      }
+      var chunk = keys.slice(done, done + DELETE_BATCH);
+      var body = new FormData();
+      chunk.forEach(function (key) { body.append('keys[]', key); });
+      fetch(orphanDeleteUrl, { method: 'POST', body: body, credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) { throw new Error(data.error); }
+          var skipKeys = new Set((data.skipped || []).map(function (x) { return x.key; }));
+          var failKeys = new Set((data.failed || []).map(function (x) { return x.key; }));
+          // 服务端只回计数与明细，成功的 key 需要自己从本批里减掉
+          var okKeys = chunk.filter(function (k) { return !skipKeys.has(k) && !failKeys.has(k); });
+          deleted += okKeys.length;
+          skipped += skipKeys.size;
+          failed += failKeys.size;
+          removeDeletedRows(okKeys);
+          done += chunk.length;
+          paintDeleteProgress(done, total);
+          return step();
+        })
+        .catch(function (err) {
+          paintDeleteProgress(done, total,
+            '删除中断：' + err.message + '。已处理 ' + done + ' / ' + total + '，未处理的可重新勾选后再删。');
+          orphanScanBtn.disabled = false;
+          orphanDeleteBtn.disabled = orphanSelected().length === 0;
+        });
+    }
+    step();
   }
 
   deleteConfirmBtn.addEventListener('click', function () {
