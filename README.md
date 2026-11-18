@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.30-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.30)
+[![version](https://img.shields.io/badge/version-3.9.31-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.31)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,23 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.30**
+当前版本：**v3.9.31**
 
-> 最近一次更新完整展开；更早的 129 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 130 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.31
+
+- **修复部分删除后「删除选中」无法再次点击**：上一版删除完成后按当前勾选数把按钮禁用了，但之后再次勾选没有监听器去更新状态，按钮就一直灰着。现在把 checkbox 的 `change` 委托到列表容器上，勾选、取消、全选都会同步按钮；扫描重建表格、删除移除行都不会丢监听器
+- **全选也走委托**：不再在扫描回调里单独绑定，避免每次扫描重复挂监听器，也顺手修掉「全选后按钮仍不可点」
+
+<details>
+<summary><b>历史版本（v3.9.30 及更早，共 130 个版本，点击展开）</b></summary>
 
 ### v3.9.30
 
 - **删除 OSS 孤儿对象有进度了**：原来点「删除选中」只发一个 POST，服务端逐个 `s3.delete`（每个 500~800ms），50 个要等 40 秒且毫无反馈。现在前端每批 5 个调用同一接口，进度条实时显示 `X / Y（N%）`，**成功的行直接从表格消失**，跳过的（仍被引用）和失败的保留在列表里可重试
 - **删除期间禁用扫描**：避免中途重新扫描把列表替换掉、进度对不上；结束后自动恢复
 - **中途失败可续**：进度停在当前位置，提示「已处理 X / Y，未处理的可重新勾选后再删」，按钮恢复可用
-
-<details>
-<summary><b>历史版本（v3.9.29 及更早，共 129 个版本，点击展开）</b></summary>
 
 ### v3.9.29
 
