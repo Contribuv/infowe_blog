@@ -7,6 +7,7 @@ import logging
 import re
 import secrets
 import shutil
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -552,7 +553,7 @@ def save(
     # 数据库里只存这一种形式，页面输出时再按当前策略换成直链或代理地址，
     # 这样切换策略不需要回写内容。
     publish(dest, rel_url)
-    _store_preview(dest, rel_url)
+    defer_preview(dest, rel_url)
     return rel_url, ""
 
 
@@ -652,6 +653,36 @@ def _store_preview(path: Path, rel_url: str) -> None:
     if thumb is None:
         return
     publish_preview(thumb, rel_url)
+
+
+def defer_preview(path: Path, rel_url: str) -> None:
+    """把预览副本的生成与上传放到后台线程。
+
+    副本只是为了让编辑器预览走对象存储时还能秒开，晚到或失败都不影响上传结果：
+    预览中转发现远端没有副本，会自动回落本地缩略图。
+    原图仍然同步传完才返回，所以「请求返回 = 远端一定有原文件」这个保证不变。
+    """
+    if not remote_active():
+        return
+    # 线程里要用 settings/插件配置，必须带上应用上下文；save() 通常在请求内调用
+    try:
+        from flask import current_app, has_app_context
+
+        app = current_app._get_current_object() if has_app_context() else None
+    except Exception:  # noqa: BLE001
+        app = None
+
+    def run() -> None:
+        try:
+            if app is not None:
+                with app.app_context():
+                    _store_preview(path, rel_url)
+            else:
+                _store_preview(path, rel_url)
+        except Exception:  # noqa: BLE001
+            logger.warning("预览副本后台生成失败：%s", rel_url, exc_info=True)
+
+    threading.Thread(target=run, daemon=True, name="upload-preview").start()
 
 
 def image_dims(rel_url: str) -> tuple[int, int] | None:

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.27-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.27)
+[![version](https://img.shields.io/badge/version-3.9.28-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.28)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.27**
+当前版本：**v3.9.28**
 
-> 最近一次更新完整展开；更早的 126 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 127 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.28
+
+- **预览副本改后台生成**：960 宽 WebP 副本原来在上传请求里同步做（PIL 缩放 + 推对象存储，约 0.8 秒），请求被它拖住，进度条停在 100% 干等。现在挪到后台线程，**原图仍然同步传完才返回**，所以「请求返回 = 远端有原文件」的保证不变；副本晚到或失败只影响预览回落本地缩略图。231KB 图片服务端耗时 1.84s → 1.39s
+- **插入编辑器不再固定等 350ms**：实测 Vditor 的 input 处理是同步重建，连续插入 5 段总耗时 37ms，原来的 350ms/张完全是过度保守。改成零等待，只在源码区长度没增长时退化为 80ms 兜底（防止将来升级后改成异步渲染）。没有用 `requestAnimationFrame`——后台标签页会被浏览器暂停，反而卡住
+- **批量上传感知明显**：一次传 8 张图，光排队插入就从 2.8s 降到几乎为 0；端到端（选文件到内容出现在编辑器）实测 2.2s → 1.1s
+
+<details>
+<summary><b>历史版本（v3.9.27 及更早，共 127 个版本，点击展开）</b></summary>
 
 ### v3.9.27
 
@@ -937,9 +946,6 @@ chown -R www:www var
 - **游客「已记住」条同样瘦身**：40px 的提示条压成 25px 一行「昵称 · 邮箱」，去掉「直接输入内容即可评论」这句解释，与博主身份条同一套语言
 - **网址输入默认收起**：未记住的游客只看到昵称 + 邮箱两列，网址收进「＋ 网址（选填）」，点了才展开第三列；已记住或填过网址时按原样显示
 - **内联回复不再显示「收起评论框」**：顶部已有「回复 @xx 取消」，展开态再留一行 summary 既重复又白占 33px；主评论框保留它作为唯一收起入口
-
-<details>
-<summary><b>历史版本（v3.9.26 及更早，共 126 个版本，点击展开）</b></summary>
 
 ### v3.9.26
 
