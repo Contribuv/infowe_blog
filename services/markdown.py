@@ -85,6 +85,132 @@ _ADMONITION_CLOSE_RE = re.compile(r"^[ \t]{0,3}:::[ \t]*$")
 _FENCE_OPEN_RE = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})")
 
 
+_POST_EMBED_RE = re.compile(r"\[\[post:\s*(\d{1,12})(?:\s*\|\s*([^\]\n]{1,80}))?\]\]", re.I)
+_PROJECT_EMBED_RE = re.compile(r"\[\[projects?:\s*(\d{1,12})(?:\s*\|\s*([^\]\n]{1,80}))?\]\]", re.I)
+_FENCE_BLOCK_RE = re.compile(r"(?ms)^(?:```|~~~)[^\n]*\n.*?^(?:```|~~~)[ \t]*$")
+
+
+def _post_embed_html(post_id: int, alias: str = "") -> str:
+    """生成一张站内文章卡片；查不到或未发布时降级成普通链接。"""
+    label = alias or f"文章 #{post_id}"
+    try:
+        from models import Post
+
+        row = Post.get(post_id)
+    except Exception:  # noqa: BLE001
+        row = None
+    if not row or str(row.get("status") or "") == "draft":
+        return f'<a class="post-embed post-embed--missing" href="/post/{post_id}">{html_lib.escape(label)}</a>'
+
+    title = alias or str(row.get("title") or label)
+    excerpt = str(row.get("excerpt") or "").strip()
+    if not excerpt:
+        from models.base import strip_markdown
+
+        excerpt = strip_markdown(str(row.get("content") or ""))
+    excerpt = excerpt.strip()
+    if len(excerpt) > 120:
+        excerpt = excerpt[:120].rstrip() + "…"
+    excerpt_html = (
+        f'<span class="post-embed-excerpt">{html_lib.escape(excerpt)}</span>' if excerpt else ""
+    )
+    cover = str(row.get("cover") or "").strip()
+    date = str(row.get("created_at") or "")[:10]
+    minutes = int(row.get("read_time") or 3)
+    meta = " · ".join(part for part in (date, f"{minutes} 分钟阅读") if part)
+    cover_html = (
+        '<span class="post-embed-cover">'
+        f'<img src="{html_lib.escape(cover, quote=True)}" alt="" loading="lazy">'
+        "</span>"
+        if cover
+        else ""
+    )
+    return (
+        '<div class="post-embed">'
+        f'<a class="post-embed-link" href="/post/{post_id}">'
+        f"{cover_html}"
+        '<span class="post-embed-main">'
+        '<span class="post-embed-kicker">引用文章</span>'
+        f'<span class="post-embed-title">{html_lib.escape(title)}</span>'
+        f"{excerpt_html}"
+        f'<span class="post-embed-meta">{html_lib.escape(meta)}</span>'
+        "</span></a></div>"
+    )
+
+
+def _project_embed_html(project_id: int, alias: str = "") -> str:
+    """项目卡片：与文章卡片同一套外壳，只是没有封面、kicker 换成「引用项目」。"""
+    label = alias or f"项目 #{project_id}"
+    try:
+        from models import Project
+
+        row = Project.get(project_id)
+    except Exception:  # noqa: BLE001
+        row = None
+    if not row:
+        return f'<a class="post-embed post-embed--missing" href="/projects/{project_id}">{html_lib.escape(label)}</a>'
+
+    title = alias or str(row.get("name") or label)
+    desc = str(row.get("description") or "").strip()
+    if len(desc) > 120:
+        desc = desc[:120].rstrip() + "…"
+    desc_html = (
+        f'<span class="post-embed-excerpt">{html_lib.escape(desc)}</span>' if desc else ""
+    )
+    parts: list[str] = []
+    lang_names: list[str] = []
+    for lang in list(row.get("languages") or [])[:2]:
+        # GitHub 语言项是 {name, bytes, percent}，本地手填的可能是纯字符串
+        name = str(lang.get("name") or "").strip() if isinstance(lang, dict) else str(lang).strip()
+        if name:
+            lang_names.append(name)
+    if lang_names:
+        parts.append(" / ".join(lang_names))
+    stars = int(row.get("stars") or 0)
+    if stars:
+        parts.append(f"★ {stars}")
+    meta = " · ".join(parts)
+    meta_html = f'<span class="post-embed-meta">{html_lib.escape(meta)}</span>' if meta else ""
+    return (
+        '<div class="post-embed post-embed--project">'
+        f'<a class="post-embed-link" href="/projects/{project_id}">'
+        '<span class="post-embed-main">'
+        '<span class="post-embed-kicker">引用项目</span>'
+        f'<span class="post-embed-title">{html_lib.escape(title)}</span>'
+        f"{desc_html}{meta_html}"
+        "</span></a></div>"
+    )
+
+
+def _expand_post_embeds(text: str) -> str:
+    """把 [[post:107]] / [[projects:3]] 换成站内卡片。
+
+    围栏代码块里的同名文本保持原样；卡片是块级 HTML，前后补空行，
+    否则 Python-Markdown 会把它当一个段落里的内联标签。
+    """
+    if "[[" not in text:
+        return text
+
+    def _sub(chunk: str) -> str:
+        def _post(m: re.Match) -> str:
+            return "\n\n" + _post_embed_html(int(m.group(1)), (m.group(2) or "").strip()) + "\n\n"
+
+        def _project(m: re.Match) -> str:
+            return "\n\n" + _project_embed_html(int(m.group(1)), (m.group(2) or "").strip()) + "\n\n"
+
+        chunk = _POST_EMBED_RE.sub(_post, chunk)
+        return _PROJECT_EMBED_RE.sub(_project, chunk)
+
+    out: list[str] = []
+    pos = 0
+    for fence in _FENCE_BLOCK_RE.finditer(text):
+        out.append(_sub(text[pos:fence.start()]))
+        out.append(fence.group(0))
+        pos = fence.end()
+    out.append(_sub(text[pos:]))
+    return "".join(out)
+
+
 def _convert_colon_admonitions(text: str) -> str:
     """把 ::: 提示框转成 Python-Markdown 的 !!! 语法。
 
@@ -207,6 +333,7 @@ def render_post(content: str) -> tuple[str, str]:
         return "", ""
     content = re.sub(r"^---.*?---\s*", "", content, count=1, flags=re.S)
     content = _convert_colon_admonitions(content)
+    content = _expand_post_embeds(content)
     content = re.sub(r"<(https?://[^>\s]+)>", r"[\1](\1)", content)
     content = content.replace("[x]", '<i class="ck ck-done">✓</i> ').replace(
         "[ ]", '<i class="ck ck-todo">☐</i> '

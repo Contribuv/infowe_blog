@@ -107,6 +107,8 @@
                 </div>
                 <div class="preview-box">
                     <p class="text-muted">编辑器为所见即所得模式，顶部工具栏支持上传图片、视频、音频与附件，粘贴图片自动上传。</p>
+                    <p class="text-muted">引用站内文章：正文里写 <code>[[post:107]]</code>，保存后渲染成文章卡片；<code>[[post:107|自定义标题]]</code> 可替换卡片标题。</p>
+                    <p class="text-muted">引用项目：<code>[[projects:3]]</code>，同样支持 <code>[[projects:3|别名]]</code>。</p>
                 </div>
             </div>
         </aside>
@@ -680,6 +682,119 @@
             for (var i = 0; i < items.length; i++) maybePreviewAsset(items[i]);
         }
         var EMPTY = /^(?:|null|none|undefined|false|为空|为空null|空)$/i;
+        // -- 预览区里的 [[post:107]] / [[projects:3]]：Vditor 不认这个语法，渲染完在这里换成卡片 --
+        var EMBED_INFO_URL = "{{ url_for('admin_post_embed_info') }}";
+        var embedInfoCache = {};    // "kind:id" -> {…} | null（null = 不存在/草稿）
+        var embedQueue = {};        // 待批量请求的 "kind:id"
+        var embedTimer = null;
+
+        function buildEmbedCard(kind, targetId, alias, info) {
+            var base = kind === 'project' ? '/projects/' : '/post/';
+            var fallback = (kind === 'project' ? '项目 #' : '文章 #') + targetId;
+            if (!info) {
+                var miss = document.createElement('a');
+                miss.className = 'post-embed post-embed--missing';
+                miss.href = base + targetId;
+                miss.target = '_blank';
+                miss.rel = 'noopener';
+                miss.textContent = alias || fallback;
+                return miss;
+            }
+            var wrap = document.createElement('div');
+            wrap.className = kind === 'project' ? 'post-embed post-embed--project' : 'post-embed';
+            var a = document.createElement('a');
+            a.className = 'post-embed-link';
+            a.href = base + targetId;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            if (info.cover) {
+                var cover = document.createElement('span');
+                cover.className = 'post-embed-cover';
+                var img = document.createElement('img');
+                img.src = info.cover;
+                img.alt = '';
+                img.loading = 'lazy';
+                cover.appendChild(img);
+                a.appendChild(cover);
+            }
+            var main = document.createElement('span');
+            main.className = 'post-embed-main';
+            var kicker = document.createElement('span');
+            kicker.className = 'post-embed-kicker';
+            kicker.textContent = kind === 'project' ? '引用项目' : '引用文章';
+            var title = document.createElement('span');
+            title.className = 'post-embed-title';
+            title.textContent = alias || info.title;
+            main.appendChild(kicker);
+            main.appendChild(title);
+            if (info.excerpt) {
+                var ex = document.createElement('span');
+                ex.className = 'post-embed-excerpt';
+                ex.textContent = info.excerpt;
+                main.appendChild(ex);
+            }
+            if (info.meta) {
+                var meta = document.createElement('span');
+                meta.className = 'post-embed-meta';
+                meta.textContent = info.meta;
+                main.appendChild(meta);
+            }
+            a.appendChild(main);
+            wrap.appendChild(a);
+            return wrap;
+        }
+
+        function queueEmbed(kind, targetId) {
+            var key = kind + ':' + targetId;
+            embedQueue[key] = true;
+            if (embedTimer) return;
+            embedTimer = setTimeout(function () {
+                embedTimer = null;
+                var keys = Object.keys(embedQueue);
+                embedQueue = {};
+                if (!keys.length) return;
+                // 文章与项目分开批量请求，缓存键带类型前缀
+                var groups = {};
+                keys.forEach(function (k) {
+                    var parts = k.split(':');
+                    (groups[parts[0]] = groups[parts[0]] || []).push(parts[1]);
+                });
+                var tasks = Object.keys(groups).map(function (kind) {
+                    var ids = groups[kind];
+                    return fetch(EMBED_INFO_URL + '?kind=' + kind + '&ids=' + ids.join(','), { credentials: 'same-origin' })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            ids.forEach(function (id) { embedInfoCache[kind + ':' + id] = data[id] || null; });
+                        })
+                        .catch(function () {
+                            ids.forEach(function (id) { embedInfoCache[kind + ':' + id] = null; });
+                        });
+                });
+                Promise.all(tasks).then(function () {
+                    // 数据回来后再扫一遍，把刚才跳过的占位段落换成卡片
+                    var previews = root.querySelectorAll('.vditor-preview');
+                    for (var i = 0; i < previews.length; i++) applyPostEmbeds(previews[i]);
+                });
+            }, 60);
+        }
+
+        var EMBED_PARAGRAPH = /^\[\[(post|projects?):\s*(\d+)(?:\s*\|\s*([^\]\n]{1,80}))?\]\]$/i;
+        function applyPostEmbeds(scope) {
+            var paras = scope.querySelectorAll('p');
+            for (var i = 0; i < paras.length; i++) {
+                var p = paras[i];
+                if (p.querySelector('.post-embed')) continue;
+                var match = EMBED_PARAGRAPH.exec((p.textContent || '').trim());
+                if (!match) continue;
+                var kind = /^post$/i.test(match[1]) ? 'post' : 'project';
+                var targetId = match[2];
+                var alias = (match[3] || '').trim();
+                var cacheKey = kind + ':' + targetId;
+                if (!(cacheKey in embedInfoCache)) { queueEmbed(kind, targetId); continue; }
+                p.parentNode.replaceChild(buildEmbedCard(kind, targetId, alias, embedInfoCache[cacheKey]), p);
+            }
+        }
+
         function captionOf(img) {
             var alt = (img.getAttribute('alt') || '').trim();
             return alt && !EMPTY.test(alt) ? alt : '';
@@ -767,6 +882,7 @@
                 var previews = root.querySelectorAll('.vditor-preview');
                 for (var i = 0; i < previews.length; i++) {
                     applyPreviewAssets(previews[i]);
+                    applyPostEmbeds(previews[i]);
                     decorate(previews[i]);
                     decorateAdmonitions(previews[i]);
                 }
@@ -798,6 +914,7 @@
         var previews = root.querySelectorAll('.vditor-preview');
         for (var i = 0; i < previews.length; i++) {
             applyPreviewAssets(previews[i]);
+            applyPostEmbeds(previews[i]);
             decorate(previews[i]);
             decorateAdmonitions(previews[i]);
         }
@@ -827,7 +944,6 @@
             'upload', 'table', '|',
             'undo', 'redo', '|',
             'fullscreen', 'edit-mode',
-            { name: 'more', toolbar: ['both', 'code-theme', 'content-theme', 'export', 'outline', 'preview', 'devtools', 'info', 'help'] },
         ],
         toolbarConfig: { pin: true },
         upload: {

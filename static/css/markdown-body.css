@@ -378,3 +378,55 @@
 .markdown-body a[href$=".js"]   { --doc-icon: url(../icons/js.svg); }
 .markdown-body a[href$=".json"] { --doc-icon: url(../icons/json.svg); }
 
+
+
+/* ── 站内文章引用卡片：[[post:107]] / [[projects:3]] ──
+   正文本身就在白卡里，引用卡片再用白色会和正文糊成一片：
+   这里改用「卡内嵌入层」的 --inset-bg（亮色比卡面暗一档、深色亮一档），
+   不用描边和阴影，靠底色区分；悬停只加深一档，不位移、不加边框。 */
+.markdown-body .post-embed { margin: 0 0 16px; }
+.markdown-body .post-embed-link {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: var(--card-radius, 10px);
+  background: var(--inset-bg, var(--mb-code-bg));
+  box-shadow: none;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color .18s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .markdown-body .post-embed-link:hover {
+    background: var(--inset-bg-strong, var(--mb-inline-code));
+  }
+}
+.markdown-body .post-embed-cover {
+  flex: none;
+  width: 108px;
+  height: 76px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--mb-inline-code);
+}
+.markdown-body .post-embed-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.markdown-body .post-embed-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.markdown-body .post-embed-kicker { font-size: 11px; letter-spacing: .04em; color: var(--mb-fg-muted); }
+.markdown-body .post-embed-title { font-size: 15px; font-weight: 600; line-height: 1.45; color: var(--mb-fg); }
+.markdown-body .post-embed-excerpt {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--mb-fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.markdown-body .post-embed-meta { font-size: 12px; color: var(--mb-fg-muted); }
+.markdown-body .post-embed--missing { color: var(--mb-link); text-decoration: underline; }
+@media (max-width: 640px) {
+  .markdown-body .post-embed-cover { width: 76px; height: 76px; }
+  .markdown-body .post-embed-kicker { display: none; }
+}

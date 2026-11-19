@@ -1790,6 +1790,15 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   font-size: 12.5px;
   font-weight: 500;
 }
+/* 悬停再深一档：常态底色只有 6%，再叠一层 6% 在亮色下几乎看不出，
+   这里直接取 13%，深浅两套都够明显；文字同时提亮到主色。
+   必须带上 :not(.tech-btn-primary) 才压得过后面 4761 行的通用 hover 规则 */
+@media (hover: hover) and (pointer: fine) {
+  .tech-post-footer-card .tech-btn:not(.tech-btn-primary):hover {
+    background: color-mix(in srgb, var(--text) 13%, transparent);
+    color: var(--text);
+  }
+}
 .tech-post-footer-card .tech-btn svg { width: 13px; height: 13px; }
 .tech-post-footer-card .tech-license { font-size: 12px; }
 @media (max-width: 768px) {

@@ -39,7 +39,9 @@ def slugify(text: str, fallback: str = "untitled") -> str:
 
 
 def strip_markdown(text: str) -> str:
-    plain = re.sub(r"<[^>]+>", "", text or "")
+    # 文章/项目嵌入语法是块级指令，不该出现在摘要与字数统计里
+    plain = re.sub(r"\[\[(?:post|projects?):\s*\d+[^\]]*\]\]", "", text or "", flags=re.I)
+    plain = re.sub(r"<[^>]+>", "", plain)
     plain = re.sub(r"[#*`\[\]()!>|~\-]", "", plain)
     plain = re.sub(r"\s+", " ", plain)
     return plain.strip()

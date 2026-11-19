@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.31-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.31)
+[![version](https://img.shields.io/badge/version-3.9.32-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.32)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,17 +925,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.31**
+当前版本：**v3.9.32**
 
-> 最近一次更新完整展开；更早的 130 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 131 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.32
+
+- **新增站内引用卡片**：正文写 `[[post:107]]` 或 `[[projects:3]]`，保存后渲染成文章 / 项目卡片；支持 `[[post:107|自定义标题]]`。代码块里的同名文本保持原样，引用语法不会进摘要与字数统计
+- **卡片与正文区分**：文章正文本身就在白卡里，引用卡片改用「卡内嵌入层」的 `--inset-bg`（亮色比卡面暗一档、深色亮一档），不再用描边和阴影；悬停只加深一档底色，不位移、不出彩色边框
+- **编辑器实时渲染**：Vditor 不认这个语法，前台保存后才生效，所以后台预览区做了 DOM 替换——批量请求 `embed-info` 接口拿标题/摘要/封面，渲染成和正文一致的卡片，悬停行为也同步
+- **文末操作按钮亮色悬停加深**：「分享/复制/返回」常态是 `text 6%` 的淡底，悬停只叠到 `--hover-bg`，亮色下几乎看不出；改为直接 `text 13%` 并把文字提到主色。上一版被通用 hover 规则压掉，这次提高特异性
+- **去掉编辑器工具栏「更多」**：里面 9 项（主题切换、devtools、info、help 等）多数与站点重复或写作时用不到，删掉后工具栏只留常用操作
+
+<details>
+<summary><b>历史版本（v3.9.31 及更早，共 131 个版本，点击展开）</b></summary>
 
 ### v3.9.31
 
 - **修复部分删除后「删除选中」无法再次点击**：上一版删除完成后按当前勾选数把按钮禁用了，但之后再次勾选没有监听器去更新状态，按钮就一直灰着。现在把 checkbox 的 `change` 委托到列表容器上，勾选、取消、全选都会同步按钮；扫描重建表格、删除移除行都不会丢监听器
 - **全选也走委托**：不再在扫描回调里单独绑定，避免每次扫描重复挂监听器，也顺手修掉「全选后按钮仍不可点」
-
-<details>
-<summary><b>历史版本（v3.9.30 及更早，共 130 个版本，点击展开）</b></summary>
 
 ### v3.9.30
 

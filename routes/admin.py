@@ -250,6 +250,70 @@ def _preview_base() -> str:
 
 
 @LOGIN
+def admin_post_embed_info():
+    """编辑器预览用：批量取文章 / 项目卡片信息。"""
+    kind = (request.args.get("kind") or "post").strip().lower()
+    raw = (request.args.get("ids") or "").split(",")
+    ids = [int(x) for x in raw if x.strip().isdigit()][:20]
+    out = {}
+
+    if kind == "project":
+        from models import Project
+
+        for project_id in ids:
+            row = Project.get(project_id)
+            if not row:
+                out[str(project_id)] = None
+                continue
+            desc = str(row.get("description") or "").strip()
+            if len(desc) > 120:
+                desc = desc[:120].rstrip() + "…"
+            parts: list[str] = []
+            lang_names: list[str] = []
+            for lang in list(row.get("languages") or [])[:2]:
+                name = str(lang.get("name") or "").strip() if isinstance(lang, dict) else str(lang).strip()
+                if name:
+                    lang_names.append(name)
+            if lang_names:
+                parts.append(" / ".join(lang_names))
+            stars = int(row.get("stars") or 0)
+            if stars:
+                parts.append(f"★ {stars}")
+            out[str(project_id)] = {
+                "id": project_id,
+                "title": str(row.get("name") or f"项目 #{project_id}"),
+                "excerpt": desc,
+                "cover": "",
+                "meta": " · ".join(parts),
+            }
+        return jsonify(out)
+
+    for post_id in ids:
+        row = Post.get(post_id)
+        if not row or str(row.get("status") or "") == "draft":
+            out[str(post_id)] = None
+            continue
+        excerpt = str(row.get("excerpt") or "").strip()
+        if not excerpt:
+            from models.base import strip_markdown
+
+            excerpt = strip_markdown(str(row.get("content") or ""))
+        excerpt = excerpt.strip()
+        if len(excerpt) > 120:
+            excerpt = excerpt[:120].rstrip() + "…"
+        date = str(row.get("created_at") or "")[:10]
+        minutes = int(row.get("read_time") or 3)
+        out[str(post_id)] = {
+            "id": post_id,
+            "title": str(row.get("title") or f"文章 #{post_id}"),
+            "excerpt": excerpt,
+            "cover": str(row.get("cover") or ""),
+            "meta": " · ".join(part for part in (date, f"{minutes} 分钟阅读") if part),
+        }
+    return jsonify(out)
+
+
+@LOGIN
 def admin_post_preview(post_id: int):
     post = Post.get(post_id)
     html, _ = markdown.render_post(post.get("content") or "") if post else ("", "")
@@ -1490,6 +1554,7 @@ def register(app) -> None:
         ("/admin/posts/<int:post_id>/purge", "admin_post_purge", admin_post_purge, ["POST"]),
         ("/admin/posts/<int:post_id>/preview", "admin_post_preview", admin_post_preview, ["GET"]),
         ("/admin/posts/preview-content", "admin_preview_content", admin_preview_content, ["POST"]),
+        ("/admin/posts/embed-info", "admin_post_embed_info", admin_post_embed_info, ["GET"]),
         ("/admin/categories", "admin_categories", admin_categories, ["GET"]),
         ("/admin/categories/new", "admin_category_new", admin_category_new, ["GET", "POST"]),
         ("/admin/categories/<int:cat_id>/edit", "admin_category_edit", admin_category_edit, ["GET", "POST"]),
