@@ -1412,7 +1412,8 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
    .tech-post-body .admonition p.admonition-title（3 个 class + 1 元素 = (0,3,1)）
    确保标题规则压过正文与块内段落两套规则。 */
 :is(.tech-post-body, .tech-proj-readme-body) .admonition {
-  padding: 14px 16px; border-radius: 8px; margin: 0 0 1.05em;
+  /* 与引用卡片、正文段落统一一档下边距（1.05em 会跟着块内字号漂移，实测只有 14px） */
+  padding: 14px 16px; border-radius: 8px; margin: 0 0 16px;
   border-left: 4px solid var(--border-strong);
   background: var(--bg-subtle);
   /* 块内正文比全文正文略紧：16px / 1.7 */
@@ -1498,7 +1499,7 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
    上下同值后，任意两个块级标签相邻时折叠间距恒为 14px，
    消除卡片类元素（引用/代码块/表格/列表/分隔线）上 0 下 16 的不均匀；
    双类特异性 (0,2,1)/(0,3,1) 压过 markdown-body.css 的同名规则（该文件后加载） */
-.tech-post-body.markdown-body :is(blockquote, pre, table, ul, ol, hr, dl, details, .admonition, .img-gallery) {
+.tech-post-body.markdown-body :is(blockquote, pre, table, ul, ol, hr, dl, details, .admonition, .post-embed, .img-gallery) {
   margin: 14px 0;
 }
 .tech-post-body.markdown-body img { margin: 14px auto; }
@@ -2786,7 +2787,7 @@ html { touch-action: manipulation; }
   .tech-post-body h5, .tech-post-body.markdown-body h5,
   .tech-post-body h6, .tech-post-body.markdown-body h6 { margin: 18px 0 8px; }
   .tech-post-body h2, .tech-post-body.markdown-body h2 { margin-bottom: 8px; }
-  .tech-post-body.markdown-body :is(blockquote, pre, table, ul, ol, hr, dl, details, .admonition, .img-gallery) {
+  .tech-post-body.markdown-body :is(blockquote, pre, table, ul, ol, hr, dl, details, .admonition, .post-embed, .img-gallery) {
     margin: 14px 0;
   }
   .tech-post-body.markdown-body img { margin: 14px auto; }

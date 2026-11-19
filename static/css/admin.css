@@ -2148,7 +2148,8 @@ html[data-theme=light] .badge-picked {
 
 /* ── 编辑器预览：::: 提示框（与前台文章 admonition 同款配色）── */
 .vditor-preview .admonition {
-  margin: 0 0 10px;
+  /* 与正文段落、引用卡片统一同一档下边距，避免 10/12/16 三种间距混排 */
+  margin: 0 0 14px;
   padding: 10px 14px;
   border-radius: 8px;
   border-left: 4px solid var(--border-strong);
@@ -2305,38 +2306,46 @@ html[data-theme=light] .badge-picked {
 }
 
 
-/* ── 编辑器预览里的站内文章卡片（正文 [[post:107]]）──
-   与正文卡片同一套行为：悬停只换底色，不加蓝边、不做位移 */
-.vditor-preview .post-embed { margin: 0 0 12px; }
+/* ── 编辑器预览里的站内文章 / 项目卡片（正文 [[post:107]] / [[projects:3]]）──
+   与正文同一套类型色：左侧 3px 色条 + kicker 着色，文章主蓝、项目绿色 */
+.vditor-preview .post-embed { margin: 0 0 14px; }
 .vditor-preview .post-embed-link {
   display: flex;
   align-items: stretch;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-surface-2);
+  padding: 12px 14px 12px 11px;
+  border: 0;
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-surface-2));
   color: inherit;
   text-decoration: none;
-  transition: background-color .18s ease, border-color .18s ease;
+  transition: background-color .18s ease;
+}
+.vditor-preview .post-embed--project .post-embed-link {
+  border-left-color: var(--success);
+  background: color-mix(in srgb, var(--success) 7%, var(--bg-surface-2));
 }
 @media (hover: hover) and (pointer: fine) {
   .vditor-preview .post-embed-link:hover {
-    background: var(--bg-hover);
-    border-color: var(--border-strong);
+    background: color-mix(in srgb, var(--accent) 11%, var(--bg-surface-2));
+  }
+  .vditor-preview .post-embed--project .post-embed-link:hover {
+    background: color-mix(in srgb, var(--success) 12%, var(--bg-surface-2));
   }
 }
 .vditor-preview .post-embed-cover {
   flex: none;
   width: 96px;
   height: 68px;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background: var(--bg-subtle);
 }
 .vditor-preview .post-embed-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .vditor-preview .post-embed-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.vditor-preview .post-embed-kicker { font-size: 11px; color: var(--text-tertiary); }
+.vditor-preview .post-embed-kicker { font-size: 11px; font-weight: 600; color: var(--accent); }
+.vditor-preview .post-embed--project .post-embed-kicker { color: var(--success); }
 .vditor-preview .post-embed-title { font-size: 14.5px; font-weight: 600; line-height: 1.45; color: var(--text); }
 .vditor-preview .post-embed-excerpt {
   font-size: 12.5px;

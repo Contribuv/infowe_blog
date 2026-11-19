@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.32-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.32)
+[![version](https://img.shields.io/badge/version-3.9.33-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.33)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.32**
+当前版本：**v3.9.33**
 
-> 最近一次更新完整展开；更早的 131 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 132 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.33
+
+- **修复编辑器预览不解析提示框**：`:::tip[标题]` 三行被 Vditor 的软换行渲染成一个 `<p>` + `<br>`，而预览区的装饰逻辑要求标记独占一个段落，整块被漏掉。现在先按 `<br>` 拆回多个 `<p>` 再交给原逻辑，四种类型都能正常显示
+- **引用卡片加类型配色**：文章走主蓝、项目走绿色，左侧 3px 色条 + 同色淡底 + kicker 着色，与提示框的左边框语言一致；悬停同色系加深一档，仍不位移
+- **移动端保留类型标识**：小屏原本直接隐藏「引用文章/引用项目」，现在改成 10.5px 小字保留，一眼能看出卡片类型
+- **卡片类间距统一 14px**：提示框原来 10px、引用卡片 12px、段落 16px，三种间距混排；现在提示框、引用卡片与代码块/表格/列表一起纳入正文块级 14px 规则，段落仍保持 16.8px 的行文节奏
+
+<details>
+<summary><b>历史版本（v3.9.32 及更早，共 132 个版本，点击展开）</b></summary>
 
 ### v3.9.32
 
@@ -936,9 +946,6 @@ chown -R www:www var
 - **编辑器实时渲染**：Vditor 不认这个语法，前台保存后才生效，所以后台预览区做了 DOM 替换——批量请求 `embed-info` 接口拿标题/摘要/封面，渲染成和正文一致的卡片，悬停行为也同步
 - **文末操作按钮亮色悬停加深**：「分享/复制/返回」常态是 `text 6%` 的淡底，悬停只叠到 `--hover-bg`，亮色下几乎看不出；改为直接 `text 13%` 并把文字提到主色。上一版被通用 hover 规则压掉，这次提高特异性
 - **去掉编辑器工具栏「更多」**：里面 9 项（主题切换、devtools、info、help 等）多数与站点重复或写作时用不到，删掉后工具栏只留常用操作
-
-<details>
-<summary><b>历史版本（v3.9.31 及更早，共 131 个版本，点击展开）</b></summary>
 
 ### v3.9.31
 

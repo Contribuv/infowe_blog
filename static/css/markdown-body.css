@@ -380,40 +380,54 @@
 
 
 
-/* ── 站内文章引用卡片：[[post:107]] / [[projects:3]] ──
-   正文本身就在白卡里，引用卡片再用白色会和正文糊成一片：
-   这里改用「卡内嵌入层」的 --inset-bg（亮色比卡面暗一档、深色亮一档），
-   不用描边和阴影，靠底色区分；悬停只加深一档，不位移、不加边框。 */
-.markdown-body .post-embed { margin: 0 0 16px; }
+/* ── 站内文章 / 项目引用卡片：[[post:107]] / [[projects:3]] ──
+   正文本身就在白卡里，卡片用「卡内嵌入层」底色区分；
+   左侧 3px 色条 + kicker 着色标明类型：文章走主蓝，项目走绿色，
+   与提示框（admonition）的左边框语言一致，移动端也保留 kicker。 */
+.markdown-body .post-embed { margin: 0 0 16px; }  /* 前台由 theme 的块级 14px 规则覆盖，这里只做无主题时的兜底 */
 .markdown-body .post-embed-link {
   display: flex;
   align-items: stretch;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 14px 16px 14px 13px;
   border: 0;
-  border-radius: var(--card-radius, 10px);
-  background: var(--inset-bg, var(--mb-code-bg));
+  border-left: 3px solid var(--accent, #2f7ad1);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #2f7ad1) 6%, var(--inset-bg, var(--mb-code-bg)));
   box-shadow: none;
   color: inherit;
   text-decoration: none;
   transition: background-color .18s ease;
 }
+.markdown-body .post-embed--project .post-embed-link {
+  border-left-color: var(--success, #2b6e52);
+  background: color-mix(in srgb, var(--success, #2b6e52) 7%, var(--inset-bg, var(--mb-code-bg)));
+}
 @media (hover: hover) and (pointer: fine) {
   .markdown-body .post-embed-link:hover {
-    background: var(--inset-bg-strong, var(--mb-inline-code));
+    background: color-mix(in srgb, var(--accent, #2f7ad1) 11%, var(--inset-bg, var(--mb-code-bg)));
+  }
+  .markdown-body .post-embed--project .post-embed-link:hover {
+    background: color-mix(in srgb, var(--success, #2b6e52) 12%, var(--inset-bg, var(--mb-code-bg)));
   }
 }
 .markdown-body .post-embed-cover {
   flex: none;
   width: 108px;
   height: 76px;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background: var(--mb-inline-code);
 }
 .markdown-body .post-embed-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .markdown-body .post-embed-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.markdown-body .post-embed-kicker { font-size: 11px; letter-spacing: .04em; color: var(--mb-fg-muted); }
+.markdown-body .post-embed-kicker {
+  font-size: 11px;
+  letter-spacing: .04em;
+  font-weight: 600;
+  color: var(--accent, #2f7ad1);
+}
+.markdown-body .post-embed--project .post-embed-kicker { color: var(--success, #2b6e52); }
 .markdown-body .post-embed-title { font-size: 15px; font-weight: 600; line-height: 1.45; color: var(--mb-fg); }
 .markdown-body .post-embed-excerpt {
   font-size: 13px;
@@ -428,5 +442,6 @@
 .markdown-body .post-embed--missing { color: var(--mb-link); text-decoration: underline; }
 @media (max-width: 640px) {
   .markdown-body .post-embed-cover { width: 76px; height: 76px; }
-  .markdown-body .post-embed-kicker { display: none; }
+  .markdown-body .post-embed-kicker { font-size: 10.5px; }
+}
 }

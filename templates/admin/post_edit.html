@@ -836,7 +836,36 @@
         };
         var ADMONITION_OPEN = /^:::\s*([A-Za-z][\w-]*)(?:\[(.*?)\])?\s*$/;
         var ADMONITION_CLOSE = /^:::\s*$/;
+        // Vditor 的 soft-break 会把
+        //   :::tip[标题]
+        //   内容
+        //   :::
+        // 渲成一个 <p> 里用 <br> 分行的结构。先按 <br> 拆回多个 <p>，
+        // 下面的块级转换才能正常识别首尾标记。
+        function splitAdmonitionParagraphs(scope) {
+            var ps = Array.prototype.slice.call(scope.querySelectorAll('p'));
+            for (var i = 0; i < ps.length; i++) {
+                var p = ps[i];
+                if (!p.querySelector('br')) continue;
+                if ((p.textContent || '').indexOf(':::') < 0) continue;
+                var groups = [[]];
+                Array.prototype.forEach.call(p.childNodes, function (node) {
+                    if (node.nodeType === 1 && node.tagName === 'BR') groups.push([]);
+                    else groups[groups.length - 1].push(node);
+                });
+                if (groups.length < 2) continue;
+                var frag = document.createDocumentFragment();
+                for (var g = 0; g < groups.length; g++) {
+                    if (!groups[g].length) continue;
+                    var np = document.createElement('p');
+                    for (var n = 0; n < groups[g].length; n++) np.appendChild(groups[g][n]);
+                    frag.appendChild(np);
+                }
+                p.parentNode.replaceChild(frag, p);
+            }
+        }
         function decorateAdmonitions(scope) {
+            splitAdmonitionParagraphs(scope);
             var paras = scope.querySelectorAll('p');
             for (var i = 0; i < paras.length; i++) {
                 var p = paras[i];
