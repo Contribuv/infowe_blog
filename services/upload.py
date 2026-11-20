@@ -231,6 +231,18 @@ def sync_remote_urls(text: str) -> None:
             logger.warning("保存前补传失败：%s", rel_url)
 
 
+def delete_remote(rel_url: str) -> None:
+    """删除远端同名对象（本地删除时同步）；没有远端能力时什么也不做。"""
+    for func in list(_remote_publishers):
+        deleter = getattr(func, "delete", None)
+        if deleter is None:
+            continue
+        try:
+            deleter(rel_url)
+        except Exception:  # noqa: BLE001
+            logger.warning("远端删除失败：%s", rel_url)
+
+
 def remote_url(rel_url: str) -> str:
     """只取远端地址、不上传；用于「文件已经存在」的场景。
 
@@ -782,7 +794,12 @@ def watermark_html(html: str) -> str:
             if target is None or not target.is_file():
                 return m.group(0)
             rel = value[len("/uploads/"):]
-            return f'src={quote}/uploads/originals/{rel}{quote}'
+            # 远端原图可能没同步成功：加载失败时退回展示图，避免裂图
+            return (
+                f'src={quote}/uploads/originals/{rel}{quote} '
+                f'data-fallback-src="{value}" '
+                'onerror="this.onerror=null;this.src=this.dataset.fallbackSrc"'
+            )
 
         return re.sub(r"""src=(["'])([^"']+)\1""", _src, tag, count=1)
 
@@ -1006,8 +1023,8 @@ def referenced_urls() -> set[str]:
 def orphans() -> list[dict]:
     # 远端存储可用时，本地文件是「停用后的回退副本」，不能当孤儿清理：
     # 一旦删掉，停用插件把地址改回本地就会全部裂图。
-    if remote_active():
-        return []
+    # 对象存储启用时，本地文件是「停用后的回退副本」，但孤儿本身已经没有任何内容引用，
+    # 删掉不会影响回退；因此照常列出，便于本地与远端一起清理。
     referenced = referenced_urls()
     base = root()
     result: list[dict] = []
@@ -1078,6 +1095,10 @@ def delete_rel(rel: str) -> str:
     except OSError:
         return "删除失败"
     (root() / "originals" / rel).unlink(missing_ok=True)
+    # 本地删完同步删远端：孤立原图对应 /uploads/originals/，普通文件对应 /uploads/
+    if not rel.startswith("originals/"):
+        delete_remote("/uploads/originals/" + rel)
+    delete_remote("/uploads/" + rel)
     return ""
 
 
@@ -1094,6 +1115,10 @@ def delete_by_url(url: str) -> bool:
     try:
         path.unlink()
         (root() / "originals" / rel).unlink(missing_ok=True)
+        # 文章删除时的清理同样同步远端，避免本地没了、OSS 上还挂着
+        if not rel.startswith("originals/"):
+            delete_remote("/uploads/originals/" + rel)
+        delete_remote("/uploads/" + rel)
         return True
     except OSError:
         return False

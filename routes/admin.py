@@ -842,10 +842,9 @@ def admin_orphans():
 
 @LOGIN
 def admin_orphan_clean():
-    # 远端存储启用时本地文件是回退副本，禁止批量删除：
-    # 删掉之后停用插件、地址改回本地就会全部裂图。
-    if upload.remote_active():
-        return jsonify({"deleted": 0, "failed": 0, "results": [], "error": "对象存储启用中，本地文件作为回退副本保留，暂不能清理"}), 409
+    # 对象存储启用时，本地孤儿同样可以清理：
+    # 孤儿已经没有任何内容引用，删掉不影响「停用插件后的回退」，
+    # delete_rel 会同步删除远端对应对象（展示图 + 原图 + 预览副本）。
     # 前端批量删除使用 path[]；兼容旧表单的 path
     selected = request.form.getlist("path") + request.form.getlist("path[]")
     selected = list(dict.fromkeys(selected))

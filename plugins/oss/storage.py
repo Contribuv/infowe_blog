@@ -420,16 +420,25 @@ def _forget_object(key: str) -> None:
 
 
 def delete_remote(rel_url: str) -> None:
-    """删除 OSS 上的同名对象（本地删除时同步，失败只记日志）。"""
+    """删除 OSS 上的同名对象（本地删除时同步，失败只记日志）。
+
+    展示图还会连带删掉它的预览副本；原图（/uploads/originals/...）
+    由调用方单独传进来，不需要再算副本。
+    """
     if not is_enabled():
         return
     cfg = get_cfg()
     if cfg is None:
         return
-    try:
-        s3.delete(cfg, rel_url)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("OSS 删除失败 %s：%s", rel_url, exc)
+    targets = [rel_url]
+    if not str(rel_url).startswith("/uploads/originals/"):
+        targets.append(preview_rel(rel_url))
+    for target in targets:
+        try:
+            s3.delete(cfg, target)
+            _forget_object(cfg.key_of(target))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("OSS 删除失败 %s：%s", target, exc)
 
 
 # ── URL 转换 ──────────────────────────────────────────

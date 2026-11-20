@@ -62,6 +62,16 @@ def _exists(rel_url: str) -> bool:
 _publish.exists = _exists
 
 
+def _delete(rel_url: str) -> None:
+    """本地删除时同步删除对象存储上的同名对象（含预览副本）。"""
+    from . import storage
+
+    storage.delete_remote(rel_url)
+
+
+_publish.delete = _delete
+
+
 def _publish_preview(local_path, rel_url: str) -> str:
     """上传时额外推一份 960 宽预览副本，编辑器预览直接取它。"""
     from . import storage

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.35-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.35)
+[![version](https://img.shields.io/badge/version-3.9.36-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.36)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.35**
+当前版本：**v3.9.36**
 
-> 最近一次更新完整展开；更早的 134 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 135 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.36
+
+- **大文件同步超时放宽**：向对象存储 PUT 的读超时从 120 秒提到 300 秒。同步历史原图时出现过「连接已建立、写入阶段超时」（`The write operation timed out`），几 MB 的相机原图在慢速网关上 120 秒传不完；重试即可成功，仍失败的会留在失败列表里
+- **原图缺失自动回退**：水印关闭时页面图片换成 `originals` 版本，同时带上 `data-fallback-src` 与 `onerror`；远端原图没同步上去时浏览器自动退回带水印的展示图，不再裂图
+- **孤儿清理不再被 OSS 挡住**：对象存储启用时，本地孤儿（含孤立原图）也会正常列出和清理。孤儿本来就没有内容引用，删掉不影响「停用插件后的回退」
+- **删除同步到对象存储**：`文件清理` 与文章删除这两条路径，本地删除后都会同步删掉 OSS 上的展示图、原图与预览副本；插件新增删除能力，停用后自动退回纯本地
+- **页面说明同步**：清理页明确写出「对象存储启用时也可清理，删除会同步 OSS」，避免误解
+
+<details>
+<summary><b>历史版本（v3.9.35 及更早，共 135 个版本，点击展开）</b></summary>
 
 ### v3.9.35
 
@@ -937,9 +948,6 @@ chown -R www:www var
 - **编辑器预览跟随开关**：预览中转路由也按水印开关取原图，后台看到的就是发布后的效果
 - **孤立原图纳入清理**：`originals/` 里「展示图已不存在」的原图会出现在「文件清理」里（备注「孤立原图」）；展示图还在的原图跟着展示图走，不会被单独删除。OSS 侧同样保护被引用展示图对应的原图对象
 - **输出顺序**：先归一化缓存里可能残留的旧签名地址，再按水印开关换原图，最后才按当前策略重新签名
-
-<details>
-<summary><b>历史版本（v3.9.34 及更早，共 134 个版本，点击展开）</b></summary>
 
 ### v3.9.34
 

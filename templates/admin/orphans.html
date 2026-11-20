@@ -13,7 +13,7 @@
 <div class="empty-state">
     {% if remote_active %}
     {{ icon('cloud', 28) | safe }}
-    <p class="text-muted">对象存储插件启用中：本地 uploads 文件作为「停用后的回退副本」完整保留，因此不参与孤儿清理。停用插件后，这里会恢复正常扫描。</p>
+    <p class="text-muted">对象存储插件启用中：本地文件是「停用插件后的回退副本」，但孤儿已经没有任何内容引用，可以正常清理；删除会同步删掉 OSS 上的对象（展示图、原图与预览副本）。</p>
     {% else %}
     {{ icon('check-circle', 28) | safe }}
     <p class="text-muted">没有孤儿文件，uploads 中的文件均被有效内容引用。</p>
@@ -40,6 +40,7 @@
         已拒绝的评论图片会保留（随时可在后台恢复通过，不会缺图）。
         头像与项目文件不在此列；<b>originals/</b> 只清理「展示图已经不存在」的孤立原图，
         仍在使用的原图跟着展示图走，不会被单独列出或误删。
+        对象存储启用时同样可以清理：删除会<b>同步删掉 OSS 上的展示图、原图与预览副本</b>。
     </div>
 
     <form id="orphanForm" action="{{ url_for('admin_orphan_clean') }}" method="post">

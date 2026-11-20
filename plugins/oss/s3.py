@@ -21,7 +21,7 @@ import requests
 
 # 网络超时：上传按 (连接, 读取) 分开，大文件读取给足时间
 CONNECT_TIMEOUT = 8
-READ_TIMEOUT = 120
+READ_TIMEOUT = 300
 HEALTH_KEY = "_infowe_healthcheck.txt"
 
 
