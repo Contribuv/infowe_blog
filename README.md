@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.36-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.36)
+[![version](https://img.shields.io/badge/version-3.9.37-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.37)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,27 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.36**
+当前版本：**v3.9.37**
 
-> 最近一次更新完整展开；更早的 135 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 136 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.37
+
+- **照片墙**：新页面 `/photos`，从文章正文与封面自动提取图片，按文章发布时间分月/日分组；「时间线 / 照片流」两种视图切换，照片流按宽度自适应 1~4 列。后台「导航菜单」可单独启停
+- **照片墙灯箱**：计数、收录文章链接、预加载与「加载中」动画；加载失败显示提示而不是破图；支持键盘、滑动、点击关闭
+- **缩略图与流量**：`/photo-thumb` 本地生成 320/560/960 档 WebP，`sizes` 按实际格子宽度计算，列表统一选 320w；本地没有源图时回退 OSS
+- **灯箱大图**：默认 302 到 OSS（公有直链 / 私有现签），8 秒未响应自动回退本地；加载期间图片不可见，不会再出现「破图 + 文件名」
+- **水印存储简化**：上传时按当前开关决定是否叠水印，不再另存 `originals` 副本；历史 `originals` 一并清理（本地与 OSS）
+- **孤儿清理重做**：对象存储侧改用 ListObjectsV2 遍历桶（历史对象、手动上传也能识别），本地与 OSS 合并列出并标记来源；新增「全部 / 仅本地 / 仅 OSS」筛选
+- **批量删除提速**：每批 4 个并发删除，前端按批更新进度、逐行移除，不再整批等几分钟
+- **确认对话框**：后台新增 `adminConfirm`，替代原生 confirm；OSS 插件页的孤儿区收敛到「文件清理」，只保留跳转
+- **图片懒加载**：正文、友链、评论区、后台补齐 `loading="lazy"`，正文补 `decoding="async"`
+- **文章页灯箱**：打开时隐藏导航，与照片墙一致，不再被毛玻璃导航压住
+- **导航**：「照片墙」改名「照片」，位置调到「归档」之后
+- **缓存**：`/photos` 不再让浏览器缓存旧 HTML，灯箱 302 不缓存签名地址
+
+<details>
+<summary><b>历史版本（v3.9.36 及更早，共 136 个版本，点击展开）</b></summary>
 
 ### v3.9.36
 
@@ -936,9 +954,6 @@ chown -R www:www var
 - **孤儿清理不再被 OSS 挡住**：对象存储启用时，本地孤儿（含孤立原图）也会正常列出和清理。孤儿本来就没有内容引用，删掉不影响「停用插件后的回退」
 - **删除同步到对象存储**：`文件清理` 与文章删除这两条路径，本地删除后都会同步删掉 OSS 上的展示图、原图与预览副本；插件新增删除能力，停用后自动退回纯本地
 - **页面说明同步**：清理页明确写出「对象存储启用时也可清理，删除会同步 OSS」，避免误解
-
-<details>
-<summary><b>历史版本（v3.9.35 及更早，共 135 个版本，点击展开）</b></summary>
 
 ### v3.9.35
 

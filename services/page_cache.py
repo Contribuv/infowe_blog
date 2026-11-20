@@ -28,6 +28,8 @@ _ASSET_SIG = {"ts": 0.0, "sig": 0}
 EXCLUDED_PREFIXES = (
     "/admin", "/api", "/search", "/comment", "/uploads", "/static",
     "/themes", "/share-thumb", "/avatar", "/readme-img", "/favicon.ico",
+    # 照片墙缩略图是二进制响应，没必要走页面缓存（store 只收 HTML，白跑磁盘）
+    "/photo-thumb",
 )
 
 
@@ -44,6 +46,9 @@ def _ttl(path: str) -> int:
         return 1800
     if path.startswith("/about"):
         return 1800
+    # 照片墙数据来自目录扫描，新增图片后希望尽快出现，别按默认 5 分钟
+    if path.startswith("/photos"):
+        return 120
     if path.startswith("/tag/"):
         return 600
     if path.startswith("/projects"):
@@ -175,7 +180,12 @@ def load():
     response.headers["X-Cache"] = "HIT"
     # 命中页缓存时给浏览器一小段缓存：回访/连点页面直接吃本地副本，
     # 过期后仍允许先展示旧页、后台再校验（stale-while-revalidate）
-    response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=120"
+    if request.path.startswith("/photos"):
+        # 照片墙会随文章增删而变，浏览器缓存住旧 HTML 会出现「已经删掉的图还在」，
+        # 这里强制每次回源（服务端仍有 120 秒缓存，压力不大）。
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    else:
+        response.headers["Cache-Control"] = "public, max-age=30, stale-while-revalidate=120"
     g._page_cache_hit = True
     return response
 

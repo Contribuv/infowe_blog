@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}照片{% endblock %}
+{% block content %}
+<div class="tech-shell pw-page">
+    <div class="tech-page-head pw-head">
+        <h1 class="tech-page-title">照片</h1>
+        <p class="tech-page-desc">
+            {% if total %}
+            共 {{ total }} 张{% if total > 500 %} · 这里展示最近 500 张{% endif %} · 文章里拍下的风景与日常
+            {% else %}
+            文章里还没有图片。
+            {% endif %}
+        </p>
+    </div>
+
+    {% if months %}
+    <div class="pw-viewtabs" id="pwTabs" role="tablist" aria-label="照片视图">
+        <button type="button" data-view="timeline" class="is-on" role="tab" aria-selected="true">时间线</button>
+        <button type="button" data-view="flow" role="tab" aria-selected="false">照片流</button>
+    </div>
+
+    <div class="pw-viewport" id="pwTimelineView">
+        {% for month in months %}
+        <section class="pw-month">
+            <h2 class="pw-month-title">{{ month.label }}<span>{{ month.count }} 张</span></h2>
+            {% for day in month.days %}
+            <div class="pw-day">
+                <h3 class="pw-day-title">{{ day.label }} · {{ day.count }} 张</h3>
+                <div class="pw-grid">
+                    {% for p in day.photos %}
+                    <a class="pw-card" href="{{ url_for('photo_view', filename=p.url[9:], v=p.post_id) }}"
+                       data-post-id="{{ p.post_id }}" data-post-title="{{ p.post_title }}"
+                       aria-label="{{ p.name }}" title="{{ p.post_title or p.name }}">
+                        <img src="{{ p.thumb }}"
+                             srcset="{{ p.thumb }}?w=320 320w, {{ p.thumb }}?w=560 560w, {{ p.thumb }}?w=960 960w"
+                             sizes="(max-width: 480px) 30vw, (max-width: 767px) 22vw, (max-width: 1000px) 15vw, 113px"
+                             alt="{{ p.post_title or p.name }}" loading="lazy" decoding="async"
+                             onerror="this.closest('.pw-card').classList.add('is-missing')">
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </section>
+        {% endfor %}
+    </div>
+
+    <div class="pw-viewport" id="pwFlowView" hidden>
+        <div class="pw-wall is-cols" id="pwWall"></div>
+    </div>
+    {% else %}
+    <div class="tech-empty">
+        <div class="tech-empty-icon">{{ icon('folder', 34) | safe }}</div>
+        <p>文章里还没有图片。在文章正文插入图片后，这里会自动出现。</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="pw-lightbox" id="pwLightbox" hidden>
+    <button type="button" class="pw-lb-btn pw-lb-close" id="pwLbClose" aria-label="关闭">×</button>
+    <div class="pw-lb-tip" id="pwLbTip" hidden>
+        <span class="pw-lb-spinner" aria-hidden="true"></span>
+        <span id="pwLbTipText">图片加载中…</span>
+    </div>
+    <button type="button" class="pw-lb-btn pw-lb-prev" id="pwLbPrev" aria-label="上一张">‹</button>
+    <button type="button" class="pw-lb-btn pw-lb-next" id="pwLbNext" aria-label="下一张">›</button>
+    <div class="pw-lb-box">
+        <p class="pw-lb-count" id="pwLbCount"></p>
+        <img class="pw-lb-img" id="pwLbImg" alt="">
+        <p class="pw-lb-refs" id="pwLbRefs"></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var tabs = document.getElementById('pwTabs');
+    if (!tabs) return;
+    var timelineView = document.getElementById('pwTimelineView');
+    var flowView = document.getElementById('pwFlowView');
+    var wall = document.getElementById('pwWall');
+    var box = document.getElementById('pwLightbox');
+    var img = document.getElementById('pwLbImg');
+    var tip = document.getElementById('pwLbTip');
+    var tipText = document.getElementById('pwLbTipText');
+    var spinner = document.querySelector('.pw-lb-spinner');
+    var refs = document.getElementById('pwLbRefs');
+    var count = document.getElementById('pwLbCount');
+    var prev = document.getElementById('pwLbPrev');
+    var next = document.getElementById('pwLbNext');
+
+    var sourceCards = Array.prototype.slice.call(timelineView.querySelectorAll('.pw-card'));
+    var wallCards = [];
+    var curList = [];
+    var index = 0;
+    var seq = 0;
+
+    // ── 照片流：把时间线的卡片克隆过来，按列数轮流分配 ──
+    function buildWall() {
+        if (wallCards.length) return;
+        sourceCards.forEach(function (card) {
+            var clone = card.cloneNode(true);
+            wallCards.push(clone);
+        });
+    }
+
+    function relayout() {
+        buildWall();
+        var width = wall.clientWidth || wall.parentElement.clientWidth || 0;
+        var n = Math.max(1, Math.min(4, Math.floor(width / 220) || 1));
+        wall.innerHTML = '';
+        wall.classList.toggle('is-cols', n > 1);
+        if (n < 2) {
+            wallCards.forEach(function (card) { wall.appendChild(card); });
+            return;
+        }
+        var cols = [];
+        for (var i = 0; i < n; i++) {
+            var col = document.createElement('div');
+            col.className = 'pw-col';
+            wall.appendChild(col);
+            cols.push(col);
+        }
+        // 第一排从左到右 = 最新的 N 张
+        wallCards.forEach(function (card, i) { cols[i % n].appendChild(card); });
+    }
+
+    function setView(view) {
+        var isFlow = view === 'flow';
+        timelineView.hidden = isFlow;
+        flowView.hidden = !isFlow;
+        Array.prototype.forEach.call(tabs.querySelectorAll('button'), function (btn) {
+            var on = btn.getAttribute('data-view') === view;
+            btn.classList.toggle('is-on', on);
+            btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        if (isFlow) relayout();
+        try { localStorage.setItem('pw-view', view); } catch (e) {}
+    }
+
+    tabs.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('button[data-view]');
+        if (btn) setView(btn.getAttribute('data-view'));
+    });
+
+    var rzTimer;
+    window.addEventListener('resize', function () {
+        if (flowView.hidden) return;
+        clearTimeout(rzTimer);
+        rzTimer = setTimeout(relayout, 150);
+    });
+
+    var savedView = 'timeline';
+    try { savedView = localStorage.getItem('pw-view') || 'timeline'; } catch (e) {}
+    if (savedView === 'flow') setView('flow');
+
+    // ── 灯箱 ──
+    function visibleRoot() {
+        return flowView.hidden ? timelineView : flowView;
+    }
+
+    function visibleCards() {
+        return Array.prototype.slice.call(visibleRoot().querySelectorAll('.pw-card'));
+    }
+
+    function syncNav() {
+        prev.classList.toggle('is-off', index <= 0);
+        next.classList.toggle('is-off', index >= curList.length - 1);
+        count.textContent = curList.length ? (index + 1) + ' / ' + curList.length : '';
+    }
+
+    function showRefs(card) {
+        var pid = card.getAttribute('data-post-id');
+        var title = card.getAttribute('data-post-title') || '';
+        if (!pid) { refs.innerHTML = ''; return; }
+        var a = document.createElement('a');
+        a.href = '/post/' + pid;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = title || ('文章 #' + pid);
+        refs.textContent = '收录于 ';
+        refs.appendChild(a);
+        var hint = document.createElement('span');
+        hint.className = 'pw-lb-hint';
+        hint.textContent = '（点文章名可阅读原文）';
+        refs.appendChild(hint);
+    }
+
+    // 默认走 OSS；OSS 超过 8 秒没响应时自动回退本地（?local=1）
+    function openFull(src, card) {
+        loadImage(src, card, false);
+    }
+
+    function loadImage(src, card, isLocal) {
+        var mine = ++seq;
+        tip.hidden = false;
+        tip.classList.remove('is-error');
+        spinner.hidden = false;
+        tipText.textContent = '图片加载中…';
+
+        // 加载期间清空旧图与 alt：没有 src 的 img 会把 alt 画成破图占位
+        img.classList.remove('is-ready');
+        img.removeAttribute('src');
+        img.alt = '';
+
+        var timer = setTimeout(function () {
+            if (mine !== seq) return;
+            if (!isLocal) {
+                // OSS 超时：换本地地址再试一次，保证图片能打开
+                var localSrc = src + (src.indexOf('?') >= 0 ? '&' : '?') + 'local=1';
+                loadImage(localSrc, card, true);
+                return;
+            }
+            fail();
+        }, isLocal ? 12000 : 8000);
+
+        var pre = new Image();
+        var done = function () {
+            if (mine !== seq) return;
+            clearTimeout(timer);
+            img.src = src;
+            img.alt = card ? (card.getAttribute('aria-label') || '') : '';
+            img.classList.add('is-ready');
+            tip.hidden = true;
+        };
+        var fail = function () {
+            if (mine !== seq) return;
+            clearTimeout(timer);
+            // 加载失败：保持 img 不可见，只显示提示 + 文章链接
+            img.removeAttribute('src');
+            img.classList.remove('is-ready');
+            spinner.hidden = true;
+            tip.classList.add('is-error');
+            tipText.textContent = '图片加载失败，可点下方文章名查看原文';
+            if (card) card.classList.add('is-missing');
+        };
+        pre.onload = done;
+        pre.onerror = fail;
+        pre.src = src;
+    }
+
+    var failedPreload = {};
+    function preload(i) {
+        if (i < 0 || i >= curList.length) return;
+        var url = curList[i].getAttribute('href');
+        if (failedPreload[url]) return;
+        var p = new Image();
+        p.onerror = function () { failedPreload[url] = true; };
+        p.src = url;
+    }
+
+    function showAt(i) {
+        if (i < 0 || i >= curList.length) return;
+        index = i;
+        openFull(curList[index].getAttribute('href'), curList[index]);
+        showRefs(curList[index]);
+        syncNav();
+        preload(index + 1);
+        preload(index - 1);
+    }
+
+    function open(i) {
+        box.hidden = false;
+        document.body.style.overflow = 'hidden';
+        document.body.classList.add('lightbox-open');
+        showAt(i);
+    }
+
+    function close() {
+        box.hidden = true;
+        img.removeAttribute('src');
+        img.classList.remove('is-ready');
+        img.alt = '';
+        document.body.style.overflow = '';
+        document.body.classList.remove('lightbox-open');
+        seq++;
+    }
+
+    // 事件委托：时间线与照片流共用，克隆/重排后依然有效
+    document.addEventListener('click', function (e) {
+        if (!box.hidden) return;
+        var card = e.target.closest && e.target.closest('.pw-card');
+        if (!card) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        if (card.classList.contains('is-missing')) {
+            var pid = card.getAttribute('data-post-id');
+            if (pid) {
+                e.preventDefault();
+                window.location.href = '/post/' + pid;
+            }
+            return;
+        }
+        curList = visibleCards();
+        var at = curList.indexOf(card);
+        if (at < 0) return;
+        e.preventDefault();
+        open(at);
+    });
+
+    document.getElementById('pwLbClose').addEventListener('click', function (e) {
+        e.stopPropagation();
+        close();
+    });
+    prev.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (index > 0) showAt(index - 1);
+    });
+    next.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (index < curList.length - 1) showAt(index + 1);
+    });
+    // 与参考站一致：点遮罩或图片都关闭（按钮自己 stopPropagation）
+    box.addEventListener('click', close);
+
+    document.addEventListener('keydown', function (e) {
+        if (box.hidden) return;
+        if (e.key === 'Escape') { close(); return; }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); if (index > 0) showAt(index - 1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); if (index < curList.length - 1) showAt(index + 1); }
+    });
+
+    // 移动端左右滑动切换；滑完吞掉紧随的那次 click，避免顺手关掉灯箱
+    var startX = 0, startY = 0, startT = 0, swipedAt = 0;
+    box.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startT = Date.now();
+    }, { passive: true });
+    box.addEventListener('touchend', function (e) {
+        if (!e.changedTouches.length) return;
+        var dx = e.changedTouches[0].clientX - startX;
+        var dy = e.changedTouches[0].clientY - startY;
+        if (Date.now() - startT > 600) return;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+            swipedAt = Date.now();
+            if (dx < 0 && index < curList.length - 1) showAt(index + 1);
+            if (dx > 0 && index > 0) showAt(index - 1);
+        }
+    }, { passive: true });
+    box.addEventListener('click', function (e) {
+        if (Date.now() - swipedAt < 450) e.stopPropagation();
+    }, true);
+})();
+</script>
+{% endblock %}

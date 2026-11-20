@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
 
@@ -52,7 +53,7 @@ _URL_RE = re.compile(r"https?://[^\s\"'<>()\[\]]+")
 # 迁移时跳过的目录：原图备份不对外，隐藏目录一律不传；
 # avatar 是站点头像（`/uploads/avatar/`），属于后台品牌资源，不参与对象存储——
 # 它由设置页直接覆盖写入，进了 OSS 反而会出现「本地已换、远端还是旧图」。
-_SKIP_DIRS = {".originals", ".trash", ".tmp", "avatar"}
+_SKIP_DIRS = {".originals", ".trash", ".tmp", "avatar", "originals"}
 
 
 # ── 配置 ──────────────────────────────────────────────
@@ -327,21 +328,6 @@ def preview_rel(rel_url: str) -> str:
     return f"/previews/{rel}.webp"
 
 
-def origin_of_key(key: str) -> str:
-    """originals/ 下的原图 key → 对应展示图 key；不是原图返回空串。
-
-    原图不写进正文，所以「是否被引用」只能看它对应的展示图。
-    """
-    parts = str(key or "").lstrip("/").split("/")
-    if "originals" not in parts:
-        return ""
-    idx = parts.index("originals")
-    rest = parts[idx + 1:]
-    if not rest:
-        return ""
-    return "/".join(parts[:idx] + ["uploads"] + rest)
-
-
 def preview_of_key(key: str) -> str:
     """previews/ 下的副本 key → 对应原图 key；不是副本则返回空串。"""
     parts = str(key or "").lstrip("/").split("/")
@@ -422,18 +408,14 @@ def _forget_object(key: str) -> None:
 def delete_remote(rel_url: str) -> None:
     """删除 OSS 上的同名对象（本地删除时同步，失败只记日志）。
 
-    展示图还会连带删掉它的预览副本；原图（/uploads/originals/...）
-    由调用方单独传进来，不需要再算副本。
+    展示图会连带删掉它的预览副本，避免「图删了、previews 里还留一份」。
     """
     if not is_enabled():
         return
     cfg = get_cfg()
     if cfg is None:
         return
-    targets = [rel_url]
-    if not str(rel_url).startswith("/uploads/originals/"):
-        targets.append(preview_rel(rel_url))
-    for target in targets:
+    for target in (rel_url, preview_rel(rel_url)):
         try:
             s3.delete(cfg, target)
             _forget_object(cfg.key_of(target))
@@ -834,10 +816,34 @@ def referenced_keys() -> set[str]:
     return keys
 
 
-def scan_orphans(limit: int = 500) -> list[dict]:
-    """列出「插件上传过、但数据库已不再引用」的对象。
+LIST_MAX_OBJECTS = 20000
 
-    只查 oss_objects，不遍历桶；每个候选再 HEAD 一次确认对象还在。
+
+def list_remote_objects(prefix: str | None = None, max_objects: int = LIST_MAX_OBJECTS) -> list[dict]:
+    """遍历桶里的对象（ListObjectsV2），默认只看配置前缀（uploads/）。
+
+    历史版本上传的对象、手动放进桶里的文件、别的工具传的对象都在桶里，
+    只查 oss_objects 清单会漏掉它们，所以孤儿扫描以桶为准。
+    """
+    cfg = get_cfg()
+    if cfg is None:
+        return []
+    target = prefix if prefix is not None else cfg.prefix.strip("/") + "/"
+    items: list[dict] = []
+    token = ""
+    for _ in range(40):  # 最多 40 页，防止异常配置下无限翻页
+        batch, token = s3.list_objects(cfg, target, token, min(1000, max_objects - len(items)))
+        items.extend(batch)
+        if not token or len(items) >= max_objects:
+            break
+    return items
+
+
+def scan_orphans(limit: int = 500) -> list[dict]:
+    """列出「对象存储上存在、但数据库已不再引用」的附件。
+
+    以 ListObjectsV2 遍历桶为准（历史对象、手动上传的也能识别）；
+    列举失败时回退到 oss_objects 清单，至少还能清掉本插件传过的孤儿。
     """
     import db
 
@@ -846,13 +852,25 @@ def scan_orphans(limit: int = 500) -> list[dict]:
         return []
     prefix = cfg.prefix.strip("/")
     referenced = referenced_keys()
-    rows = db.query(
-        "SELECT key, size, uploaded_at FROM oss_objects ORDER BY uploaded_at DESC, key ASC LIMIT ?",
-        (limit,),
-    )
+
+    candidates: list[dict] = []
+    try:
+        candidates = list_remote_objects()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("列举对象失败，回退到 oss_objects 清单：%s", exc)
+        rows = db.query(
+            "SELECT key, size, uploaded_at FROM oss_objects ORDER BY uploaded_at DESC, key ASC LIMIT ?",
+            (limit,),
+        )
+        candidates = [
+            {"key": str(row["key"] or ""), "size": int(row["size"] or 0),
+             "modified": str(row["uploaded_at"] or "")}
+            for row in rows
+        ]
+
     result: list[dict] = []
-    for row in rows:
-        key = str(row["key"] or "").lstrip("/")
+    for item in candidates:
+        key = str(item.get("key") or "").lstrip("/")
         if not key or not key.startswith(prefix + "/"):
             continue
         if key in referenced:
@@ -861,31 +879,31 @@ def scan_orphans(limit: int = 500) -> list[dict]:
         if origin and origin in referenced:
             # 预览副本属于原图的附属对象：原图还被引用时不算孤儿
             continue
-        shown = origin_of_key(key)
-        if shown and shown in referenced:
-            # 无痕原图跟着展示图走：展示图还被引用，原图就不能单独删
+        rel = key[len(prefix) + 1:]
+        # 头像 / AI 头像 / 项目文件由各自的入口管理，不当孤儿。
+        # uploads/previews/ 是旧版预览副本路径（新版在顶层 previews/），
+        # 代码已不再引用，按普通孤儿列出让用户清理。
+        if rel.startswith(("avatar/", "ai-avatar/", "projects/")):
             continue
-        try:
-            if not s3.head(cfg, key):
-                continue
-        except Exception:
-            # 网络或权限问题时不列出来，避免用户基于不完整数据删除
-            continue
-        local = Path(UPLOADS_DIR) / key[len(prefix) + 1:]
+        local = Path(UPLOADS_DIR) / rel
         name = key.rsplit("/", 1)[-1]
         ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+        size = int(item.get("size") or 0)
         result.append(
             {
                 "key": key,
+                "rel": rel,
                 "url": url_for("/" + key),
-                "size": int(row["size"] or 0),
-                "size_text": _fmt_size(int(row["size"] or 0)),
-                "uploaded_at": str(row["uploaded_at"] or ""),
+                "size": size,
+                "size_text": _fmt_size(size),
+                "uploaded_at": str(item.get("modified") or ""),
                 "has_local": local.is_file(),
                 "ext": ext,
                 "is_image": ext in {"jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "avif", "ico"},
             }
         )
+        if len(result) >= limit:
+            break
     return result
 
 
@@ -899,7 +917,11 @@ def _fmt_size(num: int) -> str:
 
 
 def delete_orphans(keys: list[str]) -> dict:
-    """删除指定的 OSS 孤儿对象；删除前重新校验引用与前缀。"""
+    """删除指定的 OSS 孤儿对象；删除前重新校验引用与前缀。
+
+    删除是网络操作，几十个串行要等很久；先过滤再并发删，
+    前端每批 5 个请求，进度才走得动。
+    """
     cfg = get_cfg()
     if cfg is None:
         return {"error": "配置不完整"}
@@ -908,6 +930,8 @@ def delete_orphans(keys: list[str]) -> dict:
     deleted = 0
     skipped: list[dict] = []
     failed: list[dict] = []
+    candidates: list[str] = []
+
     for raw in keys[:200]:
         key = str(raw or "").lstrip("/")
         if not key or not key.startswith(prefix + "/"):
@@ -921,14 +945,22 @@ def delete_orphans(keys: list[str]) -> dict:
             # 预览副本跟着原图走：原图还被引用，副本就不能单独删
             skipped.append({"key": key, "reason": "对应原图仍被内容引用"})
             continue
-        shown = origin_of_key(key)
-        if shown and shown in referenced:
-            skipped.append({"key": key, "reason": "对应展示图仍被内容引用"})
-            continue
+        candidates.append(key)
+
+    def _one(key: str) -> tuple[str, str]:
         try:
             s3.delete(cfg, key)
             _forget_object(key)
-            deleted += 1
+            return key, ""
         except Exception as exc:  # noqa: BLE001
-            failed.append({"key": key, "error": str(exc)[:160]})
+            return key, str(exc)[:160]
+
+    if candidates:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            for key, error in pool.map(_one, candidates):
+                if error:
+                    failed.append({"key": key, "error": error})
+                else:
+                    deleted += 1
+
     return {"deleted": deleted, "skipped": skipped, "failed": failed}

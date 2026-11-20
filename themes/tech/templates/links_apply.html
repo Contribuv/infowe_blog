@@ -17,7 +17,7 @@
     {% set site_bio = blog_subtitle or '记录折腾与思考' %}
     <div class="tech-link-site">
         {# 展示用站内相对路径，避免本地访问时去拉线上域名 #}
-        <img class="tech-link-site-avatar" src="{{ favicon_src }}" alt="{{ site_title }} 站标">
+        <img class="tech-link-site-avatar" src="{{ favicon_src }}" alt="{{ site_title }} 站标" loading="lazy" decoding="async">
         <div class="tech-link-site-main">
             <div class="tech-link-site-head">
                 <span class="tech-link-site-name">{{ site_title }}</span>

@@ -45,7 +45,7 @@
                     <input type="checkbox" class="row-check" name="link_ids[]" value="{{ l.id }}" form="bulk-form-pending" aria-label="选择链接 {{ l.id }}">
                 </td>
                 <td class="main-td" data-label="名称"><strong>{{ l.name }}</strong></td>
-                <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}">{% else %}{{ l.name[0] }}{% endif %}</span></td>
+                <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}" loading="lazy" decoding="async">{% else %}{{ l.name[0] }}{% endif %}</span></td>
                 <td data-label="URL"><a href="{{ l.url }}" target="_blank" class="link-url">{{ l.url[:60] }}</a></td>
                 <td data-label="验证页">
                     {% if l.backlink_url %}<a href="{{ l.backlink_url }}" target="_blank" class="link-url">{{ l.backlink_url[:40] }}</a>
@@ -124,7 +124,7 @@
                 </td>
                 <td data-label="排序">{{ l.sort_order }}</td>
                 <td class="main-td" data-label="名称"><strong>{{ l.name }}</strong></td>
-                <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}">{% else %}{{ l.name[0] }}{% endif %}</span></td>
+                <td data-label="头像"><span class="link-avatar-mini">{% if l.avatar %}<img src="{{ l.avatar }}" alt="{{ l.name }}" loading="lazy" decoding="async">{% else %}{{ l.name[0] }}{% endif %}</span></td>
                 <td data-label="URL"><a href="{{ l.url }}" target="_blank" class="link-url">{{ l.url[:60] }}</a></td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
                 <td data-label="复检">

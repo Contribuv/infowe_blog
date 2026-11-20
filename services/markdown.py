@@ -416,6 +416,8 @@ def _optimize_images(html: str) -> str:
         tag = match.group(0)
         if "loading=" not in tag:
             tag = tag.replace("<img", '<img loading="lazy"', 1)
+        if "decoding=" not in tag:
+            tag = tag.replace("<img", '<img decoding="async"', 1)
         # 占位 alt（null / 为空null 等）清成空，灯箱与正文都不会把它当备注
         if _IMG_ALT_RE.search(tag) and not _image_caption(tag):
             tag = _IMG_ALT_RE.sub('alt=""', tag, count=1)

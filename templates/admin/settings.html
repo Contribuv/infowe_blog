@@ -338,11 +338,11 @@
                 <span class="form-hint">关闭后该页面访问提示 404；首页与写作入口为固定导航，不参与开关。</span>
             </div>
         </div>
-        <!-- 图片水印：正文/灯箱图片叠加角落水印，无痕原图备份在 uploads/.originals（公网不可达） -->
+        <!-- 图片水印：上传时决定是否叠水印，同一张图只存一份，不再另存无痕原图 -->
         <div class="card">
             <div class="card-header card-header--hint">
                 <h3>图片水印</h3>
-                <span class="card-hint">保存后对新上传图片生效；历史图片暂不自动回刷</span>
+                <span class="card-hint">只在上传时生效；已上传的图保持原样</span>
             </div>
             <div class="form-group">
                 <label>启用水印</label>
@@ -351,7 +351,7 @@
                         <input type="checkbox" name="watermark_enabled" value="1"{{ ' checked' if watermark_enabled|default('1') in ('1','on','true','yes') else '' }}>
                         <span class="slider"></span>
                     </span>
-                    <span class="switch-text">开启后上传图片自动叠加水印；关闭时上传原图。</span>
+                    <span class="switch-text">开启时新上传的图片直接叠水印；关闭时存原图。切换开关不会改动已上传的图片。</span>
                 </label>
             </div>
             <div class="form-group">

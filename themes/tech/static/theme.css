@@ -5504,3 +5504,310 @@ body::after {
   letter-spacing: .01em;
 }
 
+/* ═══════════════════════════════════════════════
+   照片墙（/photos）
+   ───────────────────────────────────────────────
+   参考页的「月份 → 日期 → 方块网格」，按本站版心与配色重写：
+   · 版心沿用 .tech-shell（1000px），与归档 / 关于同宽
+   · 间距用 8 的倍数：组间 36 / 20，标题下 14 / 8，格间 8（窄屏 6 / 5）
+   · 卡片 1:1 裁切，圆角 6px，与站内卡片一致
+   · 灯箱自建，不引外部库；hidden 必须显式 display:none，
+     否则会被 .pw-lightbox 的 display:flex 覆盖
+   ═══════════════════════════════════════════════ */
+
+/* 上下留白交给 .tech-main（桌面 24px / 移动 18px），这里不再叠加：
+   .tech-main .tech-shell 在 ≤1000px 用 padding 简写，会把子级的
+   padding-top/bottom 一起清零，同元素上设上下内边距反而时有时无。 */
+.pw-page { padding-bottom: 8px; }
+.pw-head { margin-bottom: 22px; }
+
+/* ── 时间线 / 照片流 切换 ── */
+.pw-viewtabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin: -6px 0 24px;
+  border-radius: 999px;
+  /* 浅色下 --inset-bg 与页面底几乎同色，胶囊会「消失」；
+     用更深的档位 + 细边框把它托起来 */
+  background: var(--inset-bg-strong);
+  border: 1px solid var(--border);
+}
+.pw-viewtabs button {
+  border: 0;
+  background: transparent;
+  padding: 5px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+.pw-viewtabs button:hover { color: var(--text); }
+.pw-viewtabs button.is-on {
+  /* 选中项用纯白（浅色）/ 提亮灰（深色），与容器拉开层级 */
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .1), 0 2px 8px rgba(15, 23, 42, .06);
+}
+[data-theme="dark"] .pw-viewtabs {
+  background: rgba(255, 255, 255, .06);
+}
+[data-theme="dark"] .pw-viewtabs button.is-on {
+  background: #2b313c;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+}
+.pw-viewport[hidden] { display: none; }
+
+/* ── 月份 ── */
+.pw-month { margin-top: 36px; }
+.pw-month:first-of-type { margin-top: 0; }
+.pw-month-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text);
+}
+.pw-month-title span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* ── 日期 ── */
+.pw-day { margin-top: 20px; }
+.pw-day:first-of-type { margin-top: 0; }
+.pw-day-title {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: .01em;
+}
+
+/* ── 网格：minmax(0,1fr) 而不是 1fr，避免单张长图撑破列宽 ── */
+.pw-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+}
+.pw-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  background: var(--inset-bg);
+  line-height: 0;
+}
+.pw-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .35s ease;
+}
+/* 只在真鼠标设备上做 hover 放大，触摸设备点一下不会留下粘住的缩放 */
+@media (hover: hover) and (pointer: fine) {
+  .pw-card:hover img { transform: scale(1.04); }
+}
+.pw-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+/* 图片在两个存储里都找不到时，不显示破图：灰底 + 「图片缺失」，点击仍进文章 */
+.pw-card.is-missing img { display: none; }
+.pw-card.is-missing::after {
+  content: "图片缺失";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  background: var(--inset-bg);
+}
+
+/* ── 照片流 ── */
+.pw-wall { display: flex; gap: 8px; }
+.pw-wall:not(.is-cols) { display: block; }
+.pw-col { flex: 1 1 0; min-width: 0; }
+.pw-wall .pw-card {
+  aspect-ratio: auto;
+  margin-bottom: 8px;
+}
+.pw-wall .pw-card:last-child { margin-bottom: 0; }
+/* 照片流保持原图比例，不裁成方块 */
+.pw-wall .pw-card img {
+  height: auto;
+  object-fit: contain;
+}
+
+/* ── 灯箱 ── */
+.pw-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 64px;
+  background: rgba(8, 10, 14, .93);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.pw-lightbox[hidden] { display: none; }
+/* 灯箱打开时连导航一起盖住：sticky 导航带毛玻璃，纯靠 z-index 在部分合成路径下仍会透出 */
+body.lightbox-open .tech-nav,
+body.lightbox-open .tech-mobile-toggle,
+body.lightbox-open .tech-drawer { visibility: hidden; }
+
+.pw-lb-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 92vw;
+}
+.pw-lb-count {
+  order: -1;
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: .08em;
+  color: rgba(255, 255, 255, .45);
+  font-variant-numeric: tabular-nums;
+}
+.pw-lb-img {
+  width: auto;
+  height: auto;
+  max-width: 92vw;
+  max-height: 78vh;
+  object-fit: contain;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .03);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
+  /* 加载完成前完全不可见：没有 src 的 img 会把 alt 画成破图占位 */
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+.pw-lb-img.is-ready { opacity: 1; }
+.pw-lb-refs {
+  margin: 0;
+  max-width: 92vw;
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: center;
+  color: rgba(255, 255, 255, .55);
+  word-break: break-word;
+}
+.pw-lb-refs a {
+  color: rgba(255, 255, 255, .86);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  margin: 0 2px;
+}
+.pw-lb-refs a:hover { color: #fff; }
+.pw-lb-hint {
+  margin-left: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .38);
+  white-space: nowrap;
+}
+.pw-lb-tip {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, .5);
+  pointer-events: none;
+}
+.pw-lb-tip[hidden] { display: none; }
+.pw-lb-tip.is-error { color: rgba(255, 255, 255, .72); }
+.pw-lb-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, .22);
+  border-top-color: rgba(255, 255, 255, .85);
+  border-radius: 50%;
+  animation: pw-lb-spin .8s linear infinite;
+}
+.pw-lb-spinner[hidden] { display: none; }
+@keyframes pw-lb-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-lb-spinner { animation-duration: 2.4s; }
+}
+.pw-lb-btn {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 50%;
+  background: rgba(20, 20, 24, .55);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: background .18s ease, opacity .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.pw-lb-btn:hover { background: rgba(20, 20, 24, .8); }
+.pw-lb-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, .8);
+  outline-offset: 2px;
+}
+.pw-lb-btn.is-off { opacity: .2; pointer-events: none; }
+.pw-lb-close { top: 14px; right: 18px; width: 40px; height: 40px; font-size: 24px; }
+.pw-lb-prev { left: 16px; top: 50%; transform: translateY(-50%); }
+.pw-lb-next { right: 16px; top: 50%; transform: translateY(-50%); }
+
+/* ── 响应式：1000 / 767 / 480 三档，与站内断点一致 ── */
+@media (max-width: 1000px) {
+  .pw-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .pw-page { padding-bottom: 0; }
+  .pw-head { margin-bottom: 18px; }
+  .pw-month { margin-top: 28px; }
+  .pw-day { margin-top: 16px; }
+  .pw-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+
+  /* 移动端：按钮缩小、贴近边缘，给图片让出更多可视面积 */
+  .pw-lightbox { padding: 52px 10px 64px; }
+  .pw-lb-img { max-height: 72vh; }
+  .pw-lb-btn { width: 40px; height: 40px; font-size: 22px; }
+  .pw-lb-close { top: 10px; right: 10px; width: 36px; height: 36px; }
+  .pw-lb-prev { left: 6px; }
+  .pw-lb-next { right: 6px; }
+  .pw-lb-count { font-size: 11.5px; }
+  .pw-lb-refs { font-size: 12.5px; }
+  .pw-lb-hint { display: none; }
+}
+@media (max-width: 480px) {
+  .pw-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .pw-month-title { font-size: 14px; }
+  .pw-month-title span { font-size: 11.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pw-card img,
+  .pw-lb-btn { transition: none; }
+  .pw-card:hover img { transform: none; }
+}

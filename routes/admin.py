@@ -6,6 +6,7 @@ import json
 import re
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -317,15 +318,12 @@ def admin_post_embed_info():
 def admin_post_preview(post_id: int):
     post = Post.get(post_id)
     html, _ = markdown.render_post(post.get("content") or "") if post else ("", "")
-    # 与前台同一套开关：水印关闭时预览也换成无痕原图
-    html = upload.watermark_html(html)
     return jsonify({"html": upload.preview_assets(html, _preview_base())})
 
 
 @LOGIN
 def admin_preview_content():
     html, _ = markdown.render_post(request.form.get("content", ""))
-    html = upload.watermark_html(html)
     return jsonify({"html": upload.preview_assets(html, _preview_base())})
 
 
@@ -802,12 +800,7 @@ def admin_preview_asset(filename: str):
     所以签名永远新鲜，DOM 里留的稳定中转地址也不会过期。
     """
     rel = "/uploads/" + filename.lstrip("/")
-    # 水印关闭：预览也取 originals 版本，和前台看到的一致
-    if not upload.watermark_enabled():
-        origin = upload.origin_file(rel)
-        if origin is not None and origin.is_file():
-            filename = "originals/" + filename.lstrip("/")
-            rel = "/uploads/" + filename
+    # 水印开关只影响上传时；预览直接取当前文件，和前台看到的是同一张。
     remote = upload.remote_preview(rel)
     if remote:
         return redirect(remote, code=302)
@@ -830,13 +823,31 @@ def admin_preview_asset(filename: str):
 
 @LOGIN
 def admin_orphans():
-    items = upload.orphans()
+    source = (request.args.get("source") or "").strip()
+    local_items = upload.orphans()
+    remote_items = []
+    if upload.remote_active():
+        try:
+            from plugins.oss import storage as oss_storage
+
+            remote_items = oss_storage.scan_orphans()
+        except Exception:  # noqa: BLE001
+            remote_items = []
+    if source == "local":
+        items = upload.merge_orphan_sources(local_items, [])
+    elif source == "remote":
+        items = upload.merge_orphan_sources([], remote_items)
+    else:
+        items = upload.merge_orphan_sources(local_items, remote_items)
     total = sum(item["size_bytes"] for item in items)
     return render_template(
         "admin/orphans.html",
         orphans=items,
         total_size=upload.fmt_size(total),
         remote_active=upload.remote_active(),
+        source=source,
+        local_count=sum(1 for i in items if "local" in i["sources"]),
+        remote_count=sum(1 for i in items if "remote" in i["sources"]),
     )
 
 
@@ -853,19 +864,32 @@ def admin_orphan_clean():
     # 页面渲染到点击删除之间，内容可能刚被引用（例如同时开了编辑页）。
     # 删除前重新扫一次引用，避免把已重新引用的文件误删。
     still_referenced = upload.referenced_urls()
+    pending: list[str] = []
     for rel in selected:
         url = "/uploads/" + str(rel or "").replace("\\", "/").lstrip("/")
         if upload.unquote(url) in still_referenced:
             failed += 1
             results.append({"rel": rel, "ok": False, "reason": "文件已被内容引用，已跳过"})
             continue
-        reason = upload.delete_rel(rel)
-        if reason:
-            failed += 1
-            results.append({"rel": rel, "ok": False, "reason": reason})
-        else:
-            deleted += 1
-            results.append({"rel": rel, "ok": True})
+        pending.append(rel)
+
+    if pending:
+        # 删除慢在 OSS 的 DELETE（每个文件要删展示图 + 预览副本），
+        # 串行几十张就要几分钟；这里并发删，前端再按批请求，进度才走得动。
+        app = current_app._get_current_object()
+
+        def _work(rel: str):
+            with app.app_context():
+                return rel, upload.delete_rel(rel)
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            for rel, reason in pool.map(_work, pending):
+                if reason:
+                    failed += 1
+                    results.append({"rel": rel, "ok": False, "reason": reason})
+                else:
+                    deleted += 1
+                    results.append({"rel": rel, "ok": True})
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"deleted": deleted, "failed": failed, "results": results})
     if deleted:

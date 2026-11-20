@@ -163,7 +163,7 @@
                老访客仍显示「已记住」条并隐藏字段，行为不变；admin 身份条同步下移保持结构一致 #}
             {% if is_admin %}
             <div class="cmt-admin">
-                {% if admin_avatar %}<img class="cmt-admin-avatar" src="{{ admin_avatar }}" alt="">{% endif %}
+                {% if admin_avatar %}<img class="cmt-admin-avatar" src="{{ admin_avatar }}" alt="" loading="lazy" decoding="async">{% endif %}
                 <span>以博主身份评论（{{ author }}）</span>
             </div>
             {% else %}

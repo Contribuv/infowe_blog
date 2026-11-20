@@ -65,7 +65,7 @@ LEGACY_STORAGE_DIR = BASE_DIR / "storage"
 LEGACY_INSTANCE_DIR = BASE_DIR / "instance"   # v3.2.13 及更早版本的数据库位置
 
 # 版本线：Python 重构版独立版本号
-VERSION = "3.9.36"
+VERSION = "3.9.37"
 
 # 上传限制
 MAX_CONTENT_LENGTH = 64 * 1024 * 1024  # 单请求 64MB
@@ -90,6 +90,7 @@ PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 14
 # 导航项（key, 显示名, 链接）
 NAV_PAGES = [
     ("posts", "归档", "/posts"),
+    ("photos", "照片", "/photos"),
     ("projects", "项目", "/projects"),
     ("links", "友链", "/links"),
     ("circle", "圈子", "/circle"),

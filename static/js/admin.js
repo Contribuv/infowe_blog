@@ -182,4 +182,65 @@
       }
     }
   });
+
+  /* ─── 通用确认对话框：替代原生 confirm，风格与后台一致 ───
+     用法：await window.adminConfirm('确定删除？', { title: '删除', okText: '删除' })
+     返回 Promise<boolean>；danger: false 时确认按钮用主色（非破坏性操作）。 */
+  var confirmDialog = null;
+
+  function ensureConfirmDialog() {
+    if (confirmDialog) return confirmDialog;
+    var dialog = document.createElement('dialog');
+    dialog.id = 'adminConfirmDialog';
+    dialog.className = 'admin-detail-dialog admin-confirm-dialog';
+    dialog.innerHTML =
+      '<div class="admin-detail-head">' +
+        '<strong id="adminConfirmTitle">确认操作</strong>' +
+        '<button type="button" class="admin-detail-close" data-confirm-cancel aria-label="关闭">×</button>' +
+      '</div>' +
+      '<div class="admin-detail-body">' +
+        '<p id="adminConfirmMessage" class="admin-confirm-message"></p>' +
+        '<div class="admin-confirm-actions">' +
+          '<button type="button" class="btn btn-secondary" data-confirm-cancel>取消</button>' +
+          '<button type="button" class="btn btn-danger" data-confirm-ok>确定</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(dialog);
+    confirmDialog = dialog;
+    return dialog;
+  }
+
+  window.adminConfirm = function (message, options) {
+    options = options || {};
+    var dialog = ensureConfirmDialog();
+    var title = dialog.querySelector('#adminConfirmTitle');
+    var msg = dialog.querySelector('#adminConfirmMessage');
+    var ok = dialog.querySelector('[data-confirm-ok]');
+    var cancels = dialog.querySelectorAll('[data-confirm-cancel]');
+
+    title.textContent = options.title || '确认操作';
+    msg.textContent = message || '确定继续吗？';
+    ok.textContent = options.okText || '确定';
+    ok.className = 'btn ' + (options.danger === false ? 'btn-primary' : 'btn-danger');
+
+    return new Promise(function (resolve) {
+      function finish(result) {
+        ok.removeEventListener('click', onOk);
+        Array.prototype.forEach.call(cancels, function (b) { b.removeEventListener('click', onCancel); });
+        dialog.removeEventListener('cancel', onCancel);
+        dialog.removeEventListener('click', onBackdrop);
+        if (dialog.open) dialog.close();
+        resolve(result);
+      }
+      function onOk() { finish(true); }
+      function onCancel(e) { if (e) e.preventDefault(); finish(false); }
+      function onBackdrop(e) { if (e.target === dialog) finish(false); }
+
+      ok.addEventListener('click', onOk);
+      Array.prototype.forEach.call(cancels, function (b) { b.addEventListener('click', onCancel); });
+      dialog.addEventListener('cancel', onCancel);
+      dialog.addEventListener('click', onBackdrop);
+      dialog.showModal();
+    });
+  };
 })();

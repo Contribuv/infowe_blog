@@ -11,9 +11,15 @@
 
 {% if not orphans %}
 <div class="empty-state">
-    {% if remote_active %}
+    {% if source == 'remote' %}
     {{ icon('cloud', 28) | safe }}
-    <p class="text-muted">对象存储插件启用中：本地文件是「停用插件后的回退副本」，但孤儿已经没有任何内容引用，可以正常清理；删除会同步删掉 OSS 上的对象（展示图、原图与预览副本）。</p>
+    <p class="text-muted">没有 OSS 孤儿对象。<a href="{{ url_for('admin_orphans') }}">查看全部来源</a></p>
+    {% elif source == 'local' %}
+    {{ icon('check-circle', 28) | safe }}
+    <p class="text-muted">没有本地孤儿文件。<a href="{{ url_for('admin_orphans') }}">查看全部来源</a></p>
+    {% elif remote_active %}
+    {{ icon('cloud', 28) | safe }}
+    <p class="text-muted">本地与对象存储都没有孤儿文件。扫描会同时遍历桶和本地 uploads，任何一边没被引用的附件都会列出来。</p>
     {% else %}
     {{ icon('check-circle', 28) | safe }}
     <p class="text-muted">没有孤儿文件，uploads 中的文件均被有效内容引用。</p>
@@ -34,14 +40,33 @@
 
 <div class="card">
     <div class="card-hint orphan-hint">
-        这里列出 <b>uploads</b> 中不再被任何有效内容引用的上传文件
+        {% if source == 'local' %}
+        这里只列出<b>本地 uploads</b> 中的孤儿；OSS 对象不受影响。
+        {% elif source == 'remote' %}
+        这里只列出<b>对象存储桶</b>中的孤儿（遍历桶，历史对象、手动上传的也会列出）；
+        删除会同步删掉 OSS 对象与预览副本。
+        {% elif remote_active %}
+        这里列出<b>本地 uploads 与对象存储桶</b>中不再被任何有效内容引用的附件
         （文章标题/正文/摘要/标签/封面、未删除的评论、友链、记忆、项目、时间线、站点设置）。
+        启用对象存储时会遍历桶（不只查上传记录），历史对象、手动放进去的文件也能识别；
+        删除会<b>同时删掉本地文件与 OSS 对象（含预览副本）</b>。
+        {% else %}
+        这里列出<b>本地 uploads</b> 中不再被任何有效内容引用的附件
+        （文章标题/正文/摘要/标签/封面、未删除的评论、友链、记忆、项目、时间线、站点设置）。
+        删除只动本地文件。
+        {% endif %}
         例如：新建文章时传了图后放弃、<b>已删除评论</b>的附件、彻底删除文章时的漏网文件。
         已拒绝的评论图片会保留（随时可在后台恢复通过，不会缺图）。
-        头像与项目文件不在此列；<b>originals/</b> 只清理「展示图已经不存在」的孤立原图，
-        仍在使用的原图跟着展示图走，不会被单独列出或误删。
-        对象存储启用时同样可以清理：删除会<b>同步删掉 OSS 上的展示图、原图与预览副本</b>。
+        头像与项目文件不在此列。
     </div>
+
+    {% if remote_active %}
+    <nav class="orphan-source-tabs" aria-label="孤儿来源">
+        <a class="{% if not source %}active{% endif %}" href="{{ url_for('admin_orphans') }}">全部</a>
+        <a class="{% if source == 'local' %}active{% endif %}" href="{{ url_for('admin_orphans', source='local') }}">仅本地</a>
+        <a class="{% if source == 'remote' %}active{% endif %}" href="{{ url_for('admin_orphans', source='remote') }}">仅 OSS</a>
+    </nav>
+    {% endif %}
 
     <form id="orphanForm" action="{{ url_for('admin_orphan_clean') }}" method="post">
         <div class="bulk-bar">
@@ -50,6 +75,7 @@
             </label>
             <span class="bulk-count">已选 <b id="selCount">0</b> 个 · <b id="selSize">0 B</b></span>
             <span class="bulk-count" id="totalInfo">共 {{ orphans|length }} 个 · {{ total_size }}</span>
+            <span class="bulk-count" id="orphanProgress" hidden></span>
             <button type="button" id="deleteBtn" class="btn btn-sm btn-danger" disabled>删除所选</button>
         </div>
         <div class="table-wrap">
@@ -61,7 +87,7 @@
                 <th class="sort-th" data-sort="name">文件</th>
                 <th class="sort-th" data-sort="size">大小</th>
                 <th class="sort-th sort-desc" data-sort="mtime">上传时间</th>
-                <th>备注</th>
+                <th>来源</th>
             </tr>
         </thead>
         <tbody>
@@ -73,7 +99,7 @@
                 </td>
                 <td class="col-preview" data-label="预览">
                     {% if o.ext in image_exts %}
-                    <img class="orphan-thumb" src="{{ o.url }}" alt="{{ o.rel }}" loading="lazy">
+                    <img class="orphan-thumb" src="{{ url_for('admin_preview_asset', filename=o.rel) }}" alt="{{ o.rel }}" loading="lazy">
                     {% elif o.ext %}
                     <span class="orphan-ext">{{ o.ext[:4]|upper }}</span>
                     {% else %}
@@ -81,17 +107,17 @@
                     {% endif %}
                 </td>
                 <td class="main-td" data-label="文件">
-                    <a href="{{ o.url }}" target="_blank" rel="noopener" class="post-link orphan-file-link" title="在新窗口打开">{{ o.rel }}</a>
+                    <a href="{{ o.remote_url or o.url }}" target="_blank" rel="noopener" class="post-link orphan-file-link" title="在新窗口打开">{{ o.rel }}</a>
                 </td>
                 <td data-label="大小" class="cell-muted">{{ o.size }}</td>
                 <td data-label="上传时间" class="cell-muted">{{ o.mtime }}</td>
-                <td data-label="备注">
-                    {% if o.kind == 'origin' %}
-                    <span class="badge badge-warning">孤立原图</span>
-                    {% elif o.has_origin %}
-                    <span class="badge badge-warning">含无痕原图</span>
+                <td data-label="来源">
+                    {% if 'local' in o.sources and 'remote' in o.sources %}
+                    <span class="badge">本地 + OSS</span>
+                    {% elif 'remote' in o.sources %}
+                    <span class="badge badge-warning">仅 OSS</span>
                     {% else %}
-                    <span class="cell-muted">—</span>
+                    <span class="badge">仅本地</span>
                     {% endif %}
                 </td>
             </tr>
@@ -298,71 +324,88 @@
         }, 4000);
     }
 
-    /* ─── AJAX 删除：成功行动画移除，失败行标红，计数实时更新 ─── */
-    deleteBtn.addEventListener('click', function () {
+    /* ─── AJAX 删除：按批请求，每批完成立刻更新对应行与进度 ─── */
+    deleteBtn.addEventListener('click', async function () {
         var sel = updateSelection();
         if (!sel.n) return;
         var picked = rows.filter(function (row) { return row.querySelector('.row-check').checked; });
-        if (!confirm('确定删除选中的 ' + sel.n + ' 个孤儿文件（' + fmtSize(sel.bytes) + '）？\n文件及其无痕原图将被永久删除，不可恢复。')) return;
+        var ask = window.adminConfirm || function (msg) { return Promise.resolve(window.confirm(msg)); };
+        var confirmed = await ask(
+            '确定删除选中的 ' + sel.n + ' 个孤儿文件（' + fmtSize(sel.bytes) + '）？\n本地文件与 OSS 对象会一起删除，不可恢复。',
+            { title: '删除孤儿文件', okText: '删除' }
+        );
+        if (!confirmed) return;
 
         deleteBtn.disabled = true;
         deleteBtn.classList.add('btn-loading');
+        var progress = document.getElementById('orphanProgress');
+        progress.hidden = false;
 
-        var body = new URLSearchParams();
-        // 必须用 path[]：PHP 对同名的 path=a&path=b 只保留最后一个值（标量覆盖），
-        // 只有 path[]=a&path[]=b 才会解析成数组，否则「批量删除」只会删掉最后一条
-        picked.forEach(function (row) { body.append('path[]', row.dataset.rel); });
+        var total = picked.length;
+        var done = 0, failed = 0, freed = 0;
+        var BATCH = 4;
 
-        fetch(form.action || window.location.pathname, {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: body,
-            credentials: 'same-origin'
-        }).then(function (res) {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.json();
-        }).then(function (data) {
-            var byRel = {};
-            (data.results || []).forEach(function (r) { byRel[r.rel] = r; });
-            var freed = 0;
-            picked.forEach(function (row) {
-                var r = byRel[row.dataset.rel];
-                if (r && r.ok) {
-                    freed += Number(row.dataset.size);
-                    row.classList.add('row-removing');
-                    setTimeout(function () { row.remove(); }, 280);
-                } else {
-                    row.classList.add('row-failed');
-                    row.title = (r && r.reason) || '删除失败';
-                    var box = row.querySelector('.row-check');
-                    if (box) box.checked = false;
-                }
-            });
-            rows = rows.filter(function (row) { return document.body.contains(row); });
+        for (var i = 0; i < picked.length; i += BATCH) {
+            var chunk = picked.slice(i, i + BATCH);
+            var body = new URLSearchParams();
+            // 必须用 path[]：PHP 对同名的 path=a&path=b 只保留最后一个值
+            chunk.forEach(function (row) { body.append('path[]', row.dataset.rel); });
+            progress.textContent = '正在删除 ' + (done + failed) + ' / ' + total + '…';
 
-            if (data.deleted) notify('已清理 ' + data.deleted + ' 个孤儿文件，释放 ' + fmtSize(freed) + (data.failed ? '，' + data.failed + ' 个删除失败' : ''), !data.failed);
-            else notify((data.failed || 0) + ' 个文件删除失败', false);
-
-            if (!rows.length) {
-                /* 一个不剩：隐藏筛选区与卡片，显示完成态 */
-                document.querySelector('.orphan-filter-bar').style.display = 'none';
-                document.getElementById('emptyState').classList.remove('hidden');
-                var card = deleteBtn.closest('.card');
-                if (card) card.style.display = 'none';
-            } else {
-                applyFilter();
+            try {
+                var res = await fetch(form.action || window.location.pathname, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body,
+                    credentials: 'same-origin'
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var data = await res.json();
+                var byRel = {};
+                (data.results || []).forEach(function (r) { byRel[r.rel] = r; });
+                chunk.forEach(function (row) {
+                    var r = byRel[row.dataset.rel];
+                    if (r && r.ok) {
+                        freed += Number(row.dataset.size);
+                        done++;
+                        row.classList.add('row-removing');
+                        setTimeout(function () { row.remove(); }, 280);
+                    } else {
+                        failed++;
+                        row.classList.add('row-failed');
+                        row.title = (r && r.reason) || '删除失败';
+                        var box = row.querySelector('.row-check');
+                        if (box) box.checked = false;
+                    }
+                });
+                rows = rows.filter(function (row) { return document.body.contains(row); });
+            } catch (e) {
+                failed += chunk.length;
+                chunk.forEach(function (row) { row.classList.add('row-failed'); });
             }
-        }).catch(function () {
-            notify('网络错误，删除未完成，请重试', false);
-            picked.forEach(function (row) {
-                var box = row.querySelector('.row-check');
-                if (box) box.checked = false;
-            });
-            updateSelection();
-        }).finally(function () {
-            deleteBtn.classList.remove('btn-loading');
-            updateSelection();   /* 按实际选中数恢复按钮态（全删空时禁用） */
-        });
+            progress.textContent = '正在删除 ' + (done + failed) + ' / ' + total + '…';
+            // 让出主线程，行移除动画与进度文字能立即绘制
+            await new Promise(function (r) { setTimeout(r, 30); });
+        }
+
+        progress.textContent = '已清理 ' + done + ' 个' + (failed ? '，' + failed + ' 个失败' : '');
+        if (done) notify('已清理 ' + done + ' 个孤儿文件，释放 ' + fmtSize(freed) + (failed ? '，' + failed + ' 个删除失败' : ''), !failed);
+        else if (failed) notify(failed + ' 个文件删除失败', false);
+
+        if (!rows.length) {
+            /* 一个不剩：隐藏筛选区与卡片，显示完成态 */
+            var bar = document.querySelector('.orphan-filter-bar');
+            if (bar) bar.style.display = 'none';
+            var empty = document.getElementById('emptyState');
+            if (empty) empty.classList.remove('hidden');
+            var card = deleteBtn.closest('.card');
+            if (card) card.style.display = 'none';
+        } else {
+            applyFilter();
+        }
+
+        deleteBtn.classList.remove('btn-loading');
+        updateSelection();
     });
 
     applySort();

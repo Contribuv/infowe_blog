@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import unquote, urlencode
 
 from flask import (
     abort, flash, jsonify, make_response, redirect, render_template, request,
-    Response, url_for,
+    Response, send_file, url_for,
 )
 from markupsafe import escape
 
@@ -534,6 +534,83 @@ def search():
     return redirect(url_for("search_page", q=q), code=301)
 
 
+def photos():
+    """照片墙：聚合文章正文与封面里的图片，按文章发布时间分组。"""
+    if not settings.bool_of("nav_photos", True):
+        abort(404)
+    from services import photos as photos_service
+
+    months, total = photos_service.collect()
+    response = make_response(render_template("photos.html", months=months, total=total))
+    # 文章增删会立刻改变照片列表，浏览器不能缓存旧 HTML：
+    # 否则刚删掉的图还会出现在页面上，点开就是 404。
+    response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
+
+
+def photo_thumb(filename: str):
+    """照片墙缩略图：本地优先，本地没有才走对象存储。
+
+    本地有源图时在本地缩放：快、可控尺寸，也不占 OSS 出网流量。
+    只有历史文件本地已清理、只剩 OSS 对象时才 302 过去
+    （公有桶直链 / 私有桶现签）。
+    """
+    try:
+        width = int(request.args.get("w") or 560)
+    except (TypeError, ValueError):
+        width = 560
+
+    path = upload.photo_thumb(filename, width)
+    if path is None:
+        rel = "/uploads/" + unquote(str(filename or "")).lstrip("/")
+        remote = upload.remote_preview(rel)
+        if remote:
+            response = redirect(remote, code=302)
+            # 不要缓存 302：Location 是带有效期的签名地址，缓存住会在过期后变成 403
+            response.headers["Cache-Control"] = "no-store"
+            return response
+        path = upload.resolve(filename)
+        if path is None or not path.is_file():
+            abort(404)
+
+    response = send_file(path, conditional=True, max_age=604800)
+    response.cache_control.public = True
+    return response
+
+
+def photo_view(filename: str):
+    """灯箱大图：默认走对象存储，必要时回退本地。
+
+    启用 OSS 时默认 302 到远端（公有直链 / 私有现签），服务器不扛图片带宽；
+    浏览器用 ``?local=1`` 请求时才强制读本地，用于「OSS 8 秒没响应」的兜底。
+    """
+    if not settings.bool_of("nav_photos", True):
+        abort(404)
+    rel_path = unquote(str(filename or "")).lstrip("/")
+    if not rel_path or ".." in rel_path.split("/"):
+        abort(404)
+
+    force_local = request.args.get("local") == "1"
+
+    if not force_local:
+        rel = "/uploads/" + rel_path
+        if upload.remote_active() and upload.remote_exists(rel):
+            remote = upload.remote_url(rel)
+            if remote and remote != rel:
+                response = redirect(remote, code=302)
+                # 每次点击都重新签发；缓存 302 会让过期签名被复用（403）
+                response.headers["Cache-Control"] = "no-store"
+                return response
+
+    path = upload.resolve(rel_path)
+    if path is not None and path.is_file():
+        response = send_file(path, conditional=True, max_age=86400)
+        response.cache_control.public = True
+        return response
+
+    abort(404)
+
+
 def about():
     if not settings.bool_of("nav_about", True):
         abort(404)
@@ -907,6 +984,9 @@ def register(app) -> None:
         ("/comment/project/<int:project_id>", "comment_fragment_project", _comment_fragment, ["GET"]),
         ("/tags", "tags", tags, ["GET"]),
         ("/search", "search", search, ["GET"]),
+        ("/photos", "photos", photos, ["GET"]),
+        ("/photo-thumb/<path:filename>", "photo_thumb", photo_thumb, ["GET"]),
+        ("/photo-view/<path:filename>", "photo_view", photo_view, ["GET"]),
         ("/about", "about", about, ["GET"]),
         ("/circle", "circle", circle, ["GET"]),
         ("/readers", "readers_page", readers_page, ["GET"]),

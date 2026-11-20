@@ -6,7 +6,6 @@ import hashlib
 import logging
 import re
 import secrets
-import shutil
 import threading
 import time
 from datetime import datetime
@@ -107,11 +106,8 @@ def wait_remote(rel_url: str, timeout: float = 30.0) -> None:
         event.wait(timeout)
 
 
-def defer_publish(local_path, rel_url: str, origin_path=None) -> None:
+def defer_publish(local_path, rel_url: str) -> None:
     """后台把文件推到远端，并顺手生成预览副本。
-
-    origin_path 是水印前的原图；有就一并传到 originals/ 前缀，
-    供「关闭水印」时把页面图片切回无痕版本。
 
     原图仍会完整上传，只是不再阻塞 HTTP 响应；保存文章/评论时
     sync_remote_urls() 会等它结束并在必要时补传，前台不会拿到死链。
@@ -124,8 +120,6 @@ def defer_publish(local_path, rel_url: str, origin_path=None) -> None:
         # 没有应用上下文（CLI 迁移等）：退回同步发布，行为与旧版一致
         try:
             publish(local_path, rel_url)
-            if origin_path:
-                publish(origin_path, "/uploads/originals/" + rel_url[len("/uploads/"):])
         except Exception:  # noqa: BLE001
             logger.warning("同步发布失败：%s", rel_url, exc_info=True)
         return
@@ -146,9 +140,9 @@ def defer_publish(local_path, rel_url: str, origin_path=None) -> None:
         try:
             if app is not None:
                 with app.app_context():
-                    ok = _publish_and_preview(local_path, rel_url, event, origin_path)
+                    ok = _publish_and_preview(local_path, rel_url, event)
             else:
-                ok = _publish_and_preview(local_path, rel_url, event, origin_path)
+                ok = _publish_and_preview(local_path, rel_url, event)
         except Exception:  # noqa: BLE001
             logger.warning("后台上传失败：%s", rel_url, exc_info=True)
         finally:
@@ -167,11 +161,11 @@ def defer_publish(local_path, rel_url: str, origin_path=None) -> None:
     threading.Thread(target=run, daemon=True, name="upload-publish").start()
 
 
-def _publish_and_preview(local_path, rel_url: str, done: threading.Event | None = None, origin_path=None) -> bool:
-    """上传展示图 +（可选）原图 + 预览副本，返回远端是否拿到展示图。
+def _publish_and_preview(local_path, rel_url: str, done: threading.Event | None = None) -> bool:
+    """上传展示图 + 预览副本，返回远端是否拿到展示图。
 
     展示图一传完就 set(done)，让正在保存文章的那个请求先走；
-    原图与预览副本（PIL 缩放 + 小文件 PUT）继续在后台跑，不必拖住保存。
+    预览副本（PIL 缩放 + 小文件 PUT）继续在后台跑，不必拖住保存。
     """
     with _lock_for(rel_url):
         url = publish(local_path, rel_url)
@@ -179,13 +173,6 @@ def _publish_and_preview(local_path, rel_url: str, done: threading.Event | None 
         done.set()
     if not url:
         return False
-    if origin_path:
-        origin_rel = "/uploads/originals/" + rel_url[len("/uploads/"):]
-        try:
-            if Path(origin_path).is_file():
-                publish(origin_path, origin_rel)
-        except Exception:  # noqa: BLE001
-            logger.warning("原图上传失败：%s", origin_rel, exc_info=True)
     _store_preview(Path(local_path), rel_url)
     return True
 
@@ -729,17 +716,9 @@ def save(
                 return "", "图片解析失败（HEIC/AVIF），请先转换为 JPG/WebP 后重试"
             dest = converted
             filename = dest.name
-        # 先备份无痕原图到公开的 originals/ 目录，再叠水印；
-        # 关闭水印时原图和展示图内容一致（多一份副本，但切换开关后仍能正确回退）
-        try:
-            origin = root() / "originals" / sub / filename
-            origin.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(dest, origin)
-        except OSError:
-            origin = None
+        # 水印只在上传这一刻决定：开着就叠上去，关着就存原样。
+        # 不另存副本，同一张图在磁盘上只有一份；切换开关只影响之后的新图。
         _apply_watermark(dest)
-    else:
-        origin = None
     rel_url = f"/uploads/{sub}/{filename}"
     # 远端存储（如对象存储插件）只负责「额外上传一份」，
     # 返回给调用方的永远是规范路径 /uploads/...。
@@ -747,63 +726,78 @@ def save(
     # 这样切换策略不需要回写内容。
     # 本地落盘完成就返回；远端上传与预览副本放后台，
     # 保存文章/评论时由 sync_remote_urls() 等它结束并兜底补传。
-    defer_publish(dest, rel_url, origin)
+    defer_publish(dest, rel_url)
     return rel_url, ""
 
 
-def origin_file(rel_url: str) -> Path | None:
-    """展示图 URL → 对应的原图路径（uploads/originals/...）。"""
+PHOTO_THUMB_WIDTHS = (320, 560, 960)
+
+
+def drop_thumbs(rel_url: str) -> None:
+    """删掉某张照片各宽度的缩略图缓存。"""
     rel = unquote(str(rel_url or "")).replace("\\", "/")
-    if "/uploads/" not in rel:
-        return None
-    rel = rel.split("/uploads/", 1)[1]
-    if not rel or rel.startswith("originals/"):
-        return None
-    path = (root() / "originals" / rel).resolve()
-    try:
-        path.relative_to(root().resolve())
-    except ValueError:
-        return None
-    return path
+    if "/uploads/" in rel:
+        rel = rel.split("/uploads/", 1)[1]
+    rel = rel.lstrip("/")
+    if not rel:
+        return
+    cache_dir = Path(CACHE_DIR) / "photos"
+    for width in PHOTO_THUMB_WIDTHS:
+        key = hashlib.sha1(f"{rel}|{width}".encode()).hexdigest()
+        (cache_dir / f"{key}-{width}.webp").unlink(missing_ok=True)
 
 
-def watermark_enabled() -> bool:
-    return settings.bool_of("watermark_enabled", True)
 
+def photo_thumb(filename: str, width: int = 560) -> Path | None:
+    """照片墙缩略图：固定宽度 WebP，缓存到 var/cache/photos。
 
-def watermark_html(html: str) -> str:
-    """水印关闭时，把正文/页面里的图片换成 originals 版本。
-
-    只动 <img src>：链接、视频、附件保持原地址；原图不存在时保留展示图，
-    避免关掉水印后一批老图直接 404。调用位置必须在 OSS 地址改写之前，
-    否则已经变成签名直链就换不了了。
+    网格一屏可能几十张图，直接加载原图会把带宽打满；这里统一缩到 560 宽，
+    与正文预览用的 preview_thumb 分开目录，互不干扰。
+    源图不存在、动图或非位图时返回 None，由调用方回退原图。
     """
-    if not html or watermark_enabled() or "<img" not in html.lower():
-        return html
+    if width not in PHOTO_THUMB_WIDTHS:
+        width = 560
+    src = resolve(filename)
+    if src is None or not src.is_file():
+        return None
+    if src.suffix.lower() not in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}:
+        return None
 
-    def repl(match: re.Match) -> str:
-        tag = match.group(0)
+    from services import cachefs
 
-        def _src(m: re.Match) -> str:
-            quote, value = m.group(1), m.group(2)
-            if value.startswith("/uploads/originals/"):
-                return m.group(0)
-            if not value.startswith("/uploads/"):
-                return m.group(0)
-            target = origin_file(value)
-            if target is None or not target.is_file():
-                return m.group(0)
-            rel = value[len("/uploads/"):]
-            # 远端原图可能没同步成功：加载失败时退回展示图，避免裂图
-            return (
-                f'src={quote}/uploads/originals/{rel}{quote} '
-                f'data-fallback-src="{value}" '
-                'onerror="this.onerror=null;this.src=this.dataset.fallbackSrc"'
-            )
+    cache_dir = Path(CACHE_DIR) / "photos"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1(f"{unquote(filename)}|{width}".encode()).hexdigest()
+    out = cache_dir / f"{key}-{width}.webp"
+    try:
+        if out.is_file() and out.stat().st_mtime >= src.stat().st_mtime:
+            return out
+    except OSError:
+        return None
 
-        return re.sub(r"""src=(["'])([^"']+)\1""", _src, tag, count=1)
+    tmp = cache_dir / f"{key}-{width}-{secrets.token_hex(4)}.tmp"
+    try:
+        from PIL import Image, ImageOps
 
-    return re.sub(r"<img\b[^>]*>", repl, html, flags=re.I)
+        with Image.open(src) as img:
+            if getattr(img, "n_frames", 1) > 1:
+                return None
+            if img.format in {"JPEG", "MPO"}:
+                img.draft("RGB", (width * 2, width * 2))
+            img = ImageOps.exif_transpose(img)
+            img.thumbnail((width, width * 8), Image.LANCZOS)
+            if img.mode not in {"RGB", "RGBA"}:
+                img = img.convert("RGBA" if "A" in img.getbands() else "RGB")
+            img.save(tmp, "WEBP", quality=82, method=4)
+        tmp.replace(out)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("photo thumb failed for %s: %s", src, exc)
+        return None
+    finally:
+        tmp.unlink(missing_ok=True)
+
+    cachefs.cap(cache_dir, 2000)
+    return out
 
 
 def resolve(filename: str) -> Path | None:
@@ -921,11 +915,6 @@ def image_dims(rel_url: str) -> tuple[int, int] | None:
 
 def share_thumb(filename: str) -> Path | None:
     src = resolve(filename)
-    # 关闭水印时分享图也取无痕版本；原图不存在就继续用展示图
-    if src is not None and not watermark_enabled():
-        origin = root() / "originals" / unquote(str(filename or "")).replace("\\", "/").lstrip("/")
-        if origin.is_file():
-            src = origin
     if src is None or not src.is_file():
         return None
     cache_dir = Path(CACHE_DIR) / "share_thumbs"
@@ -1037,26 +1026,6 @@ def orphans() -> list[dict]:
         parts = rel.split("/")
         if not parts or parts[0].startswith("."):
             continue
-        # originals/ 只列「展示图已经不存在」的孤立原图。
-        # 展示图还在的，跟着展示图一起判孤儿；展示图删掉时 delete_rel 会连带删原图。
-        if parts[0] == "originals":
-            shown = base / Path(*parts[1:])
-            if shown.is_file():
-                continue
-            stat = path.stat()
-            result.append(
-                {
-                    "rel": rel,
-                    "url": "/uploads/" + rel,
-                    "size": fmt_size(stat.st_size),
-                    "size_bytes": stat.st_size,
-                    "ext": path.suffix.lower().lstrip("."),
-                    "mtime": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
-                    "has_origin": False,
-                    "kind": "origin",
-                }
-            )
-            continue
         # 跳过保留目录（头像 / AI 头像 / 项目文件）与隐藏目录。
         # 不再要求至少两级路径：uploads 根下直接放置的文件同样可能是孤儿，
         # 之前 len(parts) < 2 的过滤会让它们永远不显示、也永远清理不到。
@@ -1074,7 +1043,6 @@ def orphans() -> list[dict]:
                 "size_bytes": stat.st_size,
                 "ext": path.suffix.lower().lstrip("."),
                 "mtime": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
-                "has_origin": (base / "originals" / rel).is_file(),
                 "kind": "file",
             }
         )
@@ -1088,18 +1056,60 @@ def delete_rel(rel: str) -> str:
     if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects"}:
         return "非法路径"
     path = root() / rel
-    if not path.is_file():
-        return "文件不存在"
-    try:
-        path.unlink()
-    except OSError:
-        return "删除失败"
-    (root() / "originals" / rel).unlink(missing_ok=True)
-    # 本地删完同步删远端：孤立原图对应 /uploads/originals/，普通文件对应 /uploads/
-    if not rel.startswith("originals/"):
-        delete_remote("/uploads/originals/" + rel)
+    existed = path.is_file()
+    if existed:
+        try:
+            path.unlink()
+        except OSError:
+            return "删除失败"
+        drop_thumbs("/uploads/" + rel)
+    # 不管本地有没有都尝试删远端：这个文件可能只存在于对象存储。
+    # 未启用 OSS 时 delete_remote 自己会直接返回。
     delete_remote("/uploads/" + rel)
-    return ""
+    if existed or remote_active():
+        return ""
+    return "文件不存在"
+
+
+def merge_orphan_sources(local: list[dict], remote: list[dict]) -> list[dict]:
+    """把本地孤儿与对象存储孤儿合并成一份清单。
+
+    同一路径两边都有时只保留一条，标 sources 为 ["local", "remote"]，
+    后台据此提示「删一条 = 两边一起删」。
+    """
+    merged: dict[str, dict] = {}
+    for item in local:
+        entry = dict(item)
+        entry["sources"] = ["local"]
+        merged[entry["rel"]] = entry
+
+    for item in remote:
+        rel = item.get("rel") or ""
+        if not rel:
+            continue
+        if rel in merged:
+            entry = merged[rel]
+            if "remote" not in entry["sources"]:
+                entry["sources"].append("remote")
+            if int(item.get("size") or 0) > int(entry.get("size_bytes") or 0):
+                entry["size_bytes"] = int(item["size"])
+                entry["size"] = item.get("size_text") or fmt_size(entry["size_bytes"])
+            entry["remote_url"] = item.get("url", "")
+        else:
+            size = int(item.get("size") or 0)
+            merged[rel] = {
+                "rel": rel,
+                "url": "/uploads/" + rel,
+                "size": item.get("size_text") or fmt_size(size),
+                "size_bytes": size,
+                "ext": item.get("ext") or "",
+                "mtime": str(item.get("uploaded_at") or "")[:19].replace("T", " "),
+                "kind": "file",
+                "sources": ["remote"],
+                "remote_url": item.get("url", ""),
+            }
+
+    return sorted(merged.values(), key=lambda x: x.get("size_bytes") or 0, reverse=True)
 
 
 def delete_by_url(url: str) -> bool:
@@ -1114,10 +1124,8 @@ def delete_by_url(url: str) -> bool:
         return False
     try:
         path.unlink()
-        (root() / "originals" / rel).unlink(missing_ok=True)
+        drop_thumbs("/uploads/" + rel)
         # 文章删除时的清理同样同步远端，避免本地没了、OSS 上还挂着
-        if not rel.startswith("originals/"):
-            delete_remote("/uploads/originals/" + rel)
         delete_remote("/uploads/" + rel)
         return True
     except OSError:
@@ -1128,33 +1136,3 @@ def delete_by_url(url: str) -> bool:
 _ensure_heif()
 
 
-def migrate_originals() -> int:
-    """把旧的隐藏备份目录 .originals 迁到公开的 originals/（幂等，启动时跑一次）。
-
-    历史版本把无痕原图藏在 `.originals` 里，`resolve()` 拒绝隐藏目录，
-    所以它既不能公网访问、也不会同步到对象存储。现在原图要参与「水印开关切换」，
-    必须变成正常子目录。重复执行安全：同名文件已存在就丢掉旧副本。
-    """
-    old = root() / ".originals"
-    if not old.is_dir():
-        return 0
-
-    new = root() / "originals"
-    moved = 0
-    for src in list(old.rglob("*")):
-        if not src.is_file():
-            continue
-        dest = new / src.relative_to(old)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        if dest.exists():
-            src.unlink(missing_ok=True)
-            continue
-        try:
-            shutil.move(str(src), str(dest))
-            moved += 1
-        except OSError:
-            logger.warning("原图迁移失败：%s", src)
-    shutil.rmtree(old, ignore_errors=True)
-    if moved:
-        logger.info("已迁移 %d 张原图到 originals/", moved)
-    return moved

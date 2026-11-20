@@ -111,9 +111,17 @@ class S3Config:
         return "/" + str(key or "").lstrip("/")
 
 
+def _canonical_query(params: dict[str, str]) -> str:
+    """S3 规范查询串：key 排序、key/value 都做 RFC3986 编码。"""
+    return "&".join(
+        f"{quote(str(k), safe='-_.~')}={quote(str(v), safe='-_.~')}"
+        for k, v in sorted(params.items())
+    )
+
+
 def _auth_headers(cfg: S3Config, method: str, path: str, body: bytes,
-                  content_type: str = "") -> dict[str, str]:
-    """构造 SigV4 请求头；path 为已编码的完整路径（含 bucket/key）。"""
+                  content_type: str = "", query: str = "") -> dict[str, str]:
+    """构造 SigV4 请求头；path 为已编码的完整路径（含 bucket/key），query 为规范查询串。"""
     now = datetime.now(timezone.utc)
     amz_date = now.strftime("%Y%m%dT%H%M%SZ")
     date = amz_date[:8]
@@ -133,7 +141,7 @@ def _auth_headers(cfg: S3Config, method: str, path: str, body: bytes,
     signed_headers = ";".join(names)
     canonical_headers = "".join(f"{name}:{signed[name].strip()}\n" for name in names)
     canonical_request = "\n".join(
-        [method, path, "", canonical_headers, signed_headers, payload_hash]
+        [method, path, query, canonical_headers, signed_headers, payload_hash]
     )
     scope = f"{date}/{cfg.region}/s3/aws4_request"
     string_to_sign = "\n".join(
@@ -252,6 +260,61 @@ def presign(cfg: S3Config, rel: str, expires: int = 900) -> str:
         f"{cfg.endpoint.rstrip('/')}{path}?{canonical_query}"
         f"&X-Amz-Signature={signature}"
     )
+
+
+def list_objects(cfg: S3Config, prefix: str = "", token: str = "",
+                 max_keys: int = 1000) -> tuple[list[dict], str]:
+    """ListObjectsV2：返回 (对象列表, 下一页 token)。
+
+    每个对象包含 ``key`` / ``size`` / ``modified``。达到 max_keys 时返回空 token。
+    """
+    import xml.etree.ElementTree as ET
+
+    params: dict[str, str] = {"list-type": "2", "max-keys": str(max(1, min(1000, max_keys)))}
+    if prefix:
+        params["prefix"] = prefix
+    if token:
+        params["continuation-token"] = token
+    query = _canonical_query(params)
+    path = _encode_path(f"/{cfg.bucket.strip('/')}")
+    headers = _auth_headers(cfg, "GET", path, b"", "", query)
+    url = f"{cfg.endpoint.rstrip('/')}{path}?{query}"
+    try:
+        resp = requests.get(url, headers=headers, timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
+    except requests.RequestException as exc:
+        raise S3Error("无法连接对象存储", 0, str(exc)) from exc
+    if resp.status_code != 200:
+        raise S3Error("列举对象失败", resp.status_code, resp.text)
+
+    try:
+        root = ET.fromstring(resp.content)
+    except ET.ParseError as exc:
+        raise S3Error("列举结果解析失败", resp.status_code, resp.text) from exc
+
+    ns = ""
+    if root.tag.startswith("{"):
+        ns = root.tag.split("}", 1)[0] + "}"
+
+    items: list[dict] = []
+    for node in root.findall(f"{ns}Contents"):
+        key = (node.findtext(f"{ns}Key") or "").strip()
+        if not key:
+            continue
+        try:
+            size = int(node.findtext(f"{ns}Size") or 0)
+        except ValueError:
+            size = 0
+        items.append(
+            {
+                "key": key,
+                "size": size,
+                "modified": (node.findtext(f"{ns}LastModified") or "").strip(),
+            }
+        )
+
+    truncated = (root.findtext(f"{ns}IsTruncated") or "").strip().lower() == "true"
+    next_token = (root.findtext(f"{ns}NextContinuationToken") or "").strip()
+    return items, (next_token if truncated else "")
 
 
 def head(cfg: S3Config, rel: str) -> bool:

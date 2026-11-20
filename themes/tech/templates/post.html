@@ -418,12 +418,15 @@
             lb.classList.add('open');
             lb.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
+            /* 和照片墙灯箱一致：连导航一起盖住，避免毛玻璃导航透在图片上方 */
+            document.body.classList.add('lightbox-open');
             lbActive = true;
         }
         function lbClose() {
             lb.classList.remove('open');
             lb.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
+            document.body.classList.remove('lightbox-open');
             lbActive = false;
             /* 关闭灯箱时暂停灯箱内视频 */
             try {
