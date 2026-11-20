@@ -169,6 +169,11 @@ def create_app(test_config: dict | None = None) -> Flask:
     _register_cli(app)
     with app.app_context():
         plugins_service.load_all(app)
+        # 旧版把无痕原图藏在 .originals（隐藏目录，不公网、不传 OSS），
+        # 现在要参与水印开关切换，启动时顺手迁到 originals/（幂等）
+        from services import upload as upload_service
+
+        upload_service.migrate_originals()
     if not app.config.get("TESTING"):
         _start_status_scheduler(app)
         from services import feeds as feeds_service
@@ -383,14 +388,24 @@ def _register_hooks(app: Flask) -> None:
             return response
         from services import upload
 
-        if not upload.remote_active():
-            return response
+        # 水印关闭时先把图片换成 originals 版本；这一步与对象存储无关，
+        # 未启用插件时也要生效。必须在 OSS 地址改写之前做，否则签名直链换不了。
         try:
             html = response.get_data(as_text=True)
-            # 先归一化再改写：页面缓存或 README 缓存里可能存着
-            # 上一轮策略生成的直链 / 预签名地址，不剥回 /uploads/
-            # 就没法重新签名，缓存一命中就是整页 403。
-            rewritten = upload.rewrite_html(upload.normalize_html(html))
+            # 先归一化：页面缓存或 README 缓存里可能存着上一轮策略生成的
+            # 直链 / 预签名地址，不剥回 /uploads/ 就没法重新签名，缓存一命中就是整页 403。
+            html = upload.normalize_html(html)
+            # 水印关闭时换成 originals 版本（必须在 OSS 地址改写之前）
+            html = upload.watermark_html(html)
+        except Exception:  # noqa: BLE001
+            return response
+
+        if not upload.remote_active():
+            if html != response.get_data(as_text=True):
+                response.set_data(html)
+            return response
+        try:
+            rewritten = upload.rewrite_html(html)
         except Exception:  # noqa: BLE001
             return response
         if rewritten != html:

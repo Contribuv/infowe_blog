@@ -38,7 +38,8 @@
         （文章标题/正文/摘要/标签/封面、未删除的评论、友链、记忆、项目、时间线、站点设置）。
         例如：新建文章时传了图后放弃、<b>已删除评论</b>的附件、彻底删除文章时的漏网文件。
         已拒绝的评论图片会保留（随时可在后台恢复通过，不会缺图）。
-        头像、项目文件与无痕原图目录（.originals）不在此列，不会误删。
+        头像与项目文件不在此列；<b>originals/</b> 只清理「展示图已经不存在」的孤立原图，
+        仍在使用的原图跟着展示图走，不会被单独列出或误删。
     </div>
 
     <form id="orphanForm" action="{{ url_for('admin_orphan_clean') }}" method="post">
@@ -84,7 +85,9 @@
                 <td data-label="大小" class="cell-muted">{{ o.size }}</td>
                 <td data-label="上传时间" class="cell-muted">{{ o.mtime }}</td>
                 <td data-label="备注">
-                    {% if o.has_origin %}
+                    {% if o.kind == 'origin' %}
+                    <span class="badge badge-warning">孤立原图</span>
+                    {% elif o.has_origin %}
                     <span class="badge badge-warning">含无痕原图</span>
                     {% else %}
                     <span class="cell-muted">—</span>

@@ -317,12 +317,15 @@ def admin_post_embed_info():
 def admin_post_preview(post_id: int):
     post = Post.get(post_id)
     html, _ = markdown.render_post(post.get("content") or "") if post else ("", "")
+    # 与前台同一套开关：水印关闭时预览也换成无痕原图
+    html = upload.watermark_html(html)
     return jsonify({"html": upload.preview_assets(html, _preview_base())})
 
 
 @LOGIN
 def admin_preview_content():
     html, _ = markdown.render_post(request.form.get("content", ""))
+    html = upload.watermark_html(html)
     return jsonify({"html": upload.preview_assets(html, _preview_base())})
 
 
@@ -799,6 +802,12 @@ def admin_preview_asset(filename: str):
     所以签名永远新鲜，DOM 里留的稳定中转地址也不会过期。
     """
     rel = "/uploads/" + filename.lstrip("/")
+    # 水印关闭：预览也取 originals 版本，和前台看到的一致
+    if not upload.watermark_enabled():
+        origin = upload.origin_file(rel)
+        if origin is not None and origin.is_file():
+            filename = "originals/" + filename.lstrip("/")
+            rel = "/uploads/" + filename
     remote = upload.remote_preview(rel)
     if remote:
         return redirect(remote, code=302)

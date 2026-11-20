@@ -327,6 +327,21 @@ def preview_rel(rel_url: str) -> str:
     return f"/previews/{rel}.webp"
 
 
+def origin_of_key(key: str) -> str:
+    """originals/ 下的原图 key → 对应展示图 key；不是原图返回空串。
+
+    原图不写进正文，所以「是否被引用」只能看它对应的展示图。
+    """
+    parts = str(key or "").lstrip("/").split("/")
+    if "originals" not in parts:
+        return ""
+    idx = parts.index("originals")
+    rest = parts[idx + 1:]
+    if not rest:
+        return ""
+    return "/".join(parts[:idx] + ["uploads"] + rest)
+
+
 def preview_of_key(key: str) -> str:
     """previews/ 下的副本 key → 对应原图 key；不是副本则返回空串。"""
     parts = str(key or "").lstrip("/").split("/")
@@ -837,6 +852,10 @@ def scan_orphans(limit: int = 500) -> list[dict]:
         if origin and origin in referenced:
             # 预览副本属于原图的附属对象：原图还被引用时不算孤儿
             continue
+        shown = origin_of_key(key)
+        if shown and shown in referenced:
+            # 无痕原图跟着展示图走：展示图还被引用，原图就不能单独删
+            continue
         try:
             if not s3.head(cfg, key):
                 continue
@@ -892,6 +911,10 @@ def delete_orphans(keys: list[str]) -> dict:
         if origin and origin in referenced:
             # 预览副本跟着原图走：原图还被引用，副本就不能单独删
             skipped.append({"key": key, "reason": "对应原图仍被内容引用"})
+            continue
+        shown = origin_of_key(key)
+        if shown and shown in referenced:
+            skipped.append({"key": key, "reason": "对应展示图仍被内容引用"})
             continue
         try:
             s3.delete(cfg, key)

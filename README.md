@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.34-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.34)
+[![version](https://img.shields.io/badge/version-3.9.35-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.35)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.34**
+当前版本：**v3.9.35**
 
-> 最近一次更新完整展开；更早的 133 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 134 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.35
+
+- **原图与展示图分路径**：无痕原图从隐藏目录 `.originals` 迁到公开的 `originals/`，启动时自动迁移（幂等）。展示图仍是 `/uploads/...`，原图是 `/uploads/originals/...`，数据库只存展示图路径
+- **水印开关真正可逆**：关闭水印后，正文图片、封面、分享图会自动换成 `originals` 版本；重新开启立即切回。只改 `<img src>`，视频、音频、附件保持原地址；原图缺失时保留展示图，不会 404
+- **原图同步对象存储**：上传时展示图推 `uploads/...`、原图推 `uploads/originals/...`，私有桶各自现签。历史原图在插件页点「同步本地文件到 OSS」补传
+- **编辑器预览跟随开关**：预览中转路由也按水印开关取原图，后台看到的就是发布后的效果
+- **孤立原图纳入清理**：`originals/` 里「展示图已不存在」的原图会出现在「文件清理」里（备注「孤立原图」）；展示图还在的原图跟着展示图走，不会被单独删除。OSS 侧同样保护被引用展示图对应的原图对象
+- **输出顺序**：先归一化缓存里可能残留的旧签名地址，再按水印开关换原图，最后才按当前策略重新签名
+
+<details>
+<summary><b>历史版本（v3.9.34 及更早，共 134 个版本，点击展开）</b></summary>
 
 ### v3.9.34
 
@@ -935,9 +947,6 @@ chown -R www:www var
 - **缓存里不再出现签名**：页面缓存写盘前、命中后各做一次归一化，历史缓存中已经混进去的直链与预签名地址会自动剥回规范路径；代码块里的 `curl .../uploads/x` 示例不受影响
 - **兜底不依赖插件状态**：新增规则只认带 `X-Amz-Signature` 且路径含 `/uploads/` 的地址，对象存储插件停用后也能清掉旧签名
 - **文章页本就正确**：正文缓存存的是规范路径，命中时重新签名；问题只在项目 README 这条链路上，本次一并收敛到同一套「缓存存规范、输出才签名」的规则
-
-<details>
-<summary><b>历史版本（v3.9.33 及更早，共 133 个版本，点击展开）</b></summary>
 
 ### v3.9.33
 
