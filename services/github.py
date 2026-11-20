@@ -188,7 +188,13 @@ def _download_bytes(url: str, timeout: int = 8) -> bytes | None:
 
 
 def _cache_readme_image(url: str, repo: str, ext: str) -> str:
-    """与 PHP 版一致：md5(url) 命名，落到 uploads/projects/<slug>/readme/。"""
+    """与 PHP 版一致：md5(url) 命名，落到 uploads/projects/<slug>/readme/。
+
+    返回值必须是规范路径 /uploads/...，不能是远端地址：这个返回值会被
+    写进 README 缓存（data/project_cache/*.json），而预签名地址十几分钟
+    就过期，缓存却按天活着——写进去就是一批永久 403 的死图。
+    远端同步照做，但只当作副作用，不把地址带出来。
+    """
     name = hashlib.md5(url.encode("utf-8")).hexdigest() + ext
     dest = Path(UPLOADS_DIR) / "projects" / repo / "readme" / name
     rel = f"/uploads/projects/{repo}/readme/{name}"
@@ -196,7 +202,8 @@ def _cache_readme_image(url: str, repo: str, ext: str) -> str:
 
     if dest.is_file() and dest.stat().st_size > 0:
         # 文件已经在本地：确保远端也有（历史缓存可能从未上传过）
-        return upload.ensure_remote(dest, rel) or rel
+        upload.ensure_remote(dest, rel)
+        return rel
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     site = settings.get_str("site_url", "").strip().rstrip("/")
@@ -208,7 +215,8 @@ def _cache_readme_image(url: str, repo: str, ext: str) -> str:
         data = _download_bytes(candidate)
         if data:
             dest.write_bytes(data)
-            return upload.publish(dest, rel) or rel
+            upload.ensure_remote(dest, rel)
+            return rel
     return ""
 
 
@@ -219,12 +227,22 @@ def resolve_readme_urls(html: str) -> str:
     /uploads/projects/...；启用对象存储后需要在这里补一次转换，
     并把从未上传过的历史缓存图补传到远端。
 
-    代码块不参与转换：README 里的 Nginx / curl 示例是给人看的文本，
-    改写后会变成带 Access Key 与签名的真实地址。
+    这里只负责「确保远端有货」并输出规范路径，不生成最终地址：
+    预签名 URL 有有效期，而本函数的输出会进页面缓存，缓存寿命比
+    签名长得多，直接返回签名地址就会在缓存后半段整页 403。
+    真正的替换交给 app.after_request 的 upload.rewrite_html，
+    它对页面缓存写入之后的响应统一处理，且每次请求重新签名。
+
+    进入时先做一次归一化：历史缓存里可能已经混进当时的直链或预签名
+    地址，不剥回 /uploads/ 的话，上面的逻辑根本匹配不到它们。
     """
     from services import upload
 
-    if not html or "/uploads/" not in html:
+    if not html:
+        return html
+
+    html = upload.normalize_html(html)
+    if "/uploads/" not in html:
         return html
 
     published: set[str] = getattr(resolve_readme_urls, "_done", set())
@@ -233,14 +251,12 @@ def resolve_readme_urls(html: str) -> str:
     def repl(match: re.Match) -> str:
         rel = match.group(0)
         if rel in published:
-            return upload.remote_url(rel) or rel
+            return rel
         local = Path(UPLOADS_DIR) / rel[len("/uploads/"):]
         if not local.is_file():
             return rel
-        url = upload.ensure_remote(local, rel)
-        if url:
-            published.add(rel)
-            return url
+        upload.ensure_remote(local, rel)
+        published.add(rel)
         return rel
 
     def _rewrite(text: str) -> str:

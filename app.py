@@ -387,7 +387,10 @@ def _register_hooks(app: Flask) -> None:
             return response
         try:
             html = response.get_data(as_text=True)
-            rewritten = upload.rewrite_html(html)
+            # 先归一化再改写：页面缓存或 README 缓存里可能存着
+            # 上一轮策略生成的直链 / 预签名地址，不剥回 /uploads/
+            # 就没法重新签名，缓存一命中就是整页 403。
+            rewritten = upload.rewrite_html(upload.normalize_html(html))
         except Exception:  # noqa: BLE001
             return response
         if rewritten != html:

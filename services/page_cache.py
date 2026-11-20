@@ -196,6 +196,16 @@ def store(response) -> None:
     if not body:
         return
 
+    # 缓存里只允许存规范路径 /uploads/...：预签名地址的寿命比缓存短，
+    # 存下来就会在缓存中后段变成一批 403 死链。写入前统一剥回规范路径。
+    try:
+        from services import upload
+
+        if upload.remote_active():
+            body = upload.normalize_html(body)
+    except Exception:  # noqa: BLE001
+        pass
+
     url = _url()
     html_path, meta_path = _paths(url)
     try:

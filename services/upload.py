@@ -416,6 +416,20 @@ def rewrite_html(html: str) -> str:
     return html
 
 
+def normalize_html(html: str) -> str:
+    """把 HTML 里各种远端地址剥回 /uploads/...，代码块保持原样。
+
+    预签名地址只有十几分钟寿命，而页面缓存与 README 缓存是按天活着
+    的——地址一旦进了缓存，缓存越新、图越旧，到期后整页图片 403。
+    输出前统一归一化，展示时再按当前策略现场签名；
+    这里只处理代码块之外的文本，README 里的 `curl .../uploads/x`
+    这类示例保持原样。
+    """
+    if not html:
+        return html
+    return rewrite_outside_code(html, normalize_text)
+
+
 def normalize_text(text: str) -> str:
     """把各种远端地址归一化回 /uploads/...，用于保存前清洗。
 
@@ -425,6 +439,15 @@ def normalize_text(text: str) -> str:
     """
     if not text:
         return text
+    # 通用兜底：预签名地址带 X-Amz-Signature，十几分钟就过期，
+    # 无论插件当前是否启用（停用后也拿不到它的 normalize），
+    # 都不能让它留在正文或缓存里。路径里的 /uploads/ 是本站规范前缀。
+    text = re.sub(
+        r"https?://[^\s\"'<>()\[\]]*?/uploads/([^\s\"'<>()\[\]?]+)"
+        r"\?[^\s\"'<>()\[\]]*X-Amz-Signature=[^\s\"'<>()\[\]]*",
+        lambda m: "/uploads/" + m.group(1),
+        text,
+    )
     # 编辑器预览中转地址是后台路由，前台访客打不开，落库前必须剥掉。
     # 形如 /manage/preview/asset/uploads/2026/11/a.png → /uploads/2026/11/a.png
     text = re.sub(r"/[^/\s\"'<>()\[\]]*/preview/asset/uploads/", "/uploads/", text)
