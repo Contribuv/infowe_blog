@@ -5672,7 +5672,7 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   max-width: 92vw;
 }
 .pw-lb-count {
@@ -5697,6 +5697,12 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   transition: opacity .18s ease;
 }
 .pw-lb-img.is-ready { opacity: 1; }
+/* 加载中还没 src 时给一个占位尺寸：
+   否则 img 高度塌成 0，「图片加载中」会贴到下方「收录于…」文章名上。 */
+.pw-lb-img:not([src]) {
+  min-width: min(72vw, 520px);
+  min-height: min(45vh, 320px);
+}
 .pw-lb-refs {
   margin: 0;
   max-width: 92vw;
@@ -5726,6 +5732,7 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   align-items: center;
   justify-content: center;
   gap: 10px;
+  padding: 0 16px;
   font-size: 13px;
   color: rgba(255, 255, 255, .5);
   pointer-events: none;
@@ -5792,6 +5799,11 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   /* 移动端：按钮缩小、贴近边缘，给图片让出更多可视面积 */
   .pw-lightbox { padding: 52px 10px 64px; }
   .pw-lb-img { max-height: 72vh; }
+  /* 加载占位也要按手机比例收窄，避免占满一屏 */
+  .pw-lb-img:not([src]) {
+    min-width: 80vw;
+    min-height: 34vh;
+  }
   .pw-lb-btn { width: 40px; height: 40px; font-size: 22px; }
   .pw-lb-close { top: 10px; right: 10px; width: 36px; height: 36px; }
   .pw-lb-prev { left: 6px; }

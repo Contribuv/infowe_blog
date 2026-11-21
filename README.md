@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.37-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.37)
+[![version](https://img.shields.io/badge/version-3.9.38-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.38)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.37**
+当前版本：**v3.9.38**
 
-> 最近一次更新完整展开；更早的 136 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 137 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.38
+
+- **灯箱加载态排版**：加载中图片还没有 `src` 时先给一个占位尺寸（PC 520×315 / 手机 312×287），「图片加载中」与下方「收录于…」文章名不再挤在一起；实测间距 PC 159px、手机 139px
+- **提示与图片间距**：灯箱内容列间距 12px → 14px，加载提示左右留 16px，长文案不贴边
+
+<details>
+<summary><b>历史版本（v3.9.37 及更早，共 137 个版本，点击展开）</b></summary>
 
 ### v3.9.37
 
@@ -943,9 +951,6 @@ chown -R www:www var
 - **文章页灯箱**：打开时隐藏导航，与照片墙一致，不再被毛玻璃导航压住
 - **导航**：「照片墙」改名「照片」，位置调到「归档」之后
 - **缓存**：`/photos` 不再让浏览器缓存旧 HTML，灯箱 302 不缓存签名地址
-
-<details>
-<summary><b>历史版本（v3.9.36 及更早，共 136 个版本，点击展开）</b></summary>
 
 ### v3.9.36
 
