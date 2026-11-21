@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.38-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.38)
+[![version](https://img.shields.io/badge/version-3.9.39-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.39)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,17 +925,24 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.38**
+当前版本：**v3.9.39**
 
-> 最近一次更新完整展开；更早的 137 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 138 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.39
+
+- **照片缩略图统一 4:3**：时间线不再按原图比例排得高低参差，也不裁成 1:1 方块。本站 45 张照片的宽高比中位数正好是 4:3，统一后平均可见面积 75.1%（1:1 只有 68.5%），格子尺寸完全一致（123.2×92.4）
+- **照片时间线按月连续排列**：取消「每天一张独立网格」，同月照片接排，行尾不再大段留白。6 列下格子利用率从 44% 提升到 62.5%（11 月 16 张从 5 段半空变成 3 行 89% 填满）；日期信息移入卡片悬停提示与灯箱
+- **懒加载预加载距离收紧**：400px → 200px，首屏缩略图请求从 19 张降到 16 张，滚动时按需递增
+- **页面缓存签名改用纳秒 mtime**：修复开发时同一秒内连续改模板、缓存仍命中旧 HTML 的问题
+
+<details>
+<summary><b>历史版本（v3.9.38 及更早，共 138 个版本，点击展开）</b></summary>
 
 ### v3.9.38
 
 - **灯箱加载态排版**：加载中图片还没有 `src` 时先给一个占位尺寸（PC 520×315 / 手机 312×287），「图片加载中」与下方「收录于…」文章名不再挤在一起；实测间距 PC 159px、手机 139px
 - **提示与图片间距**：灯箱内容列间距 12px → 14px，加载提示左右留 16px，长文案不贴边
-
-<details>
-<summary><b>历史版本（v3.9.37 及更早，共 137 个版本，点击展开）</b></summary>
 
 ### v3.9.37
 

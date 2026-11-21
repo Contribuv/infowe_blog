@@ -137,6 +137,15 @@ def collect(limit: int = MAX_PHOTOS) -> tuple[list[dict], int]:
 
     items = _drop_missing(items)
     total = len(items)
+
+    # 预先读宽高：照片流在图片真正下载前就能占住位置。
+    # 否则未加载的图片高度为 0，整列挤在首屏，懒加载会退化成一次全加载。
+    shown = items[: max(1, limit)]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        sizes = list(pool.map(lambda item: upload.image_dims(item["url"]), shown))
+    for item, size in zip(shown, sizes):
+        if size:
+            item["width"], item["height"] = int(size[0]), int(size[1])
     months: dict[tuple[int, int], dict] = {}
     for item in items[: max(1, limit)]:
         dt = _parse_date(item["date"])

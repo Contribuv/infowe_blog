@@ -5578,42 +5578,39 @@ body::after {
   color: var(--text-secondary);
 }
 
-/* ── 日期 ── */
-.pw-day { margin-top: 20px; }
-.pw-day:first-of-type { margin-top: 0; }
-.pw-day-title {
-  margin: 0 0 8px;
-  font-size: 12.5px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  letter-spacing: .01em;
-}
-
-/* ── 网格：minmax(0,1fr) 而不是 1fr，避免单张长图撑破列宽 ── */
+/* ── 网格：最小 120px 自动填充，缩略图统一 4:3（对齐参考站的小而密） ── */
 .pw-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 8px;
+  align-items: start;
 }
 .pw-card {
   position: relative;
   display: block;
   overflow: hidden;
-  aspect-ratio: 1 / 1;
   border-radius: 6px;
   background: var(--inset-bg);
   line-height: 0;
 }
+/* 缩略图统一 4:3：所有卡片一样大，整齐；又不像 1:1 那样死板。
+   选 4:3 是因为本站照片的宽高比中位数正好 4:3，
+   统一裁切后平均可见面积 75%，比 1:1 的 68.5% 少裁一些。 */
 .pw-card img {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   transition: transform .35s ease;
 }
 /* 只在真鼠标设备上做 hover 放大，触摸设备点一下不会留下粘住的缩放 */
 @media (hover: hover) and (pointer: fine) {
   .pw-card:hover img { transform: scale(1.04); }
+/* 懒加载图片的渐显：只有 JS 加上 .pw-fade 才生效，无 JS 时图片照常直接显示 */
+.pw-card img.pw-fade { opacity: 0; }
+.pw-card img.pw-fade.is-loaded { animation: pw-img-in .45s ease forwards; }
+@keyframes pw-img-in { to { opacity: 1; } }
 }
 .pw-card:focus-visible {
   outline: none;
@@ -5621,6 +5618,7 @@ body::after {
 }
 /* 图片在两个存储里都找不到时，不显示破图：灰底 + 「图片缺失」，点击仍进文章 */
 .pw-card.is-missing img { display: none; }
+.pw-card.is-missing { aspect-ratio: 4 / 3; }
 .pw-card.is-missing::after {
   content: "图片缺失";
   position: absolute;
@@ -5643,11 +5641,15 @@ body::after {
   margin-bottom: 8px;
 }
 .pw-wall .pw-card:last-child { margin-bottom: 0; }
-/* 照片流保持原图比例，不裁成方块 */
+/* 照片流保持原图比例，不裁成方块（aspect-ratio 必须显式还原，
+   否则会继承上面统一 4:3 的规则，瀑布流就退化成等宽等高网格） */
 .pw-wall .pw-card img {
   height: auto;
+  aspect-ratio: auto;
   object-fit: contain;
 }
+/* 极少数读不到尺寸的图，用 4:3 占位，避免加载前整列高度塌陷 */
+.pw-wall .pw-card img:not([width]) { aspect-ratio: 4 / 3; }
 
 /* ── 灯箱 ── */
 .pw-lightbox {
@@ -5786,15 +5788,11 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
 .pw-lb-next { right: 16px; top: 50%; transform: translateY(-50%); }
 
 /* ── 响应式：1000 / 767 / 480 三档，与站内断点一致 ── */
-@media (max-width: 1000px) {
-  .pw-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-}
 @media (max-width: 767px) {
   .pw-page { padding-bottom: 0; }
   .pw-head { margin-bottom: 18px; }
   .pw-month { margin-top: 28px; }
-  .pw-day { margin-top: 16px; }
-  .pw-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .pw-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
 
   /* 移动端：按钮缩小、贴近边缘，给图片让出更多可视面积 */
   .pw-lightbox { padding: 52px 10px 64px; }
@@ -5813,7 +5811,7 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   .pw-lb-hint { display: none; }
 }
 @media (max-width: 480px) {
-  .pw-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+  .pw-grid { gap: 5px; }
   .pw-month-title { font-size: 14px; }
   .pw-month-title span { font-size: 11.5px; }
 }

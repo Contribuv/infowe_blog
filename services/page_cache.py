@@ -97,6 +97,9 @@ def _asset_signature() -> int:
     而 ?t= 的值就写在被缓存的 HTML 里。漏掉 static 会让 #comments、
     markdown、toast 这类独立样式表改了之后，页面仍返回旧 ?t=，
     浏览器继续命中自己的旧缓存（踩过：改了评论卡阴影看不到变化）。
+
+    签名用纳秒 mtime：开发时同一秒内连续改几个模板，秒级时间戳不变，
+    旧缓存会继续命中，表现为「文件明明改了，刷新还是老页面」。
     """
     now = time.time()
     if now - _ASSET_SIG["ts"] < 30:
@@ -105,13 +108,13 @@ def _asset_signature() -> int:
     for root in (TEMPLATE_DIR, THEMES_DIR):
         for path in root.rglob("*"):
             if path.suffix.lower() in {".html", ".css"} and path.is_file():
-                latest = max(latest, path.stat().st_mtime)
+                latest = max(latest, path.stat().st_mtime_ns)
     for path in STATIC_DIR.rglob("*"):
         if path.suffix.lower() in {".css", ".js"} and path.is_file():
-            latest = max(latest, path.stat().st_mtime)
+            latest = max(latest, path.stat().st_mtime_ns)
     icon = STATIC_DIR / "images" / "favicon.ico"
     if icon.is_file():
-        latest = max(latest, icon.stat().st_mtime)
+        latest = max(latest, icon.stat().st_mtime_ns)
     _ASSET_SIG.update(ts=now, sig=int(latest))
     return _ASSET_SIG["sig"]
 
