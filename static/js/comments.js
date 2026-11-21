@@ -1019,6 +1019,10 @@ window.initComments = function (root) {
     var IMG_MAX = 5 * 1024 * 1024;
     var IMG_COUNT = 6;   // 与后端 Comments::MAX_IMAGES 保持一致
     var pendingImages = [];
+    // 刚上传、还没提交的图片：用本地 blob 预览。
+    // /uploads/comment 直链已被后端封掉（未审核只给「审核中」占位），
+    // 所以不能直接拿服务端 URL 当缩略图。
+    var localBlobs = {};
 
     // 只接受本站评论上传目录的 URL 才拿来当缩略图，避免异常响应被注入
     var isLocalUpload = function (u) {
@@ -1039,7 +1043,7 @@ window.initComments = function (root) {
         var img = document.createElement('img');
         img.alt = '';
         img.loading = 'lazy';
-        img.src = url;
+        img.src = localBlobs[url] || url.replace(/^\/uploads\//, '/comment-img/');
         chip.appendChild(img);
 
         var del = document.createElement('button');
@@ -1048,9 +1052,13 @@ window.initComments = function (root) {
         del.setAttribute('aria-label', '删除这张图片');
         del.textContent = '×';
         del.addEventListener('click', function () {
-          pendingImages.splice(idx, 1);
-          syncImagesInput();
-          renderImages();
+            if (localBlobs[url]) {
+              URL.revokeObjectURL(localBlobs[url]);
+              delete localBlobs[url];
+            }
+            pendingImages.splice(idx, 1);
+            syncImagesInput();
+            renderImages();
         });
         chip.appendChild(del);
 
@@ -1096,6 +1104,7 @@ window.initComments = function (root) {
         .then(function (r) { return r.json().catch(function () { return { error: '上传失败，请稍后再试' }; }); })
         .then(function (data) {
           if (data && isLocalUpload(data.url)) {
+            try { localBlobs[data.url] = URL.createObjectURL(f); } catch (e) {}
             pendingImages.push(data.url);
             syncImagesInput();
             renderImages();

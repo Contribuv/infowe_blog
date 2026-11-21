@@ -220,6 +220,14 @@ def sync_ai_identity() -> None:
         )
 
 
+COMMENT_IMG_RE = re.compile(r"/uploads/comment/\d{4}/\d{2}/[A-Za-z0-9_.\-]+")
+
+
+def _comment_images(content: str) -> list[str]:
+    """评论正文里的图片地址（去重）。"""
+    return list(dict.fromkeys(COMMENT_IMG_RE.findall(content or "")))
+
+
 def on_comment(payload: dict) -> None:
     if not _enabled():
         return
@@ -251,6 +259,20 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
             if not comment:
                 return
             content = str(comment.get("content") or "").strip()
+            # 带图评论一律转人工：AI 只看得到文字，图片内容它判断不了，
+            # 自动放行等于把违规图片直接展示出去。
+            if _comment_images(content):
+                db.execute(
+                    "UPDATE comments SET ai_state='review', ai_meta=? WHERE id=?",
+                    (
+                        json.dumps(
+                            {"decision": "review", "reason": "评论含图片，必须人工审核"},
+                            ensure_ascii=False,
+                        ),
+                        cid,
+                    ),
+                )
+                return
             min_len = int(cfg.get("comment_min_length") or 10)
             # 只保留最短长度门槛：太短的评论不送 AI，原因写进 ai_meta 供后台查看
             if len(content) < min_len:

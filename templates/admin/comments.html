@@ -54,6 +54,7 @@
                         {% elif c.status == 'approved' %}<span class="badge badge-success">已通过</span>
                         {% else %}<span class="badge badge-danger">已拒绝</span>{% endif %}
                         {% if c.is_private %}<span class="badge badge-private">私密</span>{% endif %}
+                        {% if c.images %}<span class="badge badge-warning">含图 · 人工审核</span>{% endif %}
                         {# 身份动作说明：首次使用邮箱昵称 / 沿用曾用名 / 验证改名 #}
                         {% if c.identity_note %}
                         {{ detail_sub('身份：' ~ c.identity_note, '身份确认说明') }}
@@ -93,6 +94,15 @@
                         </span>
                     </td>
                     <td class="desc-cell comment-cell" data-label="内容">
+                        {% if c.images %}
+                        <div class="cmt-images">
+                            {% for img in c.images %}
+                            <a href="{{ url_for('admin_preview_asset', filename=img[9:]) }}" target="_blank" rel="noopener" title="新窗口查看原图">
+                                <img class="cmt-thumb" src="{{ url_for('admin_preview_asset', filename=img[9:], v=c.id) }}" alt="{{ c.author }}的图片 {{ loop.index }}" loading="lazy">
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
                         {% if c.content|length > 100 %}
                         <details class="comment-details">
                             <summary title="点击展开或收起全文">{{ c.content[:100] }}…<span class="comment-toggle" aria-hidden="true"></span></summary>

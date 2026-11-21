@@ -11,6 +11,7 @@ from urllib.parse import parse_qs, urlparse
 from flask import request
 from markupsafe import Markup
 
+import db
 from config import CACHE_DIR
 from services import avatar, comment_identity, ip_location, sensitive, site_url, upload
 from services import settings
@@ -42,7 +43,14 @@ def render_content(content: str) -> Markup:
         ext = Path(urlparse(path).path).suffix.lower()
         if ext not in _IMG_EXTS:
             return match.group(0)
-        return f'<img class="cmt-img" src="{path}" alt="{alt}" loading="lazy">'
+        # 评论图片走审核中转：未通过审核时返回「审核中」占位图，
+        # 通过后才返回原图；同时避免 /uploads/comment 直链绕过审核。
+        src = path
+        if "/uploads/comment/" in path:
+            rel = path.split("/uploads/comment/", 1)[1]
+            rel = rel.split("?", 1)[0].split("#", 1)[0]
+            src = "/comment-img/comment/" + rel
+        return f'<img class="cmt-img" src="{src}" alt="{alt}" loading="lazy">'
 
     return Markup(re.sub(
         r"!\[([^\]]*)\]\(((?:/uploads/|/oss-media/uploads/)[^\s()<>\"']+)\)",
@@ -94,6 +102,57 @@ def normalize_website(website: str) -> str | None:
     if not re.match(r"^https?://\S+$", website, re.I) or len(website) > 200:
         return None
     return website
+
+
+COMMENT_IMG_RE = re.compile(
+    r"/(?:oss-media/)?uploads/comment/\d{4}/\d{2}/[A-Za-z0-9_.\-]+"
+)
+
+
+def extract_images(content: str) -> list[str]:
+    """评论正文里的图片地址（去重）。后台审核、删除评论清图都走这里。"""
+    return list(dict.fromkeys(COMMENT_IMG_RE.findall(content or "")))
+
+
+def tree_ids(comment_id: int) -> list[int]:
+    """评论及其全部回复的 id，口径与软删除的级联一致。"""
+    ids = [comment_id]
+    visited = {comment_id}
+    frontier = [comment_id]
+    while frontier:
+        marks = ",".join("?" * len(frontier))
+        rows = db.query(
+            f"SELECT id FROM comments WHERE parent_id IN ({marks}) AND deleted_at IS NULL",
+            frontier,
+        )
+        frontier = []
+        for row in rows:
+            cid = int(row["id"])
+            if cid not in visited:
+                visited.add(cid)
+                frontier.append(cid)
+                ids.append(cid)
+    return ids
+
+
+def delete_images(comment_ids: list[int]) -> int:
+    """删除这些评论正文里引用的图片（本地 + OSS），返回实际删掉的张数。
+
+    只在「删除评论」时调用：拒绝评论按规则不删图，图片继续留在磁盘上。
+    """
+    if not comment_ids:
+        return 0
+    marks = ",".join("?" * len(comment_ids))
+    urls: list[str] = []
+    for row in db.query(
+        f"SELECT content FROM comments WHERE id IN ({marks})", list(comment_ids)
+    ):
+        urls.extend(extract_images(str(row["content"] or "")))
+    removed = 0
+    for url in dict.fromkeys(urls):
+        if upload.delete_by_url(url):
+            removed += 1
+    return removed
 
 
 def merge_images(content: str, raw: str) -> str:

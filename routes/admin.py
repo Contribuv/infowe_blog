@@ -19,6 +19,7 @@ from config import BACKUPS_DIR, DATA_DIR, UPLOADS_DIR, VERSION, ADMIN_PATH_RESER
 from models import Category, Comment, Link, Post, Project, Timeline, User
 from services import auth, avatar, backup, github, hooks, lang, markdown, notify, otp, project_sync, ua
 from services import settings, status, theme, upload
+from services import comments as comments_service
 
 LOGIN = auth.admin_required
 
@@ -641,6 +642,11 @@ def admin_comments():
     default_url = avatar.default_url()
     for item in items:
         item["ua_label"] = ua.describe(str(item.get("user_agent") or ""))
+        # 评论里的图片：后台直接给缩略图，人工审核时能看见图再决定
+        item["images"] = [
+            url.replace("/oss-media/uploads/", "/uploads/", 1)
+            for url in comments_service.extract_images(str(item.get("content") or ""))
+        ]
         # AI 评论头像与前台一致：优先用 AI 设置的头像，未设置则用 AI 默认头像
         if int(item.get("is_ai") or 0):
             ai_avatar = str(item.get("ai_avatar") or "")
@@ -696,7 +702,8 @@ def admin_comment_approve(comment_id: int):
 
 @LOGIN
 def admin_comment_reject(comment_id: int):
-    # 拒绝 = 前台不展示、后台保留记录（含 AI 转人工待审的评论）
+    # 拒绝 = 前台不展示、后台保留记录（含 AI 转人工待审的评论）。
+    # 按站点规则，拒绝不删图：图片继续保留，只有删除评论才清图。
     previous = Comment.get(comment_id)
     # 拒绝时把人工说明写进 ai_meta，后台「状态」列直接可见（AI 转人工的失败原因仍保留）
     Comment.mark_manual(comment_id, "人工拒绝：前台不显示，记录保留在后台", "rejected")
@@ -708,9 +715,11 @@ def admin_comment_reject(comment_id: int):
 @LOGIN
 def admin_comment_delete(comment_id: int):
     previous = Comment.get(comment_id)
+    # 删除评论才清图：连同整棵回复树里的图片一起从本地与 OSS 删掉
+    comments_service.delete_images(comments_service.tree_ids(comment_id))
     Comment.delete(comment_id)
     _audit("comment.delete", f"#{comment_id}", str(previous.get("author") or "") if previous else "")
-    flash("评论及其回复已删除（正文保留在「留存记录 · 评论留存」可查）", "success")
+    flash("评论及其回复已删除（正文保留在「留存记录 · 评论留存」可查，图片已清理）", "success")
     return _comments_back()
 
 
@@ -725,7 +734,7 @@ def admin_comments_bulk():
         flash("未选择任何评论", "error")
         return _comments_back()
     if action == "reject":
-        # 批量拒绝：置 rejected，后台留痕不删行
+        # 批量拒绝：置 rejected，后台留痕不删行；按规则拒绝不删图
         Comment.bulk(ids, "reject")
         _audit("comment.reject", f"批量 {len(ids)} 条")
         flash(f"已拒绝 {len(ids)} 条评论（前台不再显示，记录保留在后台）", "success")
@@ -749,10 +758,18 @@ def admin_comments_bulk():
         _audit("comment.approve", f"批量 {len(ids)} 条")
         flash(f"已通过 {len(ids)} 条评论", "success")
     else:
+        # 批量删除：先把整棵回复树里的图片清掉，再软删除留痕
+        targets: set[int] = set()
+        for cid in ids:
+            targets.update(comments_service.tree_ids(cid))
+        comments_service.delete_images(sorted(targets))
         for cid in ids:
             Comment.delete(cid)
         _audit("comment.delete", f"批量 {len(ids)} 条")
-        flash(f"已删除 {len(ids)} 条评论及其回复（正文保留在留存记录可查）", "success")
+        flash(
+            f"已删除 {len(ids)} 条评论及其回复（正文保留在留存记录可查，图片已清理）",
+            "success",
+        )
     return _comments_back()
 
 
@@ -800,10 +817,25 @@ def admin_preview_asset(filename: str):
     所以签名永远新鲜，DOM 里留的稳定中转地址也不会过期。
     """
     rel = "/uploads/" + filename.lstrip("/")
+    rel_path = str(filename or "").replace("\\", "/").lstrip("/")
+
+    # 评论图片不走 /uploads 直链（前台未审核只返回占位图）。
+    # 后台审核要看清原图，所以优先直接读本地文件；本地没有再回落对象存储。
+    if rel_path.lower().startswith("comment/"):
+        path = upload.resolve(rel_path)
+        if path is not None and path.is_file():
+            response = send_file(path, conditional=True, max_age=0)
+            response.cache_control.public = False
+            response.cache_control.private = True
+            return response
+
     # 水印开关只影响上传时；预览直接取当前文件，和前台看到的是同一张。
     remote = upload.remote_preview(rel)
     if remote:
-        return redirect(remote, code=302)
+        response = redirect(remote, code=302)
+        # 签名地址有时效，缓存 302 会在过期后变成 403
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     # 远端没有这个对象：图片用本地缩略图兜底，其余直接回原文件
     if Path(filename).suffix.lower() in _PREVIEW_IMAGE_EXTS:
@@ -818,6 +850,11 @@ def admin_preview_asset(filename: str):
             response.cache_control.public = False
             response.cache_control.private = True
             return response
+
+    # 评论图片已在上方处理；本地与远端都没有就是真的不存在
+    if rel_path.lower().startswith("comment/"):
+        abort(404)
+
     return redirect(url_for("uploaded_file", filename=filename), code=302)
 
 

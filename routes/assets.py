@@ -14,6 +14,11 @@ from services import avatar, cachefs, upload
 
 
 def uploaded_file(filename: str):
+    # 评论图片不允许直链：必须走 /comment-img 中转，
+    # 未审核 / 已拒绝的图片只返回「审核中」占位图。
+    rel = str(filename or "").replace("\\", "/").lstrip("/")
+    if rel.lower().startswith("comment/"):
+        abort(404)
     path = upload.resolve(filename)
     if path is None or not path.is_file():
         abort(404)

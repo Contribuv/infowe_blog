@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.40-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.40)
+[![version](https://img.shields.io/badge/version-3.9.41-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.41)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.40**
+当前版本：**v3.9.41**
 
-> 最近一次更新完整展开；更早的 139 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 140 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.41
+
+- **评论图片审核隔离**：评论图改走 `/comment-img` 中转，未通过审核（待审核 / 已拒绝 / 已删除）返回「审核中」占位图，审核通过后才返回原图；`/uploads/comment/...` 直链一律 404
+- **带图评论强制人工**：AI 托管遇到含图评论直接转人工（`ai_state=review`），不再自动放行
+- **拒绝不删图、删除才删图**：拒绝只改状态；删除评论时连同整棵回复树里的图片从本地与 OSS 一并清理
+- **评论图走 OSS**：通过审核后 `/comment-img` 302 到对象存储（公有直链 / 私有现签），未同步完成时本地兜底；直链 404，不再暴露 `/uploads/comment`
+- **后台审核体验**：评论列表显示「含图 · 人工审核」标记与 64×64 缩略图；点缩略图弹出浮窗预览原图，多图可左右切换，支持 `Esc` / 点遮罩 / `×` 关闭，键盘 `←` `→` 切图
+- **上传预览**：评论图上传后本地用 `blob:` 预览，不再依赖已封禁的服务端直链
+
+<details>
+<summary><b>历史版本（v3.9.40 及更早，共 140 个版本，点击展开）</b></summary>
 
 ### v3.9.40
 
@@ -935,9 +947,6 @@ chown -R www:www var
 - **NEW 标记**：最新 7 天文章里的照片打 NEW 标；用版本号 + localStorage 记录，第一次访问才亮，看过自动消失
 - **时间线收尾文案**：「已经翻到最早了 · 文章写到哪里，照片就记到哪里」；照片超过 500 张时提示只展示最近 500 张
 - **移动端间距**：日期 16px、月份 28px、底部文案 32px，网格 3 列
-
-<details>
-<summary><b>历史版本（v3.9.39 及更早，共 139 个版本，点击展开）</b></summary>
 
 ### v3.9.39
 

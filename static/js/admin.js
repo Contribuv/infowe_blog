@@ -243,4 +243,107 @@
       dialog.showModal();
     });
   };
+
+  /* ─── 图片浮窗预览：后台点评论图不再开新窗口 ───
+     多图（同一条评论）支持左右切换；Esc / 点遮罩 / × 关闭。 */
+  var imgDialog = null;
+  var imgGroup = [];
+  var imgIndex = 0;
+
+  function ensureImgDialog() {
+    if (imgDialog) return imgDialog;
+    var dialog = document.createElement('dialog');
+    dialog.id = 'adminImgDialog';
+    dialog.className = 'admin-detail-dialog admin-img-dialog';
+    dialog.innerHTML =
+      '<div class="admin-detail-head">' +
+        '<strong id="adminImgCaption">图片预览</strong>' +
+        '<button type="button" class="admin-detail-close" data-img-close aria-label="关闭">×</button>' +
+      '</div>' +
+      '<div class="admin-img-stage">' +
+        '<img id="adminImgView" alt="">' +
+        '<span class="admin-img-tip" id="adminImgTip">图片加载中…</span>' +
+        '<button type="button" class="admin-img-nav" data-img-prev aria-label="上一张">‹</button>' +
+        '<button type="button" class="admin-img-nav" data-img-next aria-label="下一张">›</button>' +
+      '</div>' +
+      '<div class="admin-img-foot" id="adminImgFoot"></div>';
+    document.body.appendChild(dialog);
+    imgDialog = dialog;
+
+    dialog.addEventListener('click', function (e) {
+      if (e.target === dialog) closeImg();
+    });
+    dialog.querySelector('[data-img-close]').addEventListener('click', closeImg);
+    dialog.querySelector('[data-img-prev]').addEventListener('click', function () { stepImg(-1); });
+    dialog.querySelector('[data-img-next]').addEventListener('click', function () { stepImg(1); });
+    dialog.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); stepImg(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); stepImg(1); }
+    });
+    return dialog;
+  }
+
+  function renderImg() {
+    var item = imgGroup[imgIndex] || {};
+    var view = imgDialog.querySelector('#adminImgView');
+    var tip = imgDialog.querySelector('#adminImgTip');
+    var foot = imgDialog.querySelector('#adminImgFoot');
+    var multi = imgGroup.length > 1;
+
+    imgDialog.querySelector('#adminImgCaption').textContent = item.alt || '图片预览';
+    foot.textContent = multi ? (imgIndex + 1) + ' / ' + imgGroup.length : '';
+    Array.prototype.forEach.call(imgDialog.querySelectorAll('.admin-img-nav'), function (b) {
+      b.hidden = !multi;
+    });
+
+    view.classList.add('is-loading');
+    tip.textContent = '图片加载中…';
+    tip.hidden = false;
+    view.onload = function () {
+      view.classList.remove('is-loading');
+      tip.hidden = true;
+    };
+    view.onerror = function () {
+      view.classList.remove('is-loading');
+      tip.textContent = '图片加载失败';
+    };
+    view.src = item.src || '';
+    view.alt = item.alt || '';
+  }
+
+  function stepImg(delta) {
+    if (imgGroup.length < 2) return;
+    imgIndex = (imgIndex + delta + imgGroup.length) % imgGroup.length;
+    renderImg();
+  }
+
+  function closeImg() {
+    if (!imgDialog) return;
+    if (imgDialog.open) imgDialog.close();
+    var view = imgDialog.querySelector('#adminImgView');
+    view.removeAttribute('src');
+    view.classList.remove('is-loading');
+  }
+
+  window.adminImgPreview = function (group, index) {
+    imgDialog = ensureImgDialog();
+    imgGroup = group || [];
+    imgIndex = Math.max(0, Math.min(index || 0, imgGroup.length - 1));
+    renderImg();
+    if (!imgDialog.open) imgDialog.showModal();
+  };
+
+  // 事件委托：评论区缩略图（<a href="/manage/preview/asset/...">）改为浮窗预览
+  document.addEventListener('click', function (e) {
+    var link = e.target && e.target.closest ? e.target.closest('.cmt-images a') : null;
+    if (!link) return;
+    e.preventDefault();
+    var box = link.closest('.cmt-images');
+    var links = box ? Array.prototype.slice.call(box.querySelectorAll('a')) : [link];
+    var group = links.map(function (a) {
+      var im = a.querySelector('img');
+      return { src: a.getAttribute('href') || '', alt: im ? (im.getAttribute('alt') || '') : '' };
+    });
+    window.adminImgPreview(group, links.indexOf(link));
+  });
 })();

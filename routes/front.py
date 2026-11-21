@@ -611,6 +611,74 @@ def photo_view(filename: str):
     abort(404)
 
 
+def comment_image(filename: str):
+    """评论图片中转：只有评论审核通过后才返回原图。
+
+    未通过（待审核 / 已拒绝 / 已删除）一律返回「审核中」占位图：
+    上传后不会立刻对外可访问，评论被拒后前台也拿不到图片地址。
+    通过后启用 OSS 时直接 302 到对象存储，图片带宽不经过服务器。
+    """
+    rel_path = unquote(str(filename or "")).lstrip("/")
+    if (
+        ".." in rel_path.split("/")
+        or not rel_path.startswith("comment/")
+        or Path(rel_path).suffix.lower()
+        not in {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+    ):
+        abort(404)
+
+    # 用 /uploads/... 统一匹配：历史数据可能写成 /oss-media/uploads/...
+    needle = "/uploads/" + rel_path
+    pattern = needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    approved = db.scalar(
+        "SELECT 1 FROM comments WHERE status='approved' AND deleted_at IS NULL "
+        "AND content LIKE ? ESCAPE '\\' LIMIT 1",
+        (f"%{pattern}%",),
+        0,
+    )
+    if not approved:
+        response = Response(_COMMENT_PENDING_SVG, mimetype="image/svg+xml")
+        # 审核通过后同一个地址要立刻变成原图，不能缓存占位图
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    # 通过审核：启用对象存储时优先 302 到 OSS（公有直链 / 私有现签），
+    # 图片带宽不落回服务器；OSS 上没有对象时才用本地文件兜底。
+    if upload.remote_active() and upload.remote_exists(needle):
+        remote = upload.remote_url(needle)
+        if remote and remote != needle:
+            response = redirect(remote, code=302)
+            # 私有桶签名有时效，不能缓存 302
+            response.headers["Cache-Control"] = "no-store"
+            return response
+
+    path = upload.resolve(rel_path)
+    if path is not None and path.is_file():
+        response = send_file(path, conditional=True, max_age=300)
+        response.cache_control.private = True
+        response.cache_control.public = False
+        return response
+
+    remote = upload.remote_preview(needle)
+    if remote:
+        response = redirect(remote, code=302)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    abort(404)
+
+
+_COMMENT_PENDING_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="图片审核中">
+<rect width="320" height="180" fill="#f2f4f7"/>
+<g fill="none" stroke="#c6ced9" stroke-width="2.5" stroke-linecap="round">
+<rect x="132" y="44" width="56" height="42" rx="6"/>
+<circle cx="160" cy="65" r="10"/>
+<path d="M146 44l4-7h20l4 7"/>
+</g>
+<text x="160" y="133" text-anchor="middle" fill="#8b96a5" font-size="22" font-family="-apple-system,'PingFang SC','Microsoft YaHei',sans-serif">审核中</text>
+</svg>"""
+
+
 def about():
     if not settings.bool_of("nav_about", True):
         abort(404)
@@ -987,6 +1055,7 @@ def register(app) -> None:
         ("/photos", "photos", photos, ["GET"]),
         ("/photo-thumb/<path:filename>", "photo_thumb", photo_thumb, ["GET"]),
         ("/photo-view/<path:filename>", "photo_view", photo_view, ["GET"]),
+        ("/comment-img/<path:filename>", "comment_image", comment_image, ["GET"]),
         ("/about", "about", about, ["GET"]),
         ("/circle", "circle", circle, ["GET"]),
         ("/readers", "readers_page", readers_page, ["GET"]),
