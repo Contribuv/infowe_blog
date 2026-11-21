@@ -19,33 +19,42 @@
         <button type="button" data-view="flow" role="tab" aria-selected="false">照片流</button>
     </div>
 
-    <div class="pw-viewport" id="pwTimelineView">
+    <div class="pw-viewport" id="pwTimelineView" data-bk="{{ bk }}">
         {% for month in months %}
         <section class="pw-month">
             <h2 class="pw-month-title">{{ month.label }}<span>{{ month.count }} 张</span></h2>
-            {# 同一个月的照片排进同一张网格，而不是按天各开一张网格。
-               按天分组时每天只占一两行、右边总是空一半（45 张要占掉 102 个格子），
-               看上去参差又松散；连续排只在这个月最后一行留白。 #}
-            <div class="pw-grid">
-                {% for day in month.days %}
-                {% for p in day.photos %}
-                <a class="pw-card" href="{{ url_for('photo_view', filename=p.url[9:], v=p.post_id) }}"
-                   data-post-id="{{ p.post_id }}" data-post-title="{{ p.post_title }}"
-                   data-day="{{ day.label }}"
-                   aria-label="{{ day.label }} · {{ p.name }}" title="{{ day.label }} · {{ p.post_title or p.name }}">
-                    <img data-src="{{ p.thumb }}"
-                         data-srcset="{{ p.thumb }}?w=320 320w, {{ p.thumb }}?w=560 560w, {{ p.thumb }}?w=960 960w"
-                         sizes="(max-width: 480px) 30vw, (max-width: 767px) 22vw, (max-width: 1000px) 15vw, 113px"
-                         {% if p.width %}width="{{ p.width }}" height="{{ p.height }}"{% endif %}
-                         alt="{{ p.post_title or p.name }}" loading="lazy" decoding="async"
-                         onerror="this.closest('.pw-card').classList.add('is-missing')">
-                    <noscript><img src="{{ p.thumb }}" alt="{{ p.post_title or p.name }}" loading="lazy"></noscript>
-                </a>
-                {% endfor %}
-                {% endfor %}
+            {% for day in month.days %}
+            <div class="pw-day">
+                <h3 class="pw-day-title">{{ day.label }}<span>· {{ day.count }} 张</span></h3>
+                <div class="pw-grid">
+                    {% for p in day.photos %}
+                    <a class="pw-card{% if p.is_new %} is-new{% endif %}"
+                       href="{{ url_for('photo_view', filename=p.url[9:], v=p.post_id) }}"
+                       data-post-id="{{ p.post_id }}" data-post-title="{{ p.post_title }}"
+                       data-day="{{ day.label }}"
+                       aria-label="{{ day.label }} · {{ p.name }}" title="{{ day.label }} · {{ p.post_title or p.name }}">
+                        <img data-src="{{ p.thumb }}"
+                             data-srcset="{{ p.thumb }}?w=320 320w, {{ p.thumb }}?w=560 560w, {{ p.thumb }}?w=960 960w"
+                             sizes="(max-width: 480px) 30vw, (max-width: 767px) 22vw, (max-width: 1000px) 15vw, 113px"
+                             {% if p.width %}width="{{ p.width }}" height="{{ p.height }}"{% endif %}
+                             alt="{{ p.post_title or p.name }}" loading="lazy" decoding="async"
+                             onerror="this.closest('.pw-card').classList.add('is-missing')">
+                        <noscript><img src="{{ p.thumb }}" alt="{{ p.post_title or p.name }}" loading="lazy"></noscript>
+                    </a>
+                    {% endfor %}
+                </div>
             </div>
+            {% endfor %}
         </section>
         {% endfor %}
+
+        <p class="pw-end">
+            {% if total > 500 %}
+            这里只展示最近 500 张 · 更早的照片还在文章里
+            {% else %}
+            已经翻到最早了 · 文章写到哪里，照片就记到哪里
+            {% endif %}
+        </p>
     </div>
 
     <div class="pw-viewport" id="pwFlowView" hidden>
@@ -83,6 +92,16 @@
     var timelineView = document.getElementById('pwTimelineView');
     var flowView = document.getElementById('pwFlowView');
     var wall = document.getElementById('pwWall');
+
+    // 新照片提示：版本号变了才给卡片亮 NEW，看过一次就记住，下次不再提醒
+    try {
+        var bk = timelineView.getAttribute('data-bk');
+        var seenBk = localStorage.getItem('pw-new-seen');
+        if (bk && seenBk !== bk) {
+            document.documentElement.classList.add('new-on');
+            localStorage.setItem('pw-new-seen', bk);
+        }
+    } catch (e) {}
     var box = document.getElementById('pwLightbox');
     var img = document.getElementById('pwLbImg');
     var tip = document.getElementById('pwLbTip');

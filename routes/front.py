@@ -540,8 +540,8 @@ def photos():
         abort(404)
     from services import photos as photos_service
 
-    months, total = photos_service.collect()
-    response = make_response(render_template("photos.html", months=months, total=total))
+    months, total, bk = photos_service.collect()
+    response = make_response(render_template("photos.html", months=months, total=total, bk=bk))
     # 文章增删会立刻改变照片列表，浏览器不能缓存旧 HTML：
     # 否则刚删掉的图还会出现在页面上，点开就是 404。
     response.headers["Cache-Control"] = "no-cache, must-revalidate"

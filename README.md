@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.39-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.39)
+[![version](https://img.shields.io/badge/version-3.9.40-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.40)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.39**
+当前版本：**v3.9.40**
 
-> 最近一次更新完整展开；更早的 138 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 139 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.40
+
+- **照片墙按日分组**：恢复「月份 → 日期 → 网格」，每天一个独立小网格与日期标题（如「11 月 17 日 · 4 张」），不再把整月挤成一张图墙
+- **NEW 标记**：最新 7 天文章里的照片打 NEW 标；用版本号 + localStorage 记录，第一次访问才亮，看过自动消失
+- **时间线收尾文案**：「已经翻到最早了 · 文章写到哪里，照片就记到哪里」；照片超过 500 张时提示只展示最近 500 张
+- **移动端间距**：日期 16px、月份 28px、底部文案 32px，网格 3 列
+
+<details>
+<summary><b>历史版本（v3.9.39 及更早，共 139 个版本，点击展开）</b></summary>
 
 ### v3.9.39
 
@@ -935,9 +945,6 @@ chown -R www:www var
 - **照片时间线按月连续排列**：取消「每天一张独立网格」，同月照片接排，行尾不再大段留白。6 列下格子利用率从 44% 提升到 62.5%（11 月 16 张从 5 段半空变成 3 行 89% 填满）；日期信息移入卡片悬停提示与灯箱
 - **懒加载预加载距离收紧**：400px → 200px，首屏缩略图请求从 19 张降到 16 张，滚动时按需递增
 - **页面缓存签名改用纳秒 mtime**：修复开发时同一秒内连续改模板、缓存仍命中旧 HTML 的问题
-
-<details>
-<summary><b>历史版本（v3.9.38 及更早，共 138 个版本，点击展开）</b></summary>
 
 ### v3.9.38
 

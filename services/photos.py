@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.parse import quote
 
@@ -34,6 +34,9 @@ SKIP_PREFIXES = (
 )
 
 MAX_PHOTOS = 500
+
+# 「新照片」的口径：文章发布在最近 7 天内，卡片打 NEW 标
+NEW_DAYS = 7
 
 
 def _is_photo(url: str) -> bool:
@@ -104,8 +107,8 @@ def _drop_missing(items: list[dict]) -> list[dict]:
     return [item for item, ok in zip(items, exists) if ok]
 
 
-def collect(limit: int = MAX_PHOTOS) -> tuple[list[dict], int]:
-    """返回 (按月份分组的列表, 照片总数)。
+def collect(limit: int = MAX_PHOTOS) -> tuple[list[dict], int, str]:
+    """返回 (按月份分组的列表, 照片总数, 新照片版本号)。
 
     只统计已发布文章；草稿和回收站里的文章不会被当成「已展示的照片」。
     正文里引用了但不存在的文件（本地和 OSS 都没有）会被过滤掉。
@@ -165,4 +168,12 @@ def collect(limit: int = MAX_PHOTOS) -> tuple[list[dict], int]:
     for month in months.values():
         month["days"] = list(month["days"].values())
         result.append(month)
-    return result, total
+
+    # 新照片：文章发布时间在最近 7 天内
+    cutoff = datetime.now() - timedelta(days=NEW_DAYS)
+    for item in items[: max(1, limit)]:
+        item["is_new"] = _parse_date(item["date"]) >= cutoff
+
+    # 版本号：最新文章时间 + 总数。文章新增图片但时间不变时，总数会变
+    bk = f"{items[0]['date'] if items else ''}|{total}"
+    return result, total, bk

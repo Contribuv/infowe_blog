@@ -5578,6 +5578,63 @@ body::after {
   color: var(--text-secondary);
 }
 
+/* ── 日期 ── */
+.pw-day { margin-top: 20px; }
+.pw-day:first-of-type { margin-top: 0; }
+.pw-day-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  letter-spacing: .01em;
+}
+.pw-day-title span {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  opacity: .72;
+}
+
+/* ── 新照片：只在「版本号变了」的第一次访问显示，看过就记住 ── */
+.pw-card.is-new::after { display: none; }
+html.new-on .pw-card.is-new::after {
+  content: "NEW";
+  display: block;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  line-height: 1.6;
+}
+
+/* ── 时间线末尾 ── */
+.pw-end {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 44px 0 8px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  letter-spacing: .02em;
+}
+.pw-end::before,
+.pw-end::after {
+  content: "";
+  width: 32px;
+  height: 1px;
+  background: var(--border);
+}
+
 /* ── 网格：最小 120px 自动填充，缩略图统一 4:3（对齐参考站的小而密） ── */
 .pw-grid {
   display: grid;
@@ -5792,6 +5849,8 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   .pw-page { padding-bottom: 0; }
   .pw-head { margin-bottom: 18px; }
   .pw-month { margin-top: 28px; }
+  .pw-day { margin-top: 16px; }
+  .pw-end { margin-top: 32px; }
   .pw-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; }
 
   /* 移动端：按钮缩小、贴近边缘，给图片让出更多可视面积 */
