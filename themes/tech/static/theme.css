@@ -5751,8 +5751,8 @@ html.new-on .pw-card.is-new::after {
    深色：近黑遮罩 + 白字；浅色：纸白遮罩 + 深色字，按钮改为白底深色图标。 */
 .pw-lightbox,
 .lightbox {
-  --lb-bg: rgba(8, 10, 14, .74);
-  /* 浓雾玻璃：透出页面色块但看不清内容，图片仍是视觉中心 */
+  --lb-bg: rgba(8, 10, 14, .9);
+  /* 浓雾玻璃：只透出极淡的页面明暗，不干扰图片与文字阅读 */
   --lb-blur: blur(18px) saturate(120%);
   --lb-count: rgba(255, 255, 255, .45);
   --lb-refs: rgba(255, 255, 255, .55);
@@ -5775,7 +5775,7 @@ html.new-on .pw-card.is-new::after {
 }
 [data-theme="light"] .pw-lightbox,
 [data-theme="light"] .lightbox {
-  --lb-bg: rgba(246, 247, 250, .8);
+  --lb-bg: rgba(246, 247, 250, .92);
   --lb-count: rgba(22, 27, 36, .5);
   --lb-refs: rgba(22, 27, 36, .62);
   --lb-refs-link: rgba(22, 27, 36, .9);
