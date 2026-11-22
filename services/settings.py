@@ -58,7 +58,7 @@ DEFAULTS: dict[str, str] = {
     "comments_enabled": "1",
     "comment_notify": "1",
     "comment_image_upload": "1",
-    # 首页 / 404 的代码粒子背景（展示页专用，文章页不挂）
+    # 前台代码粒子背景（全站挂载，阅读页自动降级；后台可整体关闭）
     "particles_enabled": "1",
     # 评论展示方式：inline 内嵌（默认）/ floating 浮窗（点击左下角按钮弹出）
     "comment_display": "inline",

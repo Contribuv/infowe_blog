@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.43-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.43)
+[![version](https://img.shields.io/badge/version-3.9.44-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.44)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.43**
+当前版本：**v3.9.44**
 
-> 最近一次更新完整展开；更早的 142 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 143 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.44
+
+- **修正后台背景开关文案**：标题由「首页背景」改为「全站背景」，说明改为「前台全站显示，文章与项目详情页自动降级（粒子更少、不画连线）」，并去掉已经不存在的前台鼠标光晕描述
+- **代码注释同步**：`particles.js` 与 settings 默认值注释一并更新，避免后续维护时按旧文案理解
+
+<details>
+<summary><b>历史版本（v3.9.43 及更早，共 143 个版本，点击展开）</b></summary>
 
 ### v3.9.43
 
@@ -938,9 +946,6 @@ chown -R www:www var
 - **浅色页脚层次**：页脚底色收到与页面相差约 4 级，顶线改成 11% 文字色渐变，既看得出「地面」又不突兀
 - **页头分割线**：首页头与子页页头的 1px 实线改成两端淡出的渐变，浅色下不再像硬边框
 - **登录页结构修正**：主题切换与粒子脚本拆开，补上缺失的 `</script>`，外部脚本正常加载
-
-<details>
-<summary><b>历史版本（v3.9.42 及更早，共 142 个版本，点击展开）</b></summary>
 
 ### v3.9.42
 
