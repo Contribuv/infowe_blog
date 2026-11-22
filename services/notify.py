@@ -283,14 +283,22 @@ def notify_comment(
 
 
 def notify_approved_reply(comment_id: int) -> None:
-    """评论审核通过后，补发「收到回复」邮件给被回复的访客。"""
-    if not settings.bool_of("comment_notify", True):
-        return
-
+    """评论审核通过后：写站内「已通过」通知 + 补发「收到回复」邮件给被回复的访客。"""
     from models import Comment
 
     comment = Comment.get(int(comment_id))
     if not comment or comment.get("status") != "approved":
+        return
+
+    # 站内通知：评论者本人收到「评论已通过」提醒（不受邮件开关影响）
+    try:
+        from services import comment_notify
+        if not int(comment.get("is_private") or 0):
+            comment_notify.add_approved(comment)
+    except Exception:
+        pass
+
+    if not settings.bool_of("comment_notify", True):
         return
     if int(comment.get("is_private") or 0):
         return

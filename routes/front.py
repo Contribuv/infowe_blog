@@ -9,7 +9,7 @@ from urllib.parse import unquote, urlencode
 
 from flask import (
     abort, flash, jsonify, make_response, redirect, render_template, request,
-    Response, send_file, url_for,
+    Response, send_file, session, url_for,
 )
 from markupsafe import escape
 
@@ -107,6 +107,28 @@ def _comments_context(post_id: int | None, project_id: int | None, page: int | N
     enabled = comments_service.open_comments()
     is_admin = auth.is_admin()
     commenter = comments_service.commenter()
+    # 读者账号登录态（HttpOnly Cookie），供评论区登录浮窗与身份展示使用
+    from services import reader_account
+    reader_row = reader_account.verify_token(request.cookies.get(reader_account.COOKIE_NAME, ""))
+    reader_user = reader_account.public_user(reader_row) if reader_row else None
+    if reader_user:
+        from services import avatar as avatar_svc
+        reader_user["avatar"] = avatar_svc.urls(
+            str((reader_row or {}).get("email_hash") or ""), "", 80)[0] or avatar_svc.default_url()
+        # 已登录读者：用账号信息作为表单默认身份（昵称与 comment_identities 一致，不触发改名冲突）
+        for field in ("author", "email", "website"):
+            key = "name" if field == "author" else field
+            if reader_user.get(key):
+                commenter[field] = reader_user[key]
+    # 身份条头像：博主用后台头像，注册读者用账号头像，Cookie 访客按邮箱算 Gravatar / QQ 头像
+    guest_avatar = ""
+    if commenter.get("author") and not reader_user:
+        from services import avatar as avatar_svc
+        guest_hash = str(commenter.get("email_hash") or "")
+        guest_email = str(commenter.get("email") or "").strip()
+        if not guest_hash and guest_email:
+            guest_hash = avatar_svc.email_hash(guest_email)
+        guest_avatar = (avatar_svc.urls(guest_hash, "", 64)[0] if guest_hash else "") or avatar_svc.default_url()
     my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
     if enabled:
         comment_list, comment_total, comment_pager = _load_comments(
@@ -115,14 +137,36 @@ def _comments_context(post_id: int | None, project_id: int | None, page: int | N
     else:
         comment_list, comment_total = [], 0
         comment_pager = _comment_pager({})
+    # 点赞数据：当前页所有评论（根 + 楼中楼）的赞数，及当前访客已赞集合
+    from services import reader_overview as ov
+    all_ids = []
+    for root in comment_list:
+        all_ids.append(int(root.get("id") or 0))
+        for ch in (root.get("flat_replies") or []):
+            all_ids.append(int(ch.get("id") or 0))
+    all_ids = [i for i in all_ids if i > 0]
+    like_counts = ov.likes_map(all_ids, 1)
+    dislike_counts = ov.likes_map(all_ids, -1)
+    voter_hash = str((reader_row or {}).get("email_hash") or "") or commenter.get("email_hash") or ""
+    if not voter_hash:
+        import hashlib
+        voter_hash = hashlib.md5(comments_service.request_ip().encode()).hexdigest()
+    liked_ids = ov.liked_comment_ids(voter_hash, all_ids, 1)
+    disliked_ids = ov.liked_comment_ids(voter_hash, all_ids, -1)
     return {
         "comments": comment_list,
         "comment_total": comment_total,
         "comment_pager": comment_pager,
         "comments_enabled": enabled,
         "commenter": commenter,
+        "reader_user": reader_user,
+        "like_counts": like_counts,
+        "dislike_counts": dislike_counts,
+        "liked_ids": liked_ids,
+        "disliked_ids": disliked_ids,
         "is_admin": is_admin,
         "admin_avatar": avatar.admin_url(40) if is_admin else "",
+        "guest_avatar": guest_avatar,
         "my_pending": 0 if is_admin else Comment.count_pending(comment_list),
         # 片段端点地址：inline 模式深链锚点跨页兜底用（#comment-N 指向第 2 页及以后时，
         # 首屏 DOM 没有该楼层，comments.js 据此 fetch ?focus=N 拉目标页再定位）
@@ -477,6 +521,410 @@ def comment_identity_verify():
     return jsonify(
         {"ok": True, "token": token, "expires_in": comment_identity.TOKEN_TTL}
     )
+
+
+def comment_history():
+    """按邮箱查历史公开评论里用过的网址，供评论表单自动填入。
+
+    网址本就是评论者主动公开在评论里的信息，这里只回传网址本身，
+    不暴露昵称、邮箱、IP 等；只认已通过的公开评论，按最近一次取。
+    按 IP + 邮箱哈希双维度限流，避免被拿来批量探测。
+    """
+    from services import ratelimit
+
+    raw = (request.args.get("email") or "").strip()
+    if not raw:
+        return jsonify({"website": ""})
+    email = comments_service.normalize_email(raw)
+    if "@" not in email:
+        return jsonify({"website": ""})
+
+    key_hash = avatar.email_hash(email)
+    ip = comments_service.request_ip()
+    if not ratelimit.allow("cmt_hist_ip", ip, 60, 30):
+        return jsonify({"website": ""}), 429
+    if not ratelimit.allow("cmt_hist_mail", key_hash, 60, 10):
+        return jsonify({"website": ""}), 429
+    ratelimit.touch("cmt_hist_ip", ip)
+    ratelimit.touch("cmt_hist_mail", key_hash)
+
+    row = db.one(
+        "SELECT website FROM comments WHERE email_hash = ? AND website != '' "
+        "AND status = 'approved' AND is_private = 0 AND deleted_at IS NULL "
+        "ORDER BY created_at DESC, id DESC LIMIT 1",
+        (key_hash,),
+    )
+    return jsonify({"website": str(row["website"] or "") if row else ""})
+
+
+# ── 读者账号：邮箱 + 密码注册登录（HttpOnly Cookie 登录态） ──
+def _apply_reader_cookie(response, row):
+    from services import reader_account
+
+    token = reader_account.issue_token(row)
+    response.set_cookie(
+        reader_account.COOKIE_NAME,
+        token,
+        max_age=reader_account.TOKEN_TTL,
+        path="/",
+        httponly=True,
+        samesite="Lax",
+    )
+    return response
+
+
+def reader_send_code():
+    from services import mail_template, notify, reader_account, settings
+
+    if not comments_service.open_comments():
+        abort(403)
+    email = (request.form.get("email") or "").strip()
+    code, error = reader_account.issue_code(email, comments_service.request_ip())
+    if error:
+        return jsonify({"error": error}), 429
+    blog = settings.get_str("blog_name", "博客").strip() or "博客"
+    text, page = mail_template.verify_code_notice(
+        blog_name=blog,
+        site=site_url.base(),
+        code=code,
+        ttl_minutes=reader_account.CODE_TTL // 60,
+    )
+    ok, _message = notify.send(
+        reader_account.normalize_email(email),
+        f"[{blog}] 注册验证码",
+        text,
+        page,
+    )
+    if not ok:
+        return jsonify({"error": "验证码发送失败，请稍后重试"}), 500
+    return jsonify({"ok": True, "cooldown": 60})
+
+
+def reader_register():
+    from services import captcha, reader_account
+
+    if not comments_service.open_comments():
+        abort(403)
+    if not captcha.verify(request.form.get("captcha", "")):
+        return jsonify({"error": "验证码错误或已过期", "captcha_expired": True}), 400
+    email = (request.form.get("email") or "").strip()
+    code = (request.form.get("code") or "").strip()
+    password = request.form.get("password") or ""
+    name = (request.form.get("name") or "").strip()
+    link = (request.form.get("link") or "").strip()
+    row, error = reader_account.register(email, code, password, name, link)
+    if error:
+        status = 429 if "验证码" in error else 400
+        return jsonify({"error": error}), status
+    response = jsonify({"ok": True, "user": reader_account.public_user(row)})
+    return _apply_reader_cookie(response, row)
+
+
+def reader_login():
+    from services import captcha, ratelimit, reader_account
+
+    if not comments_service.open_comments():
+        abort(403)
+    # 登录失败限流：同 IP 10 次/小时，防暴力破解
+    ip = comments_service.request_ip()
+    if not ratelimit.allow("reader_login_ip", ip, 3600, 10):
+        return jsonify({"error": "尝试次数过多，请稍后再试"}), 429
+    # 图形验证码：每次登录必须通过（答案以 HMAC 签名存 session）
+    if not captcha.verify(request.form.get("captcha", "")):
+        return jsonify({"error": "验证码错误或已过期", "captcha_expired": True}), 400
+    email = (request.form.get("email") or "").strip()
+    password = request.form.get("password") or ""
+    row, error = reader_account.login(email, password)
+    if error:
+        ratelimit.touch("reader_login_ip", ip)
+        return jsonify({"error": error}), 401
+    response = jsonify({"ok": True, "user": reader_account.public_user(row)})
+    return _apply_reader_cookie(response, row)
+
+
+def reader_logout():
+    from services import reader_account
+
+    response = jsonify({"ok": True})
+    response.delete_cookie(reader_account.COOKIE_NAME, path="/")
+    return response
+
+
+def clear_identity():
+    """清除前台全部身份 Cookie（GET，便于浏览器直接访问清理）：
+    blog_reader_session（注册登录）+ blog_commenter（昵称+邮箱访客）+ Flask session。
+    """
+    from services import reader_account
+
+    back = request.args.get("back", "/")
+    if not back.startswith("/") or back.startswith("//"):
+        back = "/"
+    response = redirect(back)
+    response.delete_cookie(reader_account.COOKIE_NAME, path="/")
+    response.delete_cookie("blog_commenter", path="/")
+    session.clear()
+    return response
+
+
+def reader_me():
+    from services import reader_account
+
+    token = request.cookies.get(reader_account.COOKIE_NAME, "")
+    row = reader_account.verify_token(token)
+    if not row:
+        return jsonify({"is_login": False, "user": None})
+    return jsonify({"is_login": True, "user": reader_account.public_user(row)})
+
+
+def identity_state():
+    """当前浏览者的身份快照（只给布尔值），供前台做跨标签页身份同步。
+
+    典型场景：在后台标签页退出登录，回到已经打开的前台标签页时，
+    页面里的博主入口 / 评论身份条还是旧的，前端拿这个接口比对一次再决定重载。
+    """
+    from services import auth as auth_service
+
+    return jsonify({"admin": bool(auth_service.is_admin())})
+
+
+# ── 读者图形验证码：算术题 SVG，答案只以 HMAC 签名存 session ──
+def reader_captcha():
+    from services import captcha
+    import secrets as _secrets
+
+    question = captcha.current_question()
+    if not question:
+        question = captcha.new_question()
+    # 手绘风 SVG：随机抖动 + 干扰线，答案本身是算术题不易被 OCR 直接读取
+    parts = question.split("+")
+    a, b = parts[0].strip(), parts[1].strip()
+    w, h = 120, 40
+    lines = []
+    for _ in range(3):
+        y1 = _secrets.randbelow(h)
+        y2 = _secrets.randbelow(h)
+        lines.append(
+            f'<line x1="0" y1="{y1}" x2="{w}" y2="{y2}" stroke="#c7d2e0" stroke-width="1"/>'
+        )
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
+        f'<rect width="{w}" height="{h}" fill="#f4f7fb"/>'
+        + "".join(lines)
+        + f'<text x="16" y="28" font-family="Arial,sans-serif" font-size="20" font-weight="700" '
+        f'fill="#2f7ad1" transform="rotate(-4 60 20)">{a} + {b} = ?</text>'
+        '</svg>'
+    )
+    response = Response(svg, mimetype="image/svg+xml")
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return response
+
+
+# ── 账号管理：昵称 / 头像 / 邮箱（需登录） ──
+def _require_reader():
+    from services import reader_account
+
+    row = reader_account.verify_token(request.cookies.get(reader_account.COOKIE_NAME, ""))
+    return row
+
+
+def reader_update_name():
+    from services import reader_account
+
+    row = _require_reader()
+    if not row:
+        return jsonify({"error": "请先登录"}), 401
+    ok, error = reader_account.update_name(row, request.form.get("name", ""))
+    if not ok:
+        return jsonify({"error": error}), 400
+    updated = reader_account.get_by_hash(row["email_hash"])
+    response = jsonify({"ok": True, "user": reader_account.public_user(updated)})
+    return _apply_reader_cookie(response, updated)
+
+
+def reader_update_password():
+    from services import reader_account
+
+    row = _require_reader()
+    if not row:
+        return jsonify({"error": "请先登录"}), 401
+    ok, error = reader_account.update_password(
+        row, request.form.get("old_password", ""), request.form.get("new_password", "")
+    )
+    if not ok:
+        return jsonify({"error": error}), 400
+    return jsonify({"ok": True})
+
+
+def reader_update_email():
+    from services import reader_account
+
+    row = _require_reader()
+    if not row:
+        return jsonify({"error": "请先登录"}), 401
+    updated, error = reader_account.update_email(row, request.form.get("email", ""), request.form.get("code", ""))
+    if not updated:
+        return jsonify({"error": error}), 400
+    response = jsonify({"ok": True, "user": reader_account.public_user(updated)})
+    return _apply_reader_cookie(response, updated)
+
+
+def reader_avatar_upload():
+    from services import reader_account, upload
+
+    row = _require_reader()
+    if not row:
+        return jsonify({"error": "请先登录"}), 401
+    file = request.files.get("avatar")
+    if not file or not file.filename:
+        return jsonify({"error": "请选择图片"}), 400
+    allowed = IMAGE_EXTS if "IMAGE_EXTS" in globals() else {"png", "jpg", "jpeg", "gif", "webp"}
+    url, error = upload.save(file, allowed_ext=allowed, sub_dir="reader/avatar", randomize=True)
+    if error:
+        return jsonify({"error": error}), 400
+    ok, error = reader_account.update_avatar(row, url)
+    if not ok:
+        return jsonify({"error": error}), 400
+    return jsonify({"ok": True, "avatar": url})
+
+
+# ── 站内通知：双身份（登录读者 Cookie / 评论 Cookie） ──
+def _notify_identity():
+    """解析身份，返回 (email_hash, identity_type)。
+    优先级：①博主(admin session→博主邮箱hash) ②注册登录(reader) ③Cookie访客(guest) ④query邮箱 ⑤空。
+    """
+    from services import avatar, reader_account, settings
+
+    # ① 博主：用后台配置的 notify_email / contact_email 生成 hash
+    if auth.is_admin():
+        bloger_email = (settings.get_str("notify_email", "") or settings.get_str("contact_email", "") or "").strip()
+        if bloger_email:
+            return avatar.email_hash(bloger_email), "admin"
+        return "", "admin"
+
+    # ② 注册登录
+    token = request.cookies.get(reader_account.COOKIE_NAME, "")
+    reader_row = reader_account.verify_token(token)
+    if reader_row:
+        return str(reader_row.get("email_hash") or ""), "reader"
+
+    # ③ Cookie 访客：优先 cookie 里的 email_hash，没有则用 email 现算
+    commenter = comments_service.commenter()
+    cookie_hash = str(commenter.get("email_hash") or "")
+    if cookie_hash:
+        return cookie_hash, "guest"
+    cookie_email = (commenter.get("email") or "").strip()
+    if cookie_email:
+        return avatar.email_hash(cookie_email), "guest"
+    # 兜底：Cookie 里是「博主资料」时 commenter() 会整条剔除（表单不回显博主资料），
+    # 但身份归集必须照常认人，否则同一浏览器发过评论后抽屉仍提示未识别身份。
+    fallback_hash = comments_service.commenter_hash()
+    if fallback_hash:
+        return fallback_hash, "guest"
+
+    # ④ query/form 邮箱
+    email = (request.values.get("email") or "").strip()
+    if email:
+        return avatar.email_hash(email), "email"
+    return "", "new"
+
+
+def comment_notifies():
+    from services import comment_notify
+
+    # 博主视角：铃铛显示待审核评论动态
+    if auth.is_admin():
+        return jsonify({
+            "count": comment_notify.admin_pending_count(),
+            "notifies": comment_notify.admin_feed(),
+            "is_admin": True,
+        })
+    key_hash, _is_reader = _notify_identity()
+    return jsonify({
+        "count": comment_notify.unread_count(key_hash),
+        "notifies": comment_notify.list_notifies(key_hash),
+        "is_admin": False,
+    })
+
+
+def comment_notifies_read():
+    from services import comment_notify
+
+    if not comments_service.open_comments():
+        abort(403)
+    key_hash, _is_reader = _notify_identity()
+    if not key_hash:
+        return jsonify({"error": "未识别身份"}), 401
+    notify_id = request.values.get("id", 0, type=int) or 0
+    changed = comment_notify.mark_read(key_hash, notify_id)
+    return jsonify({"ok": True, "changed": changed, "count": comment_notify.unread_count(key_hash)})
+
+
+# ── 我的概览：个人中心抽屉数据 ──
+def reader_overview():
+    from services import avatar, reader_overview as ov, settings
+
+    key_hash, identity_type = _notify_identity()
+    if not key_hash and identity_type != "admin":
+        return jsonify({"identified": False, "identity_type": identity_type,
+                        "stats": {}, "user": {}, "heatmap": [],
+                        "weekly": [], "recent": [], "pending": [], "pending_count": 0,
+                        "my_replies": [], "mentions": [], "my_comments": [], "liked_ids": []})
+    tab = (request.args.get("tab") or "overview").strip()
+    is_admin = identity_type == "admin"
+    reader_row = None
+    if identity_type == "reader":
+        from services import reader_account
+        reader_row = reader_account.verify_token(request.cookies.get(reader_account.COOKIE_NAME, ""))
+    custom_avatar = str((reader_row or {}).get("avatar_url") or "")
+    recent_offset = request.args.get("recent_offset", 0, type=int) or 0
+    data = ov.overview(key_hash, key_hash, include_owner=is_admin,
+                       custom_avatar=custom_avatar, recent_offset=recent_offset,
+                       owner_only=is_admin, include_pending=True)
+    data["identified"] = True
+    data["identity_type"] = identity_type
+    # 身份展示信息：博主取 settings，其它取统计出的最新昵称
+    if is_admin:
+        data["user"]["name"] = settings.get_str("author", "博主") or "博主"
+        data["user"]["avatar"] = avatar.admin_url(80)
+    elif reader_row:
+        data["user"]["name"] = str(reader_row.get("name") or data["user"].get("name") or "")
+        data["user"]["email"] = str(reader_row.get("email") or "")
+    tab_offset = request.args.get("offset", 0, type=int) or 0
+    if tab == "replies":
+        items, more = ov.my_replies(key_hash, offset=tab_offset, include_owner=is_admin,
+                                    owner_only=is_admin)
+        data["my_replies"] = items
+        data["replies_has_more"] = more
+        data["replies_next_offset"] = tab_offset + len(items)
+    elif tab == "mentions":
+        items, more = ov.mentions(key_hash, offset=tab_offset, owner_only=is_admin)
+        data["mentions"] = items
+        data["mentions_has_more"] = more
+        data["mentions_next_offset"] = tab_offset + len(items)
+    elif tab == "comments":
+        items, more = ov.my_comments(key_hash, offset=tab_offset, owner_only=is_admin)
+        data["my_comments"] = items
+        data["comments_has_more"] = more
+        data["comments_next_offset"] = tab_offset + len(items)
+    return jsonify(data)
+
+
+def comment_like():
+    from services import reader_overview as ov
+
+    if not comments_service.open_comments():
+        abort(403)
+    key_hash, _ = _notify_identity()
+    # 无身份时用 IP 哈希，保证匿名访客也能投票但同一 IP 只算一次
+    voter = key_hash or __import__("hashlib").md5(comments_service.request_ip().encode()).hexdigest()
+    comment_id = request.values.get("comment_id", 0, type=int) or 0
+    kind = request.values.get("kind", 1, type=int) or 1
+    row = db.one("SELECT id FROM comments WHERE id=? AND deleted_at IS NULL AND status='approved'", (comment_id,))
+    if not row:
+        return jsonify({"error": "评论不存在"}), 404
+    # 只有已通过的评论可投票；待审核的自己都不该看到投票按钮
+    result = ov.toggle_vote(comment_id, voter, kind)
+    return jsonify(result)
 
 
 def _comment_fragment(post_id: int | None = None, project_id: int | None = None) -> Response:
@@ -1048,6 +1496,23 @@ def register(app) -> None:
         ("/api/comment/identity", "comment_identity_check", comment_identity_check, ["GET"]),
         ("/api/comment/identity/code", "comment_identity_code", comment_identity_code, ["POST"]),
         ("/api/comment/identity/verify", "comment_identity_verify", comment_identity_verify, ["POST"]),
+        ("/api/comment/history", "comment_history", comment_history, ["GET"]),
+        ("/api/reader/captcha", "reader_captcha", reader_captcha, ["GET"]),
+        ("/api/reader/send-code", "reader_send_code", reader_send_code, ["POST"]),
+        ("/api/reader/register", "reader_register", reader_register, ["POST"]),
+        ("/api/reader/login", "reader_login", reader_login, ["POST"]),
+        ("/api/reader/logout", "reader_logout", reader_logout, ["POST"]),
+        ("/api/reader/me", "reader_me", reader_me, ["GET"]),
+        ("/api/identity", "identity_state", identity_state, ["GET"]),
+        ("/api/reader/clear-identity", "clear_identity", clear_identity, ["GET"]),
+        ("/api/reader/update-name", "reader_update_name", reader_update_name, ["POST"]),
+        ("/api/reader/update-password", "reader_update_password", reader_update_password, ["POST"]),
+        ("/api/reader/update-email", "reader_update_email", reader_update_email, ["POST"]),
+        ("/api/reader/avatar-upload", "reader_avatar_upload", reader_avatar_upload, ["POST"]),
+        ("/api/comment/notifies", "comment_notifies", comment_notifies, ["GET"]),
+        ("/api/comment/notifies/read", "comment_notifies_read", comment_notifies_read, ["POST"]),
+        ("/api/reader/overview", "reader_overview", reader_overview, ["GET"]),
+        ("/api/comment/like", "comment_like", comment_like, ["POST"]),
         ("/comment/post/<int:post_id>", "comment_fragment_post", _comment_fragment, ["GET"]),
         ("/comment/project/<int:project_id>", "comment_fragment_project", _comment_fragment, ["GET"]),
         ("/tags", "tags", tags, ["GET"]),

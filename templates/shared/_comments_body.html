@@ -70,12 +70,15 @@
                 {% if c.is_private %}<span class="cmt-badge cmt-badge--private">私密</span>{% endif %}
                 {% if c.status == 'pending' %}<span class="cmt-badge cmt-badge--pending">待审核</span>{% endif %}
                 {% if reply_to %}<a class="cmt-at" href="#comment-{{ c.parent_id }}">@{{ reply_to }}</a>{% endif %}
+                {# 待审核的评论不给回复入口：它还没公开，回复了也没有上下文 #}
+                {% if c.status != 'pending' %}
                 <div class="cmt-actions">
                     <button type="button" class="cmt-reply" data-reply-to="{{ c.id }}" data-reply-name="{{ c.author }}" title="回复 {{ c.author }}" aria-label="回复 {{ c.author }}">
                         <svg class="cmt-reply-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
                         {% if lv == 'root' %}<span class="cmt-reply-count">{{ c.reply_count or 0 }}</span>{% endif %}
                     </button>
                 </div>
+                {% endif %}
             </header>
             <p class="cmt-text">{{ c.content_html | safe }}</p>
             <div class="cmt-foot">
@@ -85,6 +88,19 @@
                     {% if c.ua_system %}<span class="cmt-ua">{{ os_svg(c.ua_system) }}{{ c.ua_system }}</span>{% endif %}
                     {% if c.ua_client %}<span class="cmt-ua">{{ browser_svg(c.ua_client) }}{{ c.ua_client }}</span>{% endif %}
                 </span>
+                {% endif %}
+                {# 待审核的评论不给投票：还没公开，投了也没有意义 #}
+                {% if c.status != 'pending' %}
+                <div class="cmt-votes">
+                    <button type="button" class="cmt-like{% if c.id in liked_ids %} is-liked{% endif %}" data-vote-id="{{ c.id }}" data-vote="1" title="赞同这条评论" aria-label="赞同这条评论">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3zm0 0 4.2-7.2a1.5 1.5 0 0 1 2.7 1.2L13 8h5.5a2 2 0 0 1 2 2.4l-1.4 8A2 2 0 0 1 17.1 20H7"/></svg>
+                        <span class="cmt-like-count">{{ like_counts.get(c.id, 0) if like_counts is defined else 0 }}</span>
+                    </button>
+                    <button type="button" class="cmt-dislike{% if disliked_ids is defined and c.id in disliked_ids %} is-disliked{% endif %}" data-vote-id="{{ c.id }}" data-vote="-1" title="不喜欢这条评论" aria-label="不喜欢这条评论">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 14V3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3zm0 0-4.2 7.2a1.5 1.5 0 0 1-2.7-1.2L11 16H5.5a2 2 0 0 1-2-2.4l1.4-8A2 2 0 0 1 6.9 4H17"/></svg>
+                        <span class="cmt-dislike-count">{{ dislike_counts.get(c.id, 0) if dislike_counts is defined else 0 }}</span>
+                    </button>
+                </div>
                 {% endif %}
             </div>
             </div>
@@ -147,13 +163,38 @@
         {# 已上传图片：由 comments.js 维护（每行一个 URL），提交时后端合并进正文并做站内白名单校验 #}
         <input type="hidden" name="images" id="comment-images" value="">
         <div class="cmt-hint" id="comment-replying" hidden>回复 @<b id="comment-replying-name"></b><button type="button" id="comment-cancel-reply">取消</button></div>
-        <details class="cmt-box" id="comment-box">
+        {# 统一身份条：4 种身份互斥显示，操作入口随身份变化
+           ①博主(admin) ②注册登录(reader_user) ③Cookie访客(commenter) ④新访客 #}
+        <div class="cmt-authbar" id="cmt-authbar" data-identity="{% if is_admin %}admin{% elif reader_user %}reader{% elif commenter.author %}guest{% else %}new{% endif %}">
+            {% if is_admin %}
+            {% if admin_avatar %}<img class="cmt-authbar-avatar" src="{{ admin_avatar }}" alt="" loading="lazy">{% endif %}
+            <span class="cmt-authbar-user">以 <b>{{ author or '博主' }}</b> 身份评论<span class="cmt-authbar-badge cmt-authbar-badge--admin" title="博主身份">博主</span></span>
+            <a class="cmt-authbar-link" href="{{ url_for('clear_identity', back=request.path) }}">退出</a>
+            {% elif reader_user %}
+            <img class="cmt-authbar-avatar" src="{{ reader_user.avatar or '' }}" alt="" loading="lazy" onerror="this.style.display='none'">
+            <span class="cmt-authbar-user">已登录为 <b>{{ reader_user.name }}</b><span class="cmt-authbar-badge" title="邮箱已验证">邮箱已验证</span></span>
+            <button type="button" class="cmt-authbar-btn" id="cmt-account-open">管理账号</button>
+            <a class="cmt-authbar-link" href="{{ url_for('clear_identity', back=request.path) }}">退出</a>
+            {% elif commenter.author %}
+            <img class="cmt-authbar-avatar" src="{{ guest_avatar }}" alt="" loading="lazy" onerror="this.style.display='none'">
+            <span class="cmt-authbar-user">以 <b>{{ commenter.author }}</b> 身份评论{% if commenter.email %} · {{ commenter.email }}{% endif %}</span>
+            <button type="button" class="cmt-authbar-link" id="cmt-remember-edit">修改</button>
+            <a class="cmt-authbar-link" href="{{ url_for('clear_identity', back=request.path) }}">退出</a>
+            {% else %}
+            <span class="cmt-authbar-tip">填写昵称 + 邮箱即可参与评论；登录账号可同步身份与查看通知。</span>
+            <button type="button" class="cmt-authbar-link cmt-authbar-link--login" id="cmt-login-open" data-login-mode="login">登录</button>
+            <button type="button" class="cmt-authbar-link cmt-authbar-link--login" id="cmt-register-open" data-login-mode="register">注册</button>
+            {% endif %}
+        </div>
+        {# 折叠策略：新访客默认收起（只留「写下你的想法…」占位条，整卡任意位置可点展开），
+           已登录身份（博主 / 读者账号 / 已记住的访客）默认展开，省一次点击。
+           展开后 summary 由 CSS 隐藏，收起入口放在动作行的「收起」文字按钮上。
+           保留 details[open] 以兼容既有 CSS/JS 选择器 #}
+        <details class="cmt-box" id="comment-box"{% if is_admin or reader_user or commenter.author %} open{% endif %}>
             <summary class="cmt-toggle">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                {# 折叠态做成「输入框占位条」：灰色提示 + 右侧「写评论」，不用悬停也能看出可点 #}
+                <svg class="cmt-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 <span class="cmt-toggle-placeholder">写下你的想法…</span>
                 <span class="cmt-toggle-act">写评论</span>
-                <span class="cmt-toggle-close">收起评论框</span>
             </summary>
             <div class="cmt-box-body">
             {# 邮件通知总开关（后台设置）：决定「邮箱通知」勾选项是否渲染，下方字段与底部选项区共用这一判定 #}
@@ -161,19 +202,8 @@
             <textarea name="content" placeholder="写下你的想法..." maxlength="2000" aria-label="评论内容"></textarea>
             {# 身份信息后置：展开评论框第一眼是内容输入框，先写后填降低评论门槛；
                老访客仍显示「已记住」条并隐藏字段，行为不变；admin 身份条同步下移保持结构一致 #}
-            {% if is_admin %}
-            <div class="cmt-admin">
-                {% if admin_avatar %}<img class="cmt-admin-avatar" src="{{ admin_avatar }}" alt="" loading="lazy" decoding="async">{% endif %}
-                <span>以博主身份评论（{{ author }}）</span>
-            </div>
-            {% else %}
-            {% if commenter.author %}
-            <div class="cmt-remember" id="comment-remember">
-                <span>{{ commenter.author }}{% if commenter.email %} · {{ commenter.email }}{% endif %}</span>
-                <button type="button" id="comment-remember-edit">修改</button>
-            </div>
-            {% endif %}
-            <div class="row" id="comment-fields"{% if commenter.author %} hidden{% endif %}>
+            {% if not is_admin %}
+            <div class="row" id="comment-fields"{% if commenter.author or reader_user %} hidden{% endif %}>
                 {# 占位文案只放最短的必要信息：三列并排时（≥768px）每列约 1/3 宽，
                    原文案「昵称（必填，显示在评论中）」这类长串会被直接截断；
                    完整说明移到 title，鼠标悬停仍可看到 #}
@@ -193,8 +223,9 @@
                     <img class="cmt-qq-av" id="cmt-qq-av" alt="" hidden>
                     <div class="cmt-suggest" id="cmt-email-suggest" hidden></div>
                 </div>
-                {# 网址：type=text 避免原生 url 校验把 www.demo.com 拦掉；缺协议时由 comments.js 下拉补全 http/https，后端再兜底补 https #}
-                <div class="cmt-field" id="comment-website-field"{% if not commenter.website %} hidden{% endif %}>
+                {# 网址：默认直接展开（不再折叠）；type=text 避免原生 url 校验拦 www.demo.com，
+                   缺协议时由 comments.js 下拉补全 http/https，后端再兜底补 https #}
+                <div class="cmt-field" id="comment-website-field">
                     <input type="text" name="website" id="comment-website" inputmode="url" autocomplete="off"
                            placeholder="网址（选填）" maxlength="200"
                            title="你的博客或个人主页地址"
@@ -202,9 +233,6 @@
                     <div class="cmt-suggest" id="cmt-website-suggest" hidden></div>
                 </div>
             </div>
-            {# 网址默认收起：多数访客不填，留一个轻量入口，点了才展开第三列 #}
-            <button type="button" class="cmt-more-fields" id="comment-more-fields"
-                    {%- if commenter.author or commenter.website %} hidden{% endif %}>＋ 网址（选填）</button>
             {% endif %}
             {# 已上传图片的缩略图条：上传后立即显示，可单独删除；正文保持纯文字，图片提交时合并 #}
             <div class="cmt-imgup-list" id="cmt-imgup-list" hidden></div>
@@ -241,6 +269,8 @@
                 <div class="cmt-foot-actions">
                     <span class="count">0 / 2000</span>
                     <span class="kbd-hint" id="cmt-kbd-hint" aria-hidden="true">Ctrl↵ 提交</span>
+                    {# 收起入口：展开态 summary 已隐藏，这里用一个轻量文字按钮保留折叠能力 #}
+                    <button type="button" class="cmt-fold-back" id="cmt-fold-btn">收起</button>
                     <button type="submit" class="submit">提交评论</button>
                 </div>
             </div>
@@ -273,6 +303,98 @@
             </div>
         </div>
     </div>
+
+    {# 读者账号登录浮窗：邮箱密码登录 / 注册 / 跳过验证（复用昵称确认浮窗样式） #}
+    {% if not is_admin %}
+    <div class="cmt-idmask" id="cmt-loginmask" hidden>
+        <div class="cmt-idcard" role="dialog" aria-modal="true" aria-labelledby="cmt-login-title">
+            <div class="cmt-idhead">
+                <strong id="cmt-login-title">邮箱登录</strong>
+                <button type="button" class="cmt-idclose" id="cmt-login-close" aria-label="关闭">×</button>
+            </div>
+            <div class="cmt-login-tabs" id="cmt-login-tabs">
+                <button type="button" class="cmt-login-tab is-active" data-mode="login">登录</button>
+                <button type="button" class="cmt-login-tab" data-mode="register">注册</button>
+            </div>
+            <p class="cmt-iddesc" id="cmt-login-desc">用注册邮箱与密码登录，登录后可同步身份、使用站内通知。</p>
+            <div class="cmt-login-fields">
+                <input type="text" id="cmt-login-email" inputmode="email" autocomplete="email" placeholder="邮箱" maxlength="100">
+                <div id="cmt-login-name-wrap" hidden>
+                    <input type="text" id="cmt-login-name" placeholder="昵称（注册时填写）" maxlength="30">
+                </div>
+                <input type="password" id="cmt-login-password" autocomplete="current-password" placeholder="密码（至少 6 位）" maxlength="100">
+                <div class="cmt-idrow">
+                    <input type="text" id="cmt-login-captcha" inputmode="numeric" maxlength="6" placeholder="计算结果" autocomplete="off">
+                    <img id="cmt-login-captcha-img" class="cmt-captcha-img" src="/api/reader/captcha" alt="点击刷新验证码" title="点击刷新" width="120" height="40">
+                </div>
+                <div id="cmt-login-code-wrap" hidden>
+                    <div class="cmt-idrow">
+                        <button type="button" class="cmt-idbtn" id="cmt-login-send">发送验证码</button>
+                        <input type="text" id="cmt-login-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 位验证码">
+                    </div>
+                </div>
+            </div>
+            <p class="cmt-idtip" id="cmt-login-tip" aria-live="polite"></p>
+            <div class="cmt-login-actions">
+                <button type="button" class="cmt-idbtn cmt-idbtn--primary" id="cmt-login-submit">登录</button>
+                <button type="button" class="cmt-idbtn" id="cmt-login-skip">跳过验证，直接评论</button>
+            </div>
+        </div>
+    </div>
+    {# 账号管理浮窗：注册用户修改昵称 / 头像 / 邮箱 #}
+    {% if reader_user %}
+    <div class="cmt-idmask" id="cmt-accountmask" hidden>
+        <div class="cmt-idcard cmt-account-card" role="dialog" aria-modal="true" aria-labelledby="cmt-account-title">
+            <div class="cmt-idhead">
+                <strong id="cmt-account-title">管理账号</strong>
+                <button type="button" class="cmt-idclose" id="cmt-account-close" aria-label="关闭">×</button>
+            </div>
+            <div class="cmt-account-avatar-row">
+                <img id="cmt-account-avatar-preview" class="cmt-account-avatar" src="{{ reader_user.avatar or '' }}" alt="">
+                <label class="cmt-idbtn" for="cmt-account-avatar-input">更换头像</label>
+                <input type="file" id="cmt-account-avatar-input" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+            </div>
+            <div class="cmt-account-section">
+                <label>昵称</label>
+                <div class="cmt-idrow">
+                    <input type="text" id="cmt-account-name" maxlength="30" value="{{ reader_user.name }}">
+                </div>
+                <div class="cmt-idrow cmt-idrow--end">
+                    <button type="button" class="cmt-idbtn" id="cmt-account-name-save">保存</button>
+                </div>
+            </div>
+            {# 输入框全部整行等宽，动作按钮统一放在字段下方右对齐——
+               原先「输入框 + 按钮」同行，按钮文案越长输入框越窄，几行宽度参差 #}
+            <div class="cmt-account-section">
+                <label>邮箱（修改需验证码）</label>
+                <div class="cmt-idrow">
+                    <input type="text" id="cmt-account-email" inputmode="email" placeholder="新邮箱" maxlength="100">
+                </div>
+                <div class="cmt-idrow">
+                    <input type="text" id="cmt-account-email-code" inputmode="numeric" maxlength="6" placeholder="6 位验证码">
+                </div>
+                <div class="cmt-idrow cmt-idrow--end">
+                    <button type="button" class="cmt-idbtn" id="cmt-account-email-send">发送验证码</button>
+                    <button type="button" class="cmt-idbtn cmt-idbtn--primary" id="cmt-account-email-save">确认修改</button>
+                </div>
+            </div>
+            <div class="cmt-account-section">
+                <label>修改密码</label>
+                <div class="cmt-idrow">
+                    <input type="password" id="cmt-account-oldpwd" placeholder="当前密码" maxlength="100">
+                </div>
+                <div class="cmt-idrow">
+                    <input type="password" id="cmt-account-newpwd" placeholder="新密码（至少 6 位）" maxlength="100">
+                </div>
+                <div class="cmt-idrow cmt-idrow--end">
+                    <button type="button" class="cmt-idbtn" id="cmt-account-pwd-save">修改密码</button>
+                </div>
+            </div>
+            <p class="cmt-idtip" id="cmt-account-tip" aria-live="polite"></p>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
 
     {# 敏感词库（JSON）：由 comments.js 读取做前端实时拦截；后端提交时另有兜底过滤 #}
     <script type="application/json" id="cmt-sw">{{ sensitive_words_json | default('') | safe }}</script>

@@ -74,6 +74,9 @@ def _cacheable() -> bool:
     # 评论者需要看到自己的待审核评论，不能读公共缓存
     if request.cookies.get("blog_commenter"):
         return False
+    # 读者账号登录态：身份条/管理账号/通知未读数是个性化内容，不能命中公共缓存
+    if request.cookies.get("blog_reader_session"):
+        return False
     # 有 flash 的页面不缓存，避免把一次性提示存给所有访客
     if session.get("_flashes"):
         g._page_cache_skip = True

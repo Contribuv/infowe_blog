@@ -54,6 +54,9 @@
                     <a href="{{ url_for('admin_comments') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/comments' %}active{% endif %}">
                         {{ icon('message-circle', 20, 'admin-nav-icon') | safe }}<span>评论管理</span>
                     </a>
+                    <a href="{{ url_for('admin_users') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/users') %}active{% endif %}">
+                        {{ icon('user', 20, 'admin-nav-icon') | safe }}<span>用户管理</span>
+                    </a>
                 </div>
                 <div class="admin-nav-group">
                     <div class="admin-nav-title">站点模块</div>
@@ -206,6 +209,12 @@
     setTimeout(sync, 0);
   });
 })();
+</script>
+<script>
+// 退出登录后从 bfcache 恢复的旧页面不能再展示后台内容，命中即重新请求
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) window.location.reload();
+});
 </script>
 {% block admin_scripts %}{% endblock %}
 </body>

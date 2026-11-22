@@ -9,6 +9,48 @@
     'background:linear-gradient(135deg,#00d4ff,#a855f7);color:#fff;padding:4px 8px;border-radius:4px;font-weight:bold;',
     'color:#00d4ff;');
 
+  /* ── 身份状态兜底 ──
+     页面 HTML 里的博主入口（抽屉「编辑本文」）、评论身份条、通知角标都是服务端
+     渲染的，以下几种情况会拿到旧快照：
+       1) bfcache 恢复（按后退/前进）；
+       2) 后台标签页退出登录后切回前台；
+       3) 浏览器直接命中了旧的 HTTP 缓存。
+     统一做法：拿 /api/identity 和页面上的 data-admin 比对，不一致就重载一次。
+     加 10 秒防抖，避免服务端与接口短暂不一致时反复刷新。 */
+  var identityBody = document.body;
+  var IDENTITY_RELOAD_KEY = 'cmt_identity_reload_at';
+
+  function identityReloadAllowed() {
+    var last = 0;
+    try { last = Number(sessionStorage.getItem(IDENTITY_RELOAD_KEY) || 0); } catch (e) {}
+    if (Date.now() - last < 10000) return false;
+    try { sessionStorage.setItem(IDENTITY_RELOAD_KEY, String(Date.now())); } catch (e) {}
+    return true;
+  }
+
+  function syncAdminIdentity() {
+    if (!identityBody) return;
+    if (document.visibilityState === 'hidden') return;
+    var mine = identityBody.getAttribute('data-admin') === '1';
+    fetch('/api/identity', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !!d.admin === mine) return;
+        if (identityReloadAllowed()) window.location.reload();
+      })
+      .catch(function () {});
+  }
+
+  document.addEventListener('visibilitychange', syncAdminIdentity);
+  window.addEventListener('focus', syncAdminIdentity);
+  window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+      if (identityReloadAllowed()) window.location.reload();
+      return;
+    }
+    syncAdminIdentity();
+  });
+
   /* ── 主题切换：三态循环（auto 跟随系统 → light → dark → auto） ── */
   var toggle = document.getElementById('theme-toggle');
   var rootEl = document.documentElement;

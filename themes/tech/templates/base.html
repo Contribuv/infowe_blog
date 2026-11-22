@@ -81,7 +81,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/share.css', t=static_ver) }}">
     {% endif %}
 </head>
-<body>
+<body data-admin="{{ '1' if is_admin else '0' }}">
     {# 代码粒子背景：全站挂载，但阅读页（文章 / 项目详情）降级——
        粒子减半、不画连线，只留一层很淡的纹理；后台可整体关闭。 #}
     {% set ambient_reading = request.path.startswith('/post/') or request.path.startswith('/projects/') %}
@@ -123,6 +123,13 @@
                     {% endfor %}
                 </div>
                 <div class="tech-nav-actions">
+                    {# 站内通知铃铛：未读数由 notify.js 拉取，登录后或评论 Cookie 均可识别身份 #}
+                    <div class="tech-notify" id="tech-notify">
+                        <button type="button" class="tech-icon-btn" id="tech-notify-btn" aria-label="通知中心" title="通知中心" aria-expanded="false">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                            <span class="tech-notify-badge" id="tech-notify-badge" hidden>0</span>
+                        </button>
+                    </div>
                     {% if is_admin %}
                     <a href="{{ writing_href }}" class="tech-icon-btn {% if request.path.startswith(admin_prefix) %}active{% endif %}" aria-label="{{ writing_label }}" title="{{ writing_label }}">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-4.5L17 3z"/></svg>
@@ -231,6 +238,7 @@
     {% endif %}
 
     <script src="{{ url_for('theme_static', filename=active_theme ~ '/static/theme.js', t=theme_asset_ver) }}" defer></script>
+    <script src="{{ url_for('static', filename='js/notify.js', t=static_ver) }}" defer></script>
     <script>
     // 项目页「反馈」按钮：瞬时定位到评论区，并展开评论框、聚焦输入框
     (function () {

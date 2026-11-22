@@ -66,8 +66,7 @@
 .cmt-thread{padding:18px 20px 15px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-hairline);transition:border-color .18s}
 /* 楼层间 18px > 卡内回复间距 14px：靠间距层级把「楼层边界」立起来，淡描边只做兜底提示 */
 .cmt-thread+.cmt-thread{margin-top:22px}
-/* 楼层卡整张不可点，不做整卡悬停；表单卡与独立 details 卡同享描边提亮反馈 */
-@media (hover:hover) and (pointer:fine){.cmt-form:hover,.cmt-box:hover{border-color:var(--c-border-h)}}
+/* 楼层卡 / 表单卡都不做整卡悬停：鼠标划过不再提亮描边（评论区整体取消悬停效果） */
 
 /* tech 皮肤楼层与 default 同构：每条根评论一张卡（楼中楼在卡内）。
    此前用 .cmt-skin-line 大外框把全部楼层连同表单圈在一起，只靠淡横线分区，
@@ -81,14 +80,8 @@
 .cmt-item[data-lv="reply"] .cmt-avatar{width:var(--av-reply);height:var(--av-reply);font-size:12px}
 /* 头像外链包裹层：不影响 .cmt-avatar 的尺寸计算 */
 /* align-self 防止被 .cmt-item 的 stretch 拉伸成整条评论高度（否则 50% 圆角变椭圆、hover 光环畸形） */
-.cmt-avatar-link{flex:none;align-self:flex-start;display:block;border-radius:50%;line-height:0;transition:box-shadow .18s ease,transform .18s ease}
-@media (hover:hover) and (pointer:fine){ .cmt-avatar-link:hover{box-shadow:0 0 0 2px var(--c-accent);transform:scale(1.06)} }
-/* 悬停头像时昵称同步高亮：:has 不支持的老浏览器自动降级为不联动 */
-@media (hover:hover) and (pointer:fine){ .cmt-item:has(.cmt-avatar-link:hover) a.cmt-author{color:var(--c-accent)} }
-@media (prefers-reduced-motion:reduce){
-  .cmt-avatar-link{transition:none}
-  .cmt-avatar-link:hover{transform:none}
-}
+.cmt-avatar-link{flex:none;align-self:flex-start;display:block;border-radius:50%;line-height:0}
+/* 头像不做悬停光环 / 放大，昵称也不跟随高亮 */
 .cmt-avatar{flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--av-color);font-weight:600;line-height:1;background:var(--av-bg);overflow:hidden;user-select:none}
 .cmt-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 /* tech 皮肤：accent-weak 底 + accent 字，随亮/暗自动切换 */
@@ -169,24 +162,20 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 表单：独立一张卡（与评论列表并列），卡内 details 不再重复描边与内距 ── */
 /* 毛玻璃：底色在文件末尾「毛玻璃降级」段统一给出（默认实色 + 特性查询升级） */
 /* 扁平化：去掉毛玻璃，仅保留描边卡 */
-.cmt-form{margin-top:20px;border:1px solid var(--card-border, var(--c-hairline));border-radius:var(--c-radius);padding:14px 16px;scroll-margin:50px 0}
+.cmt-form{margin-top:20px;border:1px solid var(--card-border, var(--c-hairline));border-radius:var(--c-radius);padding:12px 14px;scroll-margin:50px 0}
 .cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
 .cmt-toggle{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:13.5px;color:var(--c-text2);cursor:pointer;user-select:none;transition:color .15s,background .15s}
 .cmt-toggle::-webkit-details-marker{display:none}
-@media (hover:hover) and (pointer:fine){ .cmt-toggle:hover{color:var(--c-accent)} }
 .cmt-box:not([open]) .cmt-box-body{display:none}
 .cmt-box[open] .cmt-box-body{display:block}
 .cmt-box-body{padding:14px 16px}
 /* 卡内的 details 不再自带内距，统一由 .cmt-form 的 padding 收口 */
 .cmt-form .cmt-toggle{padding:0}
-/* 展开态的上下间距只给一方：这里再加 padding-bottom，会和
-   .cmt-box-body 的 padding-top 叠成 24px，summary 与输入框之间显得空一截 */
-.cmt-form .cmt-box[open] .cmt-toggle{padding-bottom:0}
-/* 内联回复展开后收起 summary：顶部已有「回复 @xx 取消」，
-   「收起评论框」这一行既重复又白占 33px；主评论框保留它作为唯一收起入口 */
-.cmt-form.is-inline .cmt-box[open] .cmt-toggle{display:none}
+/* 展开态不渲染 summary：收起入口改由动作行的「收起」文字按钮承担，
+   输入框上方不会多出一条 33px 的折叠条（内联回复态同理） */
+.cmt-form .cmt-box[open] .cmt-toggle{display:none}
 /* 展开态：flex 列布局，间距只由 --cmt-gap 提供。
    选择器必须带 [open]：上面的 .cmt-box[open] .cmt-box-body{display:block} 是 (0,3,0)，
    不带 [open] 的两 class 选择器压不过，flex 与 gap 会静默失效。 */
@@ -198,41 +187,34 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
    原先只有一行灰字「写评论」，不悬停根本看不出能点。现在整条 = 浅底 + 描边 +
    灰色提示语「写下你的想法…」+ 右侧强调动作「写评论」，与真正的 textarea 视觉连续；
    点击仍由 comments.js 的整卡热区接管，展开后换成「收起评论框」保留折叠入口 */
+/* 折叠态 =「空输入框」：描边、圆角、内距、字号全部对齐同表单的 textarea / input，
+   左侧一支书写图标，右侧「写评论」动作。展开前后是同一块输入区，视觉不跳。 */
 .cmt-form .cmt-box:not([open]) .cmt-toggle{
-  padding:10px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);
+  display:flex;align-items:center;gap:8px;
+  min-height:44px;box-sizing:border-box;
+  padding:10px 12px;
+  border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);
+  transition:border-color .15s,background-color .15s,box-shadow .15s;
 }
-/* 折叠态单框原则（分场景）：
-   浮窗 foot：form 外框会与占位条描边叠成「两个外边框」→ 外圈透明，占位条是唯一边界；
-   内嵌主位：相反——保留 form 外框（与楼层卡同构，padding 对齐），
-   占位条去描边改纯浅底条，form 外框是唯一边界 */
+/* 浮窗 foot：form 外框会与占位条描边叠成「两个外边框」→ 外圈透明，占位条是唯一边界 */
 .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])){border-color:transparent}
-.cmt .cmt-form:not(.is-inline) .cmt-box:not([open]) .cmt-toggle{border-color:transparent}
-/* 内嵌主位与楼层卡同构：同 18px 20px 内距，占位条/输入区与楼层内容左右对齐；
-   外框 hover 不提亮（安静的卡片边界），反馈交给占位条底色与提示语 */
+/* 内嵌主位与楼层卡同构：同 18px 20px 内距，占位条/输入区与楼层内容左右对齐 */
 .cmt .cmt-form:not(.is-inline){padding:18px 20px}
-@media (hover:hover) and (pointer:fine){.cmt .cmt-form:not(.is-inline):hover{border-color:var(--c-hairline)}}
+.cmt-toggle-icon{flex:none;width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--c-text3);transition:color .15s}
 .cmt-toggle-placeholder{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--c-text3)}
-.cmt-toggle-act{flex:none;font-size:12.5px;font-weight:500;color:var(--c-accent)}
+.cmt-toggle-act{flex:none;font-size:12.5px;font-weight:500;color:var(--c-accent);white-space:nowrap}
 .cmt-toggle-close{display:none;flex:1 1 auto;font-size:12.5px}
 .cmt-box[open] .cmt-toggle-placeholder,
 .cmt-box[open] .cmt-toggle-act{display:none}
 .cmt-box[open] .cmt-toggle-close{display:inline}
-/* hover：整卡都是展开热区，悬停卡片任意位置都提亮占位条。分场景：
-   浮窗 foot / 回复态 is-inline——占位条自带描边，hover 描边转 accent + 极淡底；
-   内嵌主位——占位条平时无描边，hover 只做底色微亮，不突然冒出边框 */
-@media (hover:hover) and (pointer:fine){
-  .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle,
-  .cmt-form.is-inline:has(.cmt-box:not([open])):hover .cmt-toggle{
-    border-color:var(--c-accent);background:color-mix(in srgb,var(--c-accent) 5%,var(--c-sub));
-  }
-  .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])):hover .cmt-toggle{background:var(--c-reply)}
-  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-placeholder{color:var(--c-text2)}
-}
+/* 折叠条不做鼠标悬停反馈（描边/底色/图标都不变），只保留键盘聚焦环 */
 /* 键盘聚焦：与输入框同款焦点环，明确这里可以按回车展开 */
 .cmt-form .cmt-box:not([open]) .cmt-toggle:focus-visible{
   outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak);
 }
-.cmt-form{--cmt-gap:10px;--cmt-pad:12px}
+/* 间距令牌：卡内元素统一按 9px 排，底部动作行多留 10px。
+   数值偏紧是因为卡片本身已有 12px 内距，输入框之间再留 10px 就显散 */
+.cmt-form{--cmt-gap:9px;--cmt-pad:10px}
 /* 展开态内容区的 flex 布局见上方 .cmt-form .cmt-box[open] .cmt-box-body；
    tech 主题只加载本文件（不加载 comments.css），令牌必须在本文件定义 */
 .cmt-form .row{display:flex;gap:9px}
@@ -258,17 +240,20 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
 .cmt-form .kbd-hint{font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
-/* 提交按钮：与全站 .tech-btn 同一套纸面语言（不透明淡主色底 + 细描边）。
-   这是评论区唯一的主操作，用主色底让它比楼层卡更实一档；
-   配色 / hover / disabled 只在这里定义一次。 */
-.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;min-height:38px;box-sizing:border-box;padding:0 20px;border-radius:var(--card-radius,10px);font-size:14px;font-weight:600;cursor:pointer;background:color-mix(in srgb,var(--c-accent) 8%,var(--card-bg,#fff));border:1px solid color-mix(in srgb,var(--c-accent) 30%,var(--card-border,transparent));color:color-mix(in srgb,var(--c-accent) 70%,var(--c-text));box-shadow:var(--card-shadow,none);transition:border-color .2s ease,color .2s ease,background-color .2s ease,box-shadow .2s ease,transform .12s ease,opacity .15s ease}
+/* 「收起」：次要动作只给文字，不与提交按钮争视觉重量 */
+.cmt-form .cmt-fold-back{align-self:center;padding:0;border:0;background:none;font-size:12px;line-height:1.6;color:var(--c-text3);cursor:pointer;white-space:nowrap;transition:color .15s}
+@media (hover:hover) and (pointer:fine){.cmt-form .cmt-fold-back:hover{color:var(--c-accent)}}
+.cmt-form .cmt-fold-back:focus-visible{outline:2px solid var(--c-accent);outline-offset:3px;border-radius:4px}
+/* 提交按钮：形状与全站动作按钮统一为胶囊（文章页「分享 / 复制 / 返回」同为 999px），
+   高度 34px、字号 13px —— 原先 38px / 14px 的方块比左侧工具行高出一截，看着像另一个组件。
+   配色沿用 .tech-btn-soft 的柔和主色（不透明淡主色底 + 主色描边 + 主色字）。 */
+.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;height:34px;min-height:34px;box-sizing:border-box;padding:0 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:color-mix(in srgb,var(--c-accent) 8%,var(--card-bg,#fff));border:1px solid color-mix(in srgb,var(--c-accent) 30%,var(--card-border,transparent));color:color-mix(in srgb,var(--c-accent) 78%,var(--c-text));box-shadow:none;transition:border-color .2s ease,color .2s ease,background-color .2s ease,transform .12s ease,opacity .15s ease}
 @media (hover:hover) and (pointer:fine){
   /* 悬停沿同一方向加深一档，不换色系 */
   .cmt-form .submit:not([disabled]):hover{
     background:color-mix(in srgb,var(--c-accent) 14%,var(--card-bg,#fff));
     border-color:color-mix(in srgb,var(--c-accent) 52%,var(--card-border,transparent));
-    color:color-mix(in srgb,var(--c-accent) 78%,var(--c-text));
-    box-shadow:var(--card-shadow-hover,none);
+    color:color-mix(in srgb,var(--c-accent) 88%,var(--c-text));
   }
 }
 .cmt-form .submit[disabled]{opacity:.6;cursor:not-allowed}
@@ -283,6 +268,37 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-remember{display:flex;align-items:center;gap:8px;padding:2px 0;margin-bottom:0;border-radius:0;background:none;border:0;font-size:12.5px;color:var(--c-text3)}
 .cmt-remember button{flex:none;margin-left:auto;font-size:12px;color:var(--c-text3);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
 @media (hover:hover) and (pointer:fine){ .cmt-remember button:hover{color:var(--c-accent)} }
+/* 评论标题行：标题 + 通知中心入口 */
+.cmt-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;margin:0 0 20px}
+.cmt-title-row .cmt-title{margin:0;display:flex;align-items:center}
+.cmt-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 12px}
+.cmt-list-count{font-size:14px;color:var(--c-text2)}
+.cmt-list-count b{font-size:16px;color:var(--c-text);font-weight:700}
+.cmt-notify-entry{
+  display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--c-border);
+  border-radius:999px;background:transparent;color:var(--c-text2);font-size:12.5px;cursor:pointer;
+}
+.cmt-notify-entry:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.cmt-notify-entry-badge{min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#e05252;color:#fff;font-size:10px;line-height:16px;text-align:center;font-weight:700}
+.cmt-notify-entry-badge[hidden]{display:none}
+/* 评论投票：点赞 / 不喜欢。紧跟时间 / 属地 / UA 之后自然排列，
+   不再靠 margin-left:auto 顶到行尾（否则会和作者行的回复图标连成一列）。
+   footer 是 baseline 对齐的文字行，这一组用 align-self:center 单独居中，
+   图标与数字共用一条中线，不跟文字基线错位。 */
+.cmt-votes{align-self:center;display:inline-flex;align-items:center;gap:2px;margin-left:2px}
+.cmt-like,.cmt-dislike{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 6px;border:0;background:none;color:var(--c-text3);
+  font-family:inherit;font-size:12px;line-height:1;cursor:pointer;
+}
+.cmt-like svg,.cmt-dislike svg{flex:none;display:block}
+.cmt-like:hover,.cmt-dislike:hover{color:var(--c-accent)}
+.cmt-like.is-liked{color:var(--c-accent)}
+.cmt-like.is-liked svg{fill:currentColor}
+.cmt-dislike.is-disliked{color:#c4553f}
+.cmt-dislike.is-disliked svg{fill:currentColor}
+.cmt-like:disabled,.cmt-dislike:disabled{opacity:.5;cursor:wait}
+.cmt-like-count,.cmt-dislike-count{min-width:8px;text-align:center;font-variant-numeric:tabular-nums}
 /* 博主身份条：保留头像作为「以谁的身份」的锚点，但降为辅助信息——
    去掉底色、边框和头像光环，高度从 47px 收到 24px 左右，
    不再和输入框抢视线；提交后的「博主」徽章仍会标出来。 */
@@ -299,7 +315,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 与全站 .tech-page-btn 同一套纸面语言：普通页 = 卡片表面，
    当前页 = 实心主色。评论区保留紧凑尺寸与 44px 热区 */
 .cmt-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 10px;font-size:13px;font-weight:600;line-height:1;text-decoration:none;border:1px solid var(--card-border,var(--c-border));border-radius:var(--card-radius,10px);background:var(--card-bg,var(--c-card));color:var(--text-secondary,var(--c-text2));box-shadow:var(--card-shadow,none);transition:border-color .2s ease,color .2s ease,background-color .2s ease,box-shadow .2s ease,transform .12s ease}
-@media (hover:hover) and (pointer:fine){.cmt-page-btn:not(.active):hover{background:var(--card-bg-hover,var(--c-card));border-color:var(--card-border-hover,var(--c-border-h));color:var(--text,var(--c-text));box-shadow:var(--card-shadow-hover,none)}}
+/* 分页按钮同样不做悬停反馈（评论区统一取消悬停） */
 .cmt-page-btn.active{background:color-mix(in srgb,var(--c-accent) 88%,#0b1220);border-color:transparent;color:#fff;font-weight:700;cursor:default;box-shadow:none}
 [data-theme="dark"] .cmt-page-btn.active{background:var(--c-accent);color:#0f1629}
 .cmt-page-btn:not(.active):active{transform:translateY(1px)}
@@ -315,7 +331,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 博主自定义：表单在上、评论内容在下。DOM 不动（回复挂回/分页逻辑不受影响），用 flex order 调视觉顺序 */
 .cmt{display:flex;flex-direction:column}
 .cmt>.cmt-notice{order:1}
-.cmt>.cmt-title{order:2}
+.cmt>.cmt-title-row{order:2}
 .cmt>.cmt-form{order:3}
 .cmt>#comment-form-anchor{order:4}
 .cmt>#cmt-region{order:5;margin-top:20px}
@@ -327,6 +343,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-thread{padding:16px 10px 13px}
   .cmt-replies{margin-left:0;padding-left:calc(var(--av-root) - var(--av-reply))}
   .cmt-replies .cmt-item+.cmt-item{margin-top:14px}
+  .cmt-form{padding:10px 12px}
   .cmt-form .row{flex-direction:column;gap:7px}
   .cmt-text{font-size:14px;line-height:1.75}
   .cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.75}
@@ -349,8 +366,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-form input:focus,.cmt-form textarea:focus{box-shadow:0 0 0 2px var(--c-accent-weak)}
   /* 动作行字数左 / 提交右；触屏无 Ctrl 键隐藏提示，按钮补足 44px 热区 */
   .cmt-form .kbd-hint{display:none}
-  .cmt-form .submit{min-height:40px;position:relative}
-  .cmt-form .submit::after{content:"";position:absolute;inset:-2px}
+  /* 移动端跟随全站按钮瘦身档：视觉 36px，靠伪元素补足触屏热区 */
+  .cmt-form .submit{height:36px;min-height:36px;padding:0 20px;font-size:13.5px;position:relative}
+  .cmt-form .submit::after{content:"";position:absolute;inset:-4px}
 }
 
 /* ── 邮箱字段：纯数字 QQ 号下拉补全 @qq.com + 头像预览 ── */
@@ -392,11 +410,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 锚点定位（#comment-N）：给 sticky 导航留出滚动余量，命中后短暂高亮 ── */
 .cmt-item{scroll-margin-top:80px}
 @keyframes cmt-anchor-flash{
-  0%{background:color-mix(in srgb,var(--c-reply) 25%,transparent)}
-  60%{background:color-mix(in srgb,var(--c-reply) 25%,transparent)}
-  100%{background:transparent}
+  0%{background:color-mix(in srgb,var(--c-accent) 22%,transparent);box-shadow:inset 3px 0 0 var(--c-accent)}
+  75%{background:color-mix(in srgb,var(--c-accent) 22%,transparent);box-shadow:inset 3px 0 0 var(--c-accent)}
+  100%{background:transparent;box-shadow:inset 3px 0 0 transparent}
 }
-.cmt-anchor-flash{animation:cmt-anchor-flash 1.6s ease;border-radius:12px;position:relative;overflow:hidden}
+.cmt-anchor-flash{animation:cmt-anchor-flash 3s ease;border-radius:12px;position:relative;overflow:hidden}
 
 /* ── 图片上传按钮（与表情按钮同尺寸，放在表情右侧） ── */
 .cmt-imgup{position:relative;flex:none}
@@ -435,20 +453,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 旧的两套「黑白配」覆盖段已移除：提交按钮与分页配色各自由上方单一规则定义 */
 
 
-/* 评论入口：去掉独立底色，和外层表单合为一个整体 */
-.cmt-form .cmt-box:not([open]) .cmt-toggle{
-  background:transparent;
-  border:0;
-  border-radius:0;
-  padding:2px 0;
-}
-/* 折叠态高度收到一条输入框：18px 上下内距是给展开后的 textarea 留的，
-   折叠时整卡只有一行占位语，62.9px 读起来像一张空卡；
-   收到 10px（约 47px），左右仍是 20px，与楼层内容对齐不变 */
+/* 折叠态样式统一定义在上方「折叠态 = 空输入框」段，这里只保留卡片内距：
+   18px 上下是给展开后的 textarea 留的，折叠时收到 10px，整卡不显空 */
 .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:10px 20px}
-@media (hover:hover) and (pointer:fine){
-  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle{background:transparent}
-}
 /* 回复按钮：只留右侧 SVG */
 .cmt-actions{margin-top:8px;display:flex;justify-content:flex-end}
 .cmt-reply{
@@ -477,23 +484,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-ua-icon{width:13px;height:13px;flex:none}
 
 
-/* 评论入口 hover：整张表单卡提亮一档（和可点卡片同一套反馈），
-   文字只保留「写评论」的强调，占位文案不再单独变亮 */
-@media (hover: hover) and (pointer: fine) {
-  .cmt .cmt-form:not(.is-inline):hover {
-    background: var(--card-bg-hover, color-mix(in srgb, var(--c-text) 5%, transparent));
-    border-color: var(--card-border-hover, var(--c-border-h));
-  }
-  .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle,
-  .cmt-form.is-inline:has(.cmt-box:not([open])):hover .cmt-toggle {
-    border-color: transparent;
-    background: transparent;
-  }
-  .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])):hover .cmt-toggle {
-    background: transparent;
-  }
-  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-act { color: var(--c-accent); }
-}
+/* 评论入口不做悬停反馈：整张表单卡不再提亮底色 / 描边，占位条与「写评论」
+   也保持静止（鼠标划过只有手型，没有任何颜色或位移变化）。 */
 
 /* 楼中楼：回复之间只用留白分隔。
    外层已有楼层描边、左侧已有层级竖线，再给每条回复加横线会形成
@@ -544,6 +536,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   background:var(--bg-raised,var(--bg-surface,var(--bg,#fff)));
   border:1px solid var(--c-border);color:var(--c-text);
   box-shadow:0 18px 50px rgba(15,23,32,.24);
+  /* 内容变高后（账号管理一列多行）在矮屏上自身滚动，避免遮罩裁掉顶部 */
+  max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;
 }
 .cmt-idhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cmt-idhead strong{font-size:16px;font-weight:600}
@@ -569,9 +563,79 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-idtip--ok{color:#2f9e6f}
 .cmt-idtip--error{color:#d9534f}
 .cmt-idbtn.is-loading{opacity:.7;cursor:wait}
+/* ── 读者账号：登录状态条 + 登录/注册浮窗 ── */
+/* 这一排全是文字：身份说明、修改/登录/退出文字链共用 13px / 1.5 行高，
+   且都 align-items:center，按钮与 <a> 的默认行高差会让它们上下错位 */
+.cmt-authbar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:0 2px;margin-bottom:10px;border:0;background:none;
+  font-size:13px;line-height:1.5;
+}
+.cmt-authbar-user{font-size:13px;line-height:1.5;color:var(--c-text2);flex:1;min-width:0}
+.cmt-authbar-user b{color:var(--c-text);font-weight:600}
+.cmt-authbar-badge{
+  display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;
+  font-size:11px;line-height:1.6;vertical-align:1px;
+  color:#2f9e6f;background:rgba(47,158,111,.12);
+}
+.cmt-authbar-btn{
+  padding:6px 12px;border:1px solid var(--c-border);border-radius:8px;
+  background:transparent;color:var(--c-text);font-size:13px;line-height:1.5;cursor:pointer;
+}
+.cmt-authbar-btn:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.cmt-authbar-btn--primary{background:var(--c-accent);border-color:var(--c-accent);color:#fff}
+.cmt-authbar-btn--primary:hover{color:#fff;filter:brightness(.94)}
+.cmt-authbar-tip{font-size:13px;line-height:1.5;color:var(--c-text3)}
+.cmt-authbar-link{
+  margin-left:auto;padding:0;border:0;background:none;color:var(--c-text3);
+  font-family:inherit;font-size:13px;line-height:1.5;cursor:pointer;
+  white-space:nowrap;text-decoration:none;
+}
+/* 一行里有两个以上文字链（修改 / 登录 / 退出）：只有第一个吃掉剩余空间，其余紧跟其右 */
+.cmt-authbar-link + .cmt-authbar-link{margin-left:0}
+.cmt-authbar-link:hover{color:var(--c-accent);text-decoration:underline}
+/* 登录 / 注册：与「登录同步身份」同款文字链，不再画成描边胶囊——
+   胶囊在当时那行里像第二个按钮，抢了提交评论的层级 */
+.cmt-authbar-link--login{color:var(--c-accent);font-weight:600}
+.cmt-authbar-link--login:hover{color:var(--c-accent)}
+.cmt-authbar-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg-subtle)}
+.cmt-authbar-badge--admin{color:#b8860b;background:rgba(184,134,11,.14)}
+.cmt-account-card{max-width:420px}
+.cmt-account-avatar-row{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--c-border)}
+.cmt-account-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--bg-subtle)}
+.cmt-account-section{margin-bottom:16px}
+.cmt-account-section>label{display:block;font-size:12.5px;color:var(--c-text2);margin-bottom:7px}
+/* 账号管理浮窗：一行一个字段，输入框等宽等高；按钮统一 96×38，
+   不再随文案长短（保存 / 发送验证码 / 确认修改）变宽变窄 */
+.cmt-account-card .cmt-idrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cmt-account-card .cmt-idrow:last-child{margin-bottom:0}
+.cmt-account-card .cmt-idrow input{flex:1 1 auto;min-width:0;width:100%;height:38px}
+.cmt-account-card .cmt-idbtn{
+  flex:none;min-width:96px;height:38px;box-sizing:border-box;padding:0 12px;
+  display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;
+}
+/* 只有按钮的行：靠右，与上面输入框右边缘对齐 */
+.cmt-account-card .cmt-idrow--end{justify-content:flex-end;margin-top:2px;margin-bottom:12px}
+.cmt-account-card .cmt-account-section:last-of-type .cmt-idrow--end{margin-bottom:0}
+.cmt-login-tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--c-border)}
+.cmt-login-tab{
+  padding:7px 4px;margin-bottom:-1px;border:0;border-bottom:2px solid transparent;
+  background:none;color:var(--c-text3);font-size:14px;cursor:pointer;
+}
+.cmt-login-tab.is-active{color:var(--c-accent);border-bottom-color:var(--c-accent);font-weight:600}
+.cmt-login-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
+.cmt-login-fields>input,.cmt-login-fields input{
+  width:100%;height:38px;padding:0 12px;border:1px solid var(--c-border);
+  border-radius:8px;background:var(--bg-surface,var(--bg-subtle,transparent));
+  color:var(--c-text);font-size:14px;
+}
+.cmt-login-fields .cmt-idrow input{letter-spacing:2px}
+.cmt-captcha-img{height:38px;width:120px;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;flex:none;background:#f4f7fb}
+.cmt-login-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 @media(max-width:520px){
   .cmt-idrow{flex-wrap:wrap}
   .cmt-idrow .cmt-idbtn{width:100%}
+  .cmt-login-actions .cmt-idbtn{flex:1}
 }
 /* 移动端评论主体：把右侧操作列收到正文下方，避免图标挤压作者行与正文 */
 @media (max-width:767px){
@@ -710,4 +774,28 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 }
 .cmt-form.is-inline {
   box-shadow: none;
+}
+
+/* ═══ 评论区取消悬停动画 ═══
+   鼠标划过只做即时状态切换（描边 / 底色 / 文字色），不再渐变、位移或缩放：
+   1) 过渡时长统一归零，避免划过时一片渐变色闪烁（含翻页的透明度过渡）；
+   2) 头像悬停放大、提交 / 翻页按钮按压缩放一律去掉。
+   只关过渡与悬停形变，不关 @keyframes：上传转圈、锚点高亮仍需要。 */
+.cmt, .cmt *, .cmt-idmask, .cmt-idmask * { transition: none !important; }
+.cmt .cmt-avatar-link:hover { transform: none; }
+.cmt .cmt-form .submit:active,
+.cmt .cmt-page-btn:active { transform: none; }
+
+/* ═══ 悬停反馈：只给「真的能点」的元素，且即时变色、不做过渡 ═══
+   卡片空白处不响应；折叠前的占位条就是一整块热区，必须让人看出可点。 */
+@media (hover:hover) and (pointer:fine){
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle{
+    border-color:var(--c-accent);
+    background:color-mix(in srgb,var(--c-accent) 5%,var(--c-sub));
+  }
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-icon{color:var(--c-accent)}
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-placeholder{color:var(--c-text2)}
+  .cmt-page-btn:not(.active):hover{border-color:var(--c-accent);color:var(--c-accent)}
+  .cmt-authbar-btn:hover{border-color:var(--c-accent);color:var(--c-accent)}
+  .cmt-authbar-link:hover{color:var(--c-accent);text-decoration:underline}
 }

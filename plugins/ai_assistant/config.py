@@ -87,6 +87,8 @@ DEFAULTS: dict = {
     # AI 评论头像：自定义图片 URL；留空用内置卡通机器人默认头像
     "ai_avatar": "",
     "comment_moderation": True,
+    # 注册 / 改名昵称机审：判违规的转人工审核（账号禁止登录），并写留存记录
+    "user_name_moderation": True,
     "comment_reply": True,
     "comment_reply_notify": True,
     "comment_min_length": 10,

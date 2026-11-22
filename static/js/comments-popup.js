@@ -104,7 +104,7 @@
     var delta = target.getBoundingClientRect().top - body.getBoundingClientRect().top - 8;
     body.scrollTop += delta;
     target.classList.add('cmt-anchor-flash');
-    setTimeout(function () { target.classList.remove('cmt-anchor-flash'); }, 1600);
+    setTimeout(function () { target.classList.remove('cmt-anchor-flash'); }, 3000);
   }
 
   /* 展开评论框（表单字段包在 <details> 折叠容器里）并聚焦输入框；

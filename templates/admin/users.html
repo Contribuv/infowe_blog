@@ -1,0 +1,106 @@
+﻿{% extends "admin/base.html" %}
+{% block admin_title %}用户管理{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>{{ icon('user', 20) | safe }} 用户管理 <span class="badge">{{ total }}</span></h2>
+</div>
+
+<div class="filter-bar">
+    <div class="filter-tabs">
+        <a href="{{ url_for('admin_users') }}" class="filter-tag {% if not status %}active{% endif %}">全部 <span class="muted" style="margin-left:4px">{{ counts.all }}</span></a>
+        <a href="{{ url_for('admin_users', status='manual') }}" class="filter-tag {% if status == 'manual' %}active{% endif %}">待人工审核 <span class="muted" style="margin-left:4px">{{ counts.manual }}</span></a>
+        <a href="{{ url_for('admin_users', status='approved') }}" class="filter-tag {% if status == 'approved' %}active{% endif %}">正常 <span class="muted" style="margin-left:4px">{{ counts.approved }}</span></a>
+        <a href="{{ url_for('admin_users', status='rejected') }}" class="filter-tag {% if status == 'rejected' %}active{% endif %}">已拒绝 <span class="muted" style="margin-left:4px">{{ counts.rejected }}</span></a>
+    </div>
+    <form class="filter-search" method="GET">
+        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+        <input type="text" name="q" class="search-input-sm" placeholder="搜索昵称 / 邮箱..." value="{{ keyword }}">
+        <button type="submit" class="btn btn-sm">搜索</button>
+    </form>
+</div>
+
+{% if users %}
+<div class="card">
+    <div class="table-wrap">
+    <table class="table">
+    <thead>
+        <tr>
+            <th>昵称</th>
+            <th>邮箱</th>
+            <th>状态</th>
+            <th>注册时间</th>
+            <th>最后登录</th>
+            <th>审核说明</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td class="main-td" data-label="昵称">
+                <strong>{{ u.name }}</strong>
+                {% if u.link %}<div class="muted" style="font-size:12px"><a href="{{ u.link }}" target="_blank" rel="noopener nofollow">{{ u.link[:40] }}</a></div>{% endif %}
+            </td>
+            <td data-label="邮箱">{{ u.email }}</td>
+            <td data-label="状态">
+                {% if u.review_status == 'manual' %}
+                <span class="badge badge-warn">待人工审核</span>
+                {% elif u.review_status == 'rejected' %}
+                <span class="badge badge-danger">已拒绝</span>
+                {% else %}
+                <span class="badge badge-success">正常</span>
+                {% endif %}
+            </td>
+            <td data-label="注册时间" class="muted">{{ u.created_at or '-' }}</td>
+            <td data-label="最后登录" class="muted">{{ u.last_login_at or '从未登录' }}</td>
+            <td class="desc-cell" data-label="审核说明">
+                {% if u.review_note %}{{ u.review_note[:40] }}{% else %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td class="actions-cell" data-label="操作">
+                {% if u.review_status != 'approved' %}
+                <button type="submit" form="okForm{{ u.id }}" class="btn btn-sm btn-primary">通过</button>
+                {% endif %}
+                {% if u.review_status != 'rejected' %}
+                <button type="submit" form="noForm{{ u.id }}" class="btn btn-sm btn-danger">拒绝</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    </table>
+    </div>
+</div>
+{# 单条审核表单放在表格外：表格内嵌 form 在部分浏览器会丢 action #}
+{% for u in users %}
+    <form id="okForm{{ u.id }}" method="POST" action="{{ url_for('admin_user_review', user_id=u.id) }}" class="hidden">
+        <input type="hidden" name="action" value="approve">
+        <input type="hidden" name="status" value="{{ status }}">
+        <input type="hidden" name="q" value="{{ keyword }}">
+        <input type="hidden" name="page" value="{{ page }}">
+    </form>
+    <form id="noForm{{ u.id }}" method="POST" action="{{ url_for('admin_user_review', user_id=u.id) }}" class="hidden" onsubmit="return confirm('拒绝昵称「{{ u.name }}」？该账号将无法登录。')">
+        <input type="hidden" name="action" value="reject">
+        <input type="hidden" name="status" value="{{ status }}">
+        <input type="hidden" name="q" value="{{ keyword }}">
+        <input type="hidden" name="page" value="{{ page }}">
+    </form>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <p>没有符合条件的账号</p>
+</div>
+{% endif %}
+
+{% if total_pages > 1 %}
+<nav class="admin-pagination">
+    {% if page > 1 %}
+    <a href="{{ url_for('admin_users', page=page-1, status=status or none, q=keyword or none) }}" class="page-btn">上一页</a>
+    {% endif %}
+    <span class="page-info">{{ page }} / {{ total_pages }}</span>
+    {% if page < total_pages %}
+    <a href="{{ url_for('admin_users', page=page+1, status=status or none, q=keyword or none) }}" class="page-btn">下一页</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% endblock %}

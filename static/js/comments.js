@@ -77,8 +77,8 @@ window.initComments = function (root) {
   var submitBtn = form.querySelector('.submit');
   var counter = form.querySelector('.count');
   var fields = byId('comment-fields');
-  var remember = byId('comment-remember');
-  var editBtn = byId('comment-remember-edit');
+  var remember = byId('cmt-authbar');
+  var editBtn = byId('cmt-remember-edit');
   var authorInput = form.querySelector('input[name="author"]');
   var emailInput = byId('comment-email');
   var emailSuggest = byId('cmt-email-suggest');
@@ -248,6 +248,300 @@ window.initComments = function (root) {
   if (authorInput) authorInput.addEventListener('input', resetIdentity);
   if (emailInput) emailInput.addEventListener('input', resetIdentity);
 
+  /* ── 0.7 读者账号登录浮窗（邮箱登录 / 注册 / 跳过验证） ── */
+  var loginMask = byId('cmt-loginmask');
+  var loginOpen = byId('cmt-login-open');
+  var loginClose = byId('cmt-login-close');
+  var loginSkip = byId('cmt-login-skip');
+  var loginSubmit = byId('cmt-login-submit');
+  var loginSend = byId('cmt-login-send');
+  var loginEmail = byId('cmt-login-email');
+  var loginName = byId('cmt-login-name');
+  var loginNameWrap = byId('cmt-login-name-wrap');
+  var loginCode = byId('cmt-login-code');
+  var loginCodeWrap = byId('cmt-login-code-wrap');
+  var loginTip = byId('cmt-login-tip');
+  var loginCaptcha = byId('cmt-login-captcha');
+  var loginCaptchaImg = byId('cmt-login-captcha-img');
+  var loginTitle = byId('cmt-login-title');
+  var loginDesc = byId('cmt-login-desc');
+  var loginTabs = byId('cmt-login-tabs') ? byId('cmt-login-tabs').querySelectorAll('.cmt-login-tab') : [];
+  var loginMode = 'login';
+  var loginCountdown = 0;
+  var loginTimer = null;
+
+  function setLoginTip(msg, kind) {
+    if (!loginTip) return;
+    loginTip.className = 'cmt-idtip' + (kind ? ' cmt-idtip--' + kind : '');
+    loginTip.textContent = msg || '';
+  }
+  function setLoginMode(mode) {
+    loginMode = mode;
+    Array.prototype.forEach.call(loginTabs, function (tab) {
+      tab.classList.toggle('is-active', tab.getAttribute('data-mode') === mode);
+    });
+    var register = mode === 'register';
+    if (loginNameWrap) loginNameWrap.hidden = !register;
+    if (loginCodeWrap) loginCodeWrap.hidden = !register;
+    if (loginTitle) loginTitle.textContent = register ? '注册账号' : '邮箱登录';
+    if (loginDesc) loginDesc.textContent = register
+      ? '注册后可用邮箱+密码登录，同步身份并使用站内通知。'
+      : '用注册邮箱与密码登录，登录后可同步身份、使用站内通知。';
+    if (loginSubmit) loginSubmit.textContent = register ? '注册并登录' : '登录';
+    setLoginTip('');
+  }
+  function refreshCaptcha() {
+    if (loginCaptchaImg) loginCaptchaImg.src = '/api/reader/captcha?t=' + Date.now();
+    if (loginCaptcha) loginCaptcha.value = '';
+  }
+  /* 登录 / 注册是两个独立入口：点哪个就进对应模式，不再让用户先点开再切 tab */
+  function openLogin(mode) {
+    if (!loginMask) return;
+    setLoginMode(mode === 'register' ? 'register' : 'login');
+    refreshCaptcha();
+    loginMask.hidden = false;
+    if (loginEmail) loginEmail.focus();
+  }
+  if (loginCaptchaImg) loginCaptchaImg.addEventListener('click', refreshCaptcha);
+  function closeLogin() {
+    if (loginMask) loginMask.hidden = true;
+  }
+  function postLogin(url, data) {
+    var body = [];
+    for (var key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        body.push(encodeURIComponent(key) + '=' + encodeURIComponent(data[key] || ''));
+      }
+    }
+    return fetch(url, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body.join('&')
+    }).then(function (res) { return res.json(); });
+  }
+  if (loginOpen) loginOpen.addEventListener('click', function () { openLogin(loginOpen.getAttribute('data-login-mode') || 'login'); });
+  var registerOpen = byId('cmt-register-open');
+  if (registerOpen) registerOpen.addEventListener('click', function () { openLogin('register'); });
+  if (loginClose) loginClose.addEventListener('click', closeLogin);
+  if (loginSkip) loginSkip.addEventListener('click', function () {
+    closeLogin();
+    if (fields) fields.hidden = false;
+    if (remember) remember.hidden = true;
+    if (authorInput) authorInput.focus();
+  });
+  if (loginMask) loginMask.addEventListener('click', function (e) {
+    if (e.target === loginMask) closeLogin();
+  });
+  Array.prototype.forEach.call(loginTabs, function (tab) {
+    tab.addEventListener('click', function () { setLoginMode(tab.getAttribute('data-mode')); });
+  });
+  if (loginSend) loginSend.addEventListener('click', function () {
+    if (loginCountdown > 0 || !loginEmail) return;
+    var email = loginEmail.value.trim();
+    if (!email) { setLoginTip('请先填写邮箱', 'error'); return; }
+    loginSend.disabled = true;
+    loginSend.textContent = '发送中…';
+    postLogin('/api/reader/send-code', { email: email })
+      .then(function (data) {
+        loginSend.textContent = '发送验证码';
+        if (!data || data.error) { setLoginTip((data && data.error) || '发送失败', 'error'); loginSend.disabled = false; return; }
+        setLoginTip('验证码已发送，请查收 ' + email + '（含垃圾箱）', 'ok');
+        loginCountdown = data.cooldown || 60;
+        loginSend.textContent = loginCountdown + ' 秒后重发';
+        if (loginCode) loginCode.focus();
+        loginTimer = setInterval(function () {
+          loginCountdown -= 1;
+          if (loginCountdown <= 0) {
+            clearInterval(loginTimer); loginTimer = null;
+            loginSend.disabled = false; loginSend.textContent = '发送验证码';
+          } else { loginSend.textContent = loginCountdown + ' 秒后重发'; }
+        }, 1000);
+      })
+      .catch(function () { setLoginTip('发送失败，请稍后重试', 'error'); loginSend.disabled = false; loginSend.textContent = '发送验证码'; });
+  });
+  if (loginSubmit) loginSubmit.addEventListener('click', function () {
+    if (!loginEmail) return;
+    var email = loginEmail.value.trim();
+    var password = loginPasswordValue();
+    if (!email || !password) { setLoginTip('请填写邮箱和密码', 'error'); return; }
+    var captchaVal = (loginCaptcha && loginCaptcha.value.trim()) || '';
+    if (!captchaVal) { setLoginTip('请填写图形验证码', 'error'); return; }
+    var url = loginMode === 'register' ? '/api/reader/register' : '/api/reader/login';
+    var data = { email: email, password: password, captcha: captchaVal };
+    if (loginMode === 'register') {
+      data.code = (loginCode && loginCode.value.trim()) || '';
+      data.name = (loginName && loginName.value.trim()) || '';
+      if (!data.name) { setLoginTip('请填写昵称', 'error'); return; }
+      if (!data.code) { setLoginTip('请填写验证码', 'error'); return; }
+    }
+    loginSubmit.disabled = true;
+    setLoginTip('提交中…');
+    postLogin(url, data)
+      .then(function (res) {
+        loginSubmit.disabled = false;
+        if (!res || res.error || !res.ok) {
+          setLoginTip((res && res.error) || '操作失败', 'error');
+          refreshCaptcha();  // 验证码一次性，任何失败后都刷新
+          return;
+        }
+        // 登录态写入 HttpOnly Cookie，刷新页面让服务端按登录态重渲染表单
+        window.location.reload();
+      })
+      .catch(function () { loginSubmit.disabled = false; setLoginTip('网络错误，请稍后重试', 'error'); });
+  });
+  function loginPasswordValue() {
+    var el = byId('cmt-login-password');
+    return el ? el.value : '';
+  }
+  var readerLogout = byId('cmt-reader-logout');
+  if (readerLogout) readerLogout.addEventListener('click', function () {
+    postLogin('/api/reader/logout', {}).then(function () { window.location.reload(); })
+      .catch(function () { window.location.reload(); });
+  });
+
+  /* ── 0.9 账号管理浮窗（昵称 / 头像 / 邮箱） ── */
+  var accountOpen = byId('cmt-account-open');
+  var accountMask = byId('cmt-accountmask');
+  var accountClose = byId('cmt-account-close');
+  var accountName = byId('cmt-account-name');
+  var accountNameSave = byId('cmt-account-name-save');
+  var accountEmail = byId('cmt-account-email');
+  var accountEmailCode = byId('cmt-account-email-code');
+  var accountEmailSend = byId('cmt-account-email-send');
+  var accountEmailSave = byId('cmt-account-email-save');
+  var accountAvatarInput = byId('cmt-account-avatar-input');
+  var accountAvatarPreview = byId('cmt-account-avatar-preview');
+  var accountTip = byId('cmt-account-tip');
+  var accountCountdown = 0;
+  var accountTimer = null;
+
+  function setAccountTip(msg, kind) {
+    if (!accountTip) return;
+    accountTip.className = 'cmt-idtip' + (kind ? ' cmt-idtip--' + kind : '');
+    accountTip.textContent = msg || '';
+  }
+  if (accountOpen) accountOpen.addEventListener('click', function () {
+    if (accountMask) accountMask.hidden = false;
+  });
+  if (accountClose) accountClose.addEventListener('click', function () {
+    if (accountMask) accountMask.hidden = true;
+  });
+  if (accountMask) accountMask.addEventListener('click', function (e) {
+    if (e.target === accountMask) accountMask.hidden = true;
+  });
+  if (accountNameSave) accountNameSave.addEventListener('click', function () {
+    var name = (accountName && accountName.value.trim()) || '';
+    if (!name) { setAccountTip('昵称不能为空', 'error'); return; }
+    accountNameSave.disabled = true;
+    postLogin('/api/reader/update-name', { name: name }).then(function (d) {
+      accountNameSave.disabled = false;
+      if (d && d.error) { setAccountTip(d.error, 'error'); return; }
+      setAccountTip('昵称已更新', 'ok');
+      setTimeout(function () { window.location.reload(); }, 400);
+    }).catch(function () { accountNameSave.disabled = false; setAccountTip('网络错误', 'error'); });
+  });
+  if (accountEmailSend) accountEmailSend.addEventListener('click', function () {
+    var email = (accountEmail && accountEmail.value.trim()) || '';
+    if (!email) { setAccountTip('请填写新邮箱', 'error'); return; }
+    if (accountCountdown > 0) return;
+    accountEmailSend.disabled = true;
+    postLogin('/api/reader/send-code', { email: email }).then(function (d) {
+      accountEmailSend.disabled = false;
+      if (d && d.error) { setAccountTip(d.error, 'error'); return; }
+      setAccountTip('验证码已发送，请查收 ' + email, 'ok');
+      accountCountdown = d.cooldown || 60;
+      if (accountEmailCode) accountEmailCode.focus();
+      clearInterval(accountTimer);
+      accountTimer = setInterval(function () {
+        accountCountdown -= 1;
+        if (accountCountdown <= 0) { clearInterval(accountTimer); accountEmailSend.textContent = '发送验证码'; }
+        else accountEmailSend.textContent = accountCountdown + ' 秒后重发';
+      }, 1000);
+    }).catch(function () { accountEmailSend.disabled = false; setAccountTip('发送失败', 'error'); });
+  });
+  if (accountEmailSave) accountEmailSave.addEventListener('click', function () {
+    var email = (accountEmail && accountEmail.value.trim()) || '';
+    var code = (accountEmailCode && accountEmailCode.value.trim()) || '';
+    if (!email || !code) { setAccountTip('请填写新邮箱和验证码', 'error'); return; }
+    accountEmailSave.disabled = true;
+    postLogin('/api/reader/update-email', { email: email, code: code }).then(function (d) {
+      accountEmailSave.disabled = false;
+      if (d && d.error) { setAccountTip(d.error, 'error'); return; }
+      setAccountTip('邮箱已更新', 'ok');
+      setTimeout(function () { window.location.reload(); }, 400);
+    }).catch(function () { accountEmailSave.disabled = false; setAccountTip('网络错误', 'error'); });
+  });
+  if (accountAvatarInput) accountAvatarInput.addEventListener('change', function () {
+    var file = accountAvatarInput.files && accountAvatarInput.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setAccountTip('图片不能超过 5MB', 'error'); return; }
+    var fd = new FormData();
+    fd.append('avatar', file);
+    fetch('/api/reader/avatar-upload', { method: 'POST', credentials: 'same-origin', body: fd })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.error) { setAccountTip(d.error, 'error'); return; }
+        if (accountAvatarPreview && d.avatar) accountAvatarPreview.src = d.avatar + '?t=' + Date.now();
+        setAccountTip('头像已更新', 'ok');
+      })
+      .catch(function () { setAccountTip('上传失败', 'error'); });
+  });
+  var accountPwdSave = byId('cmt-account-pwd-save');
+  if (accountPwdSave) accountPwdSave.addEventListener('click', function () {
+    var oldPwd = (byId('cmt-account-oldpwd') || {}).value || '';
+    var newPwd = (byId('cmt-account-newpwd') || {}).value || '';
+    if (!oldPwd || !newPwd) { setAccountTip('请填写当前密码和新密码', 'error'); return; }
+    accountPwdSave.disabled = true;
+    postLogin('/api/reader/update-password', { old_password: oldPwd, new_password: newPwd }).then(function (d) {
+      accountPwdSave.disabled = false;
+      if (d && d.error) { setAccountTip(d.error, 'error'); return; }
+      setAccountTip('密码已修改，下次登录请用新密码', 'ok');
+      var op = byId('cmt-account-oldpwd'), np = byId('cmt-account-newpwd');
+      if (op) op.value = ''; if (np) np.value = '';
+    }).catch(function () { accountPwdSave.disabled = false; setAccountTip('网络错误', 'error'); });
+  });
+
+  /* ── 0.8 点赞 / 不喜欢：root 级委托（翻页替换列表后仍有效）
+     同一身份对同一条只能一票：再点同一边取消，点另一边改票，
+     所以两个按钮要一起更新（乐观锁住整组，避免连点产生两票）。 ── */
+  root.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('[data-vote-id]') : null;
+    if (!btn) return;
+    e.preventDefault();
+    var id = parseInt(btn.getAttribute('data-vote-id'), 10) || 0;
+    var kind = parseInt(btn.getAttribute('data-vote'), 10) < 0 ? -1 : 1;
+    if (!id || btn.disabled) return;
+    var group = btn.closest('.cmt-votes');
+    var likeBtn = group ? group.querySelector('.cmt-like') : null;
+    var dislikeBtn = group ? group.querySelector('.cmt-dislike') : null;
+    var release = function (on) {
+      if (likeBtn) likeBtn.disabled = on;
+      if (dislikeBtn) dislikeBtn.disabled = on;
+    };
+    release(true);
+    var body = 'comment_id=' + encodeURIComponent(id) + '&kind=' + kind;
+    fetch('/api/comment/like', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: body
+    }).then(function (r) { return r.json(); })
+      .then(function (d) {
+        release(false);
+        if (d && d.error) { if (window.toast) window.toast(d.error, 'error'); return; }
+        if (likeBtn) {
+          likeBtn.classList.toggle('is-liked', !!(d && d.liked));
+          var likeCount = likeBtn.querySelector('.cmt-like-count');
+          if (likeCount) likeCount.textContent = (d && d.likes) || 0;
+        }
+        if (dislikeBtn) {
+          dislikeBtn.classList.toggle('is-disliked', !!(d && d.disliked));
+          var dislikeCount = dislikeBtn.querySelector('.cmt-dislike-count');
+          if (dislikeCount) dislikeCount.textContent = (d && d.dislikes) || 0;
+        }
+      })
+      .catch(function () { release(false); });
+  });
+
   /* ── 0.5 表单定位：仅当表单显示不全（底部/顶部被视口截断）时才滚动；
      完全可见（如文章内容较短、页面本身能装下表单）则不滚动，避免多余跳动 ── */
   function scrollFormIntoView() {
@@ -271,13 +565,29 @@ window.initComments = function (root) {
 
     /* 折叠态整卡可点：卡片四周有内边距，原先只有「写评论」那一行是热区，
        点旁边空白没反应。未展开时点击 form 任意位置都展开并聚焦输入框；
-       展开后不拦截，summary 收起与表单控件保持原生行为。 */
+       展开后不拦截，表单控件保持原生行为。 */
     form.addEventListener('click', function (e) {
       if (cmtBox.open) return;
-      e.preventDefault();
+      var target = e.target;
+      /* 身份条上的「登录 / 注册」「修改」有自己的动作，别顺带展开表单抢焦点。
+         「收起」按钮也必须跳过：它在按钮自身监听里把 open 置 false，
+         事件冒泡到这里时 open 已是 false，会被误判成「点了空白」又展开回去。 */
+      if (target.closest && target.closest('.cmt-authbar button, .cmt-authbar a, .cmt-fold-back')) return;
+      /* 占位条是 <summary>，原生会自己切换；这里统一走一套逻辑并补聚焦，
+         避免「原生 toggle + 本监听」各改一次造成状态错乱 */
+      if (target.closest && target.closest('.cmt-toggle')) e.preventDefault();
       cmtBox.open = true;
-      if (textarea) textarea.focus();
+      if (textarea && textarea.focus) textarea.focus({ preventScroll: true });
     });
+
+    /* 展开态 summary 已隐藏，收起入口是动作行的「收起」文字按钮 */
+    var foldBtn = form.querySelector('#cmt-fold-btn');
+    if (foldBtn) {
+      foldBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        cmtBox.open = false;
+      });
+    }
   }
 
   /* ── 1. 回复：把表单挂到该评论所属楼层组的回复区末尾 ── */
@@ -330,7 +640,7 @@ window.initComments = function (root) {
        给被回复楼层加高亮闪烁，明确回复对象。foot 不再被搬空，保持显示。 */
     if (form.closest('.cmt-pop-foot')) {
       item.classList.add('cmt-anchor-flash');
-      setTimeout(function () { item.classList.remove('cmt-anchor-flash'); }, 1600);
+      setTimeout(function () { item.classList.remove('cmt-anchor-flash'); }, 3000);
     } else {
       /* 内嵌模式保持原交互：表单搬进该楼层组回复区末尾，紧贴被回复内容 */
       var box = repliesBoxOf(item);
@@ -452,7 +762,7 @@ window.initComments = function (root) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       var target = el.closest('.cmt-thread') || el.closest('.cmt-item') || el;
       target.classList.add('cmt-anchor-flash');
-      setTimeout(function () { target.classList.remove('cmt-anchor-flash'); }, 1600);
+      setTimeout(function () { target.classList.remove('cmt-anchor-flash'); }, 3000);
     };
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(scroll);
     else setTimeout(scroll, 30);
@@ -752,27 +1062,14 @@ window.initComments = function (root) {
     });
   }
 
-  /* ── 5. 记住信息：点「修改」展开昵称等字段 ── */
-  var moreFields = byId('comment-more-fields');
+  /* ── 5. 记住信息：点「修改」展开昵称等字段（网址默认已展开） ── */
   var websiteField = byId('comment-website-field');
   if (editBtn && fields) {
     editBtn.addEventListener('click', function () {
       fields.hidden = false;
       if (remember) remember.hidden = true;
-      // 网址仍收着时，把入口一并放出来，否则「修改」后没地方填网址
-      if (moreFields && websiteField && websiteField.hidden) moreFields.hidden = false;
       var first = fields.querySelector('input');
       if (first) first.focus();
-    });
-  }
-
-  /* ── 5.1 网址默认收起：点「＋ 网址」再展开第三列 ── */
-  if (moreFields && websiteField) {
-    moreFields.addEventListener('click', function () {
-      websiteField.hidden = false;
-      moreFields.hidden = true;
-      var input = websiteField.querySelector('input');
-      if (input) input.focus();
     });
   }
 
@@ -868,6 +1165,44 @@ window.initComments = function (root) {
     });
     syncEmail();   // 回填记住的邮箱时同步一次（纯数字则直接显示补全项）
   }
+
+  /* ── 7.5 历史网址自动填入：昵称+邮箱齐全时按邮箱查历史公开评论用过的网址 ──
+     只在网址为空且用户没手动改过时填；请求带序号防竞态，失败静默不影响评论。 */
+  var websiteInput = byId('comment-website');
+  var websiteFieldForHistory = byId('comment-website-field');
+  var moreFieldsForHistory = byId('comment-more-fields');
+  var websiteTouched = false;
+  var historySeq = 0;
+  var historyTimer = null;
+  function lookupHistoryWebsite() {
+    if (!emailInput || !authorInput || !websiteInput) return;
+    var email = emailInput.value.trim();
+    var author = authorInput.value.trim();
+    if (QQ_RE.test(email)) email = email + '@qq.com';
+    if (!author || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return;
+    var seq = ++historySeq;
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(function () {
+      fetch('/api/comment/history?email=' + encodeURIComponent(email), {
+        credentials: 'same-origin'
+      })
+        .then(function (res) { return res.ok ? res.json() : { website: '' }; })
+        .then(function (data) {
+          var site = (data && data.website) || '';
+          if (seq !== historySeq || websiteTouched || !site) return;
+          if (websiteInput.value.trim()) return;
+          websiteInput.value = site;
+          if (websiteFieldForHistory) websiteFieldForHistory.hidden = false;
+          if (moreFieldsForHistory) moreFieldsForHistory.hidden = true;
+          // 让下方网址补全逻辑重新校验协议展示
+          websiteInput.dispatchEvent(new Event('input'));
+        })
+        .catch(function () {});
+    }, 300);
+  }
+  if (emailInput) emailInput.addEventListener('input', lookupHistoryWebsite);
+  if (authorInput) authorInput.addEventListener('input', lookupHistoryWebsite);
+  if (websiteInput) websiteInput.addEventListener('input', function () { websiteTouched = true; });
 
   /* ── 8. 表情选择：精选 Unicode emoji，插入到正文光标处 ── */
   var EMOJI_GROUPS = [

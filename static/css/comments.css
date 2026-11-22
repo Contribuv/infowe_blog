@@ -50,9 +50,7 @@
 /* ── 楼层组 ── */
 .cmt-thread{padding:18px 20px;border-radius:var(--c-radius);background:var(--c-card);border:1px solid var(--c-border);transition:border-color .18s}
 .cmt-thread+.cmt-thread{margin-top:14px}
-@media (hover:hover) and (pointer:fine){.cmt-thread:hover{border-color:var(--c-border-h)}}
-/* 表单卡与独立 details 卡同享描边提亮反馈；.cmt-form.is-inline 无描边故无变化 */
-@media (hover:hover) and (pointer:fine){.cmt-form:hover,.cmt-box:hover{border-color:var(--c-border-h)}}
+/* 楼层卡 / 表单卡均不做悬停反馈（评论区整体取消悬停效果） */
 
 /* 一律卡片楼层（.cmt-thread 基类即卡片）；皮肤差异只体现在配色，
    不再有「大外框 + 组间横线」形态 */
@@ -63,14 +61,8 @@
 .cmt-item[data-lv="reply"] .cmt-avatar{width:var(--av-reply);height:var(--av-reply);font-size:12px}
 /* 头像外链包裹层：不影响 .cmt-avatar 的尺寸计算 */
 /* align-self 防止被 .cmt-item 的 stretch 拉伸成整条评论高度（否则 50% 圆角变椭圆、hover 光环畸形） */
-.cmt-avatar-link{flex:none;align-self:flex-start;display:block;border-radius:50%;line-height:0;transition:box-shadow .18s ease,transform .18s ease}
-@media (hover:hover) and (pointer:fine){ .cmt-avatar-link:hover{box-shadow:0 0 0 2px var(--c-accent);transform:scale(1.06)} }
-/* 悬停头像时昵称同步高亮：:has 不支持的老浏览器自动降级为不联动 */
-@media (hover:hover) and (pointer:fine){ .cmt-item:has(.cmt-avatar-link:hover) a.cmt-author{color:var(--c-accent)} }
-@media (prefers-reduced-motion:reduce){
-  .cmt-avatar-link{transition:none}
-  .cmt-avatar-link:hover{transform:none}
-}
+.cmt-avatar-link{flex:none;align-self:flex-start;display:block;border-radius:50%;line-height:0}
+/* 头像不做悬停光环 / 放大，昵称也不跟随高亮 */
 .cmt-avatar{flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--av-color);font-weight:600;line-height:1;background:var(--av-bg);overflow:hidden;user-select:none}
 .cmt-avatar img{width:100%;height:100%;object-fit:cover;display:block}
 /* 亮色主题（仅 default 皮肤）：柔和浅底 + 深字，避免高饱和渐变割裂 */
@@ -133,13 +125,23 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
 .cmt-toggle{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:13.5px;color:var(--c-text2);cursor:pointer;user-select:none;transition:color .15s,background .15s}
 .cmt-toggle::-webkit-details-marker{display:none}
-@media (hover:hover) and (pointer:fine){ .cmt-toggle:hover{color:var(--c-accent)} }
 .cmt-box:not([open]) .cmt-box-body{display:none}
 .cmt-box[open] .cmt-box-body{display:block}
 .cmt-box-body{padding:14px 16px}
 /* 卡内的 details 不再自带内距，统一由 .cmt-form 的 padding 收口 */
 .cmt-form .cmt-toggle{padding:0}
-.cmt-form .cmt-box[open] .cmt-toggle{padding-bottom:12px}
+/* 折叠态 =「空输入框」：描边 / 圆角 / 内距 / 字号对齐同表单的 textarea */
+.cmt-form .cmt-box:not([open]) .cmt-toggle{
+  min-height:44px;box-sizing:border-box;padding:10px 12px;
+  border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);
+  transition:border-color .15s,background-color .15s;
+}
+.cmt-toggle-icon{flex:none;width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--c-text3);transition:color .15s}
+.cmt-toggle-placeholder{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--c-text3)}
+.cmt-toggle-act{flex:none;font-size:12.5px;font-weight:500;color:var(--c-accent);white-space:nowrap}
+/* 折叠条不做鼠标悬停反馈，只保留键盘聚焦环 */
+/* 展开态不渲染 summary：收起入口改由动作行的「收起」文字按钮承担 */
+.cmt-form .cmt-box[open] .cmt-toggle{display:none}
 .cmt-form{--cmt-gap:10px;--cmt-pad:12px}
 /* 表单内容区：间距只有一个来源，直接子块之间由 gap 控制；
    不再让 textarea / row / 身份条各自写 margin-bottom 叠加 */
@@ -163,6 +165,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .count{margin-right:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:#cf222e}
 .cmt-form .kbd-hint{font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
+/* 「收起」：次要动作只给文字，不与提交按钮争视觉重量 */
+.cmt-form .cmt-fold-back{align-self:center;padding:0;border:0;background:none;font-size:12px;line-height:1.6;color:var(--c-text3);cursor:pointer;white-space:nowrap;transition:color .15s}
+@media (hover:hover) and (pointer:fine){.cmt-form .cmt-fold-back:hover{color:var(--c-accent)}}
+.cmt-form .cmt-fold-back:focus-visible{outline:2px solid var(--c-accent);outline-offset:3px;border-radius:4px}
 .cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;min-height:36px;box-sizing:border-box;padding:8px 20px;border-radius:8px;background:var(--c-accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,filter .15s}
 @media (hover:hover) and (pointer:fine){ .cmt-form .submit:hover{filter:brightness(1.08)} }
 .cmt-form .submit[disabled]{opacity:.6;cursor:not-allowed}
@@ -171,6 +177,26 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 @media (hover:hover) and (pointer:fine){ .cmt-hint button:hover{color:var(--c-text2)} }
 .cmt-remember{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:12.5px;color:var(--c-text3)}
 .cmt-remember button{flex:none;font-size:11.5px;color:var(--c-accent);background:none;border:none;padding:0;cursor:pointer;white-space:nowrap}
+/* 评论标题行：标题 + 通知中心入口 */
+.cmt-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;margin:0 0 14px}
+.cmt-title-row .cmt-title{margin:0;display:flex;align-items:center}
+.cmt-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 12px}
+.cmt-list-count{font-size:14px;color:var(--c-text2)}
+.cmt-list-count b{font-size:16px;color:var(--c-text);font-weight:700}
+.cmt-notify-entry{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--c-border);border-radius:999px;background:transparent;color:var(--c-text2);font-size:12.5px;cursor:pointer}
+.cmt-notify-entry:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.cmt-notify-entry-badge{min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#e05252;color:#fff;font-size:10px;line-height:16px;text-align:center;font-weight:700}
+.cmt-notify-entry-badge[hidden]{display:none}
+/* 评论投票：点赞 / 不喜欢，紧跟 UA 之后自然排列，图标与数字同一条中线 */
+.cmt-votes{align-self:center;display:inline-flex;align-items:center;gap:2px;margin-left:2px}
+.cmt-like,.cmt-dislike{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:0;background:none;color:var(--c-text3);font-family:inherit;font-size:12px;cursor:pointer;line-height:1}
+.cmt-like svg,.cmt-dislike svg{flex:none;display:block}
+.cmt-like:hover,.cmt-dislike:hover,.cmt-like.is-liked{color:var(--c-accent)}
+.cmt-like.is-liked svg{fill:currentColor}
+.cmt-dislike.is-disliked{color:#c4553f}
+.cmt-dislike.is-disliked svg{fill:currentColor}
+.cmt-like:disabled,.cmt-dislike:disabled{opacity:.5;cursor:wait}
+.cmt-like-count,.cmt-dislike-count{min-width:8px;text-align:center;font-variant-numeric:tabular-nums}
 /* 博主身份条用徽章同款蓝色左边框+头像描边：语义是「将以博主身份发言」的状态警示，与普通信息条区分 */
 .cmt-admin{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:var(--c-reply);font-size:13px;color:var(--c-text);border-left:3px solid rgba(107,156,245,.55)}
 .cmt-admin-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px rgba(107,156,245,.35)}
@@ -261,11 +287,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* ── 锚点定位（#comment-N）：给 sticky 导航留出滚动余量，命中后短暂高亮 ── */
 .cmt-item{scroll-margin-top:80px}
 @keyframes cmt-anchor-flash{
-  0%{background:color-mix(in srgb,var(--c-reply) 25%,transparent)}
-  60%{background:color-mix(in srgb,var(--c-reply) 25%,transparent)}
-  100%{background:transparent}
+  0%{background:color-mix(in srgb,var(--c-accent) 22%,transparent);box-shadow:inset 3px 0 0 var(--c-accent)}
+  75%{background:color-mix(in srgb,var(--c-accent) 22%,transparent);box-shadow:inset 3px 0 0 var(--c-accent)}
+  100%{background:transparent;box-shadow:inset 3px 0 0 transparent}
 }
-.cmt-anchor-flash{animation:cmt-anchor-flash 1.6s ease;border-radius:12px;position:relative;overflow:hidden}
+.cmt-anchor-flash{animation:cmt-anchor-flash 3s ease;border-radius:12px;position:relative;overflow:hidden}
 
 /* ── 图片上传按钮（与表情按钮同尺寸，放在表情右侧） ── */
 .cmt-imgup{position:relative;flex:none}
@@ -303,6 +329,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   background:var(--bg-raised,var(--bg-surface,var(--bg,#fff)));
   border:1px solid var(--c-border);color:var(--c-text);
   box-shadow:0 18px 50px rgba(15,23,32,.24);
+  max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;
 }
 .cmt-idhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cmt-idhead strong{font-size:16px;font-weight:600}
@@ -328,6 +355,50 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-idtip--ok{color:#2f9e6f}
 .cmt-idtip--error{color:#d9534f}
 .cmt-idbtn.is-loading{opacity:.7;cursor:wait}
+/* ── 读者账号：登录状态条 + 登录/注册浮窗 ── */
+/* 这一排全是文字：身份说明、修改/登录/退出文字链共用 13px / 1.5 行高，
+   否则按钮与 <a> 的默认行高差会让它们上下错位 */
+.cmt-authbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 2px;margin-bottom:12px;border:0;background:none;font-size:13px;line-height:1.5}
+.cmt-authbar-user{font-size:13px;line-height:1.5;color:var(--c-text2);flex:1;min-width:0}
+.cmt-authbar-user b{color:var(--c-text);font-weight:600}
+.cmt-authbar-badge{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;font-size:11px;line-height:1.6;vertical-align:1px;color:#2f9e6f;background:rgba(47,158,111,.12)}
+.cmt-authbar-btn{padding:6px 12px;border:1px solid var(--c-border);border-radius:8px;background:transparent;color:var(--c-text);font-size:13px;line-height:1.5;cursor:pointer}
+.cmt-authbar-btn:hover{border-color:var(--c-accent);color:var(--c-accent)}
+.cmt-authbar-btn--primary{background:var(--c-accent);border-color:var(--c-accent);color:#fff}
+.cmt-authbar-btn--primary:hover{color:#fff;filter:brightness(.94)}
+.cmt-authbar-tip{font-size:13px;line-height:1.5;color:var(--c-text3)}
+.cmt-authbar-link{margin-left:auto;padding:0;border:0;background:none;color:var(--c-text3);font-family:inherit;font-size:13px;line-height:1.5;cursor:pointer;white-space:nowrap;text-decoration:none}
+.cmt-authbar-link + .cmt-authbar-link{margin-left:0}
+.cmt-authbar-link:hover{color:var(--c-accent);text-decoration:underline}
+/* 登录 / 注册：与「登录同步身份」同款文字链，不再画成描边胶囊 */
+.cmt-authbar-link--login{color:var(--c-accent);font-weight:600}
+.cmt-authbar-link--login:hover{color:var(--c-accent)}
+.cmt-authbar-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg-subtle)}
+.cmt-authbar-badge--admin{color:#b8860b;background:rgba(184,134,11,.14)}
+.cmt-account-card{max-width:420px}
+.cmt-account-avatar-row{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--c-border)}
+.cmt-account-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--bg-subtle)}
+.cmt-account-section{margin-bottom:16px}
+.cmt-account-section>label{display:block;font-size:12.5px;color:var(--c-text2);margin-bottom:7px}
+/* 账号管理浮窗：输入框等宽等高，按钮统一 96×38 */
+.cmt-account-card .cmt-idrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.cmt-account-card .cmt-idrow:last-child{margin-bottom:0}
+.cmt-account-card .cmt-idrow input{flex:1 1 auto;min-width:0;width:100%;height:38px}
+.cmt-account-card .cmt-idbtn{
+  flex:none;min-width:96px;height:38px;box-sizing:border-box;padding:0 12px;
+  display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;
+}
+.cmt-account-card .cmt-idrow--end{justify-content:flex-end;margin-top:2px;margin-bottom:12px}
+.cmt-account-card .cmt-account-section:last-of-type .cmt-idrow--end{margin-bottom:0}
+.cmt-login-tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--c-border)}
+.cmt-login-tab{padding:7px 4px;margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:none;color:var(--c-text3);font-size:14px;cursor:pointer}
+.cmt-login-tab.is-active{color:var(--c-accent);border-bottom-color:var(--c-accent);font-weight:600}
+.cmt-login-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:6px}
+.cmt-login-fields>input,.cmt-login-fields input{width:100%;height:38px;padding:0 12px;border:1px solid var(--c-border);border-radius:8px;background:var(--bg-surface,var(--bg-subtle,transparent));color:var(--c-text);font-size:14px}
+.cmt-login-fields .cmt-idrow input{letter-spacing:2px}
+.cmt-captcha-img{height:38px;width:120px;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;flex:none;background:#f4f7fb}
+.cmt-login-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+@media(max-width:520px){.cmt-login-actions .cmt-idbtn{flex:1}}
 @media(max-width:520px){
   .cmt-idrow{flex-wrap:wrap}
   .cmt-idrow .cmt-idbtn{width:100%}
@@ -337,3 +408,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-main{display:block}
   .cmt-actions{margin:0 0 0 auto;display:flex;justify-content:flex-end;align-self:center}
 }
+
+/* ═══ 评论区取消悬停动画 ═══
+   鼠标划过只做即时状态切换，不再渐变、位移或缩放。
+   只关过渡与悬停形变，不关 @keyframes。 */
+.cmt, .cmt *, .cmt-idmask, .cmt-idmask * { transition: none !important; }
+.cmt .cmt-avatar-link:hover { transform: none; }

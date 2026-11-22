@@ -102,6 +102,10 @@
                     <span><strong>新评论自动审核</strong><small>判断广告、辱骂、灌水；低置信度转人工</small></span>
                 </label>
                 <label class="ai-switch">
+                    <input type="checkbox" name="user_name_moderation" {% if cfg.user_name_moderation %}checked{% endif %}>
+                    <span><strong>注册昵称机审</strong><small>注册 / 改昵称时判断是否违规；违规昵称转人工审核，未通过前无法登录，记录留在「用户管理」</small></span>
+                </label>
+                <label class="ai-switch">
                     <input type="checkbox" name="comment_reply" {% if cfg.comment_reply %}checked{% endif %}>
                     <span><strong>通过后 AI 回复</strong><small>结合文章内容生成中文回复；昵称可在下方「AI 评论昵称」自定义，对话中 AI 回复评论也由本开关控制</small></span>
                 </label>

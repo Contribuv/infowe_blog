@@ -9,7 +9,13 @@
 <section class="{{ comment_section_class | default('comments-section', true) }}" id="comments">
     <div class="cmt{% if active_theme != 'default' %} cmt-skin-line{% endif %}">
 
-    <h2 class="cmt-title">评论 <span class="cmt-num">{{ comment_total }}</span></h2>
+    <div class="cmt-title-row">
+        <h2 class="cmt-title">评论 <span class="cmt-num">{{ comment_total }}</span></h2>
+        <button type="button" class="cmt-notify-entry" data-notify-open>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            通知中心<span class="cmt-notify-entry-badge" data-notify-badge hidden></span>
+        </button>
+    </div>
 
     {% include "_comments_body.html" %}
     </div><!-- /.cmt -->

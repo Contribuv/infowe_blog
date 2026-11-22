@@ -336,6 +336,167 @@ img { max-width: 100%; }
 .tech-nav-actions { display: flex; align-items: center; gap: 4px; }
 /* 汉堡按钮桌面隐藏，仅移动端显示（移动端 media 中已 .tech-burger 显示） */
 .tech-burger { display: none; }
+/* ── 站内通知铃铛 ── */
+.tech-notify { position: relative; display: inline-flex; }
+.tech-notify-badge {
+  position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px;
+  padding: 0 4px; box-sizing: border-box; border-radius: 999px;
+  background: #e05252; color: #fff; font-size: 10px; line-height: 16px;
+  text-align: center; font-weight: 700;
+}
+.tech-notify-badge[hidden] { display: none; }
+.tech-notify-panel {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 120;
+  width: min(360px, calc(100vw - 24px)); max-height: 70vh; overflow: auto;
+  background: var(--bg-raised, var(--bg-surface, var(--bg, #fff)));
+  border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(15,23,42,.24);
+}
+.tech-notify-panel[hidden] { display: none; }
+.tech-notify-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  background: var(--bg-raised, var(--bg-surface, var(--bg, #fff)));
+}
+.tech-notify-head strong { font-size: 14px; }
+.tech-notify-head button {
+  border: 0; background: none; color: var(--accent);
+  font-size: 12px; cursor: pointer; padding: 2px 0;
+}
+.tech-notify-list { padding: 6px; }
+.tech-notify-empty { padding: 24px 12px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+.tech-notify-item {
+  display: block; padding: 10px; border-radius: 9px; text-decoration: none;
+  color: var(--text); border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.tech-notify-item + .tech-notify-item { margin-top: 6px; }
+.tech-notify-item.is-read { border-left-color: var(--border); background: transparent; opacity: .72; }
+.tech-notify-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tech-notify-tag { font-size: 12px; font-weight: 600; color: var(--accent); }
+.tech-notify-item.is-read .tech-notify-tag { color: var(--text-secondary); }
+.tech-notify-item time { font-size: 11px; color: var(--text-secondary); }
+.tech-notify-item-text { margin-top: 4px; font-size: 12.5px; line-height: 1.6; }
+.tech-notify-src { display: block; margin-top: 3px; font-size: 11px; color: var(--text-secondary); }
+
+/* ── 「我的概览」右侧抽屉（JS 动态注入 .ov-root 到 body） ── */
+.ov-root { position: fixed; inset: 0; z-index: 500; pointer-events: none; }
+.ov-root.is-open { pointer-events: auto; }
+.ov-mask {
+  position: absolute; inset: 0; background: rgba(10,16,26,.5);
+  backdrop-filter: blur(2px); opacity: 0; transition: opacity .22s ease;
+}
+.ov-root.is-open .ov-mask { opacity: 1; }
+.ov-drawer {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: min(440px, 100vw); display: flex; flex-direction: column;
+  background: var(--bg-raised, var(--bg-surface, var(--bg, #fff)));
+  border-left: 1px solid var(--border); box-shadow: -12px 0 40px rgba(15,23,42,.2);
+  transform: translateX(100%); transition: transform .26s cubic-bezier(.22,.7,.3,1);
+}
+.ov-root.is-open .ov-drawer { transform: translateX(0); }
+.ov-lock { overflow: hidden; }
+.ov-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+}
+.ov-head strong { font-size: 16px; font-weight: 600; }
+.ov-head-actions { display: flex; gap: 6px; }
+.ov-icon {
+  width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 8px;
+  background: transparent; color: var(--text-secondary); font-size: 18px; line-height: 1;
+  cursor: pointer;
+}
+.ov-icon:hover { color: var(--accent); border-color: var(--accent); }
+.ov-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 12px; }
+.ov-tab {
+  flex: 1; padding: 11px 4px; border: 0; border-bottom: 2px solid transparent;
+  background: none; color: var(--text-secondary); font-size: 13.5px; cursor: pointer;
+}
+.ov-tab.is-active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.ov-body { flex: 1; overflow-y: auto; padding: 16px 18px 28px; }
+.ov-loading { padding: 40px 0; text-align: center; color: var(--text-secondary); font-size: 13px; }
+.ov-user { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.ov-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--bg-subtle); }
+.ov-user-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ov-user-info b { font-size: 15px; }
+.ov-user-info a { font-size: 12px; color: var(--accent); text-decoration: none; overflow: hidden; text-overflow: ellipsis; }
+.ov-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+.ov-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 4px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-subtle, transparent);
+}
+.ov-stat b { font-size: 20px; font-weight: 700; line-height: 1; }
+.ov-stat span { font-size: 11px; color: var(--text-secondary); }
+.ov-section { margin-top: 20px; }
+.ov-section-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-bottom: 12px; font-size: 14px; font-weight: 600;
+}
+.ov-section-sub { font-size: 11px; font-weight: 400; color: var(--text-secondary); }
+.ov-link { border: 0; background: none; color: var(--accent); font-size: 12px; cursor: pointer; }
+.ov-heat { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
+.ov-heat-col { display: flex; flex-direction: column; gap: 3px; }
+.ov-heat-cell {
+  width: 11px; height: 11px; border-radius: 2px; background: var(--bg-subtle, #e8ecf2);
+  display: block; flex: none;
+}
+.ov-h1 { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.ov-h2 { background: color-mix(in srgb, var(--accent) 48%, transparent); }
+.ov-h3 { background: color-mix(in srgb, var(--accent) 72%, transparent); }
+.ov-h4 { background: var(--accent); }
+.ov-heat-cell.is-future { opacity: .25; }
+.ov-heat-legend { display: flex; align-items: center; gap: 4px; justify-content: flex-end; margin-top: 8px; font-size: 11px; color: var(--text-secondary); }
+.ov-weekly { display: flex; align-items: flex-end; justify-content: space-between; gap: 4px; height: 84px; }
+.ov-week-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ov-week-bar-wrap { height: 60px; display: flex; align-items: flex-end; }
+.ov-week-bar { width: 18px; border-radius: 4px 4px 0 0; background: var(--accent); min-height: 4px; }
+.ov-week-col span { font-size: 10px; color: var(--text-secondary); }
+.ov-recent-list { display: flex; flex-direction: column; gap: 8px; }
+.ov-recent {
+  display: block; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px;
+  text-decoration: none; color: var(--text);
+}
+.ov-recent:hover { border-color: var(--accent); }
+.ov-recent p { margin: 0; font-size: 13px; line-height: 1.6; }
+.ov-recent-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--text-secondary); }
+.ov-recent-to { font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+.ov-pend {
+  display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px;
+  font-size: 10px; font-weight: 600; color: #8a6314;
+  background: color-mix(in srgb, #f0b429 20%, transparent);
+  vertical-align: 1px;
+}
+.ov-ok {
+  display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px;
+  font-size: 10px; font-weight: 600; color: #2b6e52;
+  background: color-mix(in srgb, #2b6e52 15%, transparent);
+  vertical-align: 1px;
+}
+.ov-notif-list { display: flex; flex-direction: column; gap: 6px; }
+.ov-notif {
+  display: flex; align-items: baseline; gap: 8px; padding: 8px 10px; border-radius: 8px;
+  border-left: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent);
+  text-decoration: none; color: var(--text); font-size: 12.5px;
+}
+.ov-notif.is-read { border-left-color: var(--border); background: transparent; opacity: .7; }
+.ov-notif-tag { flex: none; font-size: 11px; font-weight: 600; color: var(--accent); }
+/* 收件箱是列表，长评论只占一行，超出省略；点进去再看全文 */
+.ov-notif-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-notif-tag.is-pending { color: #8a6314; background: color-mix(in srgb, #f0b429 20%, transparent); }
+.ov-notif time { flex: none; font-size: 10px; color: var(--text-secondary); }
+.ov-tip { margin-top: 18px; font-size: 12px; line-height: 1.6; color: var(--text-secondary); text-align: center; }
+.ov-empty { padding: 36px 12px; text-align: center; color: var(--text-secondary); }
+.ov-empty-icon { font-size: 34px; opacity: .5; margin-bottom: 10px; }
+.ov-empty p { margin: 0 0 6px; font-size: 14px; color: var(--text); }
+.ov-empty span { font-size: 12px; line-height: 1.6; }
+.ov-id-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 500; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); vertical-align: middle; }
+.ov-user-mail { font-size: 11px; color: var(--text-secondary); }
+.ov-more { display: block; width: 100%; margin-top: 10px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--accent); font-size: 12.5px; cursor: pointer; }
+.ov-more:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.ov-more:disabled { opacity: .6; cursor: wait; }
 
 .tech-icon-btn {
   width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
@@ -375,6 +536,11 @@ html[data-theme-mode="dark"] .icon-auto { display: none; }
   transition: transform .25s ease, visibility 0s linear .25s;
   display: flex; flex-direction: column;
   padding-bottom: env(safe-area-inset-bottom);
+  /* 菜单项多于屏幕高度时抽屉自己滚动（以前没有滚动容器，矮屏会直接截断）。
+     滚动条走全站统一的 8px 细条，不再出现系统粗滚动条 */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .tech-drawer.open {
   transform: none; visibility: visible;
@@ -383,6 +549,8 @@ html[data-theme-mode="dark"] .icon-auto { display: none; }
 .tech-drawer-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px; border-bottom: 1px solid var(--border);
+  /* 抽屉滚动时标题与关闭按钮固定在上方 */
+  position: sticky; top: 0; z-index: 1; background: var(--bg);
 }
 .tech-drawer-title { font-size: 16px; font-weight: 700; }
 .tech-drawer-close {
@@ -1280,11 +1448,20 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-post-body h1, .tech-post-body.markdown-body h1 {
   font-size: 21px; padding-bottom: 0; border-bottom: 0;
 }
-/* 正文排版修复：h2 20px，上距 18、下距 8，避免密集标题形成断层 */
+/* 正文排版修复：h2 22px / 600，上距 18、下距 8 保持不动；
+   字号略拉大、字重收轻，标题层级更明显但不压过 28px 的文章标题 */
 .tech-post-body h2, .tech-post-body.markdown-body h2 {
-  font-size: 20px; padding-bottom: 8px;
-  margin: 18px 0 8px;
+  position: relative; padding-left: 14px;
+  font-size: 22px; font-weight: 600; padding-bottom: 8px;
+  margin: 36px 0 18px;
   border-bottom: 1px solid var(--border);
+}
+/* 正文二级标题前置蓝色竖条，提升长文分节辨识度；与关于页区块标题同一套语言。
+   top 用 em 对齐首行文字，避开 padding-bottom 与下边框；颜色跟随 --accent 自动适配深浅主题 */
+.tech-post-body h2::before, .tech-post-body.markdown-body h2::before {
+  content: ""; position: absolute; left: 0; top: 0.18em;
+  width: 4px; height: 1em; border-radius: 2px;
+  background: var(--accent);
 }
 /* 层级拉开：h3/h4 递进 1px；h5、h6 与 h4 同字号、仅用次级色区分——
    原先 h3–h6 挤在 16.5/15.5/15/14.5 的 2px 区间里，视觉上完全无法辨识层级 */
@@ -1360,15 +1537,17 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
    因此这里写全局规则：代码块、README 表格、错误页代码块以及未来新增的横向滚动区块
    一次性生效，无需逐个登记选择器。
    配色只取主题变量（--border-strong / --text-secondary），深浅色自动跟随 */
-::-webkit-scrollbar { height: 6px; }
+::-webkit-scrollbar { width: 8px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
 @media (hover: hover) and (pointer: fine) {
   ::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 }
-/* Firefox 不支持 ::-webkit-scrollbar，且标准属性无法区分横竖轴：
-   只对已知的横向容器声明 thin，避免把整站纵向滚动条也一起改细 */
+/* Firefox 不支持 ::-webkit-scrollbar，改用标准属性：
+   全站统一 thin（与 Chromium 的 8px 观感对齐，抽屉内部也不会出现粗条），
+   横向容器沿用同一档配色 */
 @supports (-moz-appearance: none) {
+  html { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
   .tech-post-body pre,
   .tech-proj-readme-body pre,
   .markdown-body .table-wrap,

@@ -909,3 +909,53 @@ def start_scheduler(app) -> None:
             time.sleep(600)
 
     threading.Thread(target=loop, daemon=True, name="ai-link-check").start()
+
+
+# ── 注册昵称审核 ──
+_NICK_SYSTEM = (
+    "你是博客的注册昵称审核员。判断昵称是否适合公开发布。\n"
+    "判定为 review 的情形：辱骂攻击、广告引流（QQ/微信/群号/网址）、色情低俗、"
+    "伪造官方身份（管理员/博主/系统/客服等）、冒充他人、纯乱码或纯符号。\n"
+    "正常的中文/英文昵称、普通网络用语、有意义的符号组合一律 approve。\n"
+    "输出要求：只输出一行 JSON，形如 "
+    '{"decision":"approve","reason":"普通中文昵称"}。'
+    "禁止输出推理过程、解释、Markdown 代码块或任何多余文字。"
+)
+
+
+def review_nickname(name: str) -> tuple[str, str]:
+    """注册昵称机审：返回 (decision, reason)，decision = 'pass' | 'review'。
+
+    与评论审核共用模型配置。模型未启用或调用失败时按本地规则放行，
+    避免一次接口故障把所有新注册都卡死（人工队列只承接真正被判违规的昵称）。
+    """
+    text = str(name or "").strip()
+    if not text:
+        return "review", "昵称为空"
+    blocked = _blocked_word(text)
+    if blocked:
+        return "review", "命中敏感词：" + blocked
+    if not _enabled():
+        return "pass", ""
+    if not bool(config.get().get("user_name_moderation", True)):
+        return "pass", ""
+    ok, content, _meta = ai_client.chat(
+        [
+            {"role": "system", "content": _NICK_SYSTEM},
+            {"role": "user", "content": "昵称：「" + text + "」\n只输出 JSON。"},
+        ],
+        temperature=0.1,
+        max_tokens=400,
+    )
+    if not ok:
+        return "pass", ""
+    action = ai_client.parse_action(content) or {}
+    decision = str(action.get("decision") or "").strip().lower()
+    reason = str(action.get("reason") or "").strip()[:200]
+    if decision in ("approve", "approved", "pass", "ok", "通过"):
+        return "pass", reason
+    if decision in ("review", "reject", "rejected", "bad", "违规"):
+        return "review", reason or "AI 判定昵称违规"
+    # 模型把推理过程也写出来时，JSON 可能被截断而解析失败。
+    # 这种情况放行（宁可放过也不误伤），真正违规的昵称由敏感词兜底 + 人工抽查。
+    return "pass", ""

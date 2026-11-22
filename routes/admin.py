@@ -1608,6 +1608,80 @@ def admin_upgrade_reset():
     return jsonify(upgrade_service.reset())
 
 
+# ── 用户管理（注册账号 + 昵称审核）──────────────────────
+def _users_back():
+    """审核动作后回到原来的筛选/页码。"""
+    from urllib.parse import urlencode
+
+    params = {}
+    for key in ("status", "q", "page"):
+        value = (request.form.get(key) or request.args.get(key) or "").strip()
+        if value:
+            params[key] = value
+    suffix = ("?" + urlencode(params)) if params else ""
+    return redirect(url_for("admin_users") + suffix)
+
+
+@LOGIN
+def admin_users():
+    from services import reader_account
+
+    status = (request.args.get("status") or "").strip()
+    keyword = (request.args.get("q") or "").strip()
+    page = max(1, request.args.get("page", 1, type=int) or 1)
+    per_page = max(1, min(100, settings.get_int("admin_users_per_page", 20)))
+    rows, total = reader_account.admin_list(page, per_page, status, keyword)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+        rows, total = reader_account.admin_list(page, per_page, status, keyword)
+    return render_template(
+        "admin/users.html",
+        users=rows,
+        total=total,
+        page=page,
+        total_pages=total_pages,
+        status=status,
+        keyword=keyword,
+        counts=reader_account.status_counts(),
+    )
+
+
+@LOGIN
+def admin_user_review(user_id: int):
+    from services import reader_account
+
+    action = request.form.get("action", "")
+    note = (request.form.get("note") or "").strip()[:200]
+    target = {
+        "approve": reader_account.REVIEW_APPROVED,
+        "reject": reader_account.REVIEW_REJECTED,
+    }.get(action)
+    if not target:
+        flash("无效的审核操作", "error")
+        return _users_back()
+
+    operator = ""
+    uid = session.get("admin_id")
+    if uid:
+        admin_user = User.get(int(uid))
+        if admin_user:
+            operator = str(admin_user.get("username") or "")
+    target_row = db.one("SELECT name FROM reader_users WHERE id = ?", (user_id,))
+    target_name = str(target_row["name"] or "") if target_row else ""
+    ok, msg = reader_account.set_review(user_id, target, operator, note)
+    if not ok:
+        flash(msg or "审核失败", "error")
+        return _users_back()
+    # 同步进「留存记录」插件：对象带上昵称，方便日后检索
+    _audit("user.review", f"#{user_id} {target_name}".strip()[:200], f"{target} {note}".strip())
+    if target == reader_account.REVIEW_APPROVED:
+        flash("已通过审核，该昵称即刻生效，账号可以登录了", "success")
+    else:
+        flash("已拒绝该昵称，账号将无法登录（记录保留在留存记录里）", "success")
+    return _users_back()
+
+
 # ── 注册 ──────────────────────────────────────────────
 def register(app) -> None:
     prefix = app.config.get("ADMIN_PREFIX", "/admin")
@@ -1656,6 +1730,8 @@ def register(app) -> None:
         ("/admin/comments/<int:comment_id>/reject", "admin_comment_reject", admin_comment_reject, ["POST"]),
         ("/admin/comments/<int:comment_id>/delete", "admin_comment_delete", admin_comment_delete, ["POST"]),
         ("/admin/comments/bulk", "admin_comments_bulk", admin_comments_bulk, ["POST"]),
+        ("/admin/users", "admin_users", admin_users, ["GET"]),
+        ("/admin/users/<int:user_id>/review", "admin_user_review", admin_user_review, ["POST"]),
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),
         ("/admin/upload/file", "admin_upload_file", admin_upload_file, ["POST"]),

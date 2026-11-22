@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.48-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.48)
+[![version](https://img.shields.io/badge/version-3.9.49-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.49)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,16 +925,27 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.48**
+当前版本：**v3.9.49**
 
-> 最近一次更新完整展开；更早的 147 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 148 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.49
+
+- **读者账号体系**：邮箱 + 密码注册 / 登录，登录态用 itsdangerous 签名 token 写入 HttpOnly Cookie（`blog_reader_session`），前端只通过 `/api/reader/me` 读状态；注册需先过算术图形验证码，昵称走 AI 机器审核，判定违规转人工并留痕
+- **站内通知中心**：评论区铃铛 + 右侧抽屉，四个 tab（概览 / 我的评论 / 我的回复 / 我的@）；未读角标与评论区入口同步，博主视角额外汇总待审核与新评论动态
+- **我的概览**：统计格、待处理（待审核 + 未读通知合并成收件箱）、活跃度热力图、一周分布；博主按 `is_owner` 归集、访客按 `email_hash` 归集，避免换邮箱后统计归零
+- **评论投票**：新增点赞 / 不喜欢（`comment_likes.kind`），同一身份对同一条只能一票，再点取消、点另一边改票；待审核评论不出现投票与回复入口
+- **评论弹窗与身份条**：身份条改为纯文字链、统一 13px 与行高；游客已有身份时不再重复出现「登录」；提示文案更新
+- **待审核评论常驻**：本人提交的待审核评论在评论区置顶常驻（不占用公开分页名额），翻页也不会消失
+- **缓存与身份同步**：个性化页面 `no-store`，JSON 接口一律不缓存，退出登录后浏览器前进 / 后退不会再显示旧身份
+- 其他：楼中楼回复图标与楼主行对齐、评论灯箱与投票状态样式统一
+
+<details>
+<summary><b>历史版本（v3.9.48 及更早，共 148 个版本，点击展开）</b></summary>
 
 ### v3.9.48
 
 - **灯箱打开时隐藏悬浮按钮**：回到顶部 / 跳到评论 / 评论浮窗按钮加入 `body.lightbox-open` 隐藏名单；此前只靠 z-index 压在遮罩下，毛玻璃上仍能看到淡淡轮廓
-
-<details>
-<summary><b>历史版本（v3.9.47 及更早，共 147 个版本，点击展开）</b></summary>
 
 ### v3.9.47
 

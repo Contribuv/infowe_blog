@@ -241,6 +241,33 @@ def commenter() -> dict:
     return value
 
 
+def commenter_hash() -> str:
+    """当前浏览者的身份哈希，含被 commenter() 剔除的「博主资料」Cookie。
+
+    commenter() 为了不让博主昵称/邮箱回显到表单，会把这类 Cookie 整条丢掉；
+    但身份识别（我的概览 / 站内通知 / 点赞）只读 commenter() 时，
+    就会出现「刚以该身份发过评论（仓里还挂着待审核），抽屉却说未识别身份」。
+    这里只取邮箱哈希做归集，不返回昵称、邮箱，也不参与表单回显，
+    安全边界与 commenter() 一致。
+    """
+    raw = request.cookies.get("blog_commenter", "")
+    if not raw:
+        return ""
+    try:
+        value = json.loads(raw)
+    except (ValueError, TypeError):
+        return ""
+    if not isinstance(value, dict):
+        return ""
+    stored = str(value.get("email_hash") or "").strip()
+    if stored:
+        return stored
+    email = str(value.get("email") or "").strip()
+    if not email:
+        return ""
+    return avatar.email_hash(normalize_email(email))
+
+
 def _cooldown_allowed(bucket: str, key: str, window: int) -> bool:
     from services import ratelimit
 
@@ -389,14 +416,17 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         website = normalized
 
     parent_id = None
+    parent_row = None
     if parent_raw.isdigit() and int(parent_raw) > 0:
         column = "project_id" if is_project else "post_id"
         import db
 
-        if db.one(
-            f"SELECT id FROM comments WHERE id = ? AND {column} = ? AND deleted_at IS NULL",
+        parent_row = db.one(
+            f"SELECT id, email_hash, email, notify, is_private FROM comments "
+            f"WHERE id = ? AND {column} = ? AND deleted_at IS NULL",
             (int(parent_raw), target_id),
-        ):
+        )
+        if parent_row:
             parent_id = int(parent_raw)
 
     # 只有已登录管理员才自动通过；不再凭表单邮箱是否等于 notify_email 放行
@@ -414,6 +444,33 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
         identity_action=identity_action,
         identity_note=identity_note,
     )
+
+    # 站内通知：被回复者收到提醒（与邮件通知独立，不受 comment_notify 开关影响）
+    if parent_id and parent_row:
+        from services import comment_notify
+
+        recipient_hash = str(parent_row["email_hash"] or "")
+        parent_email = str(parent_row["email"] or "").strip().lower()
+        parent_private = bool(int(parent_row["is_private"] or 0))
+        parent_notify = bool(int(parent_row["notify"] if parent_row["notify"] is not None else 1))
+        _blogger_name, blogger_mails = _blogger_identity()
+        if (
+            recipient_hash
+            and parent_notify
+            and not parent_private
+            and not is_private
+            and recipient_hash != email_hash
+            and parent_email not in blogger_mails
+        ):
+            try:
+                comment_notify.add_reply(
+                    recipient_hash, comment_id, parent_id,
+                    None if is_project else target_id, target_id if is_project else None,
+                    author, content,
+                )
+            except Exception:
+                pass
+
     if not is_admin:
         _touch_cooldown("comment", ip)
         if rename_verified:
@@ -441,7 +498,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     old = commenter()
     data: dict | None = None
     if not is_admin:
-        data = {"author": author, "email": email, "website": website}
+        data = {"author": author, "email": email, "website": website, "email_hash": email_hash}
         # 本次提交的值优先，旧记忆只用来补空字段
         # （此前是旧值无条件覆盖新值，用户点「修改」改完资料后永远存不下来）
         for key in ("author", "email", "website"):

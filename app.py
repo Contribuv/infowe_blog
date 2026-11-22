@@ -441,8 +441,23 @@ def _register_hooks(app: Flask) -> None:
         elif getattr(g, "_invalidate_pages", None):
             for path in g._invalidate_pages:
                 page_cache.invalidate_path(path)
+        # 个性化页面（登录态 / 已记住身份）一律不进浏览器缓存：
+        # 否则退出登录后按后退或前进，浏览器会把带「博主入口、身份条、通知角标」的
+        # 旧 HTML 还回来，看起来像身份没同步。bfcache 由前端 pageshow 兜底。
+        personalized = bool(
+            session.get("admin_id")
+            or request.cookies.get("blog_commenter")
+            or request.cookies.get("blog_reader_session")
+        )
         if response.mimetype in {"text/html", "application/rss+xml"}:
-            response.headers.setdefault("Cache-Control", "no-cache")
+            if personalized:
+                response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                response.headers["Pragma"] = "no-cache"
+            else:
+                response.headers.setdefault("Cache-Control", "no-cache")
+        elif response.mimetype == "application/json":
+            # 接口数据一律不缓存：身份、未读数、点赞态每次都必须现取
+            response.headers["Cache-Control"] = "no-store"
         return response
 
     @app.errorhandler(403)

@@ -208,3 +208,73 @@ CREATE TABLE IF NOT EXISTS email_codes (
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_email_codes_email ON email_codes (email_hash, created_at DESC);
+
+-- 读者账号：邮箱 + 密码注册登录（与单管理员 users 表隔离）
+-- email_hash 为身份主键，与 comment_identities / comments 共用同一哈希体系
+CREATE TABLE IF NOT EXISTS reader_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email_hash TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL DEFAULT '',
+    password_hash TEXT NOT NULL DEFAULT '',
+    link TEXT NOT NULL DEFAULT '',
+    avatar_url TEXT NOT NULL DEFAULT '',
+    verified_at TEXT DEFAULT '',
+    last_login_at TEXT DEFAULT '',
+    -- 注册昵称审核：approved 正常；manual 待人工审核（禁止登录）；rejected 已拒绝
+    review_status TEXT NOT NULL DEFAULT 'approved',
+    review_note TEXT NOT NULL DEFAULT '',
+    reviewed_at TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+-- 注册昵称审核留存：每次注册的机审结论 + 人工处理轨迹，一条注册一条记录
+-- source: local（敏感词）/ ai（模型）/ manual；decision: pass / review
+CREATE TABLE IF NOT EXISTS reader_reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL DEFAULT 0,
+    email_hash TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT '',
+    decision TEXT NOT NULL DEFAULT '',
+    reason TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'open',
+    operator TEXT NOT NULL DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    reviewed_at TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_reader_reviews_status ON reader_reviews (status, id DESC);
+CREATE INDEX IF NOT EXISTS idx_reader_reviews_hash ON reader_reviews (email_hash);
+
+-- 站内通知：回复 / 审核通过等提醒，按 email_hash 归属
+CREATE TABLE IF NOT EXISTS comment_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email_hash TEXT NOT NULL DEFAULT '',
+    type TEXT NOT NULL DEFAULT 'reply',
+    comment_id INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER NOT NULL DEFAULT 0,
+    post_id INTEGER DEFAULT NULL,
+    project_id INTEGER DEFAULT NULL,
+    from_author TEXT NOT NULL DEFAULT '',
+    excerpt TEXT NOT NULL DEFAULT '',
+    is_read INTEGER NOT NULL DEFAULT 0,
+    is_emailed INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_notif_hash_read ON comment_notifications (email_hash, is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notif_comment ON comment_notifications (comment_id);
+
+-- 评论投票：每个身份（email_hash 或访客令牌）对每条评论最多一票
+-- kind: 1 = 点赞，-1 = 不喜欢；同一人对同一条只能二选一，再点同一边即取消
+CREATE TABLE IF NOT EXISTS comment_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    comment_id INTEGER NOT NULL,
+    voter_hash TEXT NOT NULL DEFAULT '',
+    kind INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    UNIQUE(comment_id, voter_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_like_comment ON comment_likes (comment_id);
+CREATE INDEX IF NOT EXISTS idx_like_voter ON comment_likes (voter_hash);

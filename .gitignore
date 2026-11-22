@@ -22,3 +22,8 @@ docs/
 
 # 本地页面分享包（不推送）
 .trae-html-share-packages/
+
+# local debug artifacts
+.playwright-cli/
+server.log
+server.err.log
