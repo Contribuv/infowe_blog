@@ -82,6 +82,19 @@
     {% endif %}
 </head>
 <body>
+    {# 代码粒子背景：全站挂载，但阅读页（文章 / 项目详情）降级——
+       粒子减半、不画连线，只留一层很淡的纹理；后台可整体关闭。 #}
+    {% set ambient_reading = request.path.startswith('/post/') or request.path.startswith('/projects/') %}
+    {% set ambient_particles = particles_enabled|default('0') in ('1', 'on', 'true', 'yes') %}
+    {% if ambient_particles %}
+    <canvas id="particle-canvas" class="tech-particles"
+            data-count="{{ 16 if ambient_reading else 30 }}"
+            data-count-mobile="{{ 8 if ambient_reading else 12 }}"
+            data-connect="{{ 0 if ambient_reading else 76 }}"
+            data-opacity="{{ 0.6 if ambient_reading else 0.75 }}"
+            data-glow="0" aria-hidden="true"></canvas>
+    <script src="{{ url_for('static', filename='js/particles.js', t=static_ver) }}"></script>
+    {% endif %}
     {# 阅读/滚动进度条：文章页与项目页在各自模板里指定「正文」锚点；
        其余长页面（首页、文章列表、标签、搜索、归档等）用主内容区兜底。
        内容不足一屏的短页面进度恒为 0、不可见，不会带来干扰。 #}

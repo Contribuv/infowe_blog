@@ -427,10 +427,29 @@ html.page-enter .tech-main {
    页脚会和最后一张卡糊成一片。改用「页面底色再压一档」的专用令牌，
    深浅两套都明确低于页面、低于卡片，读作「地面」而非「又一张卡」。 */
 .tech-footer {
-  border-top: 1px solid var(--border);
+  position: relative;
+  border-top: 0;
   background: var(--footer-bg);
   padding: 26px 0 calc(24px + env(safe-area-inset-bottom));
   color: var(--text-secondary); font-size: 13px;
+}
+/* 页脚顶线：比页脚底色深一档的淡线，两端小幅淡出；
+   只用 --border 会在浅色下比页脚底色还浅，反而看不出来 */
+.tech-footer::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--text) 11%, transparent) 4%,
+    color-mix(in srgb, var(--text) 11%, transparent) 96%,
+    transparent
+  );
 }
 .tech-footer-inner {
   display: flex; flex-wrap: wrap; gap: 8px 20px;
@@ -499,11 +518,17 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 /* ── 页面头部（子页：列表 / 标签 / 关于等，左对齐） ── */
 .tech-page-head {
   margin-bottom: 16px; padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
   position: relative;
 }
+/* 页头底线：两端淡出的渐变，浅色纸面上不再像一条生硬的边框 */
+.tech-page-head::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0;
+  height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--border) 14%, var(--border) 86%, transparent);
+}
 .tech-page-head::after {
-  content: ""; position: absolute; left: 0; bottom: -1px;
+  content: ""; position: absolute; left: 0; bottom: 0;
   width: 64px; height: 3px; border-radius: 2px;
   background: var(--accent) /* 扁平化：装饰条改纯色 */;
 }
@@ -4611,13 +4636,24 @@ html.tech-external-open { overflow: hidden; }
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0;
+}
+/* 与子页页头一致：两端淡出的渐变线 */
+.tech-home-head::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--border) 14%, var(--border) 86%, transparent);
 }
 .tech-home-head::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -1px;              /* 压在 1px 细线上，与 .tech-page-head 一致 */
+  bottom: 0;                 /* 压在 1px 细线上，与 .tech-page-head 一致 */
   transform: translateX(-50%);
   width: 64px;
   height: 3px;
@@ -5135,9 +5171,9 @@ a.tech-reader-count, a.tech-podium-count { text-decoration: none; }
   /* 文章标题区：白卡上压一档冷灰，形成顶部导览带 */
   --post-head-bg: #f1f5f9;
   /* 页脚：比页面再压一档，明确低于卡片，读作「地面」。
-     浅色下必须比 --bg-subtle 更深一档：高亮度区人眼对亮度差不敏感，
-     ΔL 只有 2.5 级时几乎看不出（深色 2.3 级却很明显），这里取到 ΔL≈4.3 */
-  --footer-bg: #e6eaef;
+     浅色下取 ΔL≈4：压太少会看不出边界，压太多又会变成一条突兀的灰带；
+     顶部再用一条淡线收口，让「地面」和页面之间有清楚但柔和的分界 */
+  --footer-bg: #e9edf2;
 }
 [data-theme="dark"] {
   --card-bg: #1c2028;
@@ -5407,6 +5443,21 @@ body::after {
 }
 @media (prefers-reduced-motion: reduce) {
   body::before, body::after { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════
+   代码粒子背景（首页 / 404，后台可关）
+   - canvas 固定铺满视口，z-index 在内容之下
+   - 是否挂载由 base.html 根据开关与页面决定
+   ═══════════════════════════════════════════════ */
+.tech-particles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+@media print {
+  .tech-particles { display: none; }
 }
 
 /* ═══════════════════════════════════════════════

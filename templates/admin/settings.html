@@ -315,6 +315,23 @@
                 <span class="form-hint">一行一条，使用 <code>|</code> 分隔文案和出处，出处可省略；<code>#</code> 开头的行会被忽略。留空则使用内置 36 条。</span>
             </div>
         </div>
+        <!-- 首页背景：代码粒子动效，只挂首页与 404，文章页不挂 -->
+        <div class="card">
+            <div class="card-header card-header--hint">
+                <h3>首页背景</h3>
+                <span class="card-hint">仅首页与 404 展示</span>
+            </div>
+            <div class="form-group">
+                <label>代码粒子</label>
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="particles_enabled" value="1"{{ ' checked' if particles_enabled|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">在首页与 404 页显示代码字符粒子与鼠标光晕；文章页不显示，避免干扰阅读。系统开启「减少动态效果」时自动关闭。</span>
+                </label>
+            </div>
+        </div>
         <!-- 导航菜单：每项一行（页面名 + 开关）。放在一言后让双栏左右配重（原先压轴导致右多左空） -->
         <div class="card">
             <div class="card-header card-header--hint">

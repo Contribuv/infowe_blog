@@ -1175,6 +1175,7 @@ def _settings_view() -> dict:
         "smtp_sender_name": settings.get_str("smtp_sender_name", ""),
         "comment_notify": settings.get_str("comment_notify", "0"),
         "comment_image_upload": settings.get_str("comment_image_upload", "1"),
+        "particles_enabled": settings.get_str("particles_enabled", "1"),
         "sensitive_filter_enabled": settings.get_str("sensitive_filter_enabled", "0"),
         "sensitive_words": settings.get_str("sensitive_words", ""),
         "links_hour_limit": settings.get_str("links_hour_limit", "3"),
@@ -1307,6 +1308,7 @@ def _save_settings():
     for key in (
         "force_https", "unify_www", "comments_enabled", "comment_notify",
         "comment_image_upload", "sensitive_filter_enabled", "watermark_enabled",
+        "particles_enabled",
     ):
         if full_form or key in request.form:
             settings.set_value(key, "1" if request.form.get(key) else "0")

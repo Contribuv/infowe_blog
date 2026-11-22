@@ -269,6 +269,7 @@ def _register_hooks(app: Flask) -> None:
             "comment_image_upload": conf.get("comment_image_upload", "1"),
             "comment_display": conf.get("comment_display", "inline"),
             "fab_shape": conf.get("fab_shape", "capsule"),
+            "particles_enabled": conf.get("particles_enabled", "1"),
             "sensitive_words_json": _sensitive_json(),
             "icp_beian": conf.get("icp_beian", ""),
             "police_beian": conf.get("police_beian", ""),

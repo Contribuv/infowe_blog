@@ -704,14 +704,17 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt { --c-radius: var(--card-radius, 10px); }
 .cmt-replies { border-radius: var(--card-radius, 10px); }
 
-/* 评论楼层跟随全站圆角与阴影；表单卡只留圆角，不再套阴影——
-   表单是嵌在楼层里的内容，透明底 + 一层阴影会在回复区里多出一个「框」，
-   看起来像浮着的一块玻璃。 */
+/* 评论楼层跟随全站圆角与阴影；主表单也按卡片处理，和文章卡片保持一致的阴影。
+   内联回复框是嵌在楼层里的输入区（is-inline），仍保持无底色无阴影，
+   避免回复区里多出一个「框」。 */
 .cmt-thread {
   border-radius: var(--card-radius, 10px);
   box-shadow: var(--card-shadow, none);
 }
 .cmt-form {
   border-radius: var(--card-radius, 10px);
+  box-shadow: var(--card-shadow, none);
+}
+.cmt-form.is-inline {
   box-shadow: none;
 }

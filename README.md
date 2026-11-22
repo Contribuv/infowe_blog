@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.42-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.42)
+[![version](https://img.shields.io/badge/version-3.9.43-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.43)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,28 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.42**
+当前版本：**v3.9.43**
 
-> 最近一次更新完整展开；更早的 141 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 142 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.43
+
+- **全站代码粒子背景**：登录页那套代码字符粒子抽成 `static/js/particles.js`，前台全站挂载；阅读页（文章 / 项目详情）降级为 16 个粒子、不画连线、透明度 0.6，其它页面 30 个带连线
+- **粒子开关**：后台「设置 → 首页背景」可整体启停，默认开启；关闭后所有页面不再输出 canvas 与脚本
+- **粒子性能与可访问性**：切到后台标签页自动暂停，系统开启「减少动态效果」不启动，打印时隐藏；前台不显示鼠标光晕，登录页保留
+- **评论表单阴影**：主评论表单改用全站卡片阴影，与文章卡片一致；内联回复框仍保持无阴影
+- **浅色页脚层次**：页脚底色收到与页面相差约 4 级，顶线改成 11% 文字色渐变，既看得出「地面」又不突兀
+- **页头分割线**：首页头与子页页头的 1px 实线改成两端淡出的渐变，浅色下不再像硬边框
+- **登录页结构修正**：主题切换与粒子脚本拆开，补上缺失的 `</script>`，外部脚本正常加载
+
+<details>
+<summary><b>历史版本（v3.9.42 及更早，共 142 个版本，点击展开）</b></summary>
 
 ### v3.9.42
 
 - **升级横幅只在有新版本时显示**：没有更新或检测失败时不再显示「已是最新版本」占位条，仪表盘更干净，也消除了进入页面时「正在检查更新…」的闪动
 - **检查更新入口移到页头**：仪表盘标题右侧新增「检查更新」按钮，手动检测时按钮依次反馈「正在检测… / 发现新版本 / 已是最新 / 检测失败」
 - **有新版本才展开横幅**：自动或手动检测到新版本后，横幅才出现并给出「去升级」入口
-
-<details>
-<summary><b>历史版本（v3.9.41 及更早，共 141 个版本，点击展开）</b></summary>
 
 ### v3.9.41
 
