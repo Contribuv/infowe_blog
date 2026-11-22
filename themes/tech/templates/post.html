@@ -74,13 +74,13 @@
 </footer>
 </div><!-- /.tech-post-layout -->
 
-<!-- 图片灯箱（正文任意图片/视频点击打开，同组连续图轮转） -->
+<!-- 图片灯箱（正文任意图片/视频点击打开，全篇图片前后轮转） -->
 <div class="lightbox" id="lightbox" aria-hidden="true">
-    <button type="button" class="lightbox-close" id="lbClose" aria-label="关闭">&times;</button>
-    <button type="button" class="lightbox-nav lightbox-prev" id="lbPrev" aria-label="上一张">&#8249;</button>
+    <button type="button" class="lightbox-close pw-lb-btn pw-lb-close" id="lbClose" aria-label="关闭">&times;</button>
+    <button type="button" class="lightbox-nav lightbox-prev pw-lb-btn pw-lb-prev" id="lbPrev" aria-label="上一张">&#8249;</button>
     <div class="lightbox-media" id="lbMedia"></div>
-    <button type="button" class="lightbox-nav lightbox-next" id="lbNext" aria-label="下一张">&#8250;</button>
-    <span class="lightbox-count" id="lbCount"></span>
+    <button type="button" class="lightbox-nav lightbox-next pw-lb-btn pw-lb-next" id="lbNext" aria-label="下一张">&#8250;</button>
+    <span class="lightbox-count pw-lb-count" id="lbCount"></span>
 </div>
 
 <!-- 上一篇 / 下一篇 -->
@@ -269,7 +269,6 @@
         }
         var blocks = Array.prototype.slice.call(content.children);
         var seg = null, segCount = 0;
-        var groups = []; // 灯箱轮转组：连续图片一组（画廊合并后），单张图独立成组，文字段落打断
         function flushGallery() {
             if (seg) {
                 var imgs = [];
@@ -296,7 +295,6 @@
                         }
                     });
                 }
-                if (imgs.length) groups.push(imgs);
             }
             seg = null; segCount = 0;
         }
@@ -435,20 +433,15 @@
         }
         // 点击正文图片 / 视频打开灯箱；图片只轮换所属连续组的几张
         var allMedia = Array.prototype.slice.call(content.querySelectorAll('img, video'));
-        function findGroupIndex(t) {
-            for (var g = 0; g < groups.length; g++) {
-                var i = groups[g].indexOf(t);
-                if (i >= 0) return { g: g, i: i };
-            }
-            return null;
-        }
+        // 灯箱以整篇文章的图片为一组：任何一张点开都能前后轮转，
+        // 不再被中间的文字段落打断（只有一张时上下页按钮自动隐藏）
+        var allImages = Array.prototype.slice.call(content.querySelectorAll('img'));
         allMedia.forEach(function (el) {
             el.addEventListener('click', function (e) {
                 e.preventDefault();
                 if (el.tagName === 'IMG') {
-                    var hit = findGroupIndex(el);
-                    // 命中连续组走组内轮转；嵌在文字段落里的图不在组内，单张打开
-                    lbOpen(hit ? hit.i : 0, hit ? groups[hit.g] : [el]);
+                    var idx = allImages.indexOf(el);
+                    lbOpen(idx >= 0 ? idx : 0, idx >= 0 ? allImages : [el]);
                 } else {
                     lbOpen(0, [el]); // 视频独立一组
                 }

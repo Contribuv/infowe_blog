@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.44-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.44)
+[![version](https://img.shields.io/badge/version-3.9.45-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.45)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,17 +925,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.44**
+当前版本：**v3.9.45**
 
-> 最近一次更新完整展开；更早的 143 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 144 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.45
+
+- **灯箱按钮悬停**：照片墙与文章灯箱共用按钮悬停——背景提亮、边框变白、轻微放大，按下缩回；左右按钮保留垂直居中，不会跳动
+- **文章灯箱多图轮转**：整篇文章的图片作为一组，任意一张点开都能上一张 / 下一张；只有一张图时上下页与计数自动隐藏
+- **文章灯箱复用照片墙样式**：遮罩、模糊、内边距、图片圆角与阴影、按钮、计数、备注全部对齐，移动端尺寸同步
+- **灯箱主题自适应**：配色改用 CSS 变量，深色为近黑遮罩 + 白字，浅色为纸白遮罩 + 深色字，按钮同步切换白底深色图标
+- **灯箱毛玻璃**：深色遮罩 `.74`、浅色 `.8`，配合 `blur(18px) saturate(120%)`；手机降为 `blur(12px)`，不支持毛玻璃的浏览器退回近乎不透明以保证对比
+
+<details>
+<summary><b>历史版本（v3.9.44 及更早，共 144 个版本，点击展开）</b></summary>
 
 ### v3.9.44
 
 - **修正后台背景开关文案**：标题由「首页背景」改为「全站背景」，说明改为「前台全站显示，文章与项目详情页自动降级（粒子更少、不画连线）」，并去掉已经不存在的前台鼠标光晕描述
 - **代码注释同步**：`particles.js` 与 settings 默认值注释一并更新，避免后续维护时按旧文案理解
-
-<details>
-<summary><b>历史版本（v3.9.43 及更早，共 143 个版本，点击展开）</b></summary>
 
 ### v3.9.43
 

@@ -2937,64 +2937,51 @@ html { touch-action: manipulation; }
 }
 
 /* ── 灯箱（点击正文任意图片打开，左右箭头 / 键盘 / 滑屏切换） ── */
+/* 文章图片灯箱：外壳、按钮、计数与照片墙灯箱（.pw-lightbox / .pw-lb-*）共用 */
 .lightbox {
-  position: fixed; inset: 0; z-index: 9999;
+  position: fixed; inset: 0; z-index: 2147483000;
   display: none; align-items: center; justify-content: center;
-  background: rgba(6, 8, 12, .92); padding: 24px;
+  padding: 48px 64px;
+  background: var(--lb-bg);
+  -webkit-backdrop-filter: var(--lb-blur); backdrop-filter: var(--lb-blur);
   opacity: 0; transition: opacity 200ms ease;
 }
 .lightbox.open { display: flex; opacity: 1; }
 .lightbox-media {
   max-width: 92vw; max-height: 88vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px;
+  gap: 14px;
 }
 .lightbox-media img,
 .lightbox-media video {
-  max-width: 92vw; max-height: 84vh; border-radius: 8px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .5); object-fit: contain;
-  background: #000;
+  max-width: 92vw; max-height: 78vh; border-radius: 6px;
+  box-shadow: var(--lb-img-shadow); object-fit: contain;
 }
-/* 图片支持双指缩放/拖动：交给触控脚本处理，禁用浏览器默认手势 */
+.lightbox-media img { background: var(--lb-img-bg); }
+.lightbox-media video { background: #000; }
+/* 图片支持双指缩放/拖动；手势在下方脚本里处理，CSS 只关闭默认手势 */
 .lightbox-media img {
   touch-action: none;
   transform-origin: center center;
   will-change: transform;
 }
 .lightbox-media img.is-zoomed { cursor: grab; }
-/* 灯箱大图下方备注小字（含缩略图网格点开后查看 alt） */
+/* 灯箱大图下方备注小字：与照片墙的 refs 同一档颜色 */
 .lightbox-caption {
   max-width: 92vw; text-align: center;
-  color: rgba(255, 255, 255, .72); font-size: 13px; line-height: 1.5;
+  color: var(--lb-refs); font-size: 13px; line-height: 1.5;
   word-break: break-word;
 }
-.lightbox-close, .lightbox-nav {
-  position: absolute; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255, 255, 255, .12); color: #fff;
-  transition: background .15s ease;
-}
-@media (hover: hover) and (pointer: fine) { .lightbox-close:hover, .lightbox-nav:hover { background: rgba(255, 255, 255, .25); } }
-.lightbox-close {
-  top: 16px; right: 16px; width: 40px; height: 40px;
-  border-radius: 50%; font-size: 22px; line-height: 1;
-}
-.lightbox-nav {
-  top: 50%; transform: translateY(-50%);
-  width: 46px; height: 46px; border-radius: 50%;
-  font-size: 24px; line-height: 1;
-}
-.lightbox-nav[hidden] { display: none; }
-.lightbox-prev { left: 16px; }
-.lightbox-next { right: 16px; }
+.lightbox-close[hidden], .lightbox-nav[hidden] { display: none; }
 .lightbox-count {
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-  color: rgba(255, 255, 255, .7); font-size: 13px;
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+  color: var(--lb-count); font-size: 12px; letter-spacing: .08em;
+  font-variant-numeric: tabular-nums;
 }
-@media (max-width: 768px) {
-  .lightbox-nav { width: 38px; height: 38px; font-size: 20px; }
-  .lightbox-prev { left: 8px; }
-  .lightbox-next { right: 8px; }
+@media (max-width: 767px) {
+  .lightbox { padding: 52px 10px 64px; }
+  .lightbox-media img, .lightbox-media video { max-height: 72vh; }
+  .lightbox-count { top: 16px; font-size: 11.5px; }
 }
 
 /* 通用隐藏类：置于末尾以按顺序压过后文同特异度的 display 声明（如 .tech-link-avatar） */
@@ -5760,6 +5747,66 @@ html.new-on .pw-card.is-new::after {
 .pw-wall .pw-card img:not([width]) { aspect-ratio: 4 / 3; }
 
 /* ── 灯箱 ── */
+/* 灯箱公共配色：文章灯箱与照片墙灯箱共用，跟随明暗主题。
+   深色：近黑遮罩 + 白字；浅色：纸白遮罩 + 深色字，按钮改为白底深色图标。 */
+.pw-lightbox,
+.lightbox {
+  --lb-bg: rgba(8, 10, 14, .74);
+  /* 浓雾玻璃：透出页面色块但看不清内容，图片仍是视觉中心 */
+  --lb-blur: blur(18px) saturate(120%);
+  --lb-count: rgba(255, 255, 255, .45);
+  --lb-refs: rgba(255, 255, 255, .55);
+  --lb-refs-link: rgba(255, 255, 255, .86);
+  --lb-refs-link-hover: #fff;
+  --lb-hint: rgba(255, 255, 255, .38);
+  --lb-tip: rgba(255, 255, 255, .5);
+  --lb-tip-error: rgba(255, 255, 255, .72);
+  --lb-img-bg: rgba(255, 255, 255, .03);
+  --lb-img-shadow: 0 24px 64px rgba(0, 0, 0, .5);
+  --lb-btn-bg: rgba(20, 20, 24, .55);
+  --lb-btn-bg-hover: rgba(20, 20, 24, .88);
+  --lb-btn-border: rgba(255, 255, 255, .28);
+  --lb-btn-border-hover: rgba(255, 255, 255, .62);
+  --lb-btn-color: #fff;
+  --lb-btn-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+  --lb-focus: rgba(255, 255, 255, .8);
+  --lb-spinner-track: rgba(255, 255, 255, .22);
+  --lb-spinner-head: rgba(255, 255, 255, .85);
+}
+[data-theme="light"] .pw-lightbox,
+[data-theme="light"] .lightbox {
+  --lb-bg: rgba(246, 247, 250, .8);
+  --lb-count: rgba(22, 27, 36, .5);
+  --lb-refs: rgba(22, 27, 36, .62);
+  --lb-refs-link: rgba(22, 27, 36, .9);
+  --lb-refs-link-hover: #161b24;
+  --lb-hint: rgba(22, 27, 36, .42);
+  --lb-tip: rgba(22, 27, 36, .55);
+  --lb-tip-error: rgba(22, 27, 36, .78);
+  --lb-img-bg: rgba(0, 0, 0, .035);
+  --lb-img-shadow: 0 18px 50px rgba(15, 23, 42, .22);
+  --lb-btn-bg: rgba(255, 255, 255, .86);
+  --lb-btn-bg-hover: #fff;
+  --lb-btn-border: rgba(22, 27, 36, .16);
+  --lb-btn-border-hover: rgba(22, 27, 36, .4);
+  --lb-btn-color: #161b24;
+  --lb-btn-shadow: 0 4px 16px rgba(15, 23, 42, .12);
+  --lb-focus: rgba(22, 27, 36, .72);
+  --lb-spinner-track: rgba(22, 27, 36, .15);
+  --lb-spinner-head: rgba(22, 27, 36, .8);
+}
+/* 手机端全屏 backdrop-filter 更吃性能，模糊半径降一档 */
+@media (max-width: 767px) {
+  .pw-lightbox,
+  .lightbox { --lb-blur: blur(12px) saturate(115%); }
+}
+/* 不支持毛玻璃时退回近乎不透明，保证图片与文字对比 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pw-lightbox,
+  .lightbox { --lb-bg: rgba(8, 10, 14, .96); }
+  [data-theme="light"] .pw-lightbox,
+  [data-theme="light"] .lightbox { --lb-bg: rgba(246, 247, 250, .98); }
+}
 .pw-lightbox {
   position: fixed;
   inset: 0;
@@ -5768,9 +5815,9 @@ html.new-on .pw-card.is-new::after {
   align-items: center;
   justify-content: center;
   padding: 48px 64px;
-  background: rgba(8, 10, 14, .93);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background: var(--lb-bg);
+  -webkit-backdrop-filter: var(--lb-blur);
+  backdrop-filter: var(--lb-blur);
 }
 .pw-lightbox[hidden] { display: none; }
 /* 灯箱打开时连导航一起盖住：sticky 导航带毛玻璃，纯靠 z-index 在部分合成路径下仍会透出 */
@@ -5790,7 +5837,7 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   margin: 0;
   font-size: 12px;
   letter-spacing: .08em;
-  color: rgba(255, 255, 255, .45);
+  color: var(--lb-count);
   font-variant-numeric: tabular-nums;
 }
 .pw-lb-img {
@@ -5800,8 +5847,8 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   max-height: 78vh;
   object-fit: contain;
   border-radius: 6px;
-  background: rgba(255, 255, 255, .03);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, .5);
+  background: var(--lb-img-bg);
+  box-shadow: var(--lb-img-shadow);
   /* 加载完成前完全不可见：没有 src 的 img 会把 alt 画成破图占位 */
   opacity: 0;
   transition: opacity .18s ease;
@@ -5819,20 +5866,20 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   font-size: 13px;
   line-height: 1.8;
   text-align: center;
-  color: rgba(255, 255, 255, .55);
+  color: var(--lb-refs);
   word-break: break-word;
 }
 .pw-lb-refs a {
-  color: rgba(255, 255, 255, .86);
+  color: var(--lb-refs-link);
   text-decoration: underline;
   text-underline-offset: 2px;
   margin: 0 2px;
 }
-.pw-lb-refs a:hover { color: #fff; }
+.pw-lb-refs a:hover { color: var(--lb-refs-link-hover); }
 .pw-lb-hint {
   margin-left: 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, .38);
+  color: var(--lb-hint);
   white-space: nowrap;
 }
 .pw-lb-tip {
@@ -5844,16 +5891,16 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   gap: 10px;
   padding: 0 16px;
   font-size: 13px;
-  color: rgba(255, 255, 255, .5);
+  color: var(--lb-tip);
   pointer-events: none;
 }
 .pw-lb-tip[hidden] { display: none; }
-.pw-lb-tip.is-error { color: rgba(255, 255, 255, .72); }
+.pw-lb-tip.is-error { color: var(--lb-tip-error); }
 .pw-lb-spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, .22);
-  border-top-color: rgba(255, 255, 255, .85);
+  border: 2px solid var(--lb-spinner-track);
+  border-top-color: var(--lb-spinner-head);
   border-radius: 50%;
   animation: pw-lb-spin .8s linear infinite;
 }
@@ -5872,22 +5919,34 @@ body.lightbox-open .tech-drawer { visibility: hidden; }
   width: 46px;
   height: 46px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, .28);
+  border: 1px solid var(--lb-btn-border);
   border-radius: 50%;
-  background: rgba(20, 20, 24, .55);
-  color: #fff;
+  background: var(--lb-btn-bg);
+  color: var(--lb-btn-color);
   font-size: 26px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+  box-shadow: var(--lb-btn-shadow);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
-  transition: background .18s ease, opacity .18s ease;
+  transition: background .18s ease, border-color .18s ease, opacity .18s ease, transform .18s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.pw-lb-btn:hover { background: rgba(20, 20, 24, .8); }
+@media (hover: hover) and (pointer: fine) {
+  .pw-lb-btn:hover {
+    background: var(--lb-btn-bg-hover);
+    border-color: var(--lb-btn-border-hover);
+    transform: scale(1.06);
+  }
+  /* 左右按钮本身带 translateY(-50%)，hover 时补上缩放，避免位置跳动 */
+  .pw-lb-prev:hover,
+  .pw-lb-next:hover { transform: translateY(-50%) scale(1.06); }
+}
+.pw-lb-btn:active { transform: scale(.96); }
+.pw-lb-prev:active,
+.pw-lb-next:active { transform: translateY(-50%) scale(.96); }
 .pw-lb-btn:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, .8);
+  outline: 2px solid var(--lb-focus);
   outline-offset: 2px;
 }
 .pw-lb-btn.is-off { opacity: .2; pointer-events: none; }
