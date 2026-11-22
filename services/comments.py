@@ -20,6 +20,11 @@ COOLDOWN = 30
 VIEW_COOLDOWN = 60
 MAX_IMAGES = 6
 _IMG_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+# 与 services.markdown 的图注占位词保持一致：空的 [] 或通用占位词不显示备注
+_IMG_ALT_PLACEHOLDERS = {
+    "", "null", "none", "undefined", "false", "为空", "为空null", "空",
+    "图片", "image", "img", "photo", "picture",
+}
 
 # 冷却统一走 services.ratelimit（SQLite 表），不再用进程内字典：
 # gunicorn 多 worker 下内存字典各自一份，限流等于没有。
@@ -50,7 +55,11 @@ def render_content(content: str) -> Markup:
             rel = path.split("/uploads/comment/", 1)[1]
             rel = rel.split("?", 1)[0].split("#", 1)[0]
             src = "/comment-img/comment/" + rel
-        return f'<img class="cmt-img" src="{src}" alt="{alt}" loading="lazy">'
+        # 占位 alt（图片 / image / 空等）清空：评论灯箱只显示用户写的自定义说明
+        alt_text = (alt or "").strip()
+        if alt_text.lower() in _IMG_ALT_PLACEHOLDERS:
+            alt_text = ""
+        return f'<img class="cmt-img" src="{src}" alt="{alt_text}" loading="lazy">'
 
     return Markup(re.sub(
         r"!\[([^\]]*)\]\(((?:/uploads/|/oss-media/uploads/)[^\s()<>\"']+)\)",

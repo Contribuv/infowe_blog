@@ -365,6 +365,17 @@
             lbClampPan();
             lbApply();
         }
+        /* 灯箱备注：只显示用户写的自定义说明；
+           空的 [] 或上传器默认的「图片 / image」等占位词不显示，也不占位 */
+        var LB_CAPTION_EMPTY = {
+            '': 1, 'null': 1, 'none': 1, 'undefined': 1, 'false': 1,
+            '为空': 1, '为空null': 1, '空': 1,
+            '图片': 1, 'image': 1, 'img': 1, 'photo': 1, 'picture': 1
+        };
+        function lbCaption(img) {
+            var text = ((img && img.getAttribute('alt')) || '').replace(/\s+/g, ' ').trim();
+            return LB_CAPTION_EMPTY[text.toLowerCase()] ? '' : text;
+        }
         function lbShow(i) {
             if (!group.length) return;
             /* 切图时复位缩放与手势状态 */
@@ -394,7 +405,7 @@
             lbMedia.appendChild(node);
             if (el.tagName === 'IMG') lbApply();
             /* 方案A：灯箱大图下方居中显示备注（alt），缩略图网格点开灯箱也能看到 */
-            var capText = el.tagName === 'IMG' ? (el.alt || '').trim() : '';
+            var capText = el.tagName === 'IMG' ? lbCaption(el) : '';
             if (capText) {
                 var cap = document.createElement('div');
                 cap.className = 'lightbox-caption';

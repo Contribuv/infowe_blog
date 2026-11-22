@@ -383,18 +383,11 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 /* ── 评论正文内图片（评论图片上传）：默认显示缩略小图，点击后用灯箱看大图 ── */
 .cmt-text .cmt-img{display:inline-block;max-width:160px;max-height:160px;width:auto;height:auto;margin:8px 8px 0 0;border-radius:8px;border:1px solid var(--c-border);background:var(--c-reply);cursor:zoom-in;vertical-align:top}
-/* 灯箱：点缩略图后在浮层里放大显示，点空白处 / 关闭按钮 / 按 Esc 关闭 */
-.cmt-lightbox{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.85);cursor:zoom-out;opacity:0;pointer-events:none;transition:opacity .2s;touch-action:none}
-.cmt-lightbox.is-open{opacity:1;pointer-events:auto}
-.cmt-lightbox img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5);background:#111;cursor:default;touch-action:none;transition:transform .2s ease;-webkit-user-select:none;user-select:none}
-/* 右上角关闭按钮：移动端也能轻松点到 */
-.cmt-lightbox-close{position:absolute;top:16px;right:16px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:24px;line-height:1;cursor:pointer;padding:0;transition:background .15s}
-@media (hover:hover) and (pointer:fine){ .cmt-lightbox-close:hover{background:rgba(255,255,255,.28)} }
-/* 移动端：缩小留白、放大关闭按钮热区 */
-@media (max-width:640px){
-  .cmt-lightbox{padding:12px}
-  .cmt-lightbox-close{top:10px;right:10px;width:44px;height:44px;font-size:26px}
-}
+/* 灯箱：容器、按钮、计数、备注与遮罩全部复用照片墙 / 文章灯箱的
+   .pw-lightbox / .pw-lb-*（含主题变量与毛玻璃），这里只补评论图特有的手势。 */
+.cmt-lightbox{cursor:zoom-out;touch-action:none}
+.cmt-lightbox .pw-lb-img{cursor:default;touch-action:none;-webkit-user-select:none;user-select:none;transition:opacity .18s ease,transform .2s ease}
+.cmt-lightbox .pw-lb-refs[hidden]{display:none}
 
 /* ── 锚点定位（#comment-N）：给 sticky 导航留出滚动余量，命中后短暂高亮 ── */
 .cmt-item{scroll-margin-top:80px}

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.46-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.46)
+[![version](https://img.shields.io/badge/version-3.9.47-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.47)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,16 +925,24 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.46**
+当前版本：**v3.9.47**
 
-> 最近一次更新完整展开；更早的 145 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 146 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.47
+
+- **评论图片灯箱统一**：评论区灯箱改用与照片墙 / 文章相同的 `.pw-lightbox` / `.pw-lb-*` 结构，遮罩、毛玻璃、按钮悬停、计数、备注与移动端尺寸全部共用
+- **评论多图轮转**：同一条评论区内的图片作为一组，可上一张 / 下一张；只有一张时自动隐藏上下页与计数；保留捏合缩放、拖动、双击还原，并新增横滑切图
+- **评论灯箱键盘与关闭**：支持 `←` / `→` 切换、`Esc` 关闭，打开时隐藏导航、锁定页面滚动
+- **极简备注规则**：图片备注只在用户写了自定义说明时显示；`[]` 为空或「图片 / image / img / photo / picture」等占位词不显示，也不占位
+- **占位 alt 清洗**：文章正文、文章灯箱、评论渲染、评论灯箱四处统一处理，历史内容里的「图片」也不再当作备注
+
+<details>
+<summary><b>历史版本（v3.9.46 及更早，共 146 个版本，点击展开）</b></summary>
 
 ### v3.9.46
 
 - **灯箱遮罩提高不透明度**：深色 `.74 → .9`、浅色 `.8 → .92`，保留 `blur(18px)` 的毛玻璃质感，但不再透出页面文字与卡片，避免干扰图片阅读
-
-<details>
-<summary><b>历史版本（v3.9.45 及更早，共 145 个版本，点击展开）</b></summary>
 
 ### v3.9.45
 

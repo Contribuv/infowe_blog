@@ -1215,27 +1215,33 @@ window.initComments = function (root) {
   }
 
   /* ── 评论图片灯箱 ──
-     正文里的 .cmt-img 默认是缩略小图（CSS 限宽高），点击后在本层浮窗里显示原图，
-     点空白处 / 关闭按钮 / 按 Esc 关闭；触摸屏支持双指捏合缩放、单指拖动、双击放大还原。
-     用事件委托绑定在 document 上，动态插入的评论也生效。 */
+     与照片墙 / 文章灯箱共用同一套结构与样式（.pw-lightbox / .pw-lb-*）：
+     同一评论区内的图片作为一组前后轮转，单图自动隐藏上下页与计数；
+     点空白处 / 关闭按钮 / Esc 关闭；触摸屏支持双指捏合缩放、单指拖动、
+     双击放大还原、未放大时横滑切换。用事件委托绑定在 document 上，
+     动态插入的评论也生效。 */
   (function () {
     /* 全局只建一份灯箱：document 级委托监听天然覆盖浮窗片段，
        重复调用 initComments 时直接跳过，避免第二个灯箱和重复监听 */
     if (window.__cmtLightboxReady) return;
     window.__cmtLightboxReady = true;
-    var box = null, pic = null;
+    var box = null, pic = null, countEl = null, refsEl = null;
+    var prevBtn = null, nextBtn = null;
     var MIN_S = 1, MAX_S = 5, DBL_ZOOM = 2.5;
     var scale = 1, tx = 0, ty = 0;      // 变换：先平移再缩放，作用于居中显示的图片
     var pinch = null, drag = null;      // 手势起始状态
     var lastTap = 0, lastTapX = 0, lastTapY = 0;
+    var group = [], cur = 0;            // 当前评论区的图片组与索引
 
     function apply() {
+      if (!pic) return;
       pic.style.transform = (tx || ty || scale !== 1)
         ? 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')'
         : '';
     }
     // 拖动范围限制：不超过放大后图片相对视口的溢出量，避免图片被拖出屏幕找不回
     function clamp() {
+      if (!pic) return;
       var w = pic.offsetWidth, h = pic.offsetHeight;
       var maxX = Math.max(0, (w * scale - w) / 2);
       var maxY = Math.max(0, (h * scale - h) / 2);
@@ -1270,10 +1276,15 @@ window.initComments = function (root) {
     function build() {
       if (box) return;
       box = document.createElement('div');
-      box.className = 'cmt-lightbox';
+      box.className = 'pw-lightbox cmt-lightbox';
+      box.hidden = true;
+
       pic = document.createElement('img');
+      pic.className = 'pw-lb-img';
       pic.alt = '';
-      box.appendChild(pic);
+      // 与照片墙灯箱一致：加载完成后再显形，避免把 alt 画成破图占位
+      pic.addEventListener('load', function () { pic.classList.add('is-ready'); });
+      pic.addEventListener('error', function () { pic.classList.add('is-ready'); });
 
       // 触摸手势：双指捏合缩放（以两指中点为基准）+ 单指拖动（仅放大后）+ 双击缩放
       pic.addEventListener('touchstart', function (e) {
@@ -1315,52 +1326,156 @@ window.initComments = function (root) {
         pic.style.transition = '';
         if (e.touches && e.touches.length > 0) return;   // 还有手指按着，等全部抬起
         if (pinch) { pinch = null; drag = null; return; }
-        if (drag && !drag.moved && e.changedTouches && e.changedTouches.length) {
-          var t = e.changedTouches[0];
-          onTap(t.clientX, t.clientY);
+        if (drag) {
+          var t = e.changedTouches && e.changedTouches.length ? e.changedTouches[0] : null;
+          var dx = t ? t.clientX - drag.x : 0;
+          var dy = t ? t.clientY - drag.y : 0;
+          if (!drag.moved && t) {
+            // 未放大时单指横滑：切换上一张 / 下一张（与文章灯箱一致）
+            if (scale <= 1.001 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+              show(dx < 0 ? cur + 1 : cur - 1);
+            } else {
+              onTap(t.clientX, t.clientY);
+            }
+          }
         }
         drag = null;
       }
       pic.addEventListener('touchend', endTouch);
       pic.addEventListener('touchcancel', endTouch);
 
-      // 右上角关闭按钮（移动端也能点到；点它不应冒泡成「点空白关闭」）
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cmt-lightbox-close';
-      btn.setAttribute('aria-label', '关闭');
-      btn.innerHTML = '&times;';
-      btn.addEventListener('click', function (e) {
+      // 右上角关闭按钮（复用照片墙 / 文章灯箱按钮样式与悬停）
+      var closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'pw-lb-btn pw-lb-close';
+      closeBtn.setAttribute('aria-label', '关闭');
+      closeBtn.innerHTML = '&times;';
+      closeBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        close();
+        closeBox();
       });
-      box.appendChild(btn);
-      box.addEventListener('click', function (e) { if (e.target === box) close(); });
+
+      prevBtn = document.createElement('button');
+      prevBtn.type = 'button';
+      prevBtn.className = 'pw-lb-btn pw-lb-prev';
+      prevBtn.setAttribute('aria-label', '上一张');
+      prevBtn.innerHTML = '&#8249;';
+      prevBtn.hidden = true;
+      prevBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        show(cur - 1);
+      });
+
+      nextBtn = document.createElement('button');
+      nextBtn.type = 'button';
+      nextBtn.className = 'pw-lb-btn pw-lb-next';
+      nextBtn.setAttribute('aria-label', '下一张');
+      nextBtn.innerHTML = '&#8250;';
+      nextBtn.hidden = true;
+      nextBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        show(cur + 1);
+      });
+
+      var wrap = document.createElement('div');
+      wrap.className = 'pw-lb-box';
+      countEl = document.createElement('p');
+      countEl.className = 'pw-lb-count';
+      refsEl = document.createElement('p');
+      refsEl.className = 'pw-lb-refs';
+      refsEl.hidden = true;
+      wrap.appendChild(countEl);
+      wrap.appendChild(pic);
+      wrap.appendChild(refsEl);
+
+      box.appendChild(closeBtn);
+      box.appendChild(prevBtn);
+      box.appendChild(wrap);
+      box.appendChild(nextBtn);
+      box.addEventListener('click', function (e) { if (e.target === box) closeBox(); });
       document.body.appendChild(box);
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' || e.keyCode === 27) close(); });
+      document.addEventListener('keydown', function (e) {
+        if (box.hidden) return;
+        if (e.key === 'Escape' || e.keyCode === 27) closeBox();
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); show(cur - 1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); show(cur + 1); }
+      });
     }
-    function open(src, alt) {
-      build();
+
+    function show(i) {
+      if (!group.length) return;
       resetView();
+      lastTap = 0;
+      cur = (i + group.length) % group.length;
+      var el = group[cur];
+      var src = el.currentSrc || el.getAttribute('src') || el.src;
+      pic.classList.remove('is-ready');
+      pic.removeAttribute('src');
       pic.src = src;
-      pic.alt = alt || '';
+      // 同一张图连续打开时浏览器可能不再触发 load（缓存已完成），这里补一次判定
+      if (pic.complete && pic.naturalWidth > 0) pic.classList.add('is-ready');
+      var alt = (el.getAttribute('alt') || '').trim();
+      pic.alt = alt;
+      var cap = captionOf(el);
+      refsEl.textContent = cap;
+      refsEl.hidden = !cap;
+      var multi = group.length > 1;
+      countEl.textContent = multi ? (cur + 1) + ' / ' + group.length : '';
+      prevBtn.hidden = !multi;
+      nextBtn.hidden = !multi;
+    }
+
+    // 备注只显示用户写的自定义说明：空的 [] 或「图片 / image」等占位词不显示
+    var ALT_EMPTY = {
+      '': 1, 'null': 1, 'none': 1, 'undefined': 1, 'false': 1,
+      '为空': 1, '为空null': 1, '空': 1,
+      '图片': 1, 'image': 1, 'img': 1, 'photo': 1, 'picture': 1
+    };
+    function captionOf(el) {
+      var text = ((el && el.getAttribute('alt')) || '').replace(/\s+/g, ' ').trim();
+      return ALT_EMPTY[text.toLowerCase()] ? '' : text;
+    }
+
+    // 收集同一条评论列表里的图片作为一组；浮窗片段没有 .cmt-list 时退回评论项的父容器
+    function groupOf(img) {
+      var scope = img.closest('.cmt-list');
+      if (!scope) {
+        var item = img.closest('.cmt-item');
+        scope = item && item.parentElement ? item.parentElement : document;
+      }
+      var list = Array.prototype.slice.call(scope.querySelectorAll('.cmt-text .cmt-img'));
+      list = list.filter(function (el) { return !!(el.getAttribute('src') || el.currentSrc); });
+      if (list.indexOf(img) < 0) { list = [img]; }
+      return list;
+    }
+
+    function openGroup(items, idx) {
+      build();
+      group = items;
+      show(idx);
+      box.hidden = false;
       document.body.style.overflow = 'hidden';
-      box.classList.add('is-open');
+      // 和照片墙 / 文章灯箱一致：连导航一起盖住，避免毛玻璃导航透在图片上方
+      document.body.classList.add('lightbox-open');
     }
-    function close() {
-      if (!box || !box.classList.contains('is-open')) return;
-      box.classList.remove('is-open');
+    function closeBox() {
+      if (!box || box.hidden) return;
+      box.hidden = true;
       document.body.style.overflow = '';
+      document.body.classList.remove('lightbox-open');
       resetView();
+      group = []; cur = 0;
     }
+
     document.addEventListener('click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
       var img = t.closest('.cmt-text .cmt-img');
       if (!img) return;
       e.preventDefault();
-      open(img.getAttribute('src'), img.getAttribute('alt'));
+      var list = groupOf(img);
+      openGroup(list, list.indexOf(img));
     });
   })();
 };

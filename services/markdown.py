@@ -269,7 +269,11 @@ _DANGEROUS_TAGS = re.compile(
 
 # 图片备注：alt 为空或用户常用的占位词时不显示
 _IMG_ALT_RE = re.compile(r"""(?<![-\w])alt\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.I)
-_CAPTION_EMPTY = {"", "null", "none", "undefined", "false", "为空", "为空null", "空"}
+_CAPTION_EMPTY = {
+    "", "null", "none", "undefined", "false", "为空", "为空null", "空",
+    # 上传器 / 通用写法留下的占位词：不当作图注，只有自定义说明才显示
+    "图片", "image", "img", "photo", "picture",
+}
 # 只处理「整段就是一张图（可带链接）」的段落，连续多图仍交给前端的画廊逻辑
 _FIGURE_BLOCK_RE = re.compile(
     r"<p>\s*(?P<open><a\b[^>]*>\s*)?(?P<img><img\b[^>]*>)\s*(?P<close></a>)?\s*</p>",
