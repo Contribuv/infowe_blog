@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.49-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.49)
+[![version](https://img.shields.io/badge/version-3.9.50-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.50)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,21 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.49**
+当前版本：**v3.9.50**
 
-> 最近一次更新完整展开；更早的 148 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 149 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.50
+
+- **审核结果邮件通知**：后台「通过 / 拒绝 / 删除」读者账号后会给本人发信——通过时告诉他可以登录了，拒绝时带上你填写的理由与联系邮箱，删除时发一封注销回执（只说明账号已删除、评论保留，不引导重新注册）；SMTP 未配置或开关关闭时静默跳过，不影响后台操作
+- **拒绝理由输入框**：用户管理的「审核说明」列改为可编辑，理由随「拒绝」提交并落库（`review_note`）；点「通过」不会带上这个字段
+- **拒绝立即生效**：`verify_token` 增加审核状态校验，被拒绝 / 待审核的账号即使已经登录，token 也会立刻失效，不能再靠 30 天有效期绕过
+- **删除保留历史**：删除只清 `reader_users` 一行，评论正文、评论身份、审核留存全部保留，可在「留存记录」里按邮箱哈希追溯；操作写入审计（`user.delete`）
+- **账号通知开关**：后台设置新增「账号审核结果通知」，与评论邮件通知解耦，可单独关闭
+- 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
+
+<details>
+<summary><b>历史版本（v3.9.49 及更早，共 149 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 
@@ -939,9 +951,6 @@ chown -R www:www var
 - **待审核评论常驻**：本人提交的待审核评论在评论区置顶常驻（不占用公开分页名额），翻页也不会消失
 - **缓存与身份同步**：个性化页面 `no-store`，JSON 接口一律不缓存，退出登录后浏览器前进 / 后退不会再显示旧身份
 - 其他：楼中楼回复图标与楼主行对齐、评论灯箱与投票状态样式统一
-
-<details>
-<summary><b>历史版本（v3.9.48 及更早，共 148 个版本，点击展开）</b></summary>
 
 ### v3.9.48
 

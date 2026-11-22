@@ -462,6 +462,16 @@
                     <span class="switch-text">访客评论会邮件提醒你；访客回复访客时，审核通过后再通知对方；你自己评论或回复不会给自己发信。</span>
                 </label>
             </div>
+            <!-- 账号审核结果通知：与评论通知解耦，可单独关闭 -->
+            <div class="form-group">
+                <label class="switch-label">
+                    <span class="switch">
+                        <input type="checkbox" name="account_notify" value="1"{{ ' checked' if account_notify|default('1') in ('1','on','true','yes') else '' }}>
+                        <span class="slider"></span>
+                    </span>
+                    <span class="switch-text">读者账号审核结果会邮件通知对方：通过后告诉他可以登录，拒绝时带上你填写的理由，删除账号后发一封注销回执。</span>
+                </label>
+            </div>
             <div class="smtp-row">
                 <div class="form-group">
                     <label>SMTP 服务器</label>

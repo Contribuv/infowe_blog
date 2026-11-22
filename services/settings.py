@@ -57,6 +57,8 @@ DEFAULTS: dict[str, str] = {
     "contact_email": "",
     "comments_enabled": "1",
     "comment_notify": "1",
+    # 账号审核结果通知：通过 / 拒绝 / 注销回执，与评论通知开关独立
+    "account_notify": "1",
     "comment_image_upload": "1",
     # 前台代码粒子背景（全站挂载，阅读页自动降级；后台可整体关闭）
     "particles_enabled": "1",

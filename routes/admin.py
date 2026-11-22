@@ -1174,6 +1174,7 @@ def _settings_view() -> dict:
         "notify_email": settings.get_str("notify_email", ""),
         "smtp_sender_name": settings.get_str("smtp_sender_name", ""),
         "comment_notify": settings.get_str("comment_notify", "0"),
+        "account_notify": settings.get_str("account_notify", "1"),
         "comment_image_upload": settings.get_str("comment_image_upload", "1"),
         "particles_enabled": settings.get_str("particles_enabled", "1"),
         "sensitive_filter_enabled": settings.get_str("sensitive_filter_enabled", "0"),
@@ -1307,6 +1308,7 @@ def _save_settings():
 
     for key in (
         "force_https", "unify_www", "comments_enabled", "comment_notify",
+        "account_notify",
         "comment_image_upload", "sensitive_filter_enabled", "watermark_enabled",
         "particles_enabled",
     ):
@@ -1667,18 +1669,54 @@ def admin_user_review(user_id: int):
         admin_user = User.get(int(uid))
         if admin_user:
             operator = str(admin_user.get("username") or "")
-    target_row = db.one("SELECT name FROM reader_users WHERE id = ?", (user_id,))
+    target_row = db.one("SELECT name, email FROM reader_users WHERE id = ?", (user_id,))
     target_name = str(target_row["name"] or "") if target_row else ""
+    target_mail = str(target_row["email"] or "") if target_row else ""
     ok, msg = reader_account.set_review(user_id, target, operator, note)
     if not ok:
         flash(msg or "审核失败", "error")
         return _users_back()
     # 同步进「留存记录」插件：对象带上昵称，方便日后检索
     _audit("user.review", f"#{user_id} {target_name}".strip()[:200], f"{target} {note}".strip())
+    # 告诉用户一声：通过前他登不进来，拒绝后更是不知道原因；SMTP 没配就静默跳过
+    notify.notify_account_review(
+        email=target_mail,
+        name=target_name,
+        action="approved" if target == reader_account.REVIEW_APPROVED else "rejected",
+        note=note,
+    )
     if target == reader_account.REVIEW_APPROVED:
         flash("已通过审核，该昵称即刻生效，账号可以登录了", "success")
     else:
         flash("已拒绝该昵称，账号将无法登录（记录保留在留存记录里）", "success")
+    return _users_back()
+
+
+@LOGIN
+def admin_user_delete(user_id: int):
+    from services import reader_account
+
+    row = db.one("SELECT name, email FROM reader_users WHERE id = ?", (user_id,))
+    target_name = str(row["name"] or "") if row else ""
+    target_mail = str(row["email"] or "") if row else ""
+    ok, msg = reader_account.delete_user(user_id)
+    if not ok:
+        flash(msg or "删除失败", "error")
+        return _users_back()
+    # 删除同样要留痕：账号没了，但谁在什么时候删了哪个邮箱必须可查
+    _audit(
+        "user.delete",
+        f"#{user_id} {target_name}".strip()[:200],
+        f"删除读者账号 {target_mail}（评论与审核留存保留）"[:500],
+    )
+    # 注销回执：账号行已经删了，邮件是唯一还能触达他的渠道。
+    # 只说明「已删除、评论保留」，不提可重新注册，避免给刷号的人指路。
+    notify.notify_account_review(
+        email=target_mail,
+        name=target_name,
+        action="deleted",
+    )
+    flash(f"已删除账号「{target_name or target_mail}」，评论与留存记录仍可查", "success")
     return _users_back()
 
 
@@ -1732,6 +1770,7 @@ def register(app) -> None:
         ("/admin/comments/bulk", "admin_comments_bulk", admin_comments_bulk, ["POST"]),
         ("/admin/users", "admin_users", admin_users, ["GET"]),
         ("/admin/users/<int:user_id>/review", "admin_user_review", admin_user_review, ["POST"]),
+        ("/admin/users/<int:user_id>/delete", "admin_user_delete", admin_user_delete, ["POST"]),
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),
         ("/admin/upload/file", "admin_upload_file", admin_upload_file, ["POST"]),

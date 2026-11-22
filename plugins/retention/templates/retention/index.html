@@ -79,7 +79,7 @@
         <table class="table retention-table">
             <thead>
                 <tr>
-                    {% set page_headers = tabs[active].view_headers if active == 'comments' else tabs[active].headers %}
+                    {% set page_headers = tabs[active].view_headers if tabs[active].view_headers is defined else tabs[active].headers %}
                     {% for h in page_headers %}<th>{{ h }}</th>{% endfor %}
                 </tr>
             </thead>
@@ -118,6 +118,36 @@
                     </td>
                     <td data-label="成功">{% if r.ok %}<span class="badge badge-success">是</span>{% else %}<span class="badge badge-danger">否</span>{% endif %}</td>
                     <td data-label="时间">{{ r.created_at[:16] }}</td>
+                    {% elif active == 'users' %}
+                    <td data-label="ID">{{ r.id }}</td>
+                    <td class="main-td" data-label="用户">
+                        <strong>{{ r.name or '—' }}</strong>
+                        {% if r.user_id %}<span class="cell-muted">#{{ r.user_id }}</span>{% endif %}
+                    </td>
+                    <td class="wrap-text" data-label="邮箱">{{ r.email or '—' }}</td>
+                    <td data-label="来源">
+                        {% if r.source == 'local' %}<span class="badge badge-warning">敏感词</span>
+                        {% elif r.source == 'ai' %}<span class="badge">AI 模型</span>
+                        {% elif r.source == 'manual' %}<span class="badge">人工</span>
+                        {% else %}<span class="cell-muted">—</span>{% endif %}
+                    </td>
+                    <td data-label="机审结论">
+                        {% if r.decision == 'review' %}<span class="badge badge-warning">转人工</span>
+                        {% elif r.decision == 'pass' %}<span class="badge badge-success">放行</span>
+                        {% else %}<span class="cell-muted">{{ r.decision or '—' }}</span>{% endif %}
+                    </td>
+                    <td class="wrap-text" data-label="原因">{{ r.reason or '—' }}</td>
+                    <td data-label="处理状态">
+                        {% if r.status == 'open' %}<span class="badge badge-warning">待处理</span>
+                        {% elif r.status == 'approved' %}<span class="badge badge-success">已通过</span>
+                        {% elif r.status == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
+                        {% else %}<span class="cell-muted">{{ r.status or '—' }}</span>{% endif %}
+                    </td>
+                    <td data-label="处理人">{{ r.operator or '—' }}</td>
+                    <td data-label="时间">
+                        {{ (r.created_at or '')[:16] }}
+                        {% if r.reviewed_at %}<div class="cell-muted">处理 {{ r.reviewed_at[:16] }}</div>{% endif %}
+                    </td>
                     {% else %}
                     <td data-label="ID">{{ r.id }}</td>
                     <td class="main-td" data-label="昵称"><strong>{{ r.author }}</strong></td>

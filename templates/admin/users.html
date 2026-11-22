@@ -7,10 +7,10 @@
 
 <div class="filter-bar">
     <div class="filter-tabs">
-        <a href="{{ url_for('admin_users') }}" class="filter-tag {% if not status %}active{% endif %}">全部 <span class="muted" style="margin-left:4px">{{ counts.all }}</span></a>
-        <a href="{{ url_for('admin_users', status='manual') }}" class="filter-tag {% if status == 'manual' %}active{% endif %}">待人工审核 <span class="muted" style="margin-left:4px">{{ counts.manual }}</span></a>
-        <a href="{{ url_for('admin_users', status='approved') }}" class="filter-tag {% if status == 'approved' %}active{% endif %}">正常 <span class="muted" style="margin-left:4px">{{ counts.approved }}</span></a>
-        <a href="{{ url_for('admin_users', status='rejected') }}" class="filter-tag {% if status == 'rejected' %}active{% endif %}">已拒绝 <span class="muted" style="margin-left:4px">{{ counts.rejected }}</span></a>
+        <a href="{{ url_for('admin_users') }}" class="filter-tag {% if not status %}active{% endif %}">全部 <span class="filter-count">{{ counts.all }}</span></a>
+        <a href="{{ url_for('admin_users', status='manual') }}" class="filter-tag {% if status == 'manual' %}active{% endif %}">待人工审核 <span class="filter-count{% if counts.manual %} is-alert{% endif %}">{{ counts.manual }}</span></a>
+        <a href="{{ url_for('admin_users', status='approved') }}" class="filter-tag {% if status == 'approved' %}active{% endif %}">正常 <span class="filter-count">{{ counts.approved }}</span></a>
+        <a href="{{ url_for('admin_users', status='rejected') }}" class="filter-tag {% if status == 'rejected' %}active{% endif %}">已拒绝 <span class="filter-count">{{ counts.rejected }}</span></a>
     </div>
     <form class="filter-search" method="GET">
         {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
@@ -53,8 +53,12 @@
             </td>
             <td data-label="注册时间" class="muted">{{ u.created_at or '-' }}</td>
             <td data-label="最后登录" class="muted">{{ u.last_login_at or '从未登录' }}</td>
+            {# 理由输入框在表格里，用 form 属性挂到表格外的 noForm 上：点「拒绝」时随表单提交，
+               点「通过」时提交的是 okForm，这个字段不会带上（通过不需要理由） #}
             <td class="desc-cell" data-label="审核说明">
-                {% if u.review_note %}{{ u.review_note[:40] }}{% else %}<span class="muted">—</span>{% endif %}
+                <input type="text" name="note" form="noForm{{ u.id }}" class="note-input" maxlength="200"
+                       value="{{ u.review_note or '' }}" placeholder="拒绝理由（可选）"
+                       title="仅在点「拒绝」时提交，会写进邮件告知对方">
             </td>
             <td class="actions-cell" data-label="操作">
                 {% if u.review_status != 'approved' %}
@@ -63,6 +67,8 @@
                 {% if u.review_status != 'rejected' %}
                 <button type="submit" form="noForm{{ u.id }}" class="btn btn-sm btn-danger">拒绝</button>
                 {% endif %}
+                {# 删除只清账号：评论与审核留存仍在「留存记录」里可查，所以不做红色主操作 #}
+                <button type="submit" form="delForm{{ u.id }}" class="btn btn-sm btn-outline" title="删除账号（评论与留存保留）">删除</button>
             </td>
         </tr>
         {% endfor %}
@@ -78,8 +84,13 @@
         <input type="hidden" name="q" value="{{ keyword }}">
         <input type="hidden" name="page" value="{{ page }}">
     </form>
-    <form id="noForm{{ u.id }}" method="POST" action="{{ url_for('admin_user_review', user_id=u.id) }}" class="hidden" onsubmit="return confirm('拒绝昵称「{{ u.name }}」？该账号将无法登录。')">
+    <form id="noForm{{ u.id }}" method="POST" action="{{ url_for('admin_user_review', user_id=u.id) }}" class="hidden" onsubmit="return confirm('拒绝昵称「{{ u.name }}」？\n\n该账号会立刻退出登录且无法再登录（评论与留存记录保留，之后仍可通过）。\n若填了理由，会随邮件告知对方。')">
         <input type="hidden" name="action" value="reject">
+        <input type="hidden" name="status" value="{{ status }}">
+        <input type="hidden" name="q" value="{{ keyword }}">
+        <input type="hidden" name="page" value="{{ page }}">
+    </form>
+    <form id="delForm{{ u.id }}" method="POST" action="{{ url_for('admin_user_delete', user_id=u.id) }}" class="hidden" onsubmit="return confirm('删除账号「{{ u.name }}」？\n\n账号将无法再登录；评论正文与审核留存会保留，可在「留存记录」里查。')">
         <input type="hidden" name="status" value="{{ status }}">
         <input type="hidden" name="q" value="{{ keyword }}">
         <input type="hidden" name="page" value="{{ page }}">

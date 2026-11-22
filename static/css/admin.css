@@ -488,6 +488,19 @@ svg { vertical-align: -3px; flex: none; }
 @media (hover: hover) and (pointer: fine) { .main-td a:hover { color: var(--accent); } }
 .main-td strong { font-weight: 600; }
 .desc-cell { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 审核说明列：拒绝理由输入框。宽度随列收敛，不撑破表格；移动端卡片化时铺满 */
+.note-input {
+  width: 100%; max-width: 240px;
+  padding: 5px 9px;
+  font: inherit; font-size: var(--fz-xs);
+  color: var(--text);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.note-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.note-input::placeholder { color: var(--text-tertiary); }
 /* 长评论：默认显示摘要，点击展开全文；避免长内容撑坏表格 */
 /* overflow-wrap:anywhere 让无空格的长串（如 ![](/uploads/...)）也能断行，避免溢出单元格 */
 .comment-cell {
@@ -707,6 +720,19 @@ input[type="checkbox"], input[type="radio"] {
 }
 @media (hover: hover) and (pointer: fine) { .filter-tag:hover { border-color: var(--accent); color: var(--accent); } }
 .filter-tag.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+/* 标签里的计数：单独做成胶囊，别和标题文字糊成一串；
+   选中态是 accent 底色，灰字压在上面几乎看不清，改成白底 accent 字 */
+.filter-tag .filter-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 18px; padding: 0 6px; margin-left: 6px;
+  border-radius: 999px; font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums; color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+.filter-tag.active .filter-count { color: var(--accent); background: #fff; }
+/* 有待处理事项时用琥珀色提示，0 的时候保持中性 */
+.filter-tag .filter-count.is-alert { color: #8a6314; background: color-mix(in srgb, #f0b429 22%, transparent); }
+.filter-tag.active .filter-count.is-alert { color: #8a6314; background: #fdf3d7; }
 .filter-search { display: flex; gap: var(--sp-2); flex: 1; max-width: 300px; min-width: 200px; }
 /* 「至」等纯文字件：flex 默认 stretch 会把行块拉满、文字贴顶部，居中对齐 */
 .filter-search .cell-muted { align-self: center; }
@@ -1522,6 +1548,7 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
   body.bulk-on .table td.col-check { display: flex; }
   .table td.actions-cell { justify-content: flex-end; padding-top: 10px; }
   .table .desc-cell { max-width: none; white-space: normal; overflow: visible; text-overflow: clip; }
+  .table .note-input { max-width: none; }
   .table .comment-cell { flex-direction: column; align-items: stretch; text-align: left; }
   .table .comment-cell::before { margin-bottom: 4px; }
   .table td.col-opt { display: none; }  /* projects 次要列隐藏 */

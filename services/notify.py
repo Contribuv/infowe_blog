@@ -366,3 +366,90 @@ def notify_approved_reply(comment_id: int) -> None:
             }
         ]
     )
+
+
+# ── 账号审核通知 ────────────────────────────────────────
+def notify_account_review(*, email: str, name: str, action: str, note: str = "") -> None:
+    """账号审核结果与注销回执。
+
+    为什么必须发：注册被转人工后账号禁止登录，用户在后台点「通过」之前
+    只能反复试密码；「拒绝」更是只剩一句「请联系博主」。这两步都在后台发生，
+    不给用户去信，他永远不知道发生了什么。
+
+    - approved：告诉他可以登录了，闭环；
+    - rejected：带上后台填写的理由，并给出联系博主的途径（拒绝可逆，措辞不留判决口吻）；
+    - deleted：注销回执，只说明账号已删除、评论保留，不引导重新注册。
+
+    开关关闭 / 未配置 SMTP 时静默跳过；失败也不抛，后台操作已经落库，不能回滚。
+    """
+    if action not in ("approved", "rejected", "deleted"):
+        return
+    # 账号类通知单独开关：与评论通知解耦，博主可以只开评论邮件
+    if not settings.bool_of("account_notify", True):
+        return
+    to = (email or "").strip()
+    if not to:
+        return
+
+    blog = settings.get_str("blog_name", "博客").strip() or "博客"
+    site = site_url.base().rstrip("/")
+    who = mail_template.esc((name or "").strip() or to)
+    reason = " ".join((note or "").split())[:200]
+    contact = (settings.get_str("contact_email", "") or settings.get_str("notify_email", "")).strip()
+
+    if action == "approved":
+        headline = "昵称已通过审核"
+        subject = f"[{blog}] 昵称已通过审核，可以登录了"
+        body_html = (
+            '<div style="font-size:15px;line-height:1.85;color:#1f2a33;">'
+            '你的昵称「%s」已通过审核，现在可以用注册邮箱和密码登录了。</div>'
+            '<div style="padding:12px 0 0 0;font-size:13px;line-height:1.9;color:#8a97a4;">'
+            '登录后可以管理头像、查看评论回复提醒。</div>'
+        ) % who
+        button_text, button_url = "打开博客", site
+    elif action == "rejected":
+        headline = "昵称未通过审核"
+        subject = f"[{blog}] 昵称未通过审核"
+        detail = (
+            '<div style="padding:14px 0 0 0;font-size:14px;line-height:1.9;color:#5c6b78;">'
+            '审核说明：%s</div>' % mail_template.esc(reason)
+        ) if reason else ""
+        if contact:
+            tail = (
+                '<div style="padding:10px 0 0 0;font-size:13px;line-height:1.9;color:#8a97a4;">'
+                '如果你认为这是误判，可以发邮件到 <a href="mailto:%s" style="color:#2470a8;'
+                'text-decoration:none;">%s</a> 说明情况。</div>'
+            ) % (mail_template.esc(contact), mail_template.esc(contact))
+        else:
+            tail = (
+                '<div style="padding:10px 0 0 0;font-size:13px;line-height:1.9;color:#8a97a4;">'
+                '如果你认为这是误判，可以直接回复本邮件说明情况。</div>'
+            )
+        body_html = (
+            '<div style="font-size:15px;line-height:1.85;color:#1f2a33;">'
+            '你的昵称「%s」未通过审核，账号暂时无法登录。</div>'
+            '<div style="padding:10px 0 0 0;font-size:14px;line-height:1.9;color:#5c6b78;">'
+            '审核结果可以恢复：确认昵称没问题后，博主会重新放行。</div>%s%s'
+        ) % (who, detail, tail)
+        button_text, button_url = "", ""
+    else:
+        headline = "账号已注销"
+        subject = f"[{blog}] 账号已注销"
+        body_html = (
+            '<div style="font-size:15px;line-height:1.85;color:#1f2a33;">'
+            '你在 %s 的读者账号已删除，之后不能用该邮箱登录，相关审核记录一并失效。</div>'
+            '<div style="padding:12px 0 0 0;font-size:13px;line-height:1.9;color:#8a97a4;">'
+            '你的历史评论与评论身份仍保留在站内，不影响已发布的内容。</div>'
+        ) % mail_template.esc(blog)
+        button_text, button_url = "", ""
+
+    text, page = mail_template.generic_notice(
+        blog_name=blog,
+        site=site,
+        tag="账号通知",
+        headline=headline,
+        body_html=body_html,
+        button_text=button_text,
+        button_url=button_url,
+    )
+    _dispatch([{"to": to, "subject": subject, "text": text, "html": page}])

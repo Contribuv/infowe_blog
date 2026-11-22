@@ -281,6 +281,10 @@ def verify_token(token: str) -> dict | None:
     row = get_by_hash(key)
     if not row:
         return None
+    # 审核未通过的账号不应继续持有登录态：否则「拒绝」只挡住下一次密码登录，
+    # 已登录的人靠 30 天 token 照旧能用账号身份、改昵称、看个人中心，等于没拒绝。
+    if str(row.get("review_status") or REVIEW_APPROVED) != REVIEW_APPROVED:
+        return None
     # 昵称以 comment_identities 的统一昵称为准
     identity = comment_identity.get_row(str(row.get("email") or ""))
     if identity and identity["current_author"]:
@@ -329,6 +333,20 @@ def update_name(row: dict, new_name: str) -> tuple[bool, str]:
     except Exception as exc:
         conn.rollback()
         return False, f"修改失败：{exc}"
+
+
+def delete_user(user_id: int) -> tuple[bool, str]:
+    """删除读者账号（只删 reader_users 一行）。
+
+    评论、评论身份、站内通知、审核留存都不动：删除账号是「这个邮箱不能再登录」，
+    不是抹掉历史；评论正文与审核轨迹仍能在「留存记录」里追溯，
+    这样误删之后也能凭邮箱哈希找回上下文。
+    """
+    row = db.one("SELECT id FROM reader_users WHERE id = ?", (user_id,))
+    if not row:
+        return False, "账号不存在或已被删除"
+    db.execute("DELETE FROM reader_users WHERE id = ?", (user_id,))
+    return True, ""
 
 
 def update_avatar(row: dict, url: str) -> tuple[bool, str]:

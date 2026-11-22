@@ -1,4 +1,4 @@
-"""留存记录插件路由：操作审计 / AI 审计 / 评论留存三合一查看与导出。"""
+"""留存记录插件路由：操作审计 / AI 审计 / 评论留存 / 审核留存 四合一查看与导出。"""
 
 from __future__ import annotations
 
@@ -43,7 +43,25 @@ TABS = {
         "time_col": "created_at",
         "keyword_cols": "author, email, website, ip_text, user_agent, content, identity_note",
     },
+    "users": {
+        "label": "审核留存",
+        # 注册昵称审核轨迹：机审结论 + 人工处理结果，一条注册一条记录
+        "sql": (
+            "SELECT id, user_id, name, email, source, decision, reason, status, operator, "
+            "created_at, reviewed_at FROM reader_reviews"
+        ),
+        "headers": ["ID", "用户ID", "昵称", "邮箱", "来源", "机审结论", "原因", "处理状态", "处理人", "发生时间", "处理时间"],
+        # 页面把「用户ID + 昵称」并成一列、「发生 + 处理时间」并成一列，完整值进详情弹窗
+        "view_headers": ["ID", "用户", "邮箱", "来源", "机审结论", "原因", "处理状态", "处理人", "时间"],
+        "time_col": "created_at",
+        "keyword_cols": "name, email, reason, operator, source, decision, status",
+    },
 }
+
+# 审核留存：来源 / 机审结论 / 处理状态 的中文映射
+REVIEW_SOURCE_LABELS = {"local": "敏感词", "ai": "AI 模型", "manual": "人工"}
+REVIEW_DECISION_LABELS = {"pass": "放行", "review": "转人工"}
+REVIEW_STATUS_LABELS = {"open": "待处理", "approved": "已通过", "rejected": "已拒绝"}
 
 STATUS_LABELS = {"approved": "已通过", "pending": "待审核", "rejected": "已拒绝", "spam": "垃圾"}
 
@@ -60,6 +78,9 @@ OPS_LABELS = {
     "comment.approve": "通过评论",
     "comment.delete": "删除评论",
     "comment.identity.rename": "评论改名",
+    "user.review.queue": "昵称待审核",
+    "user.review": "读者昵称审核",
+    "user.delete": "删除读者账号",
     "settings.save": "保存设置",
 }
 
@@ -224,6 +245,9 @@ def register(app) -> None:
             total=total,
             args=request.args,
             status_labels=STATUS_LABELS,
+            review_source_labels=REVIEW_SOURCE_LABELS,
+            review_decision_labels=REVIEW_DECISION_LABELS,
+            review_status_labels=REVIEW_STATUS_LABELS,
             exists=exists,
         )
 
@@ -265,4 +289,11 @@ def _cell(key: str, col: str, value) -> str:
         return {"first": "首次", "keep": "沿用", "rename": "改名"}.get(str(value), "")
     if key == "ai" and col == "ok":
         return "是" if value else "否"
+    if key == "users":
+        if col == "source":
+            return REVIEW_SOURCE_LABELS.get(str(value), str(value))
+        if col == "decision":
+            return REVIEW_DECISION_LABELS.get(str(value), str(value))
+        if col == "status":
+            return REVIEW_STATUS_LABELS.get(str(value), str(value))
     return str(value)
