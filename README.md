@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.41-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.41)
+[![version](https://img.shields.io/badge/version-3.9.42-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.42)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.41**
+当前版本：**v3.9.42**
 
-> 最近一次更新完整展开；更早的 140 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 141 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.42
+
+- **升级横幅只在有新版本时显示**：没有更新或检测失败时不再显示「已是最新版本」占位条，仪表盘更干净，也消除了进入页面时「正在检查更新…」的闪动
+- **检查更新入口移到页头**：仪表盘标题右侧新增「检查更新」按钮，手动检测时按钮依次反馈「正在检测… / 发现新版本 / 已是最新 / 检测失败」
+- **有新版本才展开横幅**：自动或手动检测到新版本后，横幅才出现并给出「去升级」入口
+
+<details>
+<summary><b>历史版本（v3.9.41 及更早，共 141 个版本，点击展开）</b></summary>
 
 ### v3.9.41
 
@@ -937,9 +946,6 @@ chown -R www:www var
 - **评论图走 OSS**：通过审核后 `/comment-img` 302 到对象存储（公有直链 / 私有现签），未同步完成时本地兜底；直链 404，不再暴露 `/uploads/comment`
 - **后台审核体验**：评论列表显示「含图 · 人工审核」标记与 64×64 缩略图；点缩略图弹出浮窗预览原图，多图可左右切换，支持 `Esc` / 点遮罩 / `×` 关闭，键盘 `←` `→` 切图
 - **上传预览**：评论图上传后本地用 `blob:` 预览，不再依赖已封禁的服务端直链
-
-<details>
-<summary><b>历史版本（v3.9.40 及更早，共 140 个版本，点击展开）</b></summary>
 
 ### v3.9.40
 

@@ -3,33 +3,16 @@
 {% block admin_content %}
 <div class="page-header">
     <h2>{{ icon('layout-dashboard', 20) | safe }} 仪表盘</h2>
+    <button type="button" class="btn btn-secondary" id="upgrade-check-btn" title="检查是否有新版本">
+        {{ icon('history', 16, 'icon-sm') | safe }} 检查更新
+    </button>
 </div>
 
-{% if upgrade_available and upgrade_check %}
-<div class="upgrade-banner" id="upgrade-status">
-{% else %}
-<div class="upgrade-banner is-idle" id="upgrade-status">
-{% endif %}
+{# 只有检测到新版本时才显示；无更新 / 检测失败都不占版面 #}
+<div class="upgrade-banner" id="upgrade-status" hidden>
     <div class="upgrade-banner-icon">{{ icon('rocket', 24) | safe }}</div>
-    <div class="upgrade-banner-text" id="upgrade-status-text">
-        {% if upgrade_available and upgrade_check %}
-        <strong>发现新版本 v{{ upgrade_check.tag }}</strong>
-        <span>当前版本 v{{ version }}，点击前往一键升级（自动备份数据）</span>
-        {% elif upgrade_check %}
-        <strong>已是最新版本 v{{ version }}</strong>
-        <span>最近一次检测到的版本为 v{{ upgrade_check.tag }}</span>
-        {% else %}
-        <strong>当前版本 v{{ version }}</strong>
-        <span>正在检查更新…</span>
-        {% endif %}
-    </div>
-    <div class="upgrade-status-action" id="upgrade-status-action">
-        {% if upgrade_available and upgrade_check %}
-        <a href="{{ url_for('admin_upgrade') }}" class="btn btn-primary">{{ icon('arrow-up-right', 16, 'icon-sm') | safe }} 去升级</a>
-        {% else %}
-        <button type="button" class="btn btn-secondary" id="upgrade-status-check">{{ icon('history', 16, 'icon-sm') | safe }} 检查更新</button>
-        {% endif %}
-    </div>
+    <div class="upgrade-banner-text" id="upgrade-status-text"></div>
+    <div class="upgrade-status-action" id="upgrade-status-action"></div>
 </div>
 
 {% set pending_total = pending_comments + pending_links %}
@@ -166,11 +149,13 @@
 <script>
 // 主动发现更新：进入仪表盘即回显版本状态。服务端只读缓存（渲染期零网络），
 // 缓存过期或缺失时由这里补一次异步检测，无需刷新第二次页面。
+// 没有新版本时整条横幅不出现，检查入口统一放在页头。
 (function () {
     var box = document.getElementById('upgrade-status');
     if (!box) return;
     var textEl = document.getElementById('upgrade-status-text');
     var actionEl = document.getElementById('upgrade-status-action');
+    var btn = document.getElementById('upgrade-check-btn');
     var meta = JSON.parse(document.getElementById('dashboard-upgrade-meta').textContent);
     var CUR = "{{ version }}";
 
@@ -181,47 +166,65 @@
         return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // 动作区随状态切换：有新版给「去升级」，否则给「检查更新」
-    function setAction(available) {
-        if (available) {
-            actionEl.innerHTML = '<a href="' + esc(meta.upgrade) + '" class="btn btn-primary">' + ICON_UP + ' 去升级</a>';
-            return;
+    var btnTimer = null;
+    function restoreBtn() {
+        if (!btn) return;
+        btn.disabled = false;
+        btn.innerHTML = ICON_RE + ' 检查更新';
+    }
+    // 手动检测时给按钮一个短暂反馈：已是最新 / 检测失败
+    function flashBtn(label) {
+        if (!btn) return;
+        clearTimeout(btnTimer);
+        btn.disabled = true;
+        btn.textContent = label;
+        btnTimer = setTimeout(restoreBtn, 2200);
+    }
+
+    function show(version) {
+        textEl.innerHTML = '<strong>发现新版本 v' + esc(version) + '</strong>' +
+            '<span>当前版本 v' + esc(CUR) + '，点击前往一键升级（自动备份数据）</span>';
+        actionEl.innerHTML = '<a href="' + esc(meta.upgrade) + '" class="btn btn-primary">' + ICON_UP + ' 去升级</a>';
+        box.hidden = false;
+    }
+
+    function hide() {
+        box.hidden = true;
+        textEl.innerHTML = '';
+        actionEl.innerHTML = '';
+    }
+
+    var checking = false;
+
+    function check(force, manual) {
+        if (checking) return;
+        checking = true;
+        if (manual && btn) {
+            clearTimeout(btnTimer);
+            btn.disabled = true;
+            btn.textContent = '正在检测…';
         }
-        actionEl.innerHTML = '<button type="button" class="btn btn-secondary" id="upgrade-status-check">' + ICON_RE + ' 检查更新</button>';
-        bindCheck();
-    }
 
-    function paint(html, available) {
-        textEl.innerHTML = html;
-        box.classList.toggle('is-idle', !available);
-        setAction(available);
-    }
-
-    function apply(d) {
-        if (d && d.upgradable && d.latest_version) {
-            paint('<strong>发现新版本 v' + esc(d.latest_version) + '</strong><span>当前版本 v' + esc(CUR) + '，点击前往一键升级（自动备份数据）</span>', true);
-        } else if (d && d.ok) {
-            paint('<strong>已是最新版本 v' + esc(CUR) + '</strong><span>刚刚完成检测，未发现更高版本</span>', false);
-        } else {
-            paint('<strong>当前版本 v' + esc(CUR) + '</strong><span>未能获取版本信息（网络受限或 API 限流），可点「检查更新」重试</span>', false);
-        }
-    }
-
-    function check(force) {
-        textEl.innerHTML = '<strong>当前版本 v' + esc(CUR) + '</strong><span>' + (force ? '正在重新检测…' : '正在检查更新…') + '</span>';
         fetch(meta.check + (force ? '?force=1' : ''), { credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
-            .then(apply)
-            .catch(function () { apply({ ok: false }); });
+            .then(function (d) {
+                if (d && d.upgradable && d.latest_version) {
+                    show(d.latest_version);
+                    if (manual) flashBtn('发现新版本');
+                } else {
+                    hide();
+                    if (manual) flashBtn(d && d.ok ? '已是最新' : '检测失败');
+                }
+            })
+            .catch(function () {
+                hide();
+                if (manual) flashBtn('检测失败');
+            })
+            .then(function () { checking = false; });
     }
 
-    function bindCheck() {
-        var btn = document.getElementById('upgrade-status-check');
-        if (btn) btn.addEventListener('click', function () { check(true); });
-    }
-
-    bindCheck();
-    if (meta.auto) check(false);
+    if (btn) btn.addEventListener('click', function () { check(true, true); });
+    if (meta.auto) check(false, false);
 })();
 </script>
 {% endblock %}

@@ -900,6 +900,8 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
   border: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
   border-radius: var(--r-lg);
 }
+/* 没检测到新版本时整条隐藏：display:flex 会盖掉 hidden 属性的默认样式 */
+.upgrade-banner[hidden] { display: none; }
 .upgrade-banner-icon {
   display: flex; align-items: center; justify-content: center;
   width: 42px; height: 42px; flex: none;
