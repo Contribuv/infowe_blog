@@ -5823,7 +5823,11 @@ html.new-on .pw-card.is-new::after {
 /* 灯箱打开时连导航一起盖住：sticky 导航带毛玻璃，纯靠 z-index 在部分合成路径下仍会透出 */
 body.lightbox-open .tech-nav,
 body.lightbox-open .tech-mobile-toggle,
-body.lightbox-open .tech-drawer { visibility: hidden; }
+body.lightbox-open .tech-drawer,
+/* 悬浮按钮（回到顶部 / 跳到评论 / 评论浮窗）也在灯箱下层：
+   遮罩是半透明毛玻璃，只靠 z-index 会看到淡淡轮廓，这里直接隐藏 */
+body.lightbox-open .tech-top,
+body.lightbox-open .cmt-fab { visibility: hidden; }
 
 .pw-lb-box {
   display: flex;

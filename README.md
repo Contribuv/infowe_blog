@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.47-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.47)
+[![version](https://img.shields.io/badge/version-3.9.48-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.48)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.47**
+当前版本：**v3.9.48**
 
-> 最近一次更新完整展开；更早的 146 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 147 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.48
+
+- **灯箱打开时隐藏悬浮按钮**：回到顶部 / 跳到评论 / 评论浮窗按钮加入 `body.lightbox-open` 隐藏名单；此前只靠 z-index 压在遮罩下，毛玻璃上仍能看到淡淡轮廓
+
+<details>
+<summary><b>历史版本（v3.9.47 及更早，共 147 个版本，点击展开）</b></summary>
 
 ### v3.9.47
 
@@ -936,9 +943,6 @@ chown -R www:www var
 - **评论灯箱键盘与关闭**：支持 `←` / `→` 切换、`Esc` 关闭，打开时隐藏导航、锁定页面滚动
 - **极简备注规则**：图片备注只在用户写了自定义说明时显示；`[]` 为空或「图片 / image / img / photo / picture」等占位词不显示，也不占位
 - **占位 alt 清洗**：文章正文、文章灯箱、评论渲染、评论灯箱四处统一处理，历史内容里的「图片」也不再当作备注
-
-<details>
-<summary><b>历史版本（v3.9.46 及更早，共 146 个版本，点击展开）</b></summary>
 
 ### v3.9.46
 
