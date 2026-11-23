@@ -49,6 +49,14 @@ param(
 $ErrorActionPreference = "Continue"
 Set-Location -LiteralPath $PSScriptRoot
 
+# GITEE_TOKEN 优先取当前进程环境变量，其次回退到用户级环境变量。
+# IDE、常驻终端可能早于变量设置就已启动，只读 $env: 会拿不到新值，
+# 导致 Gitee Release 被静默跳过。
+$giteeToken = $env:GITEE_TOKEN
+if (-not $giteeToken) {
+    $giteeToken = [Environment]::GetEnvironmentVariable("GITEE_TOKEN", "User")
+}
+
 function Write-Step([string]$Message) {
     Write-Host ""
     Write-Host "==> $Message" -ForegroundColor Cyan
@@ -292,12 +300,12 @@ if (-not $SkipGitee) {
     $giteeSlug = Get-RemoteSlug $GiteeRemote
     if (-not $giteeSlug) {
         Write-Warn "无法从远端 $GiteeRemote 解析 owner/repo，跳过 Gitee Release"
-    } elseif (-not $env:GITEE_TOKEN) {
-        Write-Warn "未设置环境变量 GITEE_TOKEN，跳过 Gitee Release"
+    } elseif (-not $giteeToken) {
+        Write-Warn "未设置 GITEE_TOKEN（进程/用户环境变量都没有），跳过 Gitee Release"
         Write-Host "  设置后可手动补建，或删除本地标签后重跑：`$env:GITEE_TOKEN='<token>'; .\release.ps1"
     } else {
         $api = "https://gitee.com/api/v5/repos/$($giteeSlug.Owner)/$($giteeSlug.Repo)/releases"
-        $token = $env:GITEE_TOKEN
+        $token = $giteeToken
         $headers = @{ "Content-Type" = "application/json; charset=utf-8" }
         $payload = @{
             access_token     = $token
