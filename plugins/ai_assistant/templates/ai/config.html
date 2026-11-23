@@ -103,7 +103,7 @@
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="user_name_moderation" {% if cfg.user_name_moderation %}checked{% endif %}>
-                    <span><strong>注册昵称机审</strong><small>注册 / 改昵称时判断是否违规；违规昵称转人工审核，未通过前无法登录，记录留在「用户管理」</small></span>
+                    <span><strong>注册昵称机审</strong><small>注册 / 改昵称时判断是否违规；违规昵称转人工审核，未通过前无法登录。记录写入「留存记录 → 审核留存」，账号状态在「用户管理」查看；关闭 AI 判断后仍保留本地敏感词兜底</small></span>
                 </label>
                 <label class="ai-switch">
                     <input type="checkbox" name="comment_reply" {% if cfg.comment_reply %}checked{% endif %}>

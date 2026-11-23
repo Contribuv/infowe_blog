@@ -59,9 +59,9 @@ TABS = {
 }
 
 # 审核留存：来源 / 机审结论 / 处理状态 的中文映射
-REVIEW_SOURCE_LABELS = {"local": "敏感词", "ai": "AI 模型", "manual": "人工"}
-REVIEW_DECISION_LABELS = {"pass": "放行", "review": "转人工"}
-REVIEW_STATUS_LABELS = {"open": "待处理", "approved": "已通过", "rejected": "已拒绝"}
+REVIEW_SOURCE_LABELS = {"local": "敏感词", "ai": "AI 模型", "manual": "人工", "account": "账号变更"}
+REVIEW_DECISION_LABELS = {"pass": "放行", "review": "转人工", "": "—"}
+REVIEW_STATUS_LABELS = {"open": "待处理", "approved": "已通过", "rejected": "已拒绝", "done": "已记录"}
 
 STATUS_LABELS = {"approved": "已通过", "pending": "待审核", "rejected": "已拒绝", "spam": "垃圾"}
 

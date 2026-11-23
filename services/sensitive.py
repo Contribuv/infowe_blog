@@ -40,7 +40,22 @@ def filter_text(text: str) -> str:
 def has(text: str) -> bool:
     if not text or not enabled():
         return False
-    return any(w in text for w in words())
+    return bool(screen(text))
+
+
+def screen(text: str) -> str:
+    """只按词表检查、不看「敏感词过滤」总开关（昵称审核等安全兜底用）。
+
+    返回命中的第一个词，未命中返回空串。
+    """
+    value = str(text or "").lower()
+    if not value:
+        return ""
+    for word in words():
+        item = str(word or "").lower()
+        if item and item in value:
+            return word
+    return ""
 
 
 def as_json() -> str:

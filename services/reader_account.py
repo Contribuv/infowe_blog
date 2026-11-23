@@ -200,7 +200,10 @@ def register(email: str, code: str, password: str, name: str, link: str = "") ->
 
     # 与 comment_identities 打通：让注册用户的昵称成为该邮箱的统一昵称
     comment_identity.remember(email, name)
-    return get_by_hash(key), ""
+    row = get_by_hash(key)
+    # 机审直接通过的注册也留一条「账号变更」记录，后台留存页能看到完整账号时间线
+    _log_account_change(row, "register", f"昵称机审通过（{source}）")
+    return row, ""
 
 
 def moderate_name(name: str) -> tuple[str, str, str]:
@@ -215,8 +218,10 @@ def moderate_name(name: str) -> tuple[str, str, str]:
     try:
         from services import sensitive
 
-        if sensitive.has(text):
-            return "review", "local", "昵称命中敏感词"
+        # 昵称审核是安全兜底，不受「敏感词过滤」总开关影响：只要词表里配了词就拦
+        hit = sensitive.screen(text)
+        if hit:
+            return "review", "local", f"昵称命中敏感词：{hit}"
     except Exception:
         pass
     try:
@@ -326,6 +331,43 @@ def verify_token(token: str) -> dict | None:
 
 
 # ── 账号管理：昵称 / 头像 / 邮箱 ──
+ACCOUNT_SOURCE = "account"
+ACCOUNT_LABELS = {
+    "register": "注册账号",
+    "avatar": "修改头像",
+    "email": "换绑邮箱",
+    "name": "修改昵称",
+    "password": "修改密码",
+}
+
+
+def _log_account_change(row: dict, kind: str, detail: str = "") -> None:
+    """把账号自助变更写进审核留存（reader_reviews），后台可追溯。
+
+    与昵称机审共用一张表：source=account 表示账号操作，status=done 表示已完成，
+    前端「来源」列会显示成「账号变更」。
+    """
+    if not row:
+        return
+    label = ACCOUNT_LABELS.get(kind, kind)
+    reason = label + ("：" + detail if detail else "")
+    try:
+        db.insert(
+            "INSERT INTO reader_reviews "
+            "(user_id, email_hash, email, name, source, decision, reason, status, operator, created_at, reviewed_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                int(row.get("id") or 0), str(row.get("email_hash") or ""),
+                str(row.get("email") or ""), str(row.get("name") or ""),
+                ACCOUNT_SOURCE, "", reason, "done", str(row.get("name") or ""),
+                db.now(), db.now(),
+            ),
+        )
+    except Exception:  # noqa: BLE001
+        # 留存失败不影响账号操作本身
+        pass
+
+
 def update_name(row: dict, new_name: str) -> tuple[bool, str]:
     name = str(new_name or "").strip()
     if len(name) < 1 or len(name) > 30:
@@ -362,6 +404,7 @@ def update_name(row: dict, new_name: str) -> tuple[bool, str]:
             )
         conn.execute("UPDATE comments SET author=? WHERE email_hash=? AND deleted_at IS NULL", (name, key))
         conn.commit()
+        _log_account_change({**row, "name": name}, "name")
         return True, ""
     except Exception as exc:
         conn.rollback()
@@ -391,6 +434,7 @@ def update_avatar(row: dict, url: str) -> tuple[bool, str]:
         return False, "头像地址无效"
     db.execute("UPDATE reader_users SET avatar_url=?, updated_at=? WHERE email_hash=?",
                (value, db.now(), key))
+    _log_account_change(row, "avatar", "已更新" if value else "已移除")
     return True, ""
 
 
@@ -407,6 +451,7 @@ def update_password(row: dict, old_password: str, new_password: str) -> tuple[bo
         "UPDATE reader_users SET password_hash=?, updated_at=? WHERE email_hash=?",
         (generate_password_hash(pwd), db.now(), str(row.get("email_hash") or "")),
     )
+    _log_account_change(row, "password")
     return True, ""
 
 
@@ -440,6 +485,7 @@ def update_email(row: dict, new_email: str, code: str) -> tuple[dict | None, str
         conn.rollback()
         return None, f"换绑失败：{exc}"
     updated = get_by_hash(new_key)
+    _log_account_change(updated or row, "email", f"{row.get('email') or ''} → {normalize_email(new_email)}")
     return updated, ""
 
 

@@ -129,6 +129,7 @@
                         {% if r.source == 'local' %}<span class="badge badge-warning">敏感词</span>
                         {% elif r.source == 'ai' %}<span class="badge">AI 模型</span>
                         {% elif r.source == 'manual' %}<span class="badge">人工</span>
+                        {% elif r.source == 'account' %}<span class="badge badge-private">账号变更</span>
                         {% else %}<span class="cell-muted">—</span>{% endif %}
                     </td>
                     <td data-label="机审结论">
@@ -141,6 +142,7 @@
                         {% if r.status == 'open' %}<span class="badge badge-warning">待处理</span>
                         {% elif r.status == 'approved' %}<span class="badge badge-success">已通过</span>
                         {% elif r.status == 'rejected' %}<span class="badge badge-danger">已拒绝</span>
+                        {% elif r.status == 'done' %}<span class="badge badge-success">已记录</span>
                         {% else %}<span class="cell-muted">{{ r.status or '—' }}</span>{% endif %}
                     </td>
                     <td data-label="处理人">{{ r.operator or '—' }}</td>

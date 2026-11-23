@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.60-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.60)
+[![version](https://img.shields.io/badge/version-3.9.61-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.61)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.60**
+当前版本：**v3.9.61**
 
-> 最近一次更新完整展开；更早的 159 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 160 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.61
+
+- **审核留存补账号时间线**：注册（机审通过也记）、修改昵称、修改头像、换绑邮箱、修改密码都会写一条 `reader_reviews` 记录，「留存记录 → 审核留存」不再只有转人工才可见
+- **来源与状态区分**：账号操作显示为「账号变更」徽章、状态「已记录」；昵称机审仍是「敏感词 / AI 模型 / 人工 + 待处理 / 已通过 / 已拒绝」
+- **原因列写清动作**：修改头像 / 修改昵称 / 换绑邮箱（带旧 → 新邮箱）/ 修改密码，后台一眼能看懂做了什么
+- **失败不影响操作**：留存写入异常会被静默忽略，不会让改头像或换邮箱失败
+- **昵称审核文案修正**：AI 设置页改为「记录写入『留存记录 → 审核留存』，账号状态在『用户管理』查看」
+- **本地敏感词兜底真正生效**：昵称审核改用 `sensitive.screen()`，不再依赖「敏感词过滤」总开关；只要词表里配了词，关闭 AI 判断后仍会拦下违规昵称
+- 说明：功能从本版起生效，之前的账号变更没有历史记录可回填
 
 ### v3.9.60
 
