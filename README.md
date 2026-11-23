@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.74-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.74)
+[![version](https://img.shields.io/badge/version-3.9.75-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.75)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.74**
+当前版本：**v3.9.75**
 
-> 最近一次更新完整展开；更早的 170 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 171 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.75
+
+- **对象存储浏览器直传**：上传接口返回 PUT 预签名 URL，编辑器拿到后由浏览器直接把文件推到 OSS，绕开「服务器 → 对象存储」的公网链路；NAS / 家用宽带等上行带宽小的场景，大图大视频不再因服务器中转写超时而同步失败。服务器兜底推送保留，直传成功回调 `direct-done` 后自动跳过兜底
+- **修复多进程下启用 OSS 不生效**：gunicorn 多 worker 时，后台运行时启用插件只在处理请求的进程注册发布钩子，其余进程上传不同步到 OSS；现在各进程在首次上传 / 渲染时按数据库启用标记惰性补注册钩子，无需重启即可全员生效
+- **预签名 PUT 与 GET 共用签名实现**：`s3.presign` 重构为 `_presign(method)`，新增 `presign_put`，只签 host、payload 用 UNSIGNED-PAYLOAD，浏览器带任意 Content-Type 直传不破坏签名
 
 ### v3.9.74
 
