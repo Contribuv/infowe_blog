@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.64-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.64)
+[![version](https://img.shields.io/badge/version-3.9.65-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.65)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.64**
+当前版本：**v3.9.65**
 
-> 最近一次更新完整展开；更早的 163 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 164 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.65
+
+- **改联系邮箱自动迁移旧评论**：在「账号安全」保存新的联系邮箱时，旧邮箱下发过的评论（含历史 `is_owner=0` 数据）会自动改成新邮箱、新昵称并标记为博主，旧邮箱从此只是普通读者
+- **迁移工具保留但降级为补迁**：自动迁移只知道「上一次的邮箱」，改过多次（A→B→C）或更早未标记的邮箱仍需手动补；页面文案已说明这一点
+- **迁移页样式修复**：改用 `card-body` 布局，当前博主信息不再套输入框样式，预览区与确认勾选使用独立样式
+- **修复 `.webp.webp`**：预览副本不再给 `.webp` 源再追加一层后缀，`preview_rel()` 对 webp 源返回空；历史双后缀对象仍能在孤儿列表里正常清理
+- **孤儿识别补漏（重要）**：`reader_users.avatar_url`（读者上传头像）加入引用集合，`reader/` 与 `previews/` 目录整体跳过；OSS 端同步加入读者头像引用与 `reader/` 目录保护，避免误删头像与派生副本
+- **后台侧栏默认全展开**：撤销“默认收起”策略，三个分组全部展开，用户手动收起后才记忆
 
 ### v3.9.64
 
@@ -1052,7 +1061,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.63 及更早，共 163 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.64 及更早，共 164 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

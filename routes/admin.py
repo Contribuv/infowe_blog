@@ -1236,24 +1236,25 @@ def admin_settings():
 
 
 def _sync_owner_comments(old_author: str, new_author: str, old_email: str, new_email: str) -> None:
-    """博主改昵称 / 联系邮箱后，历史评论同步，避免前台继续显示旧昵称、旧邮箱。
+    """博主改昵称 / 联系邮箱后，历史评论自动迁移到新身份。
 
-    只处理 is_owner=1 的博主评论，访客评论一律不动。
+    换邮箱时按「旧联系邮箱」匹配：旧邮箱下发过的评论（含 is_owner=0 的历史数据）
+    统一改成新邮箱、新昵称并标记为博主，旧邮箱从此只是普通读者。
+    只改昵称时，只动 is_owner=1 的博主评论。
     """
     from services import avatar
 
-    if new_author and new_author != old_author:
-        db.execute(
-            "UPDATE comments SET author=? WHERE is_owner=1 AND deleted_at IS NULL",
-            (new_author,),
-        )
+    if not new_author and not new_email:
+        return
+    new_hash = avatar.email_hash(new_email) if new_email else ""
+    old_hash = avatar.email_hash(old_email) if old_email else ""
+
     if new_email and new_email != old_email:
-        new_hash = avatar.email_hash(new_email)
         db.execute(
-            "UPDATE comments SET email=?, email_hash=? WHERE is_owner=1 AND deleted_at IS NULL",
-            (new_email, new_hash),
+            "UPDATE comments SET author=?, email=?, email_hash=?, is_owner=1 "
+            "WHERE deleted_at IS NULL AND (is_owner=1 OR email_hash=? OR lower(email)=?)",
+            (new_author or "博主", new_email, new_hash, old_hash, old_email.lower()),
         )
-        old_hash = avatar.email_hash(old_email) if old_email else ""
         if old_hash and old_hash != new_hash:
             # 昵称统一表跟着迁移：新哈希已存在时直接丢弃旧行，避免唯一键冲突
             if db.one("SELECT 1 FROM comment_identities WHERE email_hash=?", (new_hash,)):
@@ -1263,6 +1264,13 @@ def _sync_owner_comments(old_author: str, new_author: str, old_email: str, new_e
                     "UPDATE comment_identities SET email_hash=?, email=? WHERE email_hash=?",
                     (new_hash, new_email, old_hash),
                 )
+
+    # 更早的博主评论（is_owner=1，但邮箱不是这次改的旧邮箱）也统一作者名
+    if new_author and new_author != old_author:
+        db.execute(
+            "UPDATE comments SET author=? WHERE is_owner=1 AND deleted_at IS NULL",
+            (new_author,),
+        )
 
 
 def _save_settings():

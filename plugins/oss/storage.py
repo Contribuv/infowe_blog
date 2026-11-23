@@ -42,6 +42,8 @@ TARGETS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("timeline", ("content",)),
     ("settings", ("value",)),
     ("plugins", ("config",)),
+    # 读者头像 /uploads/reader/avatar/... 不在保留目录里，必须按引用保护
+    ("reader_users", ("avatar_url",)),
 )
 
 # 站内上传路径：排除引号、括号、尖括号与空白；同时要求前面不是 URL 字符，
@@ -325,6 +327,10 @@ def preview_rel(rel_url: str) -> str:
     rel = str(rel_url or "").lstrip("/")
     if rel.startswith("uploads/"):
         rel = rel[len("uploads/"):]
+    # .webp 源不再生成副本（见 _store_preview）；这里返回空串做兜底，
+    # 避免旧调用拼出 a.webp.webp
+    if rel.lower().endswith(".webp"):
+        return ""
     return f"/previews/{rel}.webp"
 
 
@@ -349,9 +355,11 @@ def publish_preview(local_path: str | Path, rel_url: str) -> str:
     if cfg is None:
         return ""
     path = Path(local_path)
+    target = preview_rel(rel_url)
+    if not target:
+        return ""
     try:
         data = path.read_bytes()
-        target = preview_rel(rel_url)
         s3.put(cfg, target, data, "image/webp")
     except Exception as exc:  # noqa: BLE001
         logger.warning("预览副本上传失败 %s：%s", rel_url, exc)
@@ -367,6 +375,8 @@ def preview_url(rel_url: str, expires: int | None = None) -> str:
         return ""
     ttl = expires or presign_expires()
     for candidate in (preview_rel(rel_url), rel_url):
+        if not candidate:
+            continue
         try:
             if not s3.head(cfg, cfg.key_of(candidate)):
                 continue
@@ -897,7 +907,7 @@ def scan_orphans(limit: int = 500) -> list[dict]:
         # 头像 / AI 头像 / 项目文件由各自的入口管理，不当孤儿。
         # uploads/previews/ 是旧版预览副本路径（新版在顶层 previews/），
         # 代码已不再引用，按普通孤儿列出让用户清理。
-        if rel.startswith(("avatar/", "ai-avatar/", "projects/")):
+        if rel.startswith(("avatar/", "ai-avatar/", "projects/", "reader/")):
             continue
         local = Path(UPLOADS_DIR) / rel
         name = key.rsplit("/", 1)[-1]

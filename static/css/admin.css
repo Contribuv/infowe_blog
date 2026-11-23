@@ -584,6 +584,25 @@ svg { vertical-align: -3px; flex: none; }
 .status-cell { width: 150px; }
 .status-cell .cell-sub { max-width: 146px; }
 .cell-muted { color: var(--text-tertiary); }
+
+/* 历史博主信息迁移页 */
+.owner-migrate-intro { margin: 0 0 var(--sp-4); }
+.owner-current {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--bg-hover);
+}
+.owner-current--empty { color: var(--text-tertiary); font-size: var(--fz-sm); }
+.owner-migrate-form { margin-top: var(--sp-2); }
+.owner-migrate-preview {
+  margin-top: var(--sp-5); padding-top: var(--sp-4);
+  border-top: 1px solid var(--border);
+}
+.owner-migrate-line { margin: 0; font-size: var(--fz-md); line-height: 1.7; color: var(--text-secondary); }
+.owner-migrate-confirm {
+  display: flex; align-items: center; gap: 8px;
+  margin: var(--sp-3) 0; font-size: var(--fz-sm); color: var(--text-secondary); cursor: pointer;
+}
 .cell-link { word-break: break-all; }
 /* 批量选择列：默认隐藏（页面更干净），进入批量模式（body.bulk-on）后显示。
    用 .table td.col-check（0,2,1）而非 .col-check（0,1,0），否则被移动端 .table td（0,1,1）压过 */

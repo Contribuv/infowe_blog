@@ -913,10 +913,11 @@ def _store_preview(path: Path, rel_url: str) -> None:
 
     预览副本让「编辑器里走对象存储」和「预览要快」不再二选一：
     原图 500KB 的截图，副本只有 30KB 左右。
+    .webp 源本身就是压缩格式，再生成副本会得到 xxx.webp.webp 这种怪名字，直接跳过。
     """
     if not remote_active() or not rel_url.startswith("/uploads/"):
         return
-    if path.suffix.lower() not in _PREVIEW_EXTS:
+    if path.suffix.lower() not in _PREVIEW_EXTS or path.suffix.lower() == ".webp":
         return
     rel = rel_url[len("/uploads/"):]
     try:
@@ -1032,6 +1033,9 @@ def referenced_urls() -> set[str]:
         "SELECT name, description, url FROM projects",
         "SELECT content FROM timeline",
         "SELECT key, value FROM settings",
+        # 读者上传的头像：路径是 /uploads/reader/avatar/...，不在 avatar/ 目录下，
+        # 必须显式扫描，否则会被当成孤儿清理
+        "SELECT avatar_url FROM reader_users",
     ]
     for sql in sources:
         for row in db.query(sql):
@@ -1062,10 +1066,10 @@ def orphans(protect_hours: int = 24) -> list[dict]:
         parts = rel.split("/")
         if not parts or parts[0].startswith("."):
             continue
-        # 跳过保留目录（头像 / AI 头像 / 项目文件）与隐藏目录。
+        # 跳过保留目录（头像 / AI 头像 / 用户头像 / 项目文件 / 派生预览）与隐藏目录。
         # 不再要求至少两级路径：uploads 根下直接放置的文件同样可能是孤儿，
         # 之前 len(parts) < 2 的过滤会让它们永远不显示、也永远清理不到。
-        if parts[0] in {"avatar", "ai-avatar", "projects"}:
+        if parts[0] in {"avatar", "ai-avatar", "projects", "reader", "previews"}:
             continue
         url = "/uploads/" + rel
         if url in referenced:
@@ -1092,7 +1096,7 @@ def orphans(protect_hours: int = 24) -> list[dict]:
 def delete_rel(rel: str) -> str:
     rel = unquote(str(rel or "")).replace("\\", "/").lstrip("/")
     parts = rel.split("/")
-    if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects"}:
+    if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects", "reader", "previews"}:
         return "非法路径"
     path = root() / rel
     existed = path.is_file()
