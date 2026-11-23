@@ -12,6 +12,18 @@
     });
   }
 
+  /* 抽屉里的图标一律用线性 SVG，不用 emoji（emoji 在 Windows / 不同字体下
+     尺寸和基线都不稳，且一眼就是「AI 生成」的味道） */
+  var ICONS = {
+    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    comment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/><path d="M8 11h8M8 15h5"/></svg>',
+    at: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.9 7.9"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    mailbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/><path d="m2 7 10 6 10-6"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>',
+    close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+  };
+
   /* ── 动态创建抽屉 DOM（两套主题共用，不依赖模板结构） ── */
   var drawer = document.createElement('div');
   drawer.className = 'ov-root';
@@ -28,8 +40,8 @@
     + '      </div>'
     + '    </div>'
     + '    <div class="ov-head-actions">'
-    + '      <button type="button" class="ov-icon" id="ov-refresh" aria-label="刷新" title="刷新">⟳</button>'
-    + '      <button type="button" class="ov-icon" data-ov-close aria-label="关闭" title="关闭">×</button>'
+    + '      <button type="button" class="ov-icon" id="ov-refresh" aria-label="刷新" title="刷新">' + ICONS.refresh + '</button>'
+    + '      <button type="button" class="ov-icon" data-ov-close aria-label="关闭" title="关闭">' + ICONS.close + '</button>'
     + '    </div>'
     + '  </div>'
     + '  <div class="ov-body" id="ov-body"><div class="ov-loading">加载中…</div></div>'
@@ -256,7 +268,7 @@
     var u = d.user || {};
     var html = '';
     if (!d.identified) {
-      return '<div class="ov-empty"><div class="ov-empty-icon">👤</div><p>还没有识别你的身份</p>'
+      return '<div class="ov-empty"><div class="ov-empty-icon">' + ICONS.user + '</div><p>还没有识别你的身份</p>'
         + '<span>先发表一条评论（昵称 + 邮箱），或邮箱登录后即可查看你的概览。</span></div>';
     }
     var badge = d.identity_type === 'admin' ? '博主'
@@ -344,10 +356,10 @@
     var pool = commentPool(d);
     if (!pool.length) {
       var emptyMap = {
-        all: ['📝', '还没有评论', '发布评论后，你和别人的互动都会出现在这里。'],
-        mention: ['@', '还没有人回复你', '别人回复你的评论后会显示在这里。'],
-        mine: ['📝', '还没有已通过的评论', '审核通过的评论会显示在这里。'],
-        pending: ['⏳', '没有待审评论', '新评论审核通过前会先放在这里。']
+        all: [ICONS.comment, '还没有评论', '发布评论后，你和别人的互动都会出现在这里。'],
+        mention: [ICONS.at, '还没有人回复你', '别人回复你的评论后会显示在这里。'],
+        mine: [ICONS.comment, '还没有已通过的评论', '审核通过的评论会显示在这里。'],
+        pending: [ICONS.clock, '没有待审评论', '新评论审核通过前会先放在这里。']
       };
       var e = emptyMap[cmtFilter] || emptyMap.all;
       return html + '<div class="ov-empty"><div class="ov-empty-icon">' + e[0] + '</div><p>' + e[1] + '</p><span>' + e[2] + '</span></div>';

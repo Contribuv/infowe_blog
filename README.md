@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.58-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.58)
+[![version](https://img.shields.io/badge/version-3.9.59-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.59)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,14 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.58**
+当前版本：**v3.9.59**
 
-> 最近一次更新完整展开；更早的 157 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 158 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.59
+
+- **通知抽屉图标全部换 SVG**：空态的「身份 / 评论 / @ / 待审」不再用 👤 / 📝 / @ / ⏳ 等 emoji，改为统一线性图标；头部刷新与关闭也换成 SVG，尺寸与描边随主题色
+- **尺寸统一**：空态图标 34×34、头部按钮 15×15，由 CSS 控制，不再受系统 emoji 字体影响
 
 ### v3.9.58
 
@@ -1006,7 +1011,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.57 及更早，共 157 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.58 及更早，共 158 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

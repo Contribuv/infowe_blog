@@ -420,6 +420,7 @@ img { max-width: 100%; }
   cursor: pointer;
 }
 .ov-icon:hover { color: var(--accent); border-color: var(--accent); }
+.ov-icon svg { width: 15px; height: 15px; display: block; }
 .ov-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 12px; }
 .ov-tab {
   flex: 1; padding: 11px 4px; border: 0; border-bottom: 2px solid transparent;
@@ -565,6 +566,7 @@ img { max-width: 100%; }
 .ov-tip { margin-top: 18px; font-size: 12px; line-height: 1.6; color: var(--text-secondary); text-align: center; }
 .ov-empty { padding: 36px 12px; text-align: center; color: var(--text-secondary); }
 .ov-empty-icon { font-size: 34px; opacity: .5; margin-bottom: 10px; }
+.ov-empty-icon svg { width: 34px; height: 34px; margin: 0 auto; display: block; }
 .ov-empty p { margin: 0 0 6px; font-size: 14px; color: var(--text); }
 .ov-empty span { font-size: 12px; line-height: 1.6; }
 .ov-id-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 500; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); vertical-align: middle; }
