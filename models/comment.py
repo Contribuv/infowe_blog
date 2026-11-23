@@ -117,15 +117,15 @@ def load(
         c["children"] = []
         c["is_ai"] = int(c.get("is_ai") or 0)
         # 博主标签不能只看昵称：昵称人人可填（历史数据里改名/后台导入留下的同名评论很多），
-        # 只比昵称会让普通访客顶着「博主」徽章。这里要求「昵称对得上」且
-        # 「确实是博主发的（is_owner=1）」或「邮箱就是当前联系邮箱」，
-        # 历史换过的旧博主邮箱（如 site023@qq.com）不再自动获得博主身份。
+        # 只比昵称会让普通访客顶着「博主」徽章。is_owner=1 直接认定为博主；
+        # 历史数据里没有 is_owner 的再退回「昵称 + 当前联系邮箱」双匹配。
         c["is_author"] = (
-            bool(author_name)
-            and c.get("author") == author_name
-            and (
-                int(c.get("is_owner") or 0) == 1
-                or (bool(contact_hash) and str(c.get("email_hash") or "") == contact_hash)
+            int(c.get("is_owner") or 0) == 1
+            or (
+                bool(author_name)
+                and c.get("author") == author_name
+                and bool(contact_hash)
+                and str(c.get("email_hash") or "") == contact_hash
             )
         )
         ident = str(c.get("email_hash") or c.get("author") or "")

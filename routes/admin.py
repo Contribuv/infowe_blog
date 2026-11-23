@@ -659,7 +659,9 @@ def admin_comments():
             item["admin_avatar"] = ai_avatar or default_url
             item["admin_avatar_default"] = default_url
             continue
-        is_author = bool(author_name) and item.get("author") == author_name
+        is_author = int(item.get("is_owner") or 0) == 1 or (
+            bool(author_name) and item.get("author") == author_name
+        )
         if is_author and cfg_avatar and cfg_ok:
             item["admin_avatar"] = cfg_avatar
         else:
@@ -1233,10 +1235,42 @@ def admin_settings():
     return render_template("admin/settings.html", **_settings_view())
 
 
+def _sync_owner_comments(old_author: str, new_author: str, old_email: str, new_email: str) -> None:
+    """博主改昵称 / 联系邮箱后，历史评论同步，避免前台继续显示旧昵称、旧邮箱。
+
+    只处理 is_owner=1 的博主评论，访客评论一律不动。
+    """
+    from services import avatar
+
+    if new_author and new_author != old_author:
+        db.execute(
+            "UPDATE comments SET author=? WHERE is_owner=1 AND deleted_at IS NULL",
+            (new_author,),
+        )
+    if new_email and new_email != old_email:
+        new_hash = avatar.email_hash(new_email)
+        db.execute(
+            "UPDATE comments SET email=?, email_hash=? WHERE is_owner=1 AND deleted_at IS NULL",
+            (new_email, new_hash),
+        )
+        old_hash = avatar.email_hash(old_email) if old_email else ""
+        if old_hash and old_hash != new_hash:
+            # 昵称统一表跟着迁移：新哈希已存在时直接丢弃旧行，避免唯一键冲突
+            if db.one("SELECT 1 FROM comment_identities WHERE email_hash=?", (new_hash,)):
+                db.execute("DELETE FROM comment_identities WHERE email_hash=?", (old_hash,))
+            else:
+                db.execute(
+                    "UPDATE comment_identities SET email_hash=?, email=? WHERE email_hash=?",
+                    (new_hash, new_email, old_hash),
+                )
+
+
 def _save_settings():
     from app import _sanitize_stats
 
     full_form = str(request.form.get("_settings_form") or "") == "1"
+    old_author = settings.get_str("author", "")
+    old_email = settings.get_str("contact_email", "") or settings.get_str("notify_email", "")
 
     for key in TEXT_KEYS:
         if key not in request.form:
@@ -1425,6 +1459,12 @@ def _save_settings():
             flash(f"测试邮件已发送（{target}）", "success")
         else:
             flash(message, "error")
+
+    # 博主改名 / 换邮箱：历史评论同步，避免前台继续显示旧昵称、旧邮箱
+    new_author = settings.get_str("author", "")
+    new_email = settings.get_str("contact_email", "") or settings.get_str("notify_email", "")
+    if new_author != old_author or new_email != old_email:
+        _sync_owner_comments(old_author, new_author, old_email, new_email)
 
     flash("设置已保存", "success")
     _audit("settings.save", "", "保存站点设置")

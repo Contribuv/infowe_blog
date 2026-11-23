@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.61-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.61)
+[![version](https://img.shields.io/badge/version-3.9.62-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.62)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.61**
+当前版本：**v3.9.62**
 
-> 最近一次更新完整展开；更早的 160 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 161 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.62
+
+- **博主改昵称 / 邮箱同步历史评论**：后台保存站点设置时，如果 `author` 或 `contact_email` 变了，会把 `is_owner=1` 的历史评论作者名、邮箱、`email_hash` 一起更新，并把昵称统一表迁移到新哈希；访客评论一律不动
+- **博主徽章不再依赖昵称**：前台与后台的评论列表改为「`is_owner=1` 直接认定为博主」，历史评论即使没同步过旧昵称，也不会丢博主徽章、不会回退成 Gravatar 头像
+- **旧邮箱头像问题**：改邮箱后博主评论统一使用后台头像，不会再按旧邮箱去算 Gravatar
+- 说明：只在保存设置时同步，不自动改写其它历史数据
 
 ### v3.9.61
 
@@ -1030,7 +1037,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.59 及更早，共 159 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.61 及更早，共 161 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 
