@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.73-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.73)
+[![version](https://img.shields.io/badge/version-3.9.74-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.74)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.73**
+当前版本：**v3.9.74**
 
 > 最近一次更新完整展开；更早的 170 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.74
+
+- **修复楼中楼连续回复只收到第一轮**：通知邮件此前既没有 `Message-ID` 也没有 `Date`，同一篇文章反复互回时主题和正文高度相似，接收端会把后续几封当成重复邮件吞掉或折叠；现在每封邮件都生成唯一 `Message-ID` 与标准 `Date`
+- **主题带评论编号**：博主提醒与「你的评论收到了回复」主题末尾追加 `#评论ID`，同一篇文章的多轮回复不会再被邮箱客户端按主题合并成一条会话
+- **邮件正文与头像不受影响**：本次只增加标准邮件头与主题标识，模板、收件人规则、审核后补发逻辑均不变
 
 ### v3.9.73
 

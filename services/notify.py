@@ -13,7 +13,7 @@ import smtplib
 import threading
 
 from email.message import EmailMessage
-from email.utils import formataddr
+from email.utils import formataddr, formatdate, make_msgid
 
 import db
 from services import mail_template, settings, site_url
@@ -58,6 +58,11 @@ def send(
     msg["Subject"] = subject
     msg["From"] = formataddr((sender, user))
     msg["To"] = to
+    # RFC 5322 要求每封邮件都有 Message-ID 和 Date。此前两个头都没写：
+    # 楼中楼连续通知时主题、正文高度相似，QQ 邮箱/企业邮会把后几封当成
+    # 重复邮件吞掉或折叠，看起来就像「只发了第一轮」。
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = make_msgid(domain=(user.split("@")[-1] if "@" in user else None))
     if reply_to:
         msg["Reply-To"] = reply_to
     msg.set_content(body or "")
@@ -114,6 +119,15 @@ def _detail_url(detail_path: str, comment_id: int | None) -> str:
     path = detail_path if detail_path.startswith("/") else "/" + detail_path
     anchor = f"#comment-{comment_id}" if comment_id else "#comments"
     return base + path + anchor
+
+
+def _subject_ref(comment_id: int | None) -> str:
+    """主题尾部带评论编号。
+
+    同一篇文章的楼中楼反复互回，主题和正文都很像；客户端按主题归并后
+    看起来像「只发了第一轮」。带上唯一编号，每封都是独立会话。
+    """
+    return f" #{int(comment_id)}" if comment_id else ""
 
 
 def _reader_url(email_hash: str, author: str = "") -> str:
@@ -245,7 +259,7 @@ def notify_comment(
         jobs.append(
             {
                 "to": admin_to,
-                "subject": f"[{blog}] {label}《{title}》收到新评论（{review}）",
+                "subject": f"[{blog}] {label}《{title}》收到新评论（{review}）{_subject_ref(comment_id)}",
                 "text": text,
                 "html": page,
                 "reply_to": commenter,
@@ -274,7 +288,7 @@ def notify_comment(
             jobs.append(
                 {
                     "to": reply_email,
-                    "subject": f"[{blog}] 你的评论收到了回复：{title}",
+                    "subject": f"[{blog}] 你的评论收到了回复：{title}{_subject_ref(comment_id)}",
                     "text": text,
                     "html": page,
                 }
@@ -357,7 +371,7 @@ def notify_approved_reply(comment_id: int) -> None:
         [
             {
                 "to": reply_email,
-                "subject": f"[{blog}] 你的评论收到了回复：{title}",
+                "subject": f"[{blog}] 你的评论收到了回复：{title}{_subject_ref(int(comment_id))}",
                 "text": text,
                 "html": page,
             }
