@@ -52,6 +52,10 @@
                 <input type="email" name="contact_email" class="input-text"
                        value="{{ config.get('contact_email', '') }}"
                        placeholder="如: hello@yourdomain.com">
+                <span class="form-hint">
+                    修改并保存后，旧联系邮箱下发过的评论会自动迁移到新邮箱：作者名改为当前昵称、标记为博主；
+                    旧邮箱注册的读者账号保留，只是那些评论不再算它的。更早的旧邮箱可用下方「历史博主信息迁移」补迁。
+                </span>
             </div>
             <div class="form-group">
                 <label>历史博主信息迁移</label>

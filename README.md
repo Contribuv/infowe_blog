@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.66-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.66)
+[![version](https://img.shields.io/badge/version-3.9.67-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.67)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,13 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.66**
+当前版本：**v3.9.67**
 
-> 最近一次更新完整展开；更早的 165 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 166 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.67
+
+- **联系邮箱旁加行为说明**：「账号安全 → 联系邮箱」输入框下方直接写明——保存后旧邮箱的评论会自动迁移到新邮箱（昵称改当前、标记博主），旧邮箱读者账号保留；更早的旧邮箱用「历史博主信息迁移」补迁
 
 ### v3.9.66
 
@@ -1067,7 +1071,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.65 及更早，共 165 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.66 及更早，共 166 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 
