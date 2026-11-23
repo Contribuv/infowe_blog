@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.68-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.68)
+[![version](https://img.shields.io/badge/version-3.9.69-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.69)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.68**
+当前版本：**v3.9.69**
 
-> 最近一次更新完整展开；更早的 167 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 168 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.69
+
+- **修复「只剩远端副本」的头像 404**：OSS 公共读策略此前会检查本地文件是否存在，本地已被清理、只剩 OSS 副本的图片不转直链，浏览器请求 `/uploads/...` 得到 404；现在统一换成 OSS 直链
+- **评论区头像验证**：博主头像、用户上传头像在评论列表/身份条都走 OSS 预签名地址，页面不再出现 `/uploads/` 本地头像请求
+- **抽屉头像验证**：`/api/reader/overview` 返回的 `user.avatar` 也是 OSS 地址
 
 ### v3.9.68
 
@@ -1078,7 +1084,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.67 及更早，共 167 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.68 及更早，共 168 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

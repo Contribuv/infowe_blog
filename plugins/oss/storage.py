@@ -169,7 +169,7 @@ def rewrite_html(html: str) -> str:
 
         return rewrite_outside_code(html, _sign)
 
-    # 公共读：只把本地确实存在的换成直链，避免历史死链被改成 OSS 地址
+    # 公共读：统一换成直链；本地文件被清理过、只剩远端副本的图也能正常显示
     def _sub(text: str) -> str:
         def _one(match: re.Match) -> str:
             raw = match.group(0)
@@ -177,8 +177,6 @@ def rewrite_html(html: str) -> str:
             if "local=1" in raw:
                 return raw
             rel = unquote(raw.split("?", 1)[0])
-            if not _local_exists(rel):
-                return raw
             return cfg.url_of(rel)
 
         return _REL_RE.sub(_one, text)
