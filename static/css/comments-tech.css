@@ -232,8 +232,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 展开态：登录入口退到动作行，与「收起」同一高度（34px，与提交按钮一致），
    右侧细线用伪元素只画 14px，不会拉出一条长竖线 */
 .cmt-form .cmt-fold-login{
-  position:relative;display:inline-flex;align-items:center;height:34px;padding:0 12px 0 0;border:0;background:none;
-  font-size:13px;line-height:1;font-weight:500;
+  position:relative;display:inline-flex;align-items:center;height:34px;padding:0 12px 0 0;border:1px solid transparent;box-sizing:border-box;background:none;
+  font-size:13px;line-height:normal;font-weight:500;
   color:var(--c-accent);cursor:pointer;white-space:nowrap;
 }
 .cmt-form .cmt-fold-login::after{
@@ -253,6 +253,13 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 间距令牌：卡内元素统一按 9px 排，底部动作行多留 10px。
    数值偏紧是因为卡片本身已有 12px 内距，输入框之间再留 10px 就显散 */
 .cmt-form{--cmt-gap:9px;--cmt-pad:10px}
+/* 表单控件必须继承页面字体：button 默认是 UA 的 Arial，
+   与 span 上的中文字体混排时，同样 13px 也会一大一小、基线错位 */
+.cmt-form button,
+.cmt-form input,
+.cmt-form textarea,
+.cmt-form select,
+.cmt-form label{font-family:inherit}
 /* 展开态内容区的 flex 布局见上方 .cmt-form .cmt-box[open] .cmt-box-body；
    tech 主题只加载本文件（不加载 comments.css），令牌必须在本文件定义 */
 .cmt-form .row{display:flex;gap:9px}
@@ -274,19 +281,21 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
 /* 邮箱必填被拦截时的红边：提示文案交给全局 Toast（底部弹出），这里只标出是哪个字段 */
 .cmt-form input.is-invalid,.cmt-form textarea.is-invalid{border-color:var(--danger,#b4232f);box-shadow:0 0 0 3px rgba(180,35,47,.14)}
-.cmt-form .count{margin-right:auto;display:inline-flex;align-items:center;height:34px;font-size:13px;line-height:1;color:var(--c-text3);font-variant-numeric:tabular-nums}
+/* 动作行统一排版：所有文字 13px / 500，盒高 34px（与提交按钮一致），
+   border-box + 1px 透明描边让内容区高度也和按钮一致，visual 中心完全重合 */
+.cmt-form .count{margin-right:auto;display:inline-flex;align-items:center;height:34px;padding:0;border:1px solid transparent;box-sizing:border-box;font-size:13px;font-weight:500;line-height:normal;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
-.cmt-form .kbd-hint{display:inline-flex;align-items:center;height:34px;font-size:13px;line-height:1;color:var(--c-text3);opacity:.75;white-space:nowrap}
+.cmt-form .kbd-hint{display:inline-flex;align-items:center;height:34px;padding:0;border:1px solid transparent;box-sizing:border-box;font-size:13px;font-weight:500;line-height:normal;color:var(--c-text3);opacity:.75;white-space:nowrap}
 /* 「收起」：次要动作只给文字，不与提交按钮争视觉重量；
    与「登录」同字号（13px）同基线，动作行里的文字才一致 */
-.cmt-form .cmt-fold-back{display:inline-flex;align-items:center;height:34px;align-self:center;padding:0;border:0;background:none;font-size:13px;line-height:1;font-weight:500;color:var(--c-text3);cursor:pointer;white-space:nowrap}
+.cmt-form .cmt-fold-back{display:inline-flex;align-items:center;height:34px;align-self:center;padding:0;border:1px solid transparent;box-sizing:border-box;background:none;font-size:13px;line-height:normal;font-weight:500;color:var(--c-text3);cursor:pointer;white-space:nowrap}
 @media (hover:hover) and (pointer:fine){.cmt-form .cmt-fold-back:hover{color:var(--c-accent)}}
 .cmt-form .cmt-fold-back:focus-visible{outline:2px solid var(--c-accent);outline-offset:3px;border-radius:4px}
 /* 提交按钮：形状与全站动作按钮统一为胶囊（文章页「分享 / 复制 / 返回」同为 999px），
    高度 34px、字号 13px —— 原先 38px / 14px 的方块比左侧工具行高出一截，看着像另一个组件。
    配色沿用 .tech-btn-soft 的柔和主色（不透明淡主色底 + 主色描边 + 主色字）。 */
-.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;height:34px;min-height:34px;box-sizing:border-box;padding:0 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;background:color-mix(in srgb,var(--c-accent) 8%,var(--card-bg,#fff));border:1px solid color-mix(in srgb,var(--c-accent) 30%,var(--card-border,transparent));color:color-mix(in srgb,var(--c-accent) 78%,var(--c-text));box-shadow:none;transition:border-color .2s ease,color .2s ease,background-color .2s ease,transform .12s ease,opacity .15s ease}
+.cmt-form .submit{display:inline-flex;align-items:center;justify-content:center;height:34px;min-height:34px;box-sizing:border-box;padding:0 18px;border-radius:999px;font-size:13px;font-weight:500;cursor:pointer;background:color-mix(in srgb,var(--c-accent) 8%,var(--card-bg,#fff));border:1px solid color-mix(in srgb,var(--c-accent) 30%,var(--card-border,transparent));color:color-mix(in srgb,var(--c-accent) 78%,var(--c-text));box-shadow:none;transition:border-color .2s ease,color .2s ease,background-color .2s ease,transform .12s ease,opacity .15s ease}
 @media (hover:hover) and (pointer:fine){
   /* 悬停沿同一方向加深一档，不换色系 */
   .cmt-form .submit:not([disabled]):hover{
