@@ -166,7 +166,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form.is-inline{margin-top:16px;background:none;border:none;padding:0;border-radius:0}
 .cmt-box{background:var(--c-sub);border:1px solid var(--c-border);border-radius:var(--c-radius);overflow:hidden}
 .cmt-form .cmt-box{background:none;border:none;border-radius:0;overflow:visible}
-.cmt-toggle{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:13.5px;color:var(--c-text2);cursor:pointer;user-select:none;transition:color .15s,background .15s}
+.cmt-toggle{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:14px;color:var(--c-text2);cursor:pointer;user-select:none;transition:color .15s,background .15s}
 .cmt-toggle::-webkit-details-marker{display:none}
 .cmt-box:not([open]) .cmt-box-body{display:none}
 .cmt-box[open] .cmt-box-body{display:block}
@@ -179,7 +179,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 /* 展开态：flex 列布局，间距只由 --cmt-gap 提供。
    选择器必须带 [open]：上面的 .cmt-box[open] .cmt-box-body{display:block} 是 (0,3,0)，
    不带 [open] 的两 class 选择器压不过，flex 与 gap 会静默失效。 */
-.cmt-form .cmt-box[open] .cmt-box-body{display:flex;flex-direction:column;gap:var(--cmt-gap);padding:var(--cmt-pad) 0 0}
+.cmt-form .cmt-box[open] .cmt-box-body{display:flex;flex-direction:column;gap:var(--cmt-gap);padding:0}
 .cmt-form .cmt-box-body>*{margin-bottom:0}
 /* 折叠态整卡都是展开热区：内边距与空白处也给手型，避免只有「写评论」可点 */
 .cmt-form:has(.cmt-box:not([open])){cursor:pointer}
@@ -192,8 +192,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:0}
 .cmt-form .cmt-box:not([open]) .cmt-toggle{
   display:flex;align-items:center;gap:8px;
-  min-height:56px;box-sizing:border-box;
-  padding:17px 20px;
+  min-height:64px;box-sizing:border-box;
+  padding:16px;
   border:0;border-radius:var(--c-radius);background:none;
 }
 /* 浮窗没有外层卡片：占位条自己就是唯一边界，保留描边与内距 */
@@ -204,15 +204,16 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 }
 /* 浮窗 foot：form 外框会与占位条描边叠成「两个外边框」→ 外圈透明，占位条是唯一边界 */
 .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])){border-color:transparent}
-/* 内嵌主位与楼层卡同构：同 18px 20px 内距，占位条/输入区与楼层内容左右对齐 */
-.cmt .cmt-form:not(.is-inline){padding:18px 20px}
+/* 内嵌主位与楼层卡同构：外框与 .cmt-thread 同宽，内距也统一到 16px，
+   输入框 / 文字与下方评论内容左边缘对齐（此前 20px 比楼层多缩进 4px） */
+.cmt .cmt-form:not(.is-inline){padding:16px}
 .cmt-toggle-icon{flex:none;width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;color:var(--c-text3);transition:color .15s}
 .cmt-toggle-placeholder{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--c-text3)}
 .cmt-toggle-act{flex:none;font-size:12.5px;font-weight:500;color:var(--c-accent);white-space:nowrap}
 /* 新访客的折叠条只有一个「登录」按钮（参考评论区惯例：登录入口代替「写评论」） */
 .cmt-form .cmt-toggle-login{
   flex:none;padding:7px 18px;border:0;border-radius:999px;background:var(--c-accent);color:#fff;
-  font-size:12.5px;font-weight:600;line-height:1.4;cursor:pointer;white-space:nowrap;
+  font-size:13px;font-weight:600;line-height:1.4;cursor:pointer;white-space:nowrap;
 }
 @media (hover:hover) and (pointer:fine){
   /* 折叠条整体不响应悬停，只有登录按钮自己给明显反馈：加深底色 + 投影 + 上浮 */
@@ -223,9 +224,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   }
 }
 .cmt-form .cmt-toggle-login:active{background:color-mix(in srgb,var(--c-accent) 72%,#000);transform:translateY(0)}
-/* 展开态：登录入口退到动作行，与「收起」同一基线与高度，不抢提交按钮 */
+/* 展开态：登录入口退到动作行，与「收起」同一基线与高度，不抢提交按钮；
+   右侧细线把「登录」和「收起」两个次要动作分开，避免连成一句 */
 .cmt-form .cmt-fold-login{
-  display:inline-flex;align-items:center;height:20px;padding:0;border:0;background:none;
+  display:inline-flex;align-items:center;height:20px;padding:0 10px 0 0;border:0;border-right:1px solid var(--c-hairline);background:none;
   font-size:12px;line-height:1;font-weight:500;
   color:var(--c-accent);cursor:pointer;white-space:nowrap;
 }
@@ -250,7 +252,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .cmt-more-fields{align-self:flex-start;padding:0;margin-top:-4px;border:0;background:none;font-size:12px;line-height:1.6;color:var(--c-text3);cursor:pointer}
 @media (hover:hover) and (pointer:fine){.cmt-form .cmt-more-fields:hover{color:var(--c-accent)}}
 /* 只作用于文本类输入框：复选框保留原生外观（否则勾选态没有对勾），由 .chk input 单独控制 */
-.cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
+.cmt-form input:not([type="checkbox"]):not([type="radio"]),.cmt-form textarea{width:100%;font:inherit;font-size:14px;line-height:1.6;padding:9px 12px;border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);color:var(--c-text);transition:border-color .15s,box-shadow .15s}
 .cmt-form textarea{min-height:76px;resize:vertical}
 .cmt-form input::placeholder,.cmt-form textarea::placeholder{color:var(--c-text3)}
 .cmt-form input:focus,.cmt-form textarea:focus{outline:none;border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-weak)}
@@ -258,7 +260,7 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
    间距统一由 --cmt-gap / --cmt-pad 提供（定义在本文件 .cmt-form） */
 .cmt-form .foot{display:flex;flex-direction:column;gap:var(--cmt-gap,10px)}
 .cmt-form .cmt-foot-tools{display:flex;align-items:center;gap:var(--cmt-gap,10px);flex-wrap:wrap;min-height:32px}
-.cmt-form .cmt-foot-actions{display:flex;align-items:center;gap:var(--cmt-gap,10px);border-top:1px solid var(--c-hairline);padding-top:var(--cmt-pad,12px)}
+.cmt-form .cmt-foot-actions{display:flex;align-items:center;gap:var(--cmt-gap,10px);border-top:1px solid var(--c-hairline);padding-top:var(--cmt-gap,9px)}
 .cmt-form .chk{display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:12.5px;color:var(--c-text3);cursor:pointer;user-select:none}
 .cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
 /* 邮箱必填被拦截时的红边：提示文案交给全局 Toast（底部弹出），这里只标出是哪个字段 */
@@ -371,7 +373,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   .cmt-thread{padding:16px 10px 13px}
   .cmt-replies{margin-left:0;padding-left:calc(var(--av-root) - var(--av-reply))}
   .cmt-replies .cmt-item+.cmt-item{margin-top:14px}
-  .cmt-form{padding:10px 12px}
+  .cmt-form{padding:12px}
+  .cmt-form .cmt-box:not([open]) .cmt-toggle{min-height:60px;padding:14px 12px}
   .cmt-form .row{flex-direction:column;gap:7px}
   .cmt-text{font-size:14px;line-height:1.75}
   .cmt-item[data-lv="reply"] .cmt-text{font-size:14px;line-height:1.75}
@@ -482,12 +485,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 
 /* 折叠态样式统一定义在上方「折叠态 = 空输入框」段，这里只保留卡片内距：
-   折叠时整条就是输入框，左右与下方评论卡对齐（卡内 16px + 1px 描边），
-   去掉内层内距后宽度才不会被收窄 */
-.cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:0;margin-inline:17px}
-@media (max-width:767px){
-  .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){margin-inline:13px}
-}
+   折叠时整条就是输入框，表单外框与下方 .cmt-thread 同宽（880），
+   内距归零，占位条自己撑满整张卡片 */
+.cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:0}
 /* 回复按钮：只留右侧 SVG */
 .cmt-actions{margin-top:8px;display:flex;justify-content:flex-end}
 .cmt-reply{

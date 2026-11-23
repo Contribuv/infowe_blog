@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.53-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.53)
+[![version](https://img.shields.io/badge/version-3.9.54-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.54)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.53**
+当前版本：**v3.9.54**
 
-> 最近一次更新完整展开；更早的 152 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 153 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.54
+
+- **折叠条与评论卡真正同宽**：表单外框改为与 `.cmt-thread` 同为 880px，折叠态内距归零，占位条撑满整张卡片（此前只按内容区缩进，左右各窄 17px）
+- **表单内距四边统一**：展开态由「上 28 / 左右 20 / 下 17」统一为四边 16px，输入框、字段行、工具行、动作行全部按 16px 收口，与楼层卡内容对齐
+- **纵向间距统一 9px**：textarea → 字段行 → 工具行 → 分隔线 → 动作行统一同一节奏；分隔线上下留白对称
+- **字号统一**：输入框与占位条从 13.5px 提到 14px，与评论正文更接近；折叠条登录按钮 12.5px → 13px
+- **动作行分组**：「登录」与「收起」之间加细竖线，两个次要动作不再连成一句
+- **移动端同步**：表单内距 12px、折叠条内距 14/12px，与移动端评论卡（12px）对齐
 
 ### v3.9.53
 
@@ -967,7 +976,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.52 及更早，共 152 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.53 及更早，共 153 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 
