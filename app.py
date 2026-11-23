@@ -280,7 +280,9 @@ def _register_hooks(app: Flask) -> None:
             "skills": conf.get("skills", ""),
             "social_github": conf.get("social_github", ""),
             "contact_email": conf.get("contact_email", ""),
-            "avatar": conf.get("avatar", ""),
+            # 首页侧栏 / 关于页的博主头像固定走本地：带 local=1 时 OSS 改写会跳过。
+            # 评论区、后台等其它位置的博主头像不带这个标记，照常走 OSS。
+            "avatar": _local_avatar(conf.get("avatar", "")),
             # 只算已发布文章的标签，与侧栏/首页「已使用」口径一致（旧的 all_tags 含草稿标签，77≠56）
             "all_tags": _LazyCount(lambda: dict(Post.tag_counts(9999))),
             "nav_on": nav_on,
@@ -504,6 +506,18 @@ def _canonical_redirect() -> str | None:
 # ── 模板辅助 ──────────────────────────────────────────────
 _ICON_CACHE: dict[str, str] = {}
 _STATIC_VER_CACHE: dict[str, float] = {"ts": 0.0, "ver": 0.0}
+
+
+def _local_avatar(url: str) -> str:
+    """给博主头像加 local=1：首页侧栏 / 关于页固定走本地。
+
+    OSS 插件改写 HTML 时会跳过带 local=1 的地址；评论区、后台等
+    其它位置的博主头像不带这个标记，照常走 OSS。
+    """
+    value = str(url or "")
+    if not value.startswith("/uploads/") or "local=1" in value:
+        return value
+    return value + ("&" if "?" in value else "?") + "local=1"
 
 
 def _static_version() -> int:

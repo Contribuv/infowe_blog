@@ -159,9 +159,10 @@ def rewrite_html(html: str) -> str:
         def _sign(text: str) -> str:
             def _one(match: re.Match) -> str:
                 raw = match.group(0)
+                # 首页 / 关于页的博主头像带 local=1：这两处固定走本地
+                if "local=1" in raw:
+                    return raw
                 rel = unquote(raw.split("?", 1)[0])
-                if rel.startswith("/uploads/avatar/"):
-                    return raw  # 站点头像留在本地
                 return s3.presign(cfg, rel, expires)
 
             return _REL_RE.sub(_one, text)
@@ -172,9 +173,10 @@ def rewrite_html(html: str) -> str:
     def _sub(text: str) -> str:
         def _one(match: re.Match) -> str:
             raw = match.group(0)
+            # 首页 / 关于页的博主头像带 local=1：这两处固定走本地
+            if "local=1" in raw:
+                return raw
             rel = unquote(raw.split("?", 1)[0])
-            if rel.startswith("/uploads/avatar/"):
-                return raw  # 站点头像留在本地
             if not _local_exists(rel):
                 return raw
             return cfg.url_of(rel)

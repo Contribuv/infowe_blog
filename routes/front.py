@@ -102,6 +102,14 @@ def _load_comments(
     return comment_list, comment_total, _comment_pager(pager)
 
 
+def _local_avatar_url(url: str) -> str:
+    """博主头像加 local=1：首页 / 关于页固定走本地（OSS 改写会跳过）。"""
+    value = str(url or "")
+    if not value.startswith("/uploads/") or "local=1" in value:
+        return value
+    return value + ("&" if "?" in value else "?") + "local=1"
+
+
 def _comments_context(post_id: int | None, project_id: int | None, page: int | None = None) -> dict:
     """文章 / 项目详情页共用的评论上下文，返回可直接 **展开进 render_template 的字典。"""
     enabled = comments_service.open_comments()
@@ -842,7 +850,8 @@ def reader_avatar_upload():
     ok, error = reader_account.update_avatar(row, url)
     if not ok:
         return jsonify({"error": error}), 400
-    return jsonify({"ok": True, "avatar": url})
+    # 数据库存规范路径；返回给前端的预览地址按当前存储策略走 OSS（不可用时回退本地）
+    return jsonify({"ok": True, "avatar": upload.remote_url(url) or url})
 
 
 # ── 站内通知：双身份（登录读者 Cookie / 评论 Cookie） ──
@@ -971,6 +980,11 @@ def reader_overview():
         data["my_comments"] = items
         data["comments_has_more"] = more
         data["comments_next_offset"] = tab_offset + len(items)
+    # 抽屉头像走当前存储策略（OSS 启用时换成远端地址）；
+    # 首页 / 关于页的博主头像不经过这个接口，仍由模板加 local=1 走本地。
+    user_avatar = str((data.get("user") or {}).get("avatar") or "")
+    if user_avatar.startswith("/uploads/"):
+        data["user"]["avatar"] = upload.remote_url(user_avatar) or user_avatar
     return jsonify(data)
 
 
@@ -1207,7 +1221,8 @@ def about():
         status_checked=feeds.rel_time(generated) if generated else "待探测",
         about_intro=settings.get_str("about_intro", ""),
         author=settings.get_str("author", ""),
-        avatar=avatar.admin_url(200),
+        # 关于页博主头像固定走本地：带 local=1，OSS 改写会跳过
+        avatar=_local_avatar_url(avatar.admin_url(200)),
         github=settings.get_str("github_username", "") or settings.get_str("social_github", ""),
         timeline=Timeline.load(),
         post_total=post_total,

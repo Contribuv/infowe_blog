@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.67-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.67)
+[![version](https://img.shields.io/badge/version-3.9.68-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.68)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.67**
+当前版本：**v3.9.68**
 
-> 最近一次更新完整展开；更早的 166 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 167 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.68
+
+- **OSS 启用后图片统一走 OSS**：去掉了「后台头像固定本地」的硬编码，后台头像、评论区博主头像、用户上传头像、文章 / 评论 / 项目图片都按当前存储策略生成地址
+- **首页与关于页的博主头像固定本地**：这两处头像带 `local=1` 标记，OSS 改写时原样保留；同一个头像在评论区 / 后台仍走 OSS
+- **抽屉与上传接口的头像走 OSS**：`/api/reader/overview` 的 `user.avatar` 与头像上传返回的预览地址改为按存储策略生成，不再固定规范路径
+- **`/links/apply` 的 favicon 不受影响**：它是外部站点图标，本来就不经过 `/uploads/` 改写
 
 ### v3.9.67
 
@@ -1071,7 +1078,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.66 及更早，共 166 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.67 及更早，共 167 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 
