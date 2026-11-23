@@ -136,6 +136,18 @@ if ($detailsIndex -ge 0 -and $sectionIndex -gt $detailsIndex) {
 }
 Write-Ok "README 徽标 / 当前版本 / 更新日志均已对齐"
 
+# 只展开最新版：历史折叠区前只能有当前版本这一个「### v」小节。
+# 折叠区用「行首 <details> 紧跟 <summary>」定位，避开正文 bullet 里提到的 `<details>`。
+$foldMatch = [regex]::Match($readmeText, "(?m)^<details>\r?\n<summary>")
+if ($foldMatch.Success) {
+    $beforeFold = $readmeText.Substring(0, $foldMatch.Index)
+    $expandedCount = [regex]::Matches($beforeFold, "(?m)^### v\d").Count
+    if ($expandedCount -ne 1) {
+        Stop-Release "更新日志折叠区外有 $expandedCount 个展开版本（应只有当前版本 $tag 一个）。请把旧版本收进 <details> 折叠区后再发版"
+    }
+    Write-Ok "更新日志只展开当前版本 $tag，历史已折叠"
+}
+
 # ── 2. 分支与标签检查 ──
 Write-Step "检查分支与标签"
 $branch = (& git rev-parse --abbrev-ref HEAD).Trim()
