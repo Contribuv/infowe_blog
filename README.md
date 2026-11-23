@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.72-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.72)
+[![version](https://img.shields.io/badge/version-3.9.73-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.73)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.72**
+当前版本：**v3.9.73**
 
 > 最近一次更新完整展开；更早的 170 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.73
+
+- **修复博主评论被回复时收不到通知邮件**：`_blogger_emails()` 此前把博主排除在「收到回复」的收件人之外，评论审核通过后的补发也被同一判断挡掉，博主只能从一堆「收到新评论」里猜哪条是回复；现在被回复者是博主时同样会收到「你的评论收到了回复」
+- **同一事件不重复发信**：被回复者就是博主且评论已公开时，不再同时发「收到新评论」和「收到回复」，只保留后者；待审核阶段仍发「收到新评论（待审核）」，审核通过后再补发回复邮件
+- **其余场景保持不变**：普通访客之间互相回复、博主回复访客、对方关闭邮箱通知（notify=0）、私密评论，仍按原有规则处理
 
 ### v3.9.72
 

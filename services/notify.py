@@ -211,6 +211,10 @@ def notify_comment(
     jobs: list[dict] = []
     admin_to = _admin_to()
     from_blogger = _is_blogger(commenter, author, is_admin)
+    reply_lower = reply_email.lower()
+    # 被回复者是不是博主本人。博主也需要知道「自己的评论被谁回复了」，
+    # 否则他只能从一堆「收到新评论」里猜，评审通过后更是完全收不到第二封。
+    reply_is_blogger = bool(reply_lower) and reply_lower in _blogger_emails()
 
     author_avatar = ""
     try:
@@ -219,8 +223,10 @@ def notify_comment(
     except Exception:
         pass
 
-    # 1) 博主提醒：博主自己发言不再发给自己
-    if admin_to and not from_blogger:
+    # 1) 博主提醒：博主自己发言不再发给自己。
+    #    被回复者就是博主、且评论已公开时，这一封让给下面的「收到回复」：
+    #    同一件事发两封内容近似的邮件没有意义。
+    if admin_to and not from_blogger and not (reply_is_blogger and status == "approved"):
         text, page = mail_template.comment_notice(
             blog_name=blog,
             site=site,
@@ -246,11 +252,11 @@ def notify_comment(
             }
         )
 
-    # 2) 被回复者提醒：仅评论已公开、非私密、对方不是博主本人、也不是自己回自己，
-    #    且被回复者提交时保留了「邮箱通知」（notify=0 表示他不要邮件提醒）
+    # 2) 被回复者提醒：仅评论已公开、非私密、也不是自己回自己，
+    #    且被回复者提交时保留了「邮箱通知」（notify=0 表示他不要邮件提醒）。
+    #    被回复者是博主时同样要发：博主评论更多，更应该明确知道哪条是回复。
     if status == "approved" and reply_email and reply_notify and not reply_private and not is_private:
-        reply_lower = reply_email.lower()
-        if reply_lower not in _blogger_emails() and reply_lower != commenter.lower():
+        if reply_lower != commenter.lower():
             text, page = mail_template.reply_notice(
                 blog_name=blog,
                 site=site,
@@ -315,8 +321,7 @@ def notify_approved_reply(comment_id: int) -> None:
     commenter_email = str(comment.get("email") or "").strip()
     if not reply_email:
         return
-    if reply_email.lower() in _blogger_emails():
-        return
+    # 被回复者是博主也要发：审核通过后这是唯一能告诉他「你的评论被回复了」的邮件。
     if reply_email.lower() == commenter_email.lower():
         return
 
