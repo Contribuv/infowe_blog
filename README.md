@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.51-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.51)
+[![version](https://img.shields.io/badge/version-3.9.52-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.52)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.51**
+当前版本：**v3.9.52**
 
-> 最近一次更新完整展开；更早的 150 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 151 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.52
+
+- **评论区未登录入口改版**：去掉表单上方「填写昵称 + 邮箱即可参与评论…」整条提示与「登录 / 注册」双链接，折叠条右侧改为一个实心「登录」按钮（对应参考站把登录放在发送位置的写法）
+- **登录入口收进表单**：点「登录」直接打开登录浮窗（登录 / 注册 / 跳过验证），不会顺带展开评论框；展开评论框后「登录」退到动作行，与「收起」同级
+- **跳过验证的语义**：跳过验证只展开昵称 / 邮箱输入，不建立身份，折叠条仍保留登录入口；提交成功后由服务端记住身份并显示身份条
+- **已登录身份条保留**：博主 / 注册用户 / 已记住访客仍显示紧凑身份信息、管理账号与退出入口，不再出现面向新访客的长文案
+- 其他：登录按钮统一按 `data-login-open` 绑定，评论抽屉的「登录」入口同步兼容
 
 ### v3.9.51
 
@@ -950,7 +958,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.50 及更早，共 150 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.51 及更早，共 151 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

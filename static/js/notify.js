@@ -358,7 +358,7 @@
   /* ── 渲染：我的账户（身份 / 登录入口） ── */
   function renderAccount(d) {
     if (!d || !d.identified) {
-      var canLogin = !!document.getElementById('cmt-login-open');
+      var canLogin = !!document.querySelector('[data-login-open],#cmt-login-open');
       return '<div class="ov-acc">'
         + '<div class="ov-acc-card"><div class="ov-acc-row">'
         + '<span class="ov-acc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>'
@@ -499,7 +499,7 @@
     if (!login) return;
     login.addEventListener('click', function () {
       closeDrawer();
-      var trigger = document.getElementById('cmt-login-open');
+      var trigger = document.querySelector('[data-login-open],#cmt-login-open');
       if (trigger) trigger.click();
     });
   }

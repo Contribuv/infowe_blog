@@ -163,9 +163,10 @@
         {# 已上传图片：由 comments.js 维护（每行一个 URL），提交时后端合并进正文并做站内白名单校验 #}
         <input type="hidden" name="images" id="comment-images" value="">
         <div class="cmt-hint" id="comment-replying" hidden>回复 @<b id="comment-replying-name"></b><button type="button" id="comment-cancel-reply">取消</button></div>
-        {# 统一身份条：4 种身份互斥显示，操作入口随身份变化
-           ①博主(admin) ②注册登录(reader_user) ③Cookie访客(commenter) ④新访客 #}
-        <div class="cmt-authbar" id="cmt-authbar" data-identity="{% if is_admin %}admin{% elif reader_user %}reader{% elif commenter.author %}guest{% else %}new{% endif %}">
+        {# 统一身份条：只给已登录身份（博主 / 注册用户 / 已记住的访客）展示。
+           新访客不再放提示文字，登录入口收进折叠条右侧的「登录」按钮。 #}
+        {% if is_admin or reader_user or commenter.author %}
+        <div class="cmt-authbar" id="cmt-authbar" data-identity="{% if is_admin %}admin{% elif reader_user %}reader{% else %}guest{% endif %}">
             {% if is_admin %}
             {% if admin_avatar %}<img class="cmt-authbar-avatar" src="{{ admin_avatar }}" alt="" loading="lazy">{% endif %}
             <span class="cmt-authbar-user">以 <b>{{ author or '博主' }}</b> 身份评论<span class="cmt-authbar-badge cmt-authbar-badge--admin" title="博主身份">博主</span></span>
@@ -180,12 +181,9 @@
             <span class="cmt-authbar-user">以 <b>{{ commenter.author }}</b> 身份评论{% if commenter.email %} · {{ commenter.email }}{% endif %}</span>
             <button type="button" class="cmt-authbar-link" id="cmt-remember-edit">修改</button>
             <a class="cmt-authbar-link" href="{{ url_for('clear_identity', back=request.path) }}">退出</a>
-            {% else %}
-            <span class="cmt-authbar-tip">填写昵称 + 邮箱即可参与评论；登录账号可同步身份与查看通知。</span>
-            <button type="button" class="cmt-authbar-link cmt-authbar-link--login" id="cmt-login-open" data-login-mode="login">登录</button>
-            <button type="button" class="cmt-authbar-link cmt-authbar-link--login" id="cmt-register-open" data-login-mode="register">注册</button>
             {% endif %}
         </div>
+        {% endif %}
         {# 折叠策略：新访客默认收起（只留「写下你的想法…」占位条，整卡任意位置可点展开），
            已登录身份（博主 / 读者账号 / 已记住的访客）默认展开，省一次点击。
            展开后 summary 由 CSS 隐藏，收起入口放在动作行的「收起」文字按钮上。
@@ -194,7 +192,11 @@
             <summary class="cmt-toggle">
                 <svg class="cmt-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 <span class="cmt-toggle-placeholder">写下你的想法…</span>
-                <span class="cmt-toggle-act">写评论</span>
+                <span class="cmt-toggle-act"{% if not is_admin and not reader_user and not commenter.author %} hidden{% endif %}>写评论</span>
+                {% if not is_admin and not reader_user and not commenter.author %}
+                {# 新访客：折叠条右侧只放一个「登录」，与参考站一致；点开可直接登录或跳过验证填昵称邮箱 #}
+                <button type="button" class="cmt-toggle-login" id="cmt-login-open" data-login-mode="login" data-login-open>登录</button>
+                {% endif %}
             </summary>
             <div class="cmt-box-body">
             {# 邮件通知总开关（后台设置）：决定「邮箱通知」勾选项是否渲染，下方字段与底部选项区共用这一判定 #}
@@ -270,6 +272,9 @@
                     <span class="count">0 / 2000</span>
                     <span class="kbd-hint" id="cmt-kbd-hint" aria-hidden="true">Ctrl↵ 提交</span>
                     {# 收起入口：展开态 summary 已隐藏，这里用一个轻量文字按钮保留折叠能力 #}
+                    {% if not is_admin and not reader_user and not commenter.author %}
+                    <button type="button" class="cmt-fold-login" data-login-open data-login-mode="login">登录</button>
+                    {% endif %}
                     <button type="button" class="cmt-fold-back" id="cmt-fold-btn">收起</button>
                     <button type="submit" class="submit">提交评论</button>
                 </div>

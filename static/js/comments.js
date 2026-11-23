@@ -319,7 +319,26 @@ window.initComments = function (root) {
       body: body.join('&')
     }).then(function (res) { return res.json(); });
   }
-  if (loginOpen) loginOpen.addEventListener('click', function () { openLogin(loginOpen.getAttribute('data-login-mode') || 'login'); });
+  // 登录入口可能有多个（折叠条 / 展开态底栏 / 账户抽屉），统一按 data 属性绑定
+  function bindLoginTriggers() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-login-open],#cmt-login-open'), function (btn) {
+      if (btn.getAttribute('data-login-bound') === '1') return;
+      btn.setAttribute('data-login-bound', '1');
+      btn.addEventListener('click', function (e) {
+        // 折叠条里的按钮不能顺带展开 details
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        openLogin(btn.getAttribute('data-login-mode') || 'login');
+      });
+    });
+  }
+  bindLoginTriggers();
+  // 折叠条里的「登录」不能顺带展开 details：summary 的默认 toggle 只能在这里拦
+  var toggleSummary = form.querySelector('.cmt-toggle');
+  if (toggleSummary) {
+    toggleSummary.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.cmt-toggle-login')) e.preventDefault();
+    });
+  }
   var registerOpen = byId('cmt-register-open');
   if (registerOpen) registerOpen.addEventListener('click', function () { openLogin('register'); });
   if (loginClose) loginClose.addEventListener('click', closeLogin);
@@ -327,6 +346,7 @@ window.initComments = function (root) {
     closeLogin();
     if (fields) fields.hidden = false;
     if (remember) remember.hidden = true;
+    // 跳过验证不建立身份：折叠条仍保留「登录」入口，收起后随时可以再登
     if (authorInput) authorInput.focus();
   });
   if (loginMask) loginMask.addEventListener('click', function (e) {
@@ -572,7 +592,7 @@ window.initComments = function (root) {
       /* 身份条上的「登录 / 注册」「修改」有自己的动作，别顺带展开表单抢焦点。
          「收起」按钮也必须跳过：它在按钮自身监听里把 open 置 false，
          事件冒泡到这里时 open 已是 false，会被误判成「点了空白」又展开回去。 */
-      if (target.closest && target.closest('.cmt-authbar button, .cmt-authbar a, .cmt-fold-back')) return;
+      if (target.closest && target.closest('.cmt-authbar button, .cmt-authbar a, .cmt-fold-back, .cmt-toggle-login, .cmt-fold-login, [data-login-open]')) return;
       /* 占位条是 <summary>，原生会自己切换；这里统一走一套逻辑并补聚焦，
          避免「原生 toggle + 本监听」各改一次造成状态错乱 */
       if (target.closest && target.closest('.cmt-toggle')) e.preventDefault();
