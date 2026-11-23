@@ -41,6 +41,7 @@
 <div class="card">
     <div class="card-hint orphan-hint">
         最近 <b>24 小时</b>内新上传的文件不参与清理（评论区可能刚上传、还没提交）。
+        清理前会把本地文件复制到 <b>var/backups/orphans/&lt;时间&gt;/</b>，删错了可按原路径找回；对象存储上的删除不可逆。
         {% if source == 'local' %}
         这里只列出<b>本地 uploads</b> 中的孤儿；OSS 对象不受影响。
         {% elif source == 'remote' %}

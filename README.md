@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.65-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.65)
+[![version](https://img.shields.io/badge/version-3.9.66-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.66)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.65**
+当前版本：**v3.9.66**
 
-> 最近一次更新完整展开；更早的 164 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 165 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.66
+
+- **修复 OSS 预览副本误判**：`preview_of_key()` 在 `uploads/previews/...` 形式下会拼出 `uploads/uploads/...`，导致原图仍被引用时副本被列成孤儿；现在兼容顶层与 `uploads/` 前缀两种 key
+- **清理前自动备份**：删除本地孤儿前先复制到 `var/backups/orphans/<时间>/`，保留原相对路径，删错可按路径放回；对象存储删除仍不可逆，页面已提示
+- **清理页说明补全**：写清“24 小时新文件保护 + 本地备份位置 + OSS 不可逆”
 
 ### v3.9.65
 
@@ -1061,7 +1067,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.64 及更早，共 164 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.65 及更早，共 165 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

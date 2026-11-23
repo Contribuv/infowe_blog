@@ -923,6 +923,23 @@ def admin_orphan_clean():
         pending.append(rel)
 
     if pending:
+        # 删除前把本地文件复制到 backups/orphans/<时间>/ 留一份底：孤儿判定以后若有变化，
+        # 还能按原相对路径手动放回 uploads。OSS 对象删除不可逆，页面会单独提示。
+        import shutil
+        from datetime import datetime
+
+        trash = Path(BACKUPS_DIR) / "orphans" / datetime.now().strftime("%Y%m%d_%H%M%S")
+        for rel in pending:
+            src = Path(UPLOADS_DIR) / rel
+            if not src.is_file():
+                continue
+            dest = trash / rel
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dest)
+            except OSError:
+                pass
+
         # 删除慢在 OSS 的 DELETE（每个文件要删展示图 + 预览副本），
         # 串行几十张就要几分钟；这里并发删，前端再按批请求，进度才走得动。
         app = current_app._get_current_object()

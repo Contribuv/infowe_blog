@@ -335,7 +335,12 @@ def preview_rel(rel_url: str) -> str:
 
 
 def preview_of_key(key: str) -> str:
-    """previews/ 下的副本 key → 对应原图 key；不是副本则返回空串。"""
+    """previews/ 下的副本 key → 对应原图 key；不是副本则返回空串。
+
+    key 的两种形式都要兼容：
+    - previews/2026/11/a.png.webp        （顶层前缀）
+    - uploads/previews/2026/11/a.png.webp（桶前缀为 uploads 时）
+    """
     parts = str(key or "").lstrip("/").split("/")
     if "previews" not in parts:
         return ""
@@ -344,7 +349,11 @@ def preview_of_key(key: str) -> str:
     if not rest or not rest[-1].endswith(".webp"):
         return ""
     rest[-1] = rest[-1][: -len(".webp")]
-    return "/".join(parts[:idx] + ["uploads"] + rest)
+    base = parts[:idx]
+    # parts 里已经带 uploads/ 时不要再插一层，否则会得到 uploads/uploads/...
+    if not base or base[-1] != "uploads":
+        base = base + ["uploads"]
+    return "/".join(base + rest)
 
 
 def publish_preview(local_path: str | Path, rel_url: str) -> str:
