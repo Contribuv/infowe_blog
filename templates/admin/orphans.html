@@ -13,16 +13,16 @@
 <div class="empty-state">
     {% if source == 'remote' %}
     {{ icon('cloud', 28) | safe }}
-    <p class="text-muted">没有 OSS 孤儿对象。<a href="{{ url_for('admin_orphans') }}">查看全部来源</a></p>
+    <p class="text-muted">没有可清理的 OSS 孤儿对象。最近 24 小时内新上传的对象暂不参与清理（可能刚上传、还没提交），满 24 小时后会自动列出。<a href="{{ url_for('admin_orphans') }}">查看全部来源</a></p>
     {% elif source == 'local' %}
     {{ icon('check-circle', 28) | safe }}
-    <p class="text-muted">没有本地孤儿文件。<a href="{{ url_for('admin_orphans') }}">查看全部来源</a></p>
+    <p class="text-muted">没有可清理的本地孤儿文件。最近 24 小时内新上传的文件暂不参与清理（可能刚上传、还没提交），满 24 小时后会自动列出。<a href="{{ url_for('admin_orphans') }}">查看全部来源</a></p>
     {% elif remote_active %}
     {{ icon('cloud', 28) | safe }}
-    <p class="text-muted">本地与对象存储都没有孤儿文件。扫描会同时遍历桶和本地 uploads，任何一边没被引用的附件都会列出来。</p>
+    <p class="text-muted">本地与对象存储都没有可清理的孤儿文件。扫描会同时遍历桶和本地 uploads，列出未被引用的附件；最近 24 小时内新上传的文件暂不参与清理（可能刚上传、还没提交），满 24 小时后会自动列出。</p>
     {% else %}
     {{ icon('check-circle', 28) | safe }}
-    <p class="text-muted">没有孤儿文件，uploads 中的文件均被有效内容引用。</p>
+    <p class="text-muted">没有可清理的孤儿文件。uploads 中未被引用的附件会列出来；最近 24 小时内新上传的文件暂不参与清理（可能刚上传、还没提交），满 24 小时后会自动列出。</p>
     {% endif %}
 </div>
 {% else %}
