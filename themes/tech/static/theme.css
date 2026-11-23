@@ -1524,6 +1524,8 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
 .tech-post-body,
 .tech-post-body.markdown-body {
   font-size: 16px; line-height: 1.8; word-wrap: break-word;
+  /* 中文屏读微字距：0.01em 让方块字之间略透气，长文更舒展，不影响换行宽度 */
+  letter-spacing: .01em;
 }
 .tech-post-body h1, .tech-post-body h2, .tech-post-body h3,
 .tech-post-body h4, .tech-post-body h5, .tech-post-body h6,
@@ -1592,7 +1594,7 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   }
 }
 /* 描边防止白底截图融进浅色纸面；上下 16px 与其它块级间距一致 */
-.tech-post-body img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; display: block; margin: 16px auto; cursor: zoom-in; }
+.tech-post-body img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; display: block; margin: 16px auto; cursor: zoom-in; box-shadow: 0 2px 10px rgba(0, 0, 0, .10); }
 .tech-post-body blockquote {
   margin: 0 0 16px; padding: 10px 16px;
   border-left: 3px solid var(--accent);

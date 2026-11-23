@@ -10,11 +10,11 @@
 <div id="orphanNotice"></div>
 
 <style>
-.orphan-auto-card { padding: 14px 16px; margin-bottom: 16px; }
-.orphan-auto-form { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.orphan-auto-days { display: inline-flex; align-items: center; gap: 8px; }
-.orphan-auto-days input { width: 80px; }
-.orphan-auto-hint { margin: 10px 0 0; font-size: 13px; }
+.orphan-auto-card { padding: 12px 16px; margin-bottom: 16px; }
+.orphan-auto-form { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.orphan-auto-days { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fz-sm); color: var(--text-secondary); }
+.orphan-auto-days input { width: 64px; padding: 4px 8px; font-size: var(--fz-sm); border-radius: var(--r-sm); }
+.orphan-auto-hint { margin: 8px 0 0; padding: 0; }
 </style>
 <div class="card orphan-auto-card">
     <form action="{{ url_for('admin_orphan_settings_save') }}" method="post" class="orphan-auto-form">
@@ -23,13 +23,12 @@
             <span>启用定期自动清理</span>
         </label>
         <label class="orphan-auto-days">保留天数
-            <input type="number" name="orphan_retention_days" class="input-text" min="1" max="365" step="1" value="{{ orphan_cfg.retention_days }}">
+            <input type="number" name="orphan_retention_days" class="input-text" min="1" max="365" step="1" value="{{ orphan_cfg.retention_days }}" title="上传超过该天数、且无内容引用的孤儿才会被自动清理">
         </label>
         <button type="submit" class="btn btn-sm">保存设置</button>
     </form>
-    <p class="text-muted orphan-auto-hint">
-        开启后每天自动清理「超过保留天数且无引用」的本地孤儿（连同 OSS 副本），删前备份到 <b>var/backups/orphans/</b>。
-        仅存于 OSS、本地已没有的对象仍需手动清理。
+    <p class="form-hint orphan-auto-hint">
+        开启后每天自动清理一次：上传超过保留天数、且无内容引用的本地孤儿会被删除（连同 OSS 副本），删前备份到 <b>var/backups/orphans/</b>，可按原路径找回。仅存于 OSS、本地已没有的对象需手动清理。
         {% if orphan_last_run %}
         <br>上次自动清理：{{ orphan_last_run.at }} · 删除 {{ orphan_last_run.deleted }} 个 · 释放 {{ orphan_last_run.freed }}{% if orphan_last_run.failed %} · {{ orphan_last_run.failed }} 个失败{% endif %}
         {% endif %}
@@ -84,8 +83,8 @@
         （文章标题/正文/摘要/标签/封面、未删除的评论、友链、记忆、项目、时间线、站点设置）。
         删除只动本地文件。
         {% endif %}
-        例如：新建文章时传了图后放弃、<b>已删除评论</b>的附件、彻底删除文章时的漏网文件。
-        已拒绝的评论图片会保留（随时可在后台恢复通过，不会缺图）。
+        例如：新建文章时传了图后放弃、上传后未插入正文的附件、彻底删除文章时的漏网文件。
+        待审核 / 已拒绝 / 已删除评论的图片都会保留（留存记录与恢复通过都要用，不会缺图）。
         头像与项目文件不在此列。
     </div>
 
