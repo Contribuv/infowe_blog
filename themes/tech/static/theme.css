@@ -476,6 +476,11 @@ img { max-width: 100%; }
   font-size: 13px; font-weight: 600; cursor: pointer;
 }
 .ov-acc-btn:hover { filter: brightness(1.06); }
+/* 注册用户的账户操作：管理账号 / 退出登录 */
+.ov-acc-actions { display: flex; gap: 8px; margin-top: 12px; }
+.ov-acc-actions .ov-acc-btn { flex: 1; margin-top: 0; }
+.ov-acc-btn--ghost { background: transparent; border: 1px solid var(--border); color: var(--text-secondary); }
+.ov-acc-btn--ghost:hover { filter: none; color: var(--text); border-color: var(--accent); }
 .ov-acc-list { display: flex; flex-direction: column; gap: 9px; }
 .ov-acc-item { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; }
 .ov-acc-item span { color: var(--text-secondary); flex: none; }

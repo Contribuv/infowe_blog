@@ -402,6 +402,13 @@
         if (!r.v) return '';
         return '<div class="ov-acc-item"><span>' + r.t + '</span><b>' + esc(r.v) + '</b></div>';
       }).join('') + '</div></div>'
+      // 注册用户：资料卡下面直接给管理入口，不用再回评论区找「管理账号」
+      + (d.identity_type === 'reader'
+        ? '<div class="ov-acc-actions">'
+          + '<button type="button" class="ov-acc-btn" data-ov-manage>管理账号</button>'
+          + '<button type="button" class="ov-acc-btn ov-acc-btn--ghost" data-ov-logout>退出登录</button>'
+          + '</div>'
+        : '')
       + '<p class="ov-tip">' + (d.identity_type === 'reader'
         ? '当前为注册账号登录，身份与评论会自动同步。'
         : d.identity_type === 'admin'
@@ -508,11 +515,24 @@
 
   function bindAccount() {
     var login = body.querySelector('[data-ov-login]');
-    if (!login) return;
-    login.addEventListener('click', function () {
+    if (login) login.addEventListener('click', function () {
       closeDrawer();
       var trigger = document.querySelector('[data-login-open],#cmt-login-open');
       if (trigger) trigger.click();
+    });
+    // 注册用户：管理账号直接拉起评论区的账号浮窗
+    var manage = body.querySelector('[data-ov-manage]');
+    if (manage) manage.addEventListener('click', function () {
+      closeDrawer();
+      var trigger = document.getElementById('cmt-account-open');
+      if (trigger) trigger.click();
+    });
+    var logout = body.querySelector('[data-ov-logout]');
+    if (logout) logout.addEventListener('click', function () {
+      logout.disabled = true;
+      fetch('/api/reader/logout', { method: 'POST', credentials: 'same-origin' })
+        .then(function () { window.location.reload(); })
+        .catch(function () { window.location.reload(); });
     });
   }
 

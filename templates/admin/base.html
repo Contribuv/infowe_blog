@@ -41,64 +41,85 @@
 
             <nav class="admin-nav">
                 <div class="admin-nav-group">
-                    <div class="admin-nav-title">内容运营</div>
                     <a href="{{ url_for('admin_dashboard') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/dashboard' %}active{% endif %}">
-                        {{ icon('layout-dashboard', 20, 'admin-nav-icon') | safe }}<span>博客面板</span>
-                    </a>
-                    <a href="{{ url_for('admin_posts') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/posts') %}active{% endif %}">
-                        {{ icon('file-text', 20, 'admin-nav-icon') | safe }}<span>文章管理</span>
-                    </a>
-                    <a href="{{ url_for('admin_categories') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/categories') %}active{% endif %}">
-                        {{ icon('tag', 20, 'admin-nav-icon') | safe }}<span>文章分类</span>
-                    </a>
-                    <a href="{{ url_for('admin_comments') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/comments' %}active{% endif %}">
-                        {{ icon('message-circle', 20, 'admin-nav-icon') | safe }}<span>评论管理</span>
-                    </a>
-                    <a href="{{ url_for('admin_users') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/users') %}active{% endif %}">
-                        {{ icon('user', 20, 'admin-nav-icon') | safe }}<span>用户管理</span>
+                        {{ icon('layout-dashboard', 20, 'admin-nav-icon') | safe }}<span>概览</span>
                     </a>
                 </div>
-                <div class="admin-nav-group">
-                    <div class="admin-nav-title">站点模块</div>
-                    <a href="{{ url_for('admin_projects') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/projects') %}active{% endif %}">
-                        {{ icon('folder', 20, 'admin-nav-icon') | safe }}<span>项目管理</span>
-                    </a>
-                    <a href="{{ url_for('admin_links') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/links') %}active{% endif %}">
-                        {{ icon('link', 20, 'admin-nav-icon') | safe }}<span>友情链接</span>
-                    </a>
-                    <a href="{{ url_for('admin_circle') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/circle') %}active{% endif %}">
-                        {{ icon('inbox', 20, 'admin-nav-icon') | safe }}<span>圈子管理</span>
-                    </a>
-                    <a href="{{ url_for('admin_timeline') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/timeline') %}active{% endif %}">
-                        {{ icon('calendar', 20, 'admin-nav-icon') | safe }}<span>博客历程</span>
-                    </a>
+
+                {# 分组可折叠：只展开当前页所在组，其余收起，侧栏一屏放得下 #}
+                <div class="admin-nav-group is-collapsible" data-nav-group="content">
+                    <button type="button" class="admin-nav-title" aria-expanded="true">
+                        <span>内容</span>
+                        {{ icon('chevron-right', 13, 'admin-nav-caret') | safe }}
+                    </button>
+                    <div class="admin-nav-items">
+                        <a href="{{ url_for('admin_posts') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/posts') %}active{% endif %}">
+                            {{ icon('file-text', 20, 'admin-nav-icon') | safe }}<span>文章管理</span>
+                        </a>
+                        <a href="{{ url_for('admin_categories') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/categories') %}active{% endif %}">
+                            {{ icon('tag', 20, 'admin-nav-icon') | safe }}<span>文章分类</span>
+                        </a>
+                        <a href="{{ url_for('admin_comments') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/comments' %}active{% endif %}">
+                            {{ icon('message-circle', 20, 'admin-nav-icon') | safe }}<span>评论管理</span>
+                        </a>
+                        <a href="{{ url_for('admin_users') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/users') %}active{% endif %}">
+                            {{ icon('user', 20, 'admin-nav-icon') | safe }}<span>用户管理</span>
+                        </a>
+                    </div>
                 </div>
-                <div class="admin-nav-group">
-                    <div class="admin-nav-title">系统</div>
-                    <a href="{{ url_for('admin_plugins') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/plugins') and not request.path.startswith(admin_prefix ~ '/plugins/retention') %}active{% endif %}">
-                        {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>插件管理</span>
-                    </a>
-                    {# 插件路由：停用插件后 url_for 会抛 BuildError，用字符串拼接 + 启用判断兜底 #}
-                    {% if retention_enabled %}
-                    <a href="{{ admin_prefix }}/plugins/retention" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/plugins/retention') %}active{% endif %}">
-                        {{ icon('history', 20, 'admin-nav-icon') | safe }}<span>留存记录</span>
-                    </a>
-                    {% endif %}
-                    <a href="{{ url_for('admin_settings') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/settings' %}active{% endif %}">
-                        {{ icon('settings', 20, 'admin-nav-icon') | safe }}<span>博客设置</span>
-                    </a>
-                    <a href="{{ url_for('admin_themes') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/themes') %}active{% endif %}">
-                        {{ icon('palette', 20, 'admin-nav-icon') | safe }}<span>主题管理</span>
-                    </a>
-                    <a href="{{ url_for('admin_export') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/export' %}active{% endif %}">
-                        {{ icon('database', 20, 'admin-nav-icon') | safe }}<span>数据管理</span>
-                    </a>
-                    <a href="{{ url_for('admin_status') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/status') %}active{% endif %}">
-                        {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>服务时效</span>
-                    </a>
-                    <a href="{{ url_for('admin_orphans') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/orphans') %}active{% endif %}">
-                        {{ icon('trash-2', 20, 'admin-nav-icon') | safe }}<span>文件清理</span>
-                    </a>
+
+                <div class="admin-nav-group is-collapsible" data-nav-group="site">
+                    <button type="button" class="admin-nav-title" aria-expanded="true">
+                        <span>站点</span>
+                        {{ icon('chevron-right', 13, 'admin-nav-caret') | safe }}
+                    </button>
+                    <div class="admin-nav-items">
+                        <a href="{{ url_for('admin_projects') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/projects') %}active{% endif %}">
+                            {{ icon('folder', 20, 'admin-nav-icon') | safe }}<span>项目管理</span>
+                        </a>
+                        <a href="{{ url_for('admin_links') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/links') %}active{% endif %}">
+                            {{ icon('link', 20, 'admin-nav-icon') | safe }}<span>友情链接</span>
+                        </a>
+                        <a href="{{ url_for('admin_circle') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/circle') %}active{% endif %}">
+                            {{ icon('inbox', 20, 'admin-nav-icon') | safe }}<span>圈子管理</span>
+                        </a>
+                        <a href="{{ url_for('admin_timeline') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/timeline') %}active{% endif %}">
+                            {{ icon('calendar', 20, 'admin-nav-icon') | safe }}<span>博客历程</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="admin-nav-group is-collapsible" data-nav-group="system">
+                    <button type="button" class="admin-nav-title" aria-expanded="true">
+                        <span>系统</span>
+                        {{ icon('chevron-right', 13, 'admin-nav-caret') | safe }}
+                    </button>
+                    <div class="admin-nav-items">
+                        <a href="{{ url_for('admin_plugins') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/plugins') and not request.path.startswith(admin_prefix ~ '/plugins/retention') %}active{% endif %}">
+                            {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>插件管理</span>
+                        </a>
+                        {# 插件路由：停用插件后 url_for 会抛 BuildError，用字符串拼接 + 启用判断兜底 #}
+                        {% if retention_enabled %}
+                        <a href="{{ admin_prefix }}/plugins/retention" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/plugins/retention') %}active{% endif %}">
+                            {{ icon('history', 20, 'admin-nav-icon') | safe }}<span>留存记录</span>
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('admin_themes') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/themes') %}active{% endif %}">
+                            {{ icon('palette', 20, 'admin-nav-icon') | safe }}<span>主题管理</span>
+                        </a>
+                        <a href="{{ url_for('admin_settings') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/settings' %}active{% endif %}">
+                            {{ icon('settings', 20, 'admin-nav-icon') | safe }}<span>博客设置</span>
+                        </a>
+                        <a href="{{ url_for('admin_export') }}" class="admin-nav-item {% if request.path == admin_prefix ~ '/export' %}active{% endif %}">
+                            {{ icon('database', 20, 'admin-nav-icon') | safe }}<span>数据管理</span>
+                        </a>
+                        <a href="{{ url_for('admin_status') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/status') %}active{% endif %}">
+                            {{ icon('zap', 20, 'admin-nav-icon') | safe }}<span>服务时效</span>
+                        </a>
+                        <a href="{{ url_for('admin_orphans') }}" class="admin-nav-item {% if request.path.startswith(admin_prefix ~ '/orphans') %}active{% endif %}">
+                            {{ icon('trash-2', 20, 'admin-nav-icon') | safe }}<span>文件清理</span>
+                        </a>
+                    </div>
                 </div>
 
                 <div class="admin-nav-group">
@@ -181,6 +202,36 @@
 
 <script src="{{ url_for('static', filename='js/admin.js', t=admin_ver) }}"></script>
 <script src="{{ url_for('static', filename='js/disable-zoom.js', t=admin_ver) }}"></script>
+<script>
+/* 侧栏分组折叠：当前页所在组默认展开，其余收起到 localStorage 记忆。
+   栏目多的时候一屏只能看到分组标题，点开才展开具体模块。 */
+(function () {
+  var KEY = 'admin-nav-groups';
+  var groups = document.querySelectorAll('[data-nav-group]');
+  if (!groups.length) return;
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  var anyActive = !!document.querySelector('[data-nav-group] .admin-nav-item.active');
+  Array.prototype.forEach.call(groups, function (group) {
+    var name = group.getAttribute('data-nav-group');
+    var hasActive = !!group.querySelector('.admin-nav-item.active');
+    // 当前页所在组必须展开；没有命中任何组时（如仪表盘）默认展开「内容」组
+    var open = hasActive || saved[name] === true || (!anyActive && name === 'content');
+    group.classList.toggle('is-collapsed', !open);
+    var btn = group.querySelector('.admin-nav-title');
+    if (!btn) return;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.addEventListener('click', function () {
+      var next = group.classList.contains('is-collapsed');
+      group.classList.toggle('is-collapsed', !next);
+      btn.setAttribute('aria-expanded', next ? 'true' : 'false');
+      // 只记住用户手动点开的分组，不把「当前页自动展开」写死
+      saved[name] = next;
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) { /* 隐私模式忽略 */ }
+    });
+  });
+})();
+</script>
 <script>
 // 主题选择：input 是 hidden 的 radio，原生视觉不可见。点击 label 后手动同步选中态：
 // 把 .active 移到当前选中的卡片，并把「使用中」徽章搬过去，提交前用户能清晰看到选谁。

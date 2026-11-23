@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.59-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.59)
+[![version](https://img.shields.io/badge/version-3.9.60-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.60)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.59**
+当前版本：**v3.9.60**
 
-> 最近一次更新完整展开；更早的 158 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 159 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.60
+
+- **账户抽屉补操作入口**：注册用户打开「我的账户」后，资料卡下方直接显示「管理账号 / 退出登录」，不用再回评论区找「管理账号」
+- **管理账号跳浮窗**：点「管理账号」会关闭抽屉并拉起评论区的账号浮窗（改昵称 / 头像 / 邮箱），复用同一套逻辑
+- **退出登录**：POST `/api/reader/logout` 后刷新页面，评论身份条与抽屉同步恢复为访客状态
+- 博主身份不显示这两个按钮，避免出现无意义的「管理账号」
+- **后台侧栏折叠**：18 个入口压成「概览 + 内容 / 站点 / 系统」三组，点击组标题展开/收起，当前页所在组自动展开，其余默认收起；展开状态记在 localStorage
+- **命名收敛**：「博客面板」改为「概览」，「站点模块」改为「站点」，每组只保留实际入口，不再堆一长列
 
 ### v3.9.59
 
@@ -1011,7 +1020,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.58 及更早，共 158 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.59 及更早，共 159 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

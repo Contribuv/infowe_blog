@@ -188,10 +188,19 @@ svg { vertical-align: -3px; flex: none; }
    用 margin-top:auto 吃掉剩余空间；视口过矮时自动退化为普通分组间距 */
 .admin-nav > .admin-nav-group:last-child { margin-top: auto; }
 .admin-nav-title {
-  padding: 0 var(--sp-3) var(--sp-1);
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 8px var(--sp-3); margin: 0;
+  border: 0; border-radius: var(--r); background: none;
   font-size: 10.5px; font-weight: 600; letter-spacing: .12em;
   color: var(--text-tertiary); text-transform: uppercase;
+  cursor: pointer; text-align: left;
 }
+@media (hover: hover) and (pointer: fine) { .admin-nav-title:hover { color: var(--text-secondary); background: var(--bg-hover); } }
+.admin-nav-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.admin-nav-caret { width: 13px; height: 13px; color: var(--text-tertiary); transition: transform .16s ease; }
+.admin-nav-group:not(.is-collapsed) .admin-nav-caret { transform: rotate(90deg); }
+.admin-nav-group.is-collapsed .admin-nav-items { display: none; }
+.admin-nav-items { display: flex; flex-direction: column; gap: 2px; }
 .admin-nav-item {
   display: flex; align-items: center; gap: 10px;
   padding: 9px var(--sp-3);
