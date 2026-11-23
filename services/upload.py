@@ -15,8 +15,8 @@ from urllib.parse import unquote, urlparse
 from werkzeug.datastructures import FileStorage
 
 from config import (
-    CACHE_DIR, COMMENT_IMAGE_MAX_SIZE, FILE_EXTS, FONTS_DIR, IMAGE_EXTS,
-    MEDIA_EXTS, UPLOADS_DIR,
+    BACKUPS_DIR, CACHE_DIR, COMMENT_IMAGE_MAX_SIZE, FILE_EXTS, FONTS_DIR,
+    IMAGE_EXTS, MEDIA_EXTS, UPLOADS_DIR,
 )
 from services import settings
 
@@ -1226,6 +1226,49 @@ def delete_rel(rel: str) -> str:
     if existed or remote_active():
         return ""
     return "文件不存在"
+
+
+def auto_clean_orphans(retention_days: int = 7) -> dict:
+    """定期清理：删除超过保留天数且无引用的本地孤儿（连同 OSS 副本），删前备份本地。
+
+    只处理本地扫描得到的孤儿；仅存于 OSS、本地已没有的对象留给后台人工清理，
+    避免自动任务对不可逆的远端删除做太多主张。保留天数下限 1 天，比 24h 显示
+    保护期更保守，给「刚上传还没提交」留足缓冲。
+    """
+    import shutil
+
+    days = max(1, int(retention_days))
+    items = orphans(protect_hours=days * 24)
+    referenced = referenced_urls()
+    deleted = failed = freed = 0
+    trash = Path(BACKUPS_DIR) / "orphans" / datetime.now().strftime("%Y%m%d_%H%M%S")
+    for item in items:
+        rel = item["rel"]
+        # 扫描到执行之间内容可能刚被引用，删前再校验一次
+        if unquote("/uploads/" + rel) in referenced:
+            failed += 1
+            continue
+        src = root() / rel
+        if src.is_file():
+            dest = trash / rel
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dest)
+            except OSError:
+                pass
+        if delete_rel(rel):
+            failed += 1
+        else:
+            deleted += 1
+            freed += int(item.get("size_bytes") or 0)
+    return {
+        "at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "deleted": deleted,
+        "failed": failed,
+        "freed_bytes": freed,
+        "freed": fmt_size(freed),
+        "retention_days": days,
+    }
 
 
 def merge_orphan_sources(local: list[dict], remote: list[dict]) -> list[dict]:

@@ -9,6 +9,33 @@
 <!-- 操作结果提示（AJAX 删除后动态插入） -->
 <div id="orphanNotice"></div>
 
+<style>
+.orphan-auto-card { padding: 14px 16px; margin-bottom: 16px; }
+.orphan-auto-form { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.orphan-auto-days { display: inline-flex; align-items: center; gap: 8px; }
+.orphan-auto-days input { width: 80px; }
+.orphan-auto-hint { margin: 10px 0 0; font-size: 13px; }
+</style>
+<div class="card orphan-auto-card">
+    <form action="{{ url_for('admin_orphan_settings_save') }}" method="post" class="orphan-auto-form">
+        <label class="checkbox-label">
+            <input type="checkbox" name="orphan_auto_clean" {% if orphan_cfg.auto_clean %}checked{% endif %}>
+            <span>启用定期自动清理</span>
+        </label>
+        <label class="orphan-auto-days">保留天数
+            <input type="number" name="orphan_retention_days" class="input-text" min="1" max="365" step="1" value="{{ orphan_cfg.retention_days }}">
+        </label>
+        <button type="submit" class="btn btn-sm">保存设置</button>
+    </form>
+    <p class="text-muted orphan-auto-hint">
+        开启后每天自动清理「超过保留天数且无引用」的本地孤儿（连同 OSS 副本），删前备份到 <b>var/backups/orphans/</b>。
+        仅存于 OSS、本地已没有的对象仍需手动清理。
+        {% if orphan_last_run %}
+        <br>上次自动清理：{{ orphan_last_run.at }} · 删除 {{ orphan_last_run.deleted }} 个 · 释放 {{ orphan_last_run.freed }}{% if orphan_last_run.failed %} · {{ orphan_last_run.failed }} 个失败{% endif %}
+        {% endif %}
+    </p>
+</div>
+
 {% if not orphans %}
 <div class="empty-state">
     {% if source == 'remote' %}
@@ -79,6 +106,7 @@
             <span class="bulk-count" id="totalInfo">共 {{ orphans|length }} 个 · {{ total_size }}</span>
             <span class="bulk-count" id="orphanProgress" hidden></span>
             <button type="button" id="deleteBtn" class="btn btn-sm btn-danger" disabled>删除所选</button>
+            <button type="button" id="cleanAllBtn" class="btn btn-sm btn-danger">一键清理全部</button>
         </div>
         <div class="table-wrap">
         <table class="table" id="orphanTable">
@@ -409,6 +437,18 @@
         deleteBtn.classList.remove('btn-loading');
         updateSelection();
     });
+
+    /* ─── 一键清理全部：勾选所有可见行，复用「删除所选」的确认与批量删除流程 ─── */
+    var cleanAllBtn = document.getElementById('cleanAllBtn');
+    if (cleanAllBtn) {
+        cleanAllBtn.addEventListener('click', function () {
+            rows.forEach(function (row) {
+                if (row.style.display !== 'none') row.querySelector('.row-check').checked = true;
+            });
+            updateSelection();
+            deleteBtn.click();
+        });
+    }
 
     applySort();
     applyFilter();

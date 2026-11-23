@@ -171,6 +171,7 @@ def create_app(test_config: dict | None = None) -> Flask:
         plugins_service.load_all(app)
     if not app.config.get("TESTING"):
         _start_status_scheduler(app)
+        _start_orphan_scheduler(app)
         from services import feeds as feeds_service
         feeds_service.start_scheduler(app)
     return app
@@ -653,6 +654,62 @@ def _start_status_scheduler(app: Flask) -> None:
             time.sleep(60)
 
     threading.Thread(target=loop, daemon=True, name="status-probe").start()
+
+
+def _start_orphan_scheduler(app: Flask) -> None:
+    """孤儿文件定期清理：启用后每天跑一次，清理超过保留天数且无引用的本地孤儿。
+
+    与状态探活同款：多 worker 都起线程，文件锁保证同一时刻只有一个进程执行；
+    没有 fcntl 的平台（本地 Windows）不启动。每小时醒一次，距上次清理满 24h 才跑。
+    """
+    import threading
+    import time
+
+    def loop() -> None:
+        try:
+            import fcntl
+        except ImportError:
+            return
+        import json
+        from datetime import datetime
+
+        time.sleep(20)
+        while True:
+            try:
+                with app.app_context():
+                    from services import settings, upload
+
+                    if settings.bool_of("orphan_auto_clean", False):
+                        lock_path = Path(config.CACHE_DIR) / "orphan_clean.lock"
+                        lock_path.parent.mkdir(parents=True, exist_ok=True)
+                        with open(lock_path, "w") as fh:
+                            try:
+                                fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                            except OSError:
+                                pass
+                            else:
+                                # 拿到锁后再判一次是否到期，避免多进程同一天重复清
+                                last = settings.get_str("orphan_last_run", "")
+                                due = True
+                                if last:
+                                    try:
+                                        at = datetime.strptime(last[:19], "%Y-%m-%d %H:%M:%S").timestamp()
+                                        due = time.time() - at >= 86400
+                                    except ValueError:
+                                        due = True
+                                if due:
+                                    days = settings.get_int("orphan_retention_days", 7)
+                                    result = upload.auto_clean_orphans(days)
+                                    settings.set_value("orphan_last_run", json.dumps(result, ensure_ascii=False))
+                                    app.logger.info(
+                                        "孤儿定期清理：删除 %s 个，释放 %s",
+                                        result["deleted"], result["freed"],
+                                    )
+            except Exception:
+                app.logger.exception("orphan clean scheduler failed")
+            time.sleep(3600)
+
+    threading.Thread(target=loop, daemon=True, name="orphan-clean").start()
 
 
 def _register_cli(app: Flask) -> None:

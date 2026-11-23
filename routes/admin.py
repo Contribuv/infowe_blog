@@ -924,6 +924,17 @@ def admin_orphans():
     else:
         items = upload.merge_orphan_sources(local_items, remote_items)
     total = sum(item["size_bytes"] for item in items)
+    orphan_cfg = {
+        "auto_clean": settings.bool_of("orphan_auto_clean", False),
+        "retention_days": max(1, settings.get_int("orphan_retention_days", 7)),
+    }
+    last_run = None
+    raw_last = settings.get_str("orphan_last_run", "")
+    if raw_last:
+        try:
+            last_run = json.loads(raw_last)
+        except (TypeError, ValueError):
+            last_run = None
     return render_template(
         "admin/orphans.html",
         orphans=items,
@@ -932,6 +943,8 @@ def admin_orphans():
         source=source,
         local_count=sum(1 for i in items if "local" in i["sources"]),
         remote_count=sum(1 for i in items if "remote" in i["sources"]),
+        orphan_cfg=orphan_cfg,
+        orphan_last_run=last_run,
     )
 
 
@@ -999,6 +1012,19 @@ def admin_orphan_clean():
         flash(f"{failed} 个文件删除失败", "error")
     else:
         flash("没有可清理的文件", "success")
+    return redirect(url_for("admin_orphans"))
+
+
+@LOGIN
+def admin_orphan_settings_save():
+    auto = "1" if request.form.get("orphan_auto_clean") else "0"
+    settings.set_value("orphan_auto_clean", auto)
+    try:
+        days = int(request.form.get("orphan_retention_days", "7"))
+    except (TypeError, ValueError):
+        days = 7
+    settings.set_value("orphan_retention_days", str(min(max(days, 1), 365)))
+    flash("孤儿清理设置已保存", "success")
     return redirect(url_for("admin_orphans"))
 
 
@@ -1981,6 +2007,7 @@ def register(app) -> None:
         ("/admin/preview/asset/<path:filename>", "admin_preview_asset", admin_preview_asset, ["GET"]),
         ("/admin/orphans", "admin_orphans", admin_orphans, ["GET"]),
         ("/admin/orphans/clean", "admin_orphan_clean", admin_orphan_clean, ["POST"]),
+        ("/admin/orphans/settings", "admin_orphan_settings_save", admin_orphan_settings_save, ["POST"]),
         ("/admin/status", "admin_status", admin_status, ["GET", "POST"]),
         ("/admin/status/probe", "admin_status_probe", admin_status_probe, ["POST"]),
         ("/admin/status/test-cloud", "admin_status_test_cloud", admin_status_test_cloud, ["POST"]),

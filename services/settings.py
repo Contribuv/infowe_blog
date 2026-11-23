@@ -99,6 +99,10 @@ DEFAULTS: dict[str, str] = {
     "active_theme": "tech",
     "admin_path": "admin",
     "upload_max_size": "20",
+    # 孤儿文件定期清理：默认关闭；开启后每天清理超过保留天数且无引用的本地孤儿
+    "orphan_auto_clean": "0",
+    "orphan_retention_days": "7",
+    "orphan_last_run": "",
     "upload_image_ext": "jpg,jpeg,png,gif,webp,ico,avif",
     "upload_media_ext": "mp4,webm,mp3,wav,ogg,m4a,flac",
     "upload_file_ext": "pdf,zip,7z,rar,tar,gz,bz2,txt,md,json,csv,yml,yaml,doc,docx,xls,xlsx,ppt,pptx,py,js,css,sql",
@@ -131,7 +135,7 @@ BOOL_KEYS = {
     "comments_enabled", "comment_notify", "comment_image_upload",
     "sensitive_filter_enabled", "nav_posts", "nav_tags", "nav_projects",
     "nav_links", "nav_circle", "nav_readers", "nav_interactions", "nav_status", "nav_about", "force_https", "unify_www",
-    "watermark_enabled", "otp_enabled",
+    "watermark_enabled", "otp_enabled", "orphan_auto_clean",
 }
 
 
