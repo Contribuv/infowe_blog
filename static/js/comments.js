@@ -794,11 +794,55 @@ window.initComments = function (root) {
     else setTimeout(scroll, 30);
   }
   revealHashTarget();
+  /* 图片未加载完时浏览器只能按旧高度定位：#comment-N 往往停在偏上的位置。
+     这里在图片 load / 页面 load / 主体高度变化后，只要用户还没主动滚动，
+     就重新把目标拉回视口中央（用 auto，不再做第二次平滑动画）。 */
+  function reanchorHash() {
+    var hash = location.hash || '';
+    if (hash.indexOf('#comment-') !== 0) return;
+    if (window.__cmtUserScrolled) return;
+    var el = document.getElementById(hash.slice(1));
+    if (!el) return;
+    if (el.closest && el.closest('dialog')) return;
+    el.scrollIntoView({ block: 'center' });
+  }
+  function markUserScroll() { window.__cmtUserScrolled = true; }
+  ['wheel', 'touchmove'].forEach(function (name) {
+    window.addEventListener(name, markUserScroll, { passive: true });
+  });
+  window.addEventListener('load', function () { setTimeout(reanchorHash, 60); });
+  if (!window.__cmtReanchorImgBound) {
+    window.__cmtReanchorImgBound = true;
+    // 图片 load 不冒泡，用捕获；同一批图片合并成一次校准
+    document.addEventListener('load', function (e) {
+      var t = e.target;
+      if (!t || t.tagName !== 'IMG') return;
+      if ((location.hash || '').indexOf('#comment-') !== 0) return;
+      if (window.__cmtUserScrolled) return;
+      if (window.__cmtReanchorTimer) clearTimeout(window.__cmtReanchorTimer);
+      window.__cmtReanchorTimer = setTimeout(reanchorHash, 120);
+    }, true);
+  }
+  if (window.ResizeObserver && !window.__cmtReanchorRO) {
+    window.__cmtReanchorRO = true;
+    var anchorDeadline = Date.now() + 30000;
+    var raf = 0;
+    var ro = new ResizeObserver(function () {
+      if (window.__cmtUserScrolled) { ro.disconnect(); return; }
+      if (Date.now() > anchorDeadline) { ro.disconnect(); return; }
+      if (raf) return;
+      raf = requestAnimationFrame(function () { raf = 0; reanchorHash(); });
+    });
+    ro.observe(document.body);
+  }
   /* hashchange 处理函数内部用 document.getElementById 全局查找，
      天然覆盖浮窗片段；重复调用 initComments 时只绑一次，避免多次展开 */
   if (!window.__cmtHashRevealBound) {
     window.__cmtHashRevealBound = true;
-    window.addEventListener('hashchange', revealHashTarget);
+    window.addEventListener('hashchange', function () {
+      window.__cmtUserScrolled = false;
+      revealHashTarget();
+    });
   }
 
   /* ── 2.6 评论分页：只替换评论区，避免整页跳转触发跨文档过渡动画（闪屏） ──

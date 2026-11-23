@@ -192,6 +192,8 @@
             <summary class="cmt-toggle">
                 <svg class="cmt-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 <span class="cmt-toggle-placeholder">写下你的想法…</span>
+                <span class="cmt-toggle-hint">免登录 · 填昵称和邮箱即可</span>
+                <span class="cmt-toggle-hint-short">免登录</span>
                 <span class="cmt-toggle-act"{% if not is_admin and not reader_user and not commenter.author %} hidden{% endif %}>写评论</span>
                 {% if not is_admin and not reader_user and not commenter.author %}
                 {# 新访客：折叠条右侧只放一个「登录」，与参考站一致；点开可直接登录或跳过验证填昵称邮箱 #}

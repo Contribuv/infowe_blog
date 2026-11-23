@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.56-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.56)
+[![version](https://img.shields.io/badge/version-3.9.57-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.57)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.56**
+当前版本：**v3.9.57**
 
-> 最近一次更新完整展开；更早的 155 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 156 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.57
+
+- **折叠条提示免登录**：占位条紧跟「免登录 · 填昵称和邮箱即可」，让人知道不登录也能评论；窄屏（≤900px）自动换成「免登录」两个字，不会溢出或换行
+- **动作行字号再统一**：`Ctrl↵ 提交` 提示也提到 13px，与「提交评论 / 登录 / 收起」一致；「收起」字重补到 500，和「登录」对齐
+- **登录悬停去掉下划线**：改成轻微提亮，不再出现文字下划线
+- **图片未加载完时的锚点修复**：`/post/111#comment-554` 这类链接此前会因为上方图片撑高页面而停在错误位置；现在在图片 load、页面 load、主体高度变化后重新校正（用户主动滚动后立即停止，不会抢滚动）
 
 ### v3.9.56
 
@@ -987,7 +994,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.55 及更早，共 155 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.56 及更早，共 156 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 
