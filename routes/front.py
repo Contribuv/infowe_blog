@@ -113,8 +113,12 @@ def _comments_context(post_id: int | None, project_id: int | None, page: int | N
     reader_user = reader_account.public_user(reader_row) if reader_row else None
     if reader_user:
         from services import avatar as avatar_svc
-        reader_user["avatar"] = avatar_svc.urls(
-            str((reader_row or {}).get("email_hash") or ""), "", 80)[0] or avatar_svc.default_url()
+        # 上传的自定义头像优先于 Gravatar / QQ 邮箱头像
+        custom_avatar = str((reader_row or {}).get("avatar_url") or "").strip()
+        reader_user["avatar"] = custom_avatar or (
+            avatar_svc.urls(str((reader_row or {}).get("email_hash") or ""), "", 80)[0]
+            or avatar_svc.default_url()
+        )
         # 已登录读者：用账号信息作为表单默认身份（昵称与 comment_identities 一致，不触发改名冲突）
         for field in ("author", "email", "website"):
             key = "name" if field == "author" else field
@@ -600,6 +604,55 @@ def reader_send_code():
     return jsonify({"ok": True, "cooldown": 60})
 
 
+def reader_reset_code():
+    from services import mail_template, notify, reader_account, settings
+
+    if not comments_service.open_comments():
+        abort(403)
+    email = (request.form.get("email") or "").strip()
+    code, error = reader_account.issue_code(
+        email, comments_service.request_ip(), reader_account.RESET_PURPOSE
+    )
+    if error:
+        return jsonify({"error": error}), 429
+    blog = settings.get_str("blog_name", "博客").strip() or "博客"
+    text, page = mail_template.reset_code_notice(
+        blog_name=blog,
+        site=site_url.base(),
+        code=code,
+        ttl_minutes=reader_account.CODE_TTL // 60,
+    )
+    ok, _message = notify.send(
+        reader_account.normalize_email(email),
+        f"[{blog}] 重置密码验证码",
+        text,
+        page,
+    )
+    if not ok:
+        return jsonify({"error": "验证码发送失败，请稍后重试"}), 500
+    return jsonify({"ok": True, "cooldown": 60})
+
+
+def reader_reset_password():
+    from services import captcha, reader_account
+
+    if not comments_service.open_comments():
+        abort(403)
+    if not captcha.verify(request.form.get("captcha", "")):
+        return jsonify({"error": "验证码错误或已过期", "captcha_expired": True}), 400
+    email = (request.form.get("email") or "").strip()
+    code = (request.form.get("code") or "").strip()
+    password = request.form.get("password") or ""
+    if not code:
+        return jsonify({"error": "请填写邮箱验证码"}), 400
+    row, error = reader_account.reset_password(email, code, password)
+    if error:
+        status = 429 if "验证码" in error else 400
+        return jsonify({"error": error}), status
+    response = jsonify({"ok": True, "user": reader_account.public_user(row)})
+    return _apply_reader_cookie(response, row)
+
+
 def reader_register():
     from services import captcha, reader_account
 
@@ -777,8 +830,13 @@ def reader_avatar_upload():
     file = request.files.get("avatar")
     if not file or not file.filename:
         return jsonify({"error": "请选择图片"}), 400
-    allowed = IMAGE_EXTS if "IMAGE_EXTS" in globals() else {"png", "jpg", "jpeg", "gif", "webp"}
-    url, error = upload.save(file, allowed_ext=allowed, sub_dir="reader/avatar", randomize=True)
+    # 头像只收图片：用 upload 的统一扩展名集合（带点，含 .jpeg / .avif），
+    # 之前的 fallback 漏了点，导致所有头像都被判成「不支持的文件类型」
+    allowed = set(upload.image_exts())
+    url, error = upload.save(
+        file, allowed_ext=allowed, sub_dir="reader/avatar",
+        randomize=True, square=320, watermark=False,
+    )
     if error:
         return jsonify({"error": error}), 400
     ok, error = reader_account.update_avatar(row, url)
@@ -1506,6 +1564,8 @@ def register(app) -> None:
         ("/api/comment/history", "comment_history", comment_history, ["GET"]),
         ("/api/reader/captcha", "reader_captcha", reader_captcha, ["GET"]),
         ("/api/reader/send-code", "reader_send_code", reader_send_code, ["POST"]),
+    ("/api/reader/reset-code", "reader_reset_code", reader_reset_code, ["POST"]),
+    ("/api/reader/reset-password", "reader_reset_password", reader_reset_password, ["POST"]),
         ("/api/reader/register", "reader_register", reader_register, ["POST"]),
         ("/api/reader/login", "reader_login", reader_login, ["POST"]),
         ("/api/reader/logout", "reader_logout", reader_logout, ["POST"]),

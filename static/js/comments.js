@@ -256,6 +256,7 @@ window.initComments = function (root) {
   var loginSubmit = byId('cmt-login-submit');
   var loginSend = byId('cmt-login-send');
   var loginEmail = byId('cmt-login-email');
+  var loginEmailSuggest = byId('cmt-login-email-suggest');
   var loginName = byId('cmt-login-name');
   var loginNameWrap = byId('cmt-login-name-wrap');
   var loginCode = byId('cmt-login-code');
@@ -266,6 +267,9 @@ window.initComments = function (root) {
   var loginTitle = byId('cmt-login-title');
   var loginDesc = byId('cmt-login-desc');
   var loginTabs = byId('cmt-login-tabs') ? byId('cmt-login-tabs').querySelectorAll('.cmt-login-tab') : [];
+  var loginTabsWrap = byId('cmt-login-tabs');
+  var loginForgot = byId('cmt-login-forgot');
+  var loginBack = byId('cmt-login-back');
   var loginMode = 'login';
   var loginCountdown = 0;
   var loginTimer = null;
@@ -275,19 +279,61 @@ window.initComments = function (root) {
     loginTip.className = 'cmt-idtip' + (kind ? ' cmt-idtip--' + kind : '');
     loginTip.textContent = msg || '';
   }
+  /* 登录邮箱也支持「纯 QQ 号 → 补全 @qq.com」：输入时给提示，点提示或提交时自动补全 */
+  var LOGIN_QQ_RE = /^\d{5,12}$/;
+  function loginEmailValue() {
+    var v = loginEmail ? loginEmail.value.trim() : '';
+    return LOGIN_QQ_RE.test(v) ? v + '@qq.com' : v;
+  }
+  function hideLoginEmailSuggest() {
+    if (loginEmailSuggest) loginEmailSuggest.hidden = true;
+  }
+  if (loginEmail && loginEmailSuggest) {
+    var syncLoginEmail = function () {
+      var v = loginEmail.value.trim();
+      if (LOGIN_QQ_RE.test(v)) {
+        loginEmailSuggest.textContent = '补全为 ' + v + '@qq.com';
+        loginEmailSuggest.hidden = false;
+      } else {
+        hideLoginEmailSuggest();
+      }
+    };
+    loginEmail.addEventListener('input', syncLoginEmail);
+    loginEmail.addEventListener('blur', function () { setTimeout(hideLoginEmailSuggest, 150); });
+    loginEmailSuggest.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      if (loginEmail && LOGIN_QQ_RE.test(loginEmail.value.trim())) {
+        loginEmail.value = loginEmail.value.trim() + '@qq.com';
+      }
+      hideLoginEmailSuggest();
+    });
+  }
   function setLoginMode(mode) {
     loginMode = mode;
+    var register = mode === 'register';
+    var reset = mode === 'reset';
     Array.prototype.forEach.call(loginTabs, function (tab) {
       tab.classList.toggle('is-active', tab.getAttribute('data-mode') === mode);
     });
-    var register = mode === 'register';
+    if (loginTabsWrap) loginTabsWrap.hidden = reset;
     if (loginNameWrap) loginNameWrap.hidden = !register;
-    if (loginCodeWrap) loginCodeWrap.hidden = !register;
-    if (loginTitle) loginTitle.textContent = register ? '注册账号' : '邮箱登录';
-    if (loginDesc) loginDesc.textContent = register
-      ? '注册后可用邮箱+密码登录，同步身份并使用站内通知。'
-      : '用注册邮箱与密码登录，登录后可同步身份、使用站内通知。';
-    if (loginSubmit) loginSubmit.textContent = register ? '注册并登录' : '登录';
+    if (loginCodeWrap) loginCodeWrap.hidden = !(register || reset);
+    var pwd = byId('cmt-login-password');
+    if (pwd) {
+      pwd.placeholder = reset ? '新密码（至少 6 位）' : '密码（至少 6 位）';
+      pwd.setAttribute('autocomplete', reset ? 'new-password' : 'current-password');
+    }
+    if (loginForgot) loginForgot.hidden = reset;
+    if (loginBack) loginBack.hidden = !reset;
+    if (loginSkip) loginSkip.hidden = reset;
+    if (loginTitle) loginTitle.textContent = reset ? '找回密码' : (register ? '注册账号' : '邮箱登录');
+    if (loginDesc) loginDesc.textContent = reset
+      ? '用注册邮箱接收验证码，验证后设置新密码。'
+      : (register
+        ? '注册后可用邮箱+密码登录，同步身份并使用站内通知。'
+        : '用注册邮箱与密码登录，登录后可同步身份、使用站内通知。');
+    if (loginSubmit) loginSubmit.textContent = reset ? '重置密码' : (register ? '注册并登录' : '登录');
+    hideLoginEmailSuggest();
     setLoginTip('');
   }
   function refreshCaptcha() {
@@ -342,6 +388,11 @@ window.initComments = function (root) {
   var registerOpen = byId('cmt-register-open');
   if (registerOpen) registerOpen.addEventListener('click', function () { openLogin('register'); });
   if (loginClose) loginClose.addEventListener('click', closeLogin);
+  if (loginForgot) loginForgot.addEventListener('click', function () { setLoginMode('reset'); });
+  if (loginBack) loginBack.addEventListener('click', function () {
+    setLoginMode('login');
+    refreshCaptcha();
+  });
   if (loginSkip) loginSkip.addEventListener('click', function () {
     closeLogin();
     if (fields) fields.hidden = false;
@@ -363,11 +414,12 @@ window.initComments = function (root) {
   });
   if (loginSend) loginSend.addEventListener('click', function () {
     if (loginCountdown > 0 || !loginEmail) return;
-    var email = loginEmail.value.trim();
+    var email = loginEmailValue();
     if (!email) { setLoginTip('请先填写邮箱', 'error'); return; }
     loginSend.disabled = true;
     loginSend.textContent = '发送中…';
-    postLogin('/api/reader/send-code', { email: email })
+    var codeUrl = loginMode === 'reset' ? '/api/reader/reset-code' : '/api/reader/send-code';
+    postLogin(codeUrl, { email: email })
       .then(function (data) {
         loginSend.textContent = '发送验证码';
         if (!data || data.error) { setLoginTip((data && data.error) || '发送失败', 'error'); loginSend.disabled = false; return; }
@@ -387,18 +439,24 @@ window.initComments = function (root) {
   });
   if (loginSubmit) loginSubmit.addEventListener('click', function () {
     if (!loginEmail) return;
-    var email = loginEmail.value.trim();
+    var email = loginEmailValue();
     var password = loginPasswordValue();
     if (!email || !password) { setLoginTip('请填写邮箱和密码', 'error'); return; }
     var captchaVal = (loginCaptcha && loginCaptcha.value.trim()) || '';
     if (!captchaVal) { setLoginTip('请填写图形验证码', 'error'); return; }
-    var url = loginMode === 'register' ? '/api/reader/register' : '/api/reader/login';
+    var url = loginMode === 'register' ? '/api/reader/register'
+      : loginMode === 'reset' ? '/api/reader/reset-password'
+        : '/api/reader/login';
     var data = { email: email, password: password, captcha: captchaVal };
     if (loginMode === 'register') {
       data.code = (loginCode && loginCode.value.trim()) || '';
       data.name = (loginName && loginName.value.trim()) || '';
       if (!data.name) { setLoginTip('请填写昵称', 'error'); return; }
       if (!data.code) { setLoginTip('请填写验证码', 'error'); return; }
+    }
+    if (loginMode === 'reset') {
+      data.code = (loginCode && loginCode.value.trim()) || '';
+      if (!data.code) { setLoginTip('请填写邮箱验证码', 'error'); return; }
     }
     loginSubmit.disabled = true;
     setLoginTip('提交中…');

@@ -25,6 +25,7 @@ TOKEN_TTL = 30 * 24 * 3600  # 登录态 30 天
 CODE_TTL = 600              # 验证码 10 分钟
 MAX_ATTEMPTS = 5
 PURPOSE = "register"
+RESET_PURPOSE = "reset"
 COOKIE_NAME = "blog_reader_session"
 
 # 昵称审核状态：approved 正常可用；manual 待人工审核（禁止登录）；
@@ -65,14 +66,21 @@ def _code_hash(key: str, code: str) -> str:
     return hashlib.sha256(f"{key}:{code}".encode("utf-8")).hexdigest()
 
 
-def issue_code(email: str, ip: str = "") -> tuple[str, str]:
-    """生成注册验证码，返回 (code, error)。已注册邮箱不允许重复注册。"""
+def issue_code(email: str, ip: str = "", purpose: str = PURPOSE) -> tuple[str, str]:
+    """生成邮箱验证码，返回 (code, error)。
+
+    purpose="register" 只给未注册邮箱，purpose="reset" 只给已注册邮箱；
+    两种用途分开存，注册验证码不能拿去重置密码。
+    """
     value = normalize_email(email)
     key = avatar.email_hash(value)
     if not valid_email(value):
         return "", "邮箱格式不正确"
-    if get_by_hash(key):
+    exists = bool(get_by_hash(key))
+    if purpose == PURPOSE and exists:
         return "", "该邮箱已注册，请直接登录"
+    if purpose == RESET_PURPOSE and not exists:
+        return "", "该邮箱还没有注册"
 
     checks = [
         ("reader_code_minute", key, 60, 1, "发送太频繁，请 60 秒后再试"),
@@ -89,13 +97,13 @@ def issue_code(email: str, ip: str = "") -> tuple[str, str]:
     now = db.now()
     db.execute(
         "DELETE FROM email_codes WHERE email_hash=? AND purpose=? AND used_at=''",
-        (key, PURPOSE),
+        (key, purpose),
     )
     db.insert(
         "INSERT INTO email_codes "
         "(email_hash, email, code_hash, new_author, purpose, expires_at, ip, created_at) "
         "VALUES (?,?,?,?,?,?,?,?)",
-        (key, value, _code_hash(key, code), "", PURPOSE,
+        (key, value, _code_hash(key, code), "", purpose,
          int(time.time()) + CODE_TTL, ip, now),
     )
     for bucket in ("reader_code_minute", "reader_code_10m", "reader_code_day"):
@@ -105,8 +113,8 @@ def issue_code(email: str, ip: str = "") -> tuple[str, str]:
     return code, ""
 
 
-def verify_code(email: str, code: str) -> str:
-    """校验注册验证码，成功返回空错误串。"""
+def verify_code(email: str, code: str, purpose: str = PURPOSE) -> str:
+    """校验验证码，成功返回空错误串。"""
     value = normalize_email(email)
     key = avatar.email_hash(value)
     if not key:
@@ -114,7 +122,7 @@ def verify_code(email: str, code: str) -> str:
     row = db.one(
         "SELECT * FROM email_codes WHERE email_hash=? AND purpose=? "
         "AND used_at='' AND expires_at>? ORDER BY id DESC LIMIT 1",
-        (key, PURPOSE, int(time.time())),
+        (key, purpose, int(time.time())),
     )
     if not row:
         return "验证码已过期，请重新获取"
@@ -254,6 +262,31 @@ def login(email: str, password: str) -> tuple[dict | None, str]:
     if identity and identity["current_author"]:
         row["name"] = str(identity["current_author"])
     return row, ""
+
+
+def reset_password(email: str, code: str, password: str) -> tuple[dict | None, str]:
+    """邮箱验证码重置密码；成功后把邮箱验证码标记为已用。"""
+    value = normalize_email(email)
+    if not valid_email(value):
+        return None, "邮箱格式不正确"
+    row = get_by_hash(avatar.email_hash(value))
+    if not row:
+        return None, "该邮箱还没有注册"
+    if len(password or "") < 6:
+        return None, "密码至少 6 位"
+    error = verify_code(value, code, RESET_PURPOSE)
+    if error:
+        return None, error
+    from werkzeug.security import generate_password_hash
+
+    db.execute(
+        "UPDATE reader_users SET password_hash=?, updated_at=? WHERE email_hash=?",
+        (generate_password_hash(password), db.now(), email_hash(value)),
+    )
+    # 密码重置后让旧登录态失效：token 里有 password_hash 指纹时由 verify 拒绝；
+    # 这里顺带刷新 last_login_at，方便后台看出最近一次操作
+    db.execute("UPDATE reader_users SET last_login_at=? WHERE email_hash=?", (db.now(), email_hash(value)))
+    return get_by_hash(email_hash(value)), ""
 
 
 def _serializer() -> URLSafeTimedSerializer:

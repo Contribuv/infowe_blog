@@ -661,14 +661,39 @@ def _convert_heic(src: Path, quality: int = 92) -> Path | None:
     return out
 
 
+def _square_crop(path: Path, size: int) -> Path | None:
+    """居中裁成正方形并转 WebP（头像用）。失败返回 None，调用方保留原图。"""
+    try:
+        from PIL import Image, ImageOps
+
+        with Image.open(path) as img:
+            img = ImageOps.exif_transpose(img)
+            if img.mode not in {"RGB", "RGBA"}:
+                img = img.convert("RGB")
+            img = ImageOps.fit(img, (size, size), Image.LANCZOS, centering=(0.5, 0.5))
+            out = path.with_suffix(".webp")
+            img.save(out, "WEBP", quality=90, method=4)
+        if out != path:
+            path.unlink(missing_ok=True)
+        return out
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("头像裁切失败 %s: %s", path, exc)
+        return None
+
+
 def save(
     file: FileStorage | None,
     allowed_ext: set[str],
     max_bytes: int | None = None,
     sub_dir: str | None = None,
     randomize: bool = False,
+    square: int = 0,
+    watermark: bool = True,
 ) -> tuple[str, str]:
-    """返回 (相对 URL, 错误信息)。"""
+    """返回 (相对 URL, 错误信息)。
+
+    square > 0 时居中裁成正方形并转 WebP（头像）；watermark=False 时不叠水印。
+    """
     if file is None or not file.filename:
         return "", "未选择文件或上传失败"
     limit = max_bytes or max_size()
@@ -718,7 +743,13 @@ def save(
             filename = dest.name
         # 水印只在上传这一刻决定：开着就叠上去，关着就存原样。
         # 不另存副本，同一张图在磁盘上只有一份；切换开关只影响之后的新图。
-        _apply_watermark(dest)
+        if watermark:
+            _apply_watermark(dest)
+    if square:
+        cropped = _square_crop(dest, int(square))
+        if cropped is not None:
+            dest = cropped
+            filename = dest.name
     rel_url = f"/uploads/{sub}/{filename}"
     # 远端存储（如对象存储插件）只负责「额外上传一份」，
     # 返回给调用方的永远是规范路径 /uploads/...。

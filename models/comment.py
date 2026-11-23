@@ -97,6 +97,16 @@ def load(
     avatar_default = avatar.default_url()
     cfg_avatar = settings.get_str("avatar", "").strip()
     cfg_ok = avatar.configured_avatar_exists()
+    # 注册用户的自定义头像：一次查出全部映射，避免每条评论单独查库
+    custom_avatars: dict[str, str] = {}
+    try:
+        for row in db.query(
+            "SELECT email_hash, avatar_url FROM reader_users "
+            "WHERE COALESCE(avatar_url, '') != ''"
+        ):
+            custom_avatars[str(row["email_hash"])] = str(row["avatar_url"])
+    except Exception:  # noqa: BLE001
+        custom_avatars = {}
 
     by_id: dict[int, dict] = {}
     items: list[dict] = []
@@ -140,9 +150,14 @@ def load(
             else:
                 c["avatar"], c["avatar_fallback"] = avatar.urls(contact_hash, contact_qq)
         else:
-            c["avatar"], c["avatar_fallback"] = avatar.urls(
-                str(c.get("email_hash") or ""), str(c.get("qq") or "")
-            )
+            # 注册用户上传过自定义头像时优先用账号头像，其次才按邮箱算 Gravatar / QQ 头像
+            custom_avatar = custom_avatars.get(str(c.get("email_hash") or ""))
+            if custom_avatar:
+                c["avatar"], c["avatar_fallback"] = custom_avatar, avatar_default
+            else:
+                c["avatar"], c["avatar_fallback"] = avatar.urls(
+                    str(c.get("email_hash") or ""), str(c.get("qq") or "")
+                )
         if c["is_ai"]:
             try:
                 ai_meta = json.loads(c.get("ai_meta") or "{}")

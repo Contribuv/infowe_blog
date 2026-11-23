@@ -270,10 +270,10 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
 /* 邮箱必填被拦截时的红边：提示文案交给全局 Toast（底部弹出），这里只标出是哪个字段 */
 .cmt-form input.is-invalid,.cmt-form textarea.is-invalid{border-color:var(--danger,#b4232f);box-shadow:0 0 0 3px rgba(180,35,47,.14)}
-.cmt-form .count{margin-right:auto;font-size:12px;color:var(--c-text3);font-variant-numeric:tabular-nums}
+.cmt-form .count{margin-right:auto;display:inline-flex;align-items:center;height:20px;font-size:13px;line-height:1;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
-.cmt-form .kbd-hint{font-size:13px;color:var(--c-text3);opacity:.75;white-space:nowrap}
+.cmt-form .kbd-hint{display:inline-flex;align-items:center;height:20px;font-size:13px;line-height:1;color:var(--c-text3);opacity:.75;white-space:nowrap}
 /* 「收起」：次要动作只给文字，不与提交按钮争视觉重量；
    与「登录」同字号（13px）同基线，动作行里的文字才一致 */
 .cmt-form .cmt-fold-back{display:inline-flex;align-items:center;height:20px;align-self:center;padding:0;border:0;background:none;font-size:13px;line-height:1;font-weight:500;color:var(--c-text3);cursor:pointer;white-space:nowrap}
@@ -667,8 +667,21 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   color:var(--c-text);font-size:14px;
 }
 .cmt-login-fields .cmt-idrow input{letter-spacing:2px}
+/* 登录邮箱 QQ 号补全提示 */
+.cmt-login-suggest{
+  margin-top:-4px;padding:6px 10px;border:1px solid var(--c-border);border-radius:6px;
+  background:var(--bg-surface,var(--bg-subtle,transparent));
+  font-size:12px;line-height:1.5;color:var(--c-text2);cursor:pointer;
+}
+@media (hover:hover) and (pointer:fine){.cmt-login-suggest:hover{border-color:var(--c-accent);color:var(--c-accent)}}
 .cmt-captcha-img{height:38px;width:120px;border:1px solid var(--c-border);border-radius:8px;cursor:pointer;flex:none;background:#f4f7fb}
 .cmt-login-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+/* 忘记密码：登录模式下右对齐的轻量文字入口 */
+.cmt-login-forgot{
+  display:block;margin:10px 0 0 auto;padding:0;border:0;background:none;
+  font-size:12.5px;line-height:1.6;color:var(--c-text3);cursor:pointer;
+}
+@media (hover:hover) and (pointer:fine){.cmt-login-forgot:hover{color:var(--c-accent)}}
 @media(max-width:520px){
   .cmt-idrow{flex-wrap:wrap}
   .cmt-idrow .cmt-idbtn{width:100%}

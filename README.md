@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.57-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.57)
+[![version](https://img.shields.io/badge/version-3.9.58-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.58)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.57**
+当前版本：**v3.9.58**
 
-> 最近一次更新完整展开；更早的 156 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 157 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.58
+
+- **头像上传修复**：`avatar-upload` 的扩展名白名单漏了 `.`，所有图片（含 `.jpeg`）都会被判成「不支持的文件类型」；改为复用 `upload.image_exts()`，与后台其余上传一致
+- **自定义头像优先**：注册用户上传的头像现在优先于 Gravatar / QQ 邮箱头像，评论区列表、表单身份条、账户抽屉三处同时生效
+- **上传即裁切**：头像统一居中裁成 320×320 并转 WebP（体积更小、圆形显示不变形），头像不叠水印
+- **忘记密码 / 找回密码**：登录浮窗新增「忘记密码？」入口，用注册邮箱收验证码 → 设置新密码；验证码按 `reset` 用途单独存放，注册验证码不能拿去重置
+- **重置邮件文案**：单独一封「重置密码验证码」邮件，不再复用「修改昵称」模板；非本人操作会提示忽略即可
+- **登录邮箱支持 QQ 号**：输入纯 QQ 号时提示「补全为 xxx@qq.com」，点提示、发送验证码或提交时都会自动补全
+- **动作行真正对齐**：「0 / 2000」「Ctrl↵ 提交」「登录」「收起」「提交评论」统一 13px / 20px 行高并垂直居中，不再因字号与行高不同而错位
+- 其他：重置成功后旧密码立即失效，新密码可直接登录
 
 ### v3.9.57
 
@@ -994,7 +1005,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.56 及更早，共 156 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.57 及更早，共 157 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 
