@@ -103,9 +103,16 @@ def _load_comments(
 
 
 def _local_avatar_url(url: str) -> str:
-    """博主头像加 local=1：首页 / 关于页固定走本地（OSS 改写会跳过）。"""
+    """博主头像加 local=1：首页 / 关于页固定走本地（OSS 改写会跳过）。
+
+    停用 OSS 时返回原路径，不留下无意义的查询参数。
+    """
     value = str(url or "")
     if not value.startswith("/uploads/") or "local=1" in value:
+        return value
+    from services import upload
+
+    if not upload.remote_active():
         return value
     return value + ("&" if "?" in value else "?") + "local=1"
 

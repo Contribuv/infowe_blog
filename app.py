@@ -513,9 +513,14 @@ def _local_avatar(url: str) -> str:
 
     OSS 插件改写 HTML 时会跳过带 local=1 的地址；评论区、后台等
     其它位置的博主头像不带这个标记，照常走 OSS。
+    停用 OSS 时返回原路径，不留下无意义的查询参数。
     """
     value = str(url or "")
     if not value.startswith("/uploads/") or "local=1" in value:
+        return value
+    from services import upload as upload_service
+
+    if not upload_service.remote_active():
         return value
     return value + ("&" if "?" in value else "?") + "local=1"
 

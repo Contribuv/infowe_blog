@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.70-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.70)
+[![version](https://img.shields.io/badge/version-3.9.71-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.71)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.70**
+当前版本：**v3.9.71**
 
-> 最近一次更新完整展开；更早的 169 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 170 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.71
+
+- **存储策略定稿并写入文档**：启用 OSS 后，文章 / 项目正文、封面、友链 logo、时间线 / 记忆图、评论区博主与注册用户头像、后台评论头像、后台账号页头像、照片墙灯箱大图走 OSS；首页侧栏与关于页博主头像、Gravatar / QQ / 默认头像、照片墙列表缩略图、`/links/apply` 的 `/static/images/favicon.ico` 固定本地；评论图片经 `/comment-img` 审核中转，通过后再 302 到 OSS
+- **停用 OSS 的回落机制确认**：HTML 输出不再改写、页面缓存存的是规范路径、代理路由按 `remote_active()` 回退、接口 `remote_url()` 返回空时回退、数据库不落签名地址——前后台都会回到 `/uploads/...` 本地
+- **后台展示图保持本地路径**：编辑器与图片选择器不改写，避免临时地址被写进正文；只有纯展示的头像单独走 OSS
+- **读者页头像同步自定义头像**：`/readers` 排行榜与读者详情页此前只按邮箱算 Gravatar / QQ，现在优先 `reader_users.avatar_url`，与评论区和后台一致
+- **停用 OSS 时清理本地标记**：首页 / 关于页头像的 `local=1` 只在 OSS 启用时添加，停用后输出干净的 `/uploads/...`
+- **对外抓取类输出保持本地**：RSS / OG 分享图 / 邮件通知里的图片仍用本站绝对地址，因为私有桶的签名地址会过期，不适合被外部平台长期缓存
 
 ### v3.9.70
 
@@ -1089,7 +1098,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.69 及更早，共 169 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.70 及更早，共 170 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

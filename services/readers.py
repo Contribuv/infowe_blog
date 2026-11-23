@@ -47,9 +47,37 @@ def _site(url: str) -> str:
     return value if re.match(r"^https?://", value, re.I) else ""
 
 
-def _avatar(row: dict) -> str:
-    url, _ = avatar.urls(str(row.get("email_hash") or ""), str(row.get("qq") or ""))
+def _avatar(row: dict, custom: dict[str, str] | None = None) -> str:
+    # 注册用户上传过自定义头像时优先用它；否则退回 Gravatar / QQ
+    key = str(row.get("email_hash") or "")
+    if custom and key and custom.get(key):
+        return custom[key]
+    url, _ = avatar.urls(key, str(row.get("qq") or ""))
     return url or avatar.default_url()
+
+
+def _custom_avatar_map(rows: list[dict]) -> dict[str, str]:
+    """一次查出这批评论者里注册用户的自定义头像，避免逐条查库。"""
+    import db
+
+    hashes = sorted({str(r.get("email_hash") or "") for r in rows if r.get("email_hash")})
+    if not hashes:
+        return {}
+    result: dict[str, str] = {}
+    for start in range(0, len(hashes), 200):
+        chunk = hashes[start:start + 200]
+        marks = ",".join("?" * len(chunk))
+        try:
+            found = db.query(
+                f"SELECT email_hash, avatar_url FROM reader_users "
+                f"WHERE email_hash IN ({marks}) AND COALESCE(avatar_url, '') != ''",
+                tuple(chunk),
+            )
+        except Exception:  # noqa: BLE001
+            continue
+        for row in found:
+            result[str(row["email_hash"])] = str(row["avatar_url"])
+    return result
 
 
 def _source(row: dict) -> tuple[str, str]:
@@ -116,6 +144,8 @@ def rank(page: int = 1, per_page: int = RANK_PER_PAGE) -> dict:
     total_pages = max(1, (total + per_page - 1) // per_page)
     page = min(max(1, int(page or 1)), total_pages)
     start = (page - 1) * per_page
+    page_rows = [bucket["last"] for bucket in ordered[start:start + per_page]]
+    custom_avatars = _custom_avatar_map(page_rows)
     items = []
     for index, bucket in enumerate(ordered[start:start + per_page], start=start + 1):
         row = bucket["last"]
@@ -126,7 +156,7 @@ def rank(page: int = 1, per_page: int = RANK_PER_PAGE) -> dict:
                 "reader_id": reader_id(bucket["key"]),
                 "author": row.get("author") or "匿名读者",
                 "website": _site(str(row.get("website") or "")),
-                "avatar": _avatar(row),
+                "avatar": _avatar(row, custom_avatars),
                 "count": bucket["count"],
                 "last_at": row.get("created_at") or "",
                 "last_text": _plain(str(row.get("content") or ""), 60),
@@ -196,12 +226,13 @@ def detail(rid: str, page: int = 1, per_page: int = DETAIL_PER_PAGE) -> dict | N
 
     latest = mine[0]
     earliest = mine[-1]
+    custom_avatars = _custom_avatar_map([latest])
     return {
         "reader": {
             "id": reader_id(_key(latest)),
             "author": latest.get("author") or "匿名读者",
             "website": _site(str(latest.get("website") or "")),
-            "avatar": _avatar(latest),
+            "avatar": _avatar(latest, custom_avatars),
             "total": total,
             "recent": recent,
             "sources": len({(row.get("post_id"), row.get("project_id")) for row in mine}),
