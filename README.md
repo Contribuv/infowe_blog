@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.54-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.54)
+[![version](https://img.shields.io/badge/version-3.9.55-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.55)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.54**
+当前版本：**v3.9.55**
 
-> 最近一次更新完整展开；更早的 153 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 154 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.55
+
+- **动作行字号统一**：「提交评论」「登录」「收起」统一 13px；字数统计与 `Ctrl↵ 提交` 提示统一 12px，不再一大一小
+- **登录按钮悬停只变色**：去掉上浮位移与投影，悬停 / 按下只做底色加深，与参考站一致
+- 其他：折叠条占位文字 14px、输入框 14px，与评论正文的阅读尺度统一
 
 ### v3.9.54
 
@@ -976,7 +982,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.53 及更早，共 153 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.54 及更早，共 154 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

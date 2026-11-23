@@ -216,19 +216,17 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
   font-size:13px;font-weight:600;line-height:1.4;cursor:pointer;white-space:nowrap;
 }
 @media (hover:hover) and (pointer:fine){
-  /* 折叠条整体不响应悬停，只有登录按钮自己给明显反馈：加深底色 + 投影 + 上浮 */
+  /* 悬停只做颜色反差，不做位移/浮起（与参考站一致） */
   .cmt-form .cmt-toggle-login:hover{
-    background:color-mix(in srgb,var(--c-accent) 82%,#000);
-    box-shadow:0 6px 18px color-mix(in srgb,var(--c-accent) 48%,transparent);
-    transform:translateY(-1px);
+    background:color-mix(in srgb,var(--c-accent) 78%,#000);
   }
 }
-.cmt-form .cmt-toggle-login:active{background:color-mix(in srgb,var(--c-accent) 72%,#000);transform:translateY(0)}
+.cmt-form .cmt-toggle-login:active{background:color-mix(in srgb,var(--c-accent) 68%,#000)}
 /* 展开态：登录入口退到动作行，与「收起」同一基线与高度，不抢提交按钮；
-   右侧细线把「登录」和「收起」两个次要动作分开，避免连成一句 */
+   字号与「提交评论」同为 13px，右侧细线把两个次要动作分开 */
 .cmt-form .cmt-fold-login{
   display:inline-flex;align-items:center;height:20px;padding:0 10px 0 0;border:0;border-right:1px solid var(--c-hairline);background:none;
-  font-size:12px;line-height:1;font-weight:500;
+  font-size:13px;line-height:1;font-weight:500;
   color:var(--c-accent);cursor:pointer;white-space:nowrap;
 }
 @media (hover:hover) and (pointer:fine){.cmt-form .cmt-fold-login:hover{text-decoration:underline}}
@@ -265,13 +263,13 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .chk input{width:auto;accent-color:var(--c-accent);cursor:pointer}
 /* 邮箱必填被拦截时的红边：提示文案交给全局 Toast（底部弹出），这里只标出是哪个字段 */
 .cmt-form input.is-invalid,.cmt-form textarea.is-invalid{border-color:var(--danger,#b4232f);box-shadow:0 0 0 3px rgba(180,35,47,.14)}
-.cmt-form .count{margin-right:auto;font-size:11.5px;color:var(--c-text3);font-variant-numeric:tabular-nums}
+.cmt-form .count{margin-right:auto;font-size:12px;color:var(--c-text3);font-variant-numeric:tabular-nums}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
-.cmt-form .kbd-hint{font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
+.cmt-form .kbd-hint{font-size:12px;color:var(--c-text3);opacity:.75;white-space:nowrap}
 /* 「收起」：次要动作只给文字，不与提交按钮争视觉重量；
-   与「登录」同高同基线，动作行里的文字才对齐 */
-.cmt-form .cmt-fold-back{display:inline-flex;align-items:center;height:20px;align-self:center;padding:0;border:0;background:none;font-size:12px;line-height:1;font-weight:400;color:var(--c-text3);cursor:pointer;white-space:nowrap}
+   与「登录」同字号（13px）同基线，动作行里的文字才一致 */
+.cmt-form .cmt-fold-back{display:inline-flex;align-items:center;height:20px;align-self:center;padding:0;border:0;background:none;font-size:13px;line-height:1;font-weight:400;color:var(--c-text3);cursor:pointer;white-space:nowrap}
 @media (hover:hover) and (pointer:fine){.cmt-form .cmt-fold-back:hover{color:var(--c-accent)}}
 .cmt-form .cmt-fold-back:focus-visible{outline:2px solid var(--c-accent);outline-offset:3px;border-radius:4px}
 /* 提交按钮：形状与全站动作按钮统一为胶囊（文章页「分享 / 复制 / 返回」同为 999px），
