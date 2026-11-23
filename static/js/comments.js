@@ -346,8 +346,14 @@ window.initComments = function (root) {
     closeLogin();
     if (fields) fields.hidden = false;
     if (remember) remember.hidden = true;
-    // 跳过验证不建立身份：折叠条仍保留「登录」入口，收起后随时可以再登
-    if (authorInput) authorInput.focus();
+    // 跳过验证 = 直接进入评论：展开评论框并定位过去，省掉再点一次占位条
+    var box = byId('comment-box');
+    if (box) box.open = true;
+    if (form.scrollIntoView) {
+      try { form.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      catch (e) { form.scrollIntoView(); }
+    }
+    if (authorInput) authorInput.focus({ preventScroll: true });
   });
   if (loginMask) loginMask.addEventListener('click', function (e) {
     if (e.target === loginMask) closeLogin();

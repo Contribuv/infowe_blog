@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.52-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.52)
+[![version](https://img.shields.io/badge/version-3.9.53-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.53)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.52**
+当前版本：**v3.9.53**
 
-> 最近一次更新完整展开；更早的 151 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 152 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.53
+
+- **折叠条去双层边框**：表单外层已是卡片边界，占位条不再重复描边与底色，避免「框里套框」
+- **折叠条与评论卡同宽**：折叠态去掉表单内距并按评论卡缩进（桌面 17px / 移动 13px），左右边缘与下方楼层完全对齐，不再收窄一截
+- **去掉占位条悬停变色**：鼠标划过整条不再变色（保留手型提示可点），只有「登录」按钮响应悬停
+- **登录按钮悬停加强**：底色加深一档 + 主色投影 + 上浮 1px，按下回弹，比原来仅轻微提亮更明显
+- **动作行文字对齐**：「登录」「收起」统一 20px 行高与 inline-flex 居中，与字数统计、快捷提示、提交按钮同一条中线
+- **跳过验证后直接进入评论**：点「跳过验证，直接评论」会展开评论框并平滑滚动到表单、聚焦昵称输入
 
 ### v3.9.52
 
@@ -958,7 +967,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.51 及更早，共 151 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.52 及更早，共 152 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

@@ -187,14 +187,20 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
    原先只有一行灰字「写评论」，不悬停根本看不出能点。现在整条 = 浅底 + 描边 +
    灰色提示语「写下你的想法…」+ 右侧强调动作「写评论」，与真正的 textarea 视觉连续；
    点击仍由 comments.js 的整卡热区接管，展开后换成「收起评论框」保留折叠入口 */
-/* 折叠态 =「空输入框」：描边、圆角、内距、字号全部对齐同表单的 textarea / input，
-   左侧一支书写图标，右侧「写评论」动作。展开前后是同一块输入区，视觉不跳。 */
+/* 折叠态 =「空输入框」：内嵌主表单的外层卡片已经是唯一边界，
+   summary 不再重复描边/底色，也不收内距 —— 视觉上与下方评论卡同宽 */
+.cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:0}
 .cmt-form .cmt-box:not([open]) .cmt-toggle{
   display:flex;align-items:center;gap:8px;
-  min-height:44px;box-sizing:border-box;
-  padding:10px 12px;
+  min-height:56px;box-sizing:border-box;
+  padding:17px 20px;
+  border:0;border-radius:var(--c-radius);background:none;
+}
+/* 浮窗没有外层卡片：占位条自己就是唯一边界，保留描边与内距 */
+.cmt-pop-foot .cmt-form:has(.cmt-box:not([open])){padding:18px 20px;margin-inline:0}
+.cmt-pop-foot .cmt-form .cmt-box:not([open]) .cmt-toggle{
+  min-height:44px;padding:10px 12px;
   border:1px solid var(--c-border-strong);border-radius:8px;background:var(--c-sub);
-  transition:border-color .15s,background-color .15s,box-shadow .15s;
 }
 /* 浮窗 foot：form 外框会与占位条描边叠成「两个外边框」→ 外圈透明，占位条是唯一边界 */
 .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])){border-color:transparent}
@@ -205,18 +211,23 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-toggle-act{flex:none;font-size:12.5px;font-weight:500;color:var(--c-accent);white-space:nowrap}
 /* 新访客的折叠条只有一个「登录」按钮（参考评论区惯例：登录入口代替「写评论」） */
 .cmt-form .cmt-toggle-login{
-  flex:none;padding:6px 16px;border:0;border-radius:999px;background:var(--c-accent);color:#fff;
+  flex:none;padding:7px 18px;border:0;border-radius:999px;background:var(--c-accent);color:#fff;
   font-size:12.5px;font-weight:600;line-height:1.4;cursor:pointer;white-space:nowrap;
-  transition:filter .15s,box-shadow .15s;
 }
 @media (hover:hover) and (pointer:fine){
-  .cmt-form .cmt-toggle-login:hover{filter:brightness(1.06);box-shadow:0 2px 10px color-mix(in srgb,var(--c-accent) 32%,transparent)}
+  /* 折叠条整体不响应悬停，只有登录按钮自己给明显反馈：加深底色 + 投影 + 上浮 */
+  .cmt-form .cmt-toggle-login:hover{
+    background:color-mix(in srgb,var(--c-accent) 82%,#000);
+    box-shadow:0 6px 18px color-mix(in srgb,var(--c-accent) 48%,transparent);
+    transform:translateY(-1px);
+  }
 }
-.cmt-form .cmt-toggle-login:active{filter:brightness(.96)}
-/* 展开态：登录入口退到动作行，与「收起」同级，不抢提交按钮 */
+.cmt-form .cmt-toggle-login:active{background:color-mix(in srgb,var(--c-accent) 72%,#000);transform:translateY(0)}
+/* 展开态：登录入口退到动作行，与「收起」同一基线与高度，不抢提交按钮 */
 .cmt-form .cmt-fold-login{
-  align-self:center;padding:0;border:0;background:none;font-size:12px;line-height:1.6;
-  color:var(--c-accent);font-weight:600;cursor:pointer;white-space:nowrap;
+  display:inline-flex;align-items:center;height:20px;padding:0;border:0;background:none;
+  font-size:12px;line-height:1;font-weight:500;
+  color:var(--c-accent);cursor:pointer;white-space:nowrap;
 }
 @media (hover:hover) and (pointer:fine){.cmt-form .cmt-fold-login:hover{text-decoration:underline}}
 .cmt-toggle-close{display:none;flex:1 1 auto;font-size:12.5px}
@@ -256,8 +267,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-form .count.is-over{color:var(--danger,#b4232f)}
 /* Ctrl/Cmd+Enter 快捷提交提示，紧随字数计数，视觉同级更淡 */
 .cmt-form .kbd-hint{font-size:11px;color:var(--c-text3);opacity:.75;white-space:nowrap}
-/* 「收起」：次要动作只给文字，不与提交按钮争视觉重量 */
-.cmt-form .cmt-fold-back{align-self:center;padding:0;border:0;background:none;font-size:12px;line-height:1.6;color:var(--c-text3);cursor:pointer;white-space:nowrap;transition:color .15s}
+/* 「收起」：次要动作只给文字，不与提交按钮争视觉重量；
+   与「登录」同高同基线，动作行里的文字才对齐 */
+.cmt-form .cmt-fold-back{display:inline-flex;align-items:center;height:20px;align-self:center;padding:0;border:0;background:none;font-size:12px;line-height:1;font-weight:400;color:var(--c-text3);cursor:pointer;white-space:nowrap}
 @media (hover:hover) and (pointer:fine){.cmt-form .cmt-fold-back:hover{color:var(--c-accent)}}
 .cmt-form .cmt-fold-back:focus-visible{outline:2px solid var(--c-accent);outline-offset:3px;border-radius:4px}
 /* 提交按钮：形状与全站动作按钮统一为胶囊（文章页「分享 / 复制 / 返回」同为 999px），
@@ -470,8 +482,12 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 
 
 /* 折叠态样式统一定义在上方「折叠态 = 空输入框」段，这里只保留卡片内距：
-   18px 上下是给展开后的 textarea 留的，折叠时收到 10px，整卡不显空 */
-.cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:10px 20px}
+   折叠时整条就是输入框，左右与下方评论卡对齐（卡内 16px + 1px 描边），
+   去掉内层内距后宽度才不会被收窄 */
+.cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){padding:0;margin-inline:17px}
+@media (max-width:767px){
+  .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])){margin-inline:13px}
+}
 /* 回复按钮：只留右侧 SVG */
 .cmt-actions{margin-top:8px;display:flex;justify-content:flex-end}
 .cmt-reply{
@@ -803,14 +819,9 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt .cmt-page-btn:active { transform: none; }
 
 /* ═══ 悬停反馈：只给「真的能点」的元素，且即时变色、不做过渡 ═══
-   卡片空白处不响应；折叠前的占位条就是一整块热区，必须让人看出可点。 */
+   卡片空白处不响应；折叠条本身不做悬停变色（外层卡片已表明可点），
+   只有其中的「登录」按钮与其它操作按钮响应。 */
 @media (hover:hover) and (pointer:fine){
-  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle{
-    border-color:var(--c-accent);
-    background:color-mix(in srgb,var(--c-accent) 5%,var(--c-sub));
-  }
-  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-icon{color:var(--c-accent)}
-  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-placeholder{color:var(--c-text2)}
   .cmt-page-btn:not(.active):hover{border-color:var(--c-accent);color:var(--c-accent)}
   .cmt-authbar-btn:hover{border-color:var(--c-accent);color:var(--c-accent)}
   .cmt-authbar-link:hover{color:var(--c-accent);text-decoration:underline}
