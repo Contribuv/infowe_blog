@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 import time
@@ -22,6 +23,7 @@ from services import settings, status, theme, upload
 from services import comments as comments_service
 
 LOGIN = auth.admin_required
+logger = logging.getLogger(__name__)
 
 
 def _refresh_feed_async(link_id: int) -> None:
@@ -801,12 +803,21 @@ def admin_comments_bulk():
 
 
 # ── 上传 ──────────────────────────────────────────────
+def _direct_put_field(url: str) -> str:
+    """生成 PUT 预签名 URL 供浏览器直传 OSS；失败返回空串（走服务器兜底）。"""
+    try:
+        return upload.presign_put_url(url)
+    except Exception:  # noqa: BLE001
+        logger.warning("生成直传 URL 失败：%s", url, exc_info=True)
+        return ""
+
+
 @LOGIN
 def admin_upload_image():
     url, error = upload.save(request.files.get("image") or request.files.get("file"), upload.image_exts())
     if error:
         return jsonify({"error": error}), 400
-    return jsonify({"url": url})
+    return jsonify({"url": url, "put_url": _direct_put_field(url)})
 
 
 @LOGIN
@@ -815,7 +826,7 @@ def admin_upload_media():
     url, error = upload.save(file, upload.media_exts())
     if error:
         return jsonify({"error": error}), 400
-    return jsonify({"url": url, "name": Path(url).name})
+    return jsonify({"url": url, "name": Path(url).name, "put_url": _direct_put_field(url)})
 
 
 @LOGIN
@@ -823,7 +834,16 @@ def admin_upload_file():
     url, error = upload.save(request.files.get("file"), upload.file_exts())
     if error:
         return jsonify({"error": error}), 400
-    return jsonify({"url": url, "name": Path(url).name})
+    return jsonify({"url": url, "name": Path(url).name, "put_url": _direct_put_field(url)})
+
+
+@LOGIN
+def admin_upload_direct_done():
+    """浏览器直传 OSS 成功后回调：通知后台跳过服务器兜底推送。"""
+    url = request.form.get("url") or (request.get_json(silent=True) or {}).get("url", "")
+    if url and upload.mark_direct_done(url):
+        return jsonify({"ok": True})
+    return jsonify({"ok": False}), 400
 
 
 # 预览可以缩略的静态位图后缀（gif 动图不缩，避免丢帧）
@@ -1957,6 +1977,7 @@ def register(app) -> None:
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),
         ("/admin/upload/file", "admin_upload_file", admin_upload_file, ["POST"]),
+        ("/admin/upload/direct-done", "admin_upload_direct_done", admin_upload_direct_done, ["POST"]),
         ("/admin/preview/asset/<path:filename>", "admin_preview_asset", admin_preview_asset, ["GET"]),
         ("/admin/orphans", "admin_orphans", admin_orphans, ["GET"]),
         ("/admin/orphans/clean", "admin_orphan_clean", admin_orphan_clean, ["POST"]),

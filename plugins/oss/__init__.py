@@ -42,6 +42,16 @@ def _url_for(rel_url: str) -> str:
 _publish.url_for = _url_for
 
 
+def _presign_put(rel_url: str) -> str:
+    """浏览器直传用的 PUT 预签名 URL；未启用/配置不全时返回空串。"""
+    from . import storage
+
+    return storage.presign_put_url(rel_url)
+
+
+_publish.presign_put = _presign_put
+
+
 def _ensure(local_path, rel_url: str) -> str:
     """本地已有文件时，确保远端也有一份（不存在才传）。"""
     from . import storage

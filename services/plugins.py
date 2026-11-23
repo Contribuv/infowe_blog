@@ -165,6 +165,11 @@ def _legacy_registered(app) -> set[str]:
     return app.extensions.setdefault("plugin_legacy_registered", set())
 
 
+# 本进程已执行过启用副作用（on_enable / 旧契约 register）的插件。
+# 进程级内存：gunicorn 多 worker 各自一份，配合 ensure_enabled_loaded() 做惰性补加载。
+_loaded_enabled: set[str] = set()
+
+
 def load_all(app) -> None:
     """加载所有已安装插件。
 
@@ -192,10 +197,12 @@ def load_all(app) -> None:
                 if item["enabled"] and key not in legacy:
                     register_func(app)
                     legacy.add(key)
+                    _loaded_enabled.add(key)
                 continue
             _guard_endpoints(app, key, _register_routes(app, register_func))
             if item["enabled"]:
                 on_enable(app)
+                _loaded_enabled.add(key)
         except Exception:  # noqa: BLE001
             app.logger.exception("plugin %s failed to load", key)
 
@@ -216,6 +223,7 @@ def activate(app, key: str) -> None:
     on_enable = getattr(module, "on_enable", None)
     if on_enable is not None:
         on_enable(app)
+        _loaded_enabled.add(key)
         return
     # 旧插件：没有 on_enable，尝试运行时补注册路由（仅首次）
     legacy = _legacy_registered(app)
@@ -224,6 +232,27 @@ def activate(app, key: str) -> None:
     register_func = getattr(module, func_name)
     _guard_endpoints(app, key, _register_routes(app, register_func))
     legacy.add(key)
+    _loaded_enabled.add(key)
+
+
+def ensure_enabled_loaded(app) -> None:
+    """确保所有「已启用」插件都在本进程执行过启用副作用（幂等）。
+
+    多进程部署（gunicorn 多 worker）下，后台运行时启用插件只会在处理该请求的
+    进程里执行 on_enable，其余进程的进程内钩子（如对象存储发布函数）仍是空的，
+    表现为「上传随机不 sync 到 OSS」。这里让其余进程在首次上传/渲染时按数据库
+    启用标记惰性补加载，效果等同重启，但无需真的重启服务。
+
+    已加载过的插件记录在进程级 _loaded_enabled 里，不会重复执行 on_enable。
+    """
+    for item in all_rows():
+        key = str(item["key"])
+        if not item["installed"] or not item["enabled"] or key in _loaded_enabled:
+            continue
+        try:
+            activate(app, key)
+        except Exception:  # noqa: BLE001
+            app.logger.exception("plugin %s lazy load failed", key)
 
 
 def deactivate(app, key: str) -> None:
@@ -231,6 +260,8 @@ def deactivate(app, key: str) -> None:
     item = get(key)
     if not item:
         return
+    # 清除本进程的已加载标记：之后再次启用时能重新执行 on_enable
+    _loaded_enabled.discard(key)
     try:
         module, _ = _load_module(item["manifest"])
     except Exception:  # noqa: BLE001

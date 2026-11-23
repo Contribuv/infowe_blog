@@ -203,15 +203,15 @@ def fetch(cfg: S3Config, rel: str, max_bytes: int = 20 * 1024 * 1024) -> bytes |
     return resp.content
 
 
-def presign(cfg: S3Config, rel: str, expires: int = 900) -> str:
-    """生成 GET 预签名 URL（SigV4 query 签名）。
+def _presign(cfg: S3Config, method: str, rel: str, expires: int = 900) -> str:
+    """预签名 URL 的公共实现（SigV4 query 签名）。
 
     文档要求：
     - 只签 host，路径与查询参数都参与签名
     - endpoint 必须是浏览器实际访问的地址（含端口）
     - 有效期 1~604800 秒
 
-    这里把签名时间按时间窗取整（默认 5 分钟），让同一窗口内生成的 URL
+    签名时间按时间窗取整（默认 5 分钟），让同一窗口内生成的 URL
     保持一致，浏览器缓存才能命中；预签名在服务端按 X-Amz-Expires 判断过期，
     取整带来的几分钟偏差不会触发 RequestTimeTooSkewed。
     """
@@ -241,7 +241,7 @@ def presign(cfg: S3Config, rel: str, expires: int = 900) -> str:
         for name, value in sorted(params.items())
     )
     canonical_request = "\n".join(
-        ["GET", path, canonical_query, f"host:{host}\n", "host", "UNSIGNED-PAYLOAD"]
+        [method, path, canonical_query, f"host:{host}\n", "host", "UNSIGNED-PAYLOAD"]
     )
     string_to_sign = "\n".join(
         [
@@ -260,6 +260,22 @@ def presign(cfg: S3Config, rel: str, expires: int = 900) -> str:
         f"{cfg.endpoint.rstrip('/')}{path}?{canonical_query}"
         f"&X-Amz-Signature={signature}"
     )
+
+
+def presign(cfg: S3Config, rel: str, expires: int = 900) -> str:
+    """生成 GET 预签名 URL（浏览器读取对象）。"""
+    return _presign(cfg, "GET", rel, expires)
+
+
+def presign_put(cfg: S3Config, rel: str, expires: int = 900) -> str:
+    """生成 PUT 预签名 URL（浏览器直传对象）。
+
+    只签 host（与 GET 一致），浏览器 fetch PUT 带上任意 Content-Type
+    都不会破坏签名；payload 用 UNSIGNED-PAYLOAD。
+    注意：对象的 key 仍由 rel 经 key_of() 推导，与站内 /uploads/ 一一对应，
+    所以孤儿识别、删除同步等逻辑都不受影响。
+    """
+    return _presign(cfg, "PUT", rel, expires)
 
 
 def list_objects(cfg: S3Config, prefix: str = "", token: str = "",

@@ -419,6 +419,23 @@
         return '';
     }
 
+    // 浏览器直传 OSS：拿到预签名 PUT URL 后直接把文件推到对象存储。
+    // 这一步走浏览器网络（不走服务器 → OSS 的链路），成功后回调后台跳过兜底推送。
+    // 失败不抛错——后台兜底推送仍会补上，不影响正文插入。
+    function directPut(url, putUrl, file) {
+        if (!putUrl) return Promise.resolve(false);
+        return fetch(putUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream' }, mode: 'cors' })
+            .then(function (resp) {
+                if (!resp.ok) return false;
+                var fd = new FormData();
+                fd.append('url', url);
+                return fetch("{{ url_for('admin_upload_direct_done') }}", { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function () { return true; })
+                    .catch(function () { return true; });
+            })
+            .catch(function () { return false; });
+    }
+
     // 单个文件上传：用 XHR 以便上报进度（fetch 无法获取上传进度）
     function uploadOne(endpoint, field, file, onProgress) {
         return new Promise(function (resolve, reject) {
@@ -434,7 +451,9 @@
                 var data = xhr.response;
                 if (!data) { try { data = JSON.parse(xhr.responseText); } catch (err) { data = null; } }
                 if (xhr.status >= 200 && xhr.status < 300 && data && !data.error) {
-                    resolve({ url: data.url, name: data.name || file.name });
+                    directPut(data.url, data.put_url, file).then(function () {
+                        resolve({ url: data.url, name: data.name || file.name });
+                    });
                 } else {
                     reject(new Error((data && data.error) || ('上传失败（HTTP ' + xhr.status + '）')));
                 }

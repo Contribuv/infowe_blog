@@ -48,12 +48,46 @@ def unregister_remote(func) -> None:
         _remote_publishers.remove(func)
 
 
+# 惰性补注册节流：本进程钩子为空时，最多每隔这段时间查一次数据库启用标记。
+# 钩子一旦存在，_ensure_hooks() 首行即返回，正常上传/渲染零额外开销。
+_last_hook_check = 0.0
+_HOOK_CHECK_INTERVAL = 5.0
+
+
+def _ensure_hooks() -> None:
+    """按数据库启用标记，为本进程惰性补注册远端钩子。
+
+    多进程部署下，运行时启用对象存储插件只会在处理启用请求的那个进程注册钩子，
+    其余进程 _remote_publishers 为空，导致上传不 sync 到 OSS（与文件大小无关）。
+    这里在钩子为空时补加载已启用插件，使各进程无需重启即可生效。
+    没有应用上下文（CLI 迁移等）时跳过，行为与原来一致。
+    """
+    global _last_hook_check
+    if _remote_publishers:
+        return
+    now = time.time()
+    if now - _last_hook_check < _HOOK_CHECK_INTERVAL:
+        return
+    _last_hook_check = now
+    try:
+        from flask import current_app, has_app_context
+
+        if not has_app_context():
+            return
+        from services import plugins as plugins_service
+
+        plugins_service.ensure_enabled_loaded(current_app._get_current_object())
+    except Exception:  # noqa: BLE001
+        logger.warning("惰性注册远端钩子失败", exc_info=True)
+
+
 def remote_active() -> bool:
     """当前是否有「真正可用」的远端存储接管上传。
 
     发布函数可以挂 ``is_active`` 属性做二次判断（例如插件已启用但配置不完整）。
     没有任何远端时返回 False，孤儿清理等逻辑保持原样。
     """
+    _ensure_hooks()
     for func in list(_remote_publishers):
         checker = getattr(func, "is_active", None)
         if checker is None:
@@ -68,6 +102,7 @@ def remote_active() -> bool:
 
 def publish(local_path, rel_url: str) -> str:
     """把刚写入本地的文件交给远端存储；没有可用远端时返回空串。"""
+    _ensure_hooks()
     for func in list(_remote_publishers):
         try:
             url = func(local_path, rel_url)
@@ -87,6 +122,14 @@ _publish_guard = threading.Lock()
 _publish_locks: dict[str, threading.RLock] = {}
 _pending_events: dict[str, threading.Event] = {}
 _failed_uploads: set[str] = set()
+
+# 浏览器直传（presigned PUT）状态：
+# - _direct_done：后台推送等待的「直传已完成」事件，每个待传文件一个；
+# - _direct_pending：生成 PUT URL 的时间戳，用来校验通知接口的合法性（半小时有效）。
+# 浏览器直传成功后调 mark_direct_done()，后台推送就跳过，避免再走慢链路。
+DIRECT_GRACE = 20.0  # 后台等直传结果的秒数；超时则兜底由服务器推
+_direct_done: dict[str, threading.Event] = {}
+_direct_pending: dict[str, float] = {}
 
 
 def _lock_for(rel_url: str) -> threading.RLock:
@@ -149,6 +192,8 @@ def defer_publish(local_path, rel_url: str) -> None:
             event.set()
             with _publish_guard:
                 _pending_events.pop(rel_url, None)
+                _direct_done.pop(rel_url, None)
+                _direct_pending.pop(rel_url, None)
                 if ok:
                     _failed_uploads.discard(rel_url)
                 else:
@@ -164,11 +209,26 @@ def defer_publish(local_path, rel_url: str) -> None:
 def _publish_and_preview(local_path, rel_url: str, done: threading.Event | None = None) -> bool:
     """上传展示图 + 预览副本，返回远端是否拿到展示图。
 
-    展示图一传完就 set(done)，让正在保存文章的那个请求先走；
+    浏览器直传（presigned PUT）流程：
+    - 若 presign_put_url() 已登记「等待直传」，先等一小段时间看浏览器是否成功；
+      成功则跳过服务器推送（省掉慢链路），只补一份小预览副本；
+    - 超时未收到通知（浏览器直传失败/未实现）才走服务器兜底推送。
+    旧客户端不会生成 PUT URL，也就没有登记，行为与以前完全一致。
+
+    展示图一确定就 set(done)，让正在保存文章的那个请求先走；
     预览副本（PIL 缩放 + 小文件 PUT）继续在后台跑，不必拖住保存。
     """
-    with _lock_for(rel_url):
-        url = publish(local_path, rel_url)
+    with _publish_guard:
+        direct_event = _direct_done.get(rel_url)
+        waiting_direct = rel_url in _direct_pending
+    direct_ok = False
+    if waiting_direct and direct_event is not None:
+        direct_ok = direct_event.wait(DIRECT_GRACE)
+    if direct_ok:
+        url = remote_url(rel_url) or "direct"
+    else:
+        with _lock_for(rel_url):
+            url = publish(local_path, rel_url)
     if done is not None:
         done.set()
     if not url:
@@ -220,6 +280,7 @@ def sync_remote_urls(text: str) -> None:
 
 def delete_remote(rel_url: str) -> None:
     """删除远端同名对象（本地删除时同步）；没有远端能力时什么也不做。"""
+    _ensure_hooks()
     for func in list(_remote_publishers):
         deleter = getattr(func, "delete", None)
         if deleter is None:
@@ -236,6 +297,7 @@ def remote_url(rel_url: str) -> str:
     例如项目 README 图片缓存：文件可能早就在本地了，
     但页面仍然应该展示远端地址，没必要每次渲染都重传一遍。
     """
+    _ensure_hooks()
     for func in list(_remote_publishers):
         getter = getattr(func, "url_for", None)
         if getter is None:
@@ -249,6 +311,54 @@ def remote_url(rel_url: str) -> str:
     return ""
 
 
+def presign_put_url(rel_url: str) -> str:
+    """生成 PUT 预签名 URL 供浏览器直传对象存储。
+
+    浏览器拿到后直接 PUT，绕开「服务器 → 对象存储」这段公网链路；
+    服务端后台推送作为兜底保留。对象 key 由 rel 推导，与 /uploads/ 一一对应。
+    未启用远端能力时返回空串。
+
+    成功生成 URL 时会登记「等待直传」状态：后台推送会先等一小段时间，
+    等浏览器直传成功的通知；超时未收到才走服务器兜底推送。
+    """
+    _ensure_hooks()
+    for func in list(_remote_publishers):
+        getter = getattr(func, "presign_put", None)
+        if getter is None:
+            continue
+        try:
+            url = getter(rel_url)
+        except Exception:  # noqa: BLE001
+            continue
+        if url:
+            with _publish_guard:
+                _direct_pending[rel_url] = time.time()
+                # 后台线程可能已经先跑到 publish 了；若它当时没看到 pending，
+                # 这里补一个事件也无妨——它不会等，直接兜底推送（幂等覆盖）。
+                _direct_done.setdefault(rel_url, threading.Event())
+            return str(url)
+    return ""
+
+
+def mark_direct_done(rel_url: str) -> bool:
+    """标记浏览器已直传成功；返回 False 表示这个 URL 未在等待列表中。
+
+    只有刚刚通过 presign_put_url() 生成过 PUT URL 的文件才接受通知，
+    防止任意外部请求干扰后台推送。通知后后台线程跳过兜底推送。
+    """
+    with _publish_guard:
+        pending_at = _direct_pending.get(rel_url)
+        if pending_at is None or time.time() - pending_at > 1800:
+            return False
+        event = _direct_done.get(rel_url)
+        if event is not None:
+            event.set()
+        _direct_pending.pop(rel_url, None)
+        # 直传成功即视为远端已有对象，不再算失败
+        _failed_uploads.discard(rel_url)
+    return True
+
+
 def ensure_remote(local_path, rel_url: str) -> str:
     """确保文件已经在远端（本地已存在但从未上传的历史文件）。
 
@@ -256,6 +366,7 @@ def ensure_remote(local_path, rel_url: str) -> str:
     没有这份能力时退回 `publish`。
     同一文件与后台发布共用一把锁，避免两个线程同时 PUT 同一个 key。
     """
+    _ensure_hooks()
     with _lock_for(rel_url):
         for func in list(_remote_publishers):
             ensure = getattr(func, "ensure", None)
@@ -284,6 +395,7 @@ def remote_exists(rel_url: str) -> bool:
 
     结果缓存 5 分钟：一次播放会发多次 Range 请求，不该每次都去 HEAD。
     """
+    _ensure_hooks()
     now = time.time()
     cached = _remote_exists_cache.get(rel_url)
     if cached and now - cached[0] < _REMOTE_EXISTS_TTL:
@@ -309,6 +421,7 @@ def remote_exists(rel_url: str) -> bool:
 
 def publish_preview(local_path, rel_url: str) -> str:
     """上传后把预览副本交给远端存储；没有可用远端时返回空串。"""
+    _ensure_hooks()
     for func in list(_remote_publishers):
         publisher = getattr(func, "publish_preview", None)
         if publisher is None:
@@ -336,6 +449,7 @@ def remote_preview(rel_url: str, expires: int = 3600) -> str:
     结果缓存 5 分钟：一次预览会连续请求多个资源，
     没必要每次都去 HEAD 一遍对象存储。
     """
+    _ensure_hooks()
     cache_key = (rel_url, expires)
     now = time.time()
     cached = _remote_preview_cache.get(cache_key)

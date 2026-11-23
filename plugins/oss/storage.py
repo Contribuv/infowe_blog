@@ -133,6 +133,20 @@ def url_for(rel: str) -> str:
     return cfg.url_of(rel)
 
 
+def presign_put_url(rel: str) -> str:
+    """生成 PUT 预签名 URL 供浏览器直传；未启用/配置不全时返回空串。
+
+    浏览器拿到后直接 PUT 文件到 OSS，避开「服务器 → 对象存储」这段公网链路。
+    对象 key 与站内 /uploads/ 路径一一对应（key_of），孤儿识别照常工作。
+    """
+    if not is_enabled():
+        return ""
+    cfg = get_cfg()
+    if cfg is None:
+        return ""
+    return s3.presign_put(cfg, rel, presign_expires())
+
+
 def rewrite_html(html: str) -> str:
     """把 HTML 里的 /uploads/... 换成当前策略对应的最终地址。
 
