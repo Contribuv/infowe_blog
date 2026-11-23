@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.69-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.69)
+[![version](https://img.shields.io/badge/version-3.9.70-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.70)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,14 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.69**
+当前版本：**v3.9.70**
 
-> 最近一次更新完整展开；更早的 168 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 169 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.70
+
+- **后台评论列表优先显示自定义头像**：注册用户上传过头像时，后台评论管理不再退回 QQ / Gravatar 头像；与前台、抽屉使用同一份 `reader_users.avatar_url`
+- **后台头像按存储策略走 OSS**：后台评论列表与「账号安全」预览里的博主头像、用户头像都经 `remote_url()` 生成，OSS 启用时直接显示远端地址；访客的 `/avatar/...` 代理头像与默认头像仍走本地
 
 ### v3.9.69
 
@@ -1084,7 +1089,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.68 及更早，共 168 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.69 及更早，共 169 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

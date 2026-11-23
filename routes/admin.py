@@ -640,6 +640,16 @@ def admin_comments():
     cfg_avatar = settings.get_str("avatar", "").strip()
     cfg_ok = avatar.configured_avatar_exists()
     default_url = avatar.default_url()
+    # 注册用户上传的自定义头像：后台评论列表也要优先显示，不能退回 QQ / Gravatar 头像
+    custom_avatars: dict[str, str] = {}
+    try:
+        for row in db.query(
+            "SELECT email_hash, avatar_url FROM reader_users "
+            "WHERE COALESCE(avatar_url, '') != ''"
+        ):
+            custom_avatars[str(row["email_hash"])] = str(row["avatar_url"])
+    except Exception:  # noqa: BLE001
+        custom_avatars = {}
     for item in items:
         item["ua_label"] = ua.describe(str(item.get("user_agent") or ""))
         # 评论里的图片：后台直接给缩略图，人工审核时能看见图再决定
@@ -665,11 +675,16 @@ def admin_comments():
         if is_author and cfg_avatar and cfg_ok:
             item["admin_avatar"] = cfg_avatar
         else:
-            item["admin_avatar"] = avatar.urls(
+            custom_avatar = custom_avatars.get(str(item.get("email_hash") or ""))
+            item["admin_avatar"] = custom_avatar or avatar.urls(
                 str(item.get("email_hash") or ""), str(item.get("qq") or "")
             )[0]
         if not item["admin_avatar"]:
             item["admin_avatar"] = default_url
+        # 后台页面本身不做 OSS 改写（避免编辑器把临时地址写进正文），
+        # 但纯展示的头像单独按存储策略换成远端地址
+        if str(item["admin_avatar"]).startswith("/uploads/"):
+            item["admin_avatar"] = upload.remote_url(item["admin_avatar"]) or item["admin_avatar"]
         item["admin_avatar_default"] = default_url
     return render_template(
         "admin/comments.html",
@@ -1189,7 +1204,7 @@ def _settings_view() -> dict:
     return {
         "admin_username": (auth.current_user() or {}).get("username", "admin"),
         "admin_path": settings.get_str("admin_path", "admin"),
-        "admin_avatar": settings.get_str("avatar", ""),
+        "admin_avatar": upload.remote_url(settings.get_str("avatar", "")) or settings.get_str("avatar", ""),
         "avatar_exists": avatar.configured_avatar_exists(),
         "site_url": settings.get_str("site_url", ""),
         "current_url": base(),
