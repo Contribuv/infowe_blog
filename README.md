@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.75-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.75)
+[![version](https://img.shields.io/badge/version-3.9.76-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.76)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.75**
+当前版本：**v3.9.76**
 
-> 最近一次更新完整展开；更早的 171 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 172 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.76
+
+- **孤儿文件定期自动清理**：文件清理页新增配置卡，可开启「定期自动清理」（默认关闭）并设置保留天数（默认 7 天，范围 1-365）。开启后每天自动清理「超过保留天数且无引用」的本地孤儿（连同 OSS 副本），删前备份到 `var/backups/orphans/`、重新校验引用；多进程用文件锁保证只有一个 worker 执行。仅存于 OSS、本地已没有的对象仍留人工清理
+- **一键清理全部**：文件清理页新增按钮，一次清掉当前列出的所有孤儿，复用既有确认与批量删除流程；页面并显示上次自动清理结果
+- **孤儿页空状态文案补充 24 小时保护期说明**：原文案称「任何未被引用的附件都会列出来」与实际不符，现明确最近 24h 新上传的文件暂不参与清理（可能刚上传还没提交）、满 24h 自动列出
 
 ### v3.9.75
 
