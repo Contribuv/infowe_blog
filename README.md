@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.77-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.77)
+[![version](https://img.shields.io/badge/version-3.9.78-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.78)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,22 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.77**
+当前版本：**v3.9.78**
 
-> 最近一次更新完整展开；更早的 176 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 177 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.78
+
+- **孤儿页样式重构**：自动清理配置由独立卡片改为标题下方的无边框设置条（底部细分隔线），空状态去掉虚线盒子并改为左对齐，与提示文字统一左边缘，整页连成一体、不再有「两个卡片硬拼凑」的割裂感
+
+<details>
+<summary><b>历史版本（v3.9.77 及更早，共 177 个版本，点击展开）</b></summary>
 
 ### v3.9.77
 
 - **孤儿清理配置卡样式收紧**：数字输入框改为与「保存」按钮一致的紧凑高度，提示改用 `.form-hint` 小字，配置卡不再突兀
 - **孤儿页文案校正**：修正孤儿示例——待审核 / 已拒绝 / 已删除评论的图片均保留（留存与恢复要用），不会成为孤儿；自动清理说明更准确
 - **文章阅读体验微调**：中文正文加 `0.01em` 微字距，长文更舒展；正文图片加柔和投影，提升质感
-
-<details>
-<summary><b>历史版本（v3.9.76 及更早，共 176 个版本，点击展开）</b></summary>
 
 ### v3.9.76
 
