@@ -869,10 +869,24 @@ def scan_orphans(limit: int = 500) -> list[dict]:
         ]
 
     result: list[dict] = []
+    # 与本地一致：最近 24 小时新上传的对象先保护，避免删掉编辑器里还没提交的图
+    from datetime import datetime, timedelta, timezone
+
+    protect_after = datetime.now(timezone.utc) - timedelta(hours=24)
     for item in candidates:
         key = str(item.get("key") or "").lstrip("/")
         if not key or not key.startswith(prefix + "/"):
             continue
+        modified = str(item.get("modified") or "")
+        if modified:
+            try:
+                stamp = datetime.fromisoformat(modified.replace("Z", "+00:00"))
+                if stamp.tzinfo is None:
+                    stamp = stamp.replace(tzinfo=timezone.utc)
+                if stamp >= protect_after:
+                    continue
+            except (ValueError, TypeError):
+                pass
         if key in referenced:
             continue
         origin = preview_of_key(key)

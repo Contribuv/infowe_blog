@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.63-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.63)
+[![version](https://img.shields.io/badge/version-3.9.64-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.64)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.63**
+当前版本：**v3.9.64**
 
-> 最近一次更新完整展开；更早的 162 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 163 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.64
+
+- **评论图片不再被误判孤儿**：`referenced_urls()` 的评论扫描不再加 `deleted_at IS NULL`，软删除 / 待审 / 已拒绝评论正文里的图片同样视为有效引用——「留存记录 → 评论留存」仍要展示正文，图片被清掉回溯就缺图
+- **新上传文件 24 小时保护**：本地 uploads 与 OSS 桶都跳过最近 24 小时的对象，避免评论区编辑器里「刚上传、还没提交」的图片被清理
+- **页面提示**：文件清理页顶部说明 24 小时保护规则
+- 说明：超过 24 小时且确实没有任何正文引用的上传图（例如上传后放弃评论）仍会列为孤儿，可手动清理
 
 ### v3.9.63
 
@@ -1045,7 +1052,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.62 及更早，共 162 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.63 及更早，共 163 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

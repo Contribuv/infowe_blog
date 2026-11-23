@@ -1012,10 +1012,9 @@ def referenced_urls() -> set[str]:
     - **文章**：回收站里的软删除文章仍可恢复，且彻底删除时由
       `Post._purge_rows` 负责清图，所以这里全部统计。
       字段必须覆盖 `cover`——只在封面用到的图若漏扫，会被孤儿清理误删。
-    - **评论**：只有已软删除（`deleted_at`）的评论才算孤儿——后台没有恢复
-      入口，图片交给孤儿清理。**已拒绝（`rejected`）的评论图片保留**：
-      拒绝态随时可能在后台恢复通过，若提前清理，恢复后就会缺图。
-      `pending` 同理保留（作者本人可见、管理员随时可通过）。
+    - **评论**：正文里的图片一律保护（含软删除、待审、已拒绝）。
+      「留存记录 → 评论留存」会永久展示正文，图片被清理后回溯就会缺图；
+      未提交就放弃的图片不在这类引用里，仍会正常出现在孤儿列表。
     - **友链**：`rejected` 仍可在后台恢复通过，按「可恢复」处理，全部统计。
     - **记忆 / 项目 / 时间线**：没有删除或审核标记，全部统计。
     - **设置项**：头像、自定义 logo 等图片一并保护，避免被当成孤儿。
@@ -1027,7 +1026,7 @@ def referenced_urls() -> set[str]:
     referenced: set[str] = set()
     sources = [
         "SELECT title, content, excerpt, tags, cover FROM posts",
-        "SELECT author, website, content FROM comments WHERE deleted_at IS NULL",
+        "SELECT author, website, content FROM comments",
         "SELECT name, url, description, avatar FROM links",
         "SELECT title, text, image FROM memories",
         "SELECT name, description, url FROM projects",
@@ -1040,7 +1039,12 @@ def referenced_urls() -> set[str]:
     return referenced
 
 
-def orphans() -> list[dict]:
+def orphans(protect_hours: int = 24) -> list[dict]:
+    """列出本地孤儿文件。
+
+    protect_hours：最近 N 小时内新上传的文件先保护起来——评论区编辑器里
+    可能刚上传、还没提交，这时数据库里还没有引用，直接清理会把图删掉。
+    """
     # 远端存储可用时，本地文件是「停用后的回退副本」，不能当孤儿清理：
     # 一旦删掉，停用插件把地址改回本地就会全部裂图。
     # 对象存储启用时，本地文件是「停用后的回退副本」，但孤儿本身已经没有任何内容引用，
@@ -1050,6 +1054,7 @@ def orphans() -> list[dict]:
     result: list[dict] = []
     if not base.is_dir():
         return result
+    cutoff = time.time() - max(0, int(protect_hours)) * 3600
     for path in base.rglob("*"):
         if not path.is_file():
             continue
@@ -1066,6 +1071,9 @@ def orphans() -> list[dict]:
         if url in referenced:
             continue
         stat = path.stat()
+        if stat.st_mtime >= cutoff:
+            # 刚上传的文件可能是「编辑器里还没提交」的评论图片，本轮先跳过
+            continue
         result.append(
             {
                 "rel": rel,
