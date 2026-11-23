@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.50-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.50)
+[![version](https://img.shields.io/badge/version-3.9.51-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.51)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.50**
+当前版本：**v3.9.51**
 
-> 最近一次更新完整展开；更早的 149 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 150 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.51
+
+- **通知中心重构（正确性）**：博主与读者彻底分流——新增 `admin_notifications` 记录「新评论 / 被回复」，待审核项实时查 `comments`，不再把评论 id 当通知 id；已读接口不再因评论开关返回 403
+- **通知时机修正**：待审核评论不再提前写站内通知，审核通过（后台单条 / 批量 / AI 自动通过 / AI 工具通过）统一补写「已通过」「被回复」「博主通知」；删除评论树时同步清理通知，铃铛不再指向不存在的评论
+- **通知链接分页**：通知 URL 按 `comments_per_page` 算出真实页码（`?cpage=n#comment-id`），不再跳到错误分页的锚点
+- **抽屉改版对齐评论区参考**：顶部改为「小标题 + 主标题 + 说明」+ 图标，底部固定三栏导航（我的概览 / 我的评论 / 我的账户）；「我的评论」补搜索框与「全部 / 提及 / 我的 / 待审」分段筛选，「我的账户」展示身份资料或访客登录入口
+- **概览排版**：统计格改 2×2 带图标，热力图补星期刻度与「近 N 周 · 共 N 条」，一周分布柱顶显示数值，底部新增「最近发言」（待审项标注「审核中」）
+- **通知列表可读性**：待处理条目最多两行、标签与时间回到首行对齐，未读总数与角标严格一致
+- **评论开关联动**：关闭评论后前台不再渲染铃铛，`notify.js` 也不再轮询通知接口
+- 其他：`comment_notify` 默认值统一为「开」（后台表单与代码判断一致）；已有公开评论一次性回填进博主通知表（标记已读，只作历史记录）
 
 ### v3.9.50
 
@@ -939,7 +950,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.49 及更早，共 149 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.50 及更早，共 150 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

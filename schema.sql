@@ -266,6 +266,37 @@ CREATE TABLE IF NOT EXISTS comment_notifications (
 CREATE INDEX IF NOT EXISTS idx_notif_hash_read ON comment_notifications (email_hash, is_read, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notif_comment ON comment_notifications (comment_id);
 
+-- 博主通知：新评论 / 被回复。与读者通知分开，避免两套身份混用同一个已读状态。
+-- 只有评论区真正公开的评论才写入；待审核项由 comments.status='pending' 实时查询，不复制一份。
+CREATE TABLE IF NOT EXISTS admin_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL DEFAULT 'new',
+    comment_id INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER NOT NULL DEFAULT 0,
+    post_id INTEGER DEFAULT NULL,
+    project_id INTEGER DEFAULT NULL,
+    from_author TEXT NOT NULL DEFAULT '',
+    excerpt TEXT NOT NULL DEFAULT '',
+    is_read INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_admin_notif_read ON admin_notifications (is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_notif_comment ON admin_notifications (comment_id);
+
+-- 一次性回填：已有公开评论补进通知表（标记已读，只作历史记录），
+-- NOT EXISTS 保证与运行期写入互不重复，重复执行安全。
+INSERT INTO admin_notifications
+    (type, comment_id, parent_id, post_id, project_id, from_author, excerpt, is_read, created_at)
+SELECT CASE WHEN c.parent_id > 0 THEN 'reply' ELSE 'new' END,
+       c.id, COALESCE(c.parent_id, 0), c.post_id, c.project_id,
+       COALESCE(NULLIF(c.author, ''), '匿名'),
+       substr(replace(replace(COALESCE(c.content, ''), char(10), ' '), char(13), ' '), 1, 120),
+       1, c.created_at
+FROM comments c
+WHERE c.status = 'approved' AND c.deleted_at IS NULL
+  AND COALESCE(c.is_owner, 0) = 0 AND COALESCE(c.is_private, 0) = 0
+  AND NOT EXISTS (SELECT 1 FROM admin_notifications n WHERE n.comment_id = c.id);
+
 -- 评论投票：每个身份（email_hash 或访客令牌）对每条评论最多一票
 -- kind: 1 = 点赞，-1 = 不喜欢；同一人对同一条只能二选一，再点同一边即取消
 CREATE TABLE IF NOT EXISTS comment_likes (

@@ -568,6 +568,13 @@ def _dispatch(name: str, args: dict) -> dict:
         if not Comment.get(cid):
             return {"ok": False, "error": "评论不存在"}
         Comment.set_status(cid, "approved")
+        # 与后台审核保持一致：补站内通知（评论者「已通过」、被回复者、博主）
+        try:
+            from services import notify
+
+            notify.notify_approved_reply(cid)
+        except Exception:
+            pass
         return {"ok": True, "message": f"评论 #{cid} 已通过"}
 
     if name == "reply_comment":

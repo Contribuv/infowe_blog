@@ -56,12 +56,68 @@ def add_approved(comment: dict) -> int:
     )
 
 
+def add_reply_for_comment(comment: dict) -> int:
+    """按评论记录给被回复者写站内通知，条件不满足则跳过。
+
+    评论提交与审核通过共用同一套判断，避免两处条件写反：
+    私密、父级私密、对方关了通知、自己回自己、被回复的是博主 → 不写。
+    """
+    if not comment:
+        return 0
+    if int(comment.get("is_private") or 0):
+        return 0
+    parent_id = int(comment.get("parent_id") or 0)
+    if parent_id <= 0:
+        return 0
+    parent = db.one(
+        "SELECT email_hash, is_private, notify, is_owner FROM comments WHERE id = ?",
+        (parent_id,),
+    )
+    if not parent:
+        return 0
+    recipient = str(parent["email_hash"] or "")
+    if not recipient or int(parent["is_private"] or 0) or int(parent["is_owner"] or 0):
+        return 0
+    if not int(parent["notify"] if parent["notify"] is not None else 1):
+        return 0
+    if recipient == str(comment.get("email_hash") or ""):
+        return 0
+    return add_reply(
+        recipient, int(comment.get("id") or 0), parent_id,
+        comment.get("post_id"), comment.get("project_id"),
+        str(comment.get("author") or ""), str(comment.get("content") or ""),
+    )
+
+
 def unread_count(email_hash: str) -> int:
     if not email_hash:
         return 0
     return int(db.scalar(
         "SELECT COUNT(*) FROM comment_notifications WHERE email_hash=? AND is_read=0",
         (email_hash,), 0) or 0)
+
+
+def _comment_url(post_id: int | None, project_id: int | None, comment_id: int) -> str:
+    """通知里的评论链接：按每页评论数算出真实分页，否则目标可能在第 2 页打不开。"""
+    base = ""
+    if post_id:
+        base = f"/post/{int(post_id)}"
+    elif project_id:
+        base = f"/projects/{int(project_id)}"
+    else:
+        return ""
+    page = 1
+    try:
+        from models import Comment
+        from services import settings
+
+        per_page = settings.get_int("comments_per_page", 10)
+        if per_page > 0:
+            page = Comment.page_of(int(comment_id), per_page) or 1
+    except Exception:
+        page = 1
+    query = f"?cpage={page}" if page > 1 else ""
+    return f"{base}{query}#comment-{int(comment_id)}"
 
 
 def list_notifies(email_hash: str, limit: int = 50) -> list[dict]:
@@ -80,15 +136,8 @@ def list_notifies(email_hash: str, limit: int = 50) -> list[dict]:
     results = []
     for row in rows:
         item = dict(row)
-        if item.get("post_id"):
-            item["label"] = str(item.get("post_title") or "文章")
-            item["url"] = f"/post/{item['post_id']}#comment-{item['comment_id']}"
-        elif item.get("project_id"):
-            item["label"] = str(item.get("project_name") or "项目")
-            item["url"] = f"/projects/{item['project_id']}#comment-{item['comment_id']}"
-        else:
-            item["label"] = ""
-            item["url"] = ""
+        item["label"] = str(item.get("post_title") or item.get("project_name") or "")
+        item["url"] = _comment_url(item.get("post_id"), item.get("project_id"), item["comment_id"])
         results.append(item)
     return results
 
@@ -122,37 +171,113 @@ def identity_hash_from_cookies(reader_row: dict | None, commenter_cookie: dict, 
     return ""
 
 
+def add_admin_comment(comment: dict) -> int:
+    """评论公开后给博主写一条通知；待审核不写，审核通过时调这里补写。
+
+    只记录真正需要博主知道的：已通过、非博主本人、非私密。
+    同一条评论只写一次，批量通过重复调用不会产生重复行。
+    """
+    if not comment:
+        return 0
+    if str(comment.get("status") or "") != "approved":
+        return 0
+    if int(comment.get("is_owner") or 0) or int(comment.get("is_private") or 0):
+        return 0
+    comment_id = int(comment.get("id") or 0)
+    if comment_id <= 0:
+        return 0
+    if db.one("SELECT 1 FROM admin_notifications WHERE comment_id = ?", (comment_id,)):
+        return 0
+
+    parent_id = int(comment.get("parent_id") or 0)
+    kind = "new"
+    if parent_id:
+        parent = db.one("SELECT is_owner FROM comments WHERE id = ?", (parent_id,))
+        if parent and int(parent["is_owner"] or 0):
+            kind = "reply"
+
+    return db.insert(
+        "INSERT INTO admin_notifications "
+        "(type, comment_id, parent_id, post_id, project_id, from_author, excerpt, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (kind, comment_id, parent_id, comment.get("post_id"), comment.get("project_id"),
+         str(comment.get("author") or "匿名")[:30], _plain(str(comment.get("content") or "")), db.now()),
+    )
+
+
+def remove_admin_for_comment(comment_ids: list[int]) -> int:
+    """删除评论（含回复树）时同步清掉博主通知，避免铃铛指向不存在的评论。"""
+    ids = [int(x) for x in (comment_ids or []) if str(x).lstrip("-").isdigit() and int(x) > 0]
+    if not ids:
+        return 0
+    marks = ",".join("?" * len(ids))
+    cur = db.execute(f"DELETE FROM admin_notifications WHERE comment_id IN ({marks})", ids)
+    return cur.rowcount
+
+
+def admin_mark_read(notify_id: int = 0) -> int:
+    """标记博主通知已读；notify_id=0 表示全部。待审核项不在这里，处理完自动消失。"""
+    if notify_id > 0:
+        cur = db.execute(
+            "UPDATE admin_notifications SET is_read=1 WHERE id=?", (notify_id,)
+        )
+    else:
+        cur = db.execute("UPDATE admin_notifications SET is_read=1 WHERE is_read=0")
+    return cur.rowcount
+
+
 def admin_feed(limit: int = 20) -> list[dict]:
-    """博主视角：最近待审核 / 最新评论动态，供后台铃铛展示。"""
+    """博主通知：新评论 / 被回复。id 是通知 id，不是评论 id。"""
     rows = db.query(
-        "SELECT c.id, c.author, c.content, c.status, c.created_at, "
-        "c.post_id, c.project_id, p.title AS post_title, pj.name AS project_name "
-        "FROM comments c "
-        "LEFT JOIN posts p ON c.post_id = p.id "
-        "LEFT JOIN projects pj ON c.project_id = pj.id "
-        "WHERE c.deleted_at IS NULL AND c.is_ai = 0 "
-        "ORDER BY (c.status = 'pending') DESC, c.created_at DESC, c.id DESC LIMIT ?",
+        "SELECT n.id, n.type, n.comment_id, n.parent_id, n.post_id, n.project_id, "
+        "n.from_author, n.excerpt, n.is_read, n.created_at, "
+        "p.title AS post_title, pj.name AS project_name "
+        "FROM admin_notifications n "
+        "LEFT JOIN posts p ON n.post_id = p.id "
+        "LEFT JOIN projects pj ON n.project_id = pj.id "
+        "ORDER BY n.is_read ASC, n.created_at DESC, n.id DESC LIMIT ?",
         (max(1, min(50, int(limit))),),
     )
     items = []
     for row in rows:
         item = dict(row)
-        pending = item.get("status") == "pending"
-        item["type"] = "pending" if pending else "new"
-        item["from_author"] = str(item.get("author") or "匿名")
-        item["excerpt"] = _plain(str(item.get("content") or ""))
-        item["is_read"] = 0 if pending else 1
-        if item.get("post_id"):
-            item["label"] = str(item.get("post_title") or "文章")
-            item["url"] = "/admin/comments"
-        elif item.get("project_id"):
-            item["label"] = str(item.get("project_name") or "项目")
-            item["url"] = "/admin/comments"
-        else:
-            item["label"] = ""
-            item["url"] = "/admin/comments"
+        item["label"] = str(item.get("post_title") or item.get("project_name") or "")
+        # 已通过的评论在前台可见，直接跳到对应锚点；找不到来源才回后台列表
+        item["url"] = _comment_url(item.get("post_id"), item.get("project_id"), item["comment_id"]) or "/admin/comments"
         items.append(item)
     return items
+
+
+def admin_pending_list(limit: int = 20) -> list[dict]:
+    """待审核评论：实时查询，不复制进通知表，避免状态变化后留下一份旧数据。"""
+    rows = db.query(
+        "SELECT c.id, c.author, c.content, c.created_at, c.post_id, c.project_id, "
+        "p.title AS post_title, pj.name AS project_name "
+        "FROM comments c "
+        "LEFT JOIN posts p ON c.post_id = p.id "
+        "LEFT JOIN projects pj ON c.project_id = pj.id "
+        "WHERE c.status='pending' AND c.deleted_at IS NULL AND c.is_ai = 0 "
+        "ORDER BY c.created_at DESC, c.id DESC LIMIT ?",
+        (max(1, min(50, int(limit))),),
+    )
+    items = []
+    for row in rows:
+        item = dict(row)
+        item["comment_id"] = int(item.pop("id"))
+        item["type"] = "pending"
+        item["from_author"] = str(item.get("author") or "匿名")
+        item["excerpt"] = _plain(str(item.get("content") or ""))
+        item["is_read"] = 0
+        item["label"] = str(item.get("post_title") or item.get("project_name") or "")
+        item["url"] = "/admin/comments"
+        items.append(item)
+    return items
+
+
+def admin_unread_count() -> int:
+    unread = int(db.scalar(
+        "SELECT COUNT(*) FROM admin_notifications WHERE is_read=0", (), 0) or 0)
+    return admin_pending_count() + unread
 
 
 def admin_pending_count() -> int:

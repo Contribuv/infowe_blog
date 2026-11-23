@@ -19,27 +19,68 @@
     + '<div class="ov-mask" data-ov-close></div>'
     + '<aside class="ov-drawer" role="dialog" aria-modal="true" aria-label="我的概览">'
     + '  <div class="ov-head">'
-    + '    <strong>我的概览</strong>'
+    + '    <div class="ov-head-main">'
+    + '      <span class="ov-head-ico" id="ov-head-ico"></span>'
+    + '      <div class="ov-head-txt">'
+    + '        <small id="ov-head-kicker">概览</small>'
+    + '        <strong id="ov-head-title">我的概览</strong>'
+    + '        <span id="ov-head-sub">你在所有站点留下的评论足迹</span>'
+    + '      </div>'
+    + '    </div>'
     + '    <div class="ov-head-actions">'
     + '      <button type="button" class="ov-icon" id="ov-refresh" aria-label="刷新" title="刷新">⟳</button>'
     + '      <button type="button" class="ov-icon" data-ov-close aria-label="关闭" title="关闭">×</button>'
     + '    </div>'
     + '  </div>'
-    + '  <nav class="ov-tabs" id="ov-tabs">'
-    + '    <button type="button" class="ov-tab is-active" data-tab="overview">概览</button>'
-    + '    <button type="button" class="ov-tab" data-tab="comments">我的评论</button>'
-    + '    <button type="button" class="ov-tab" data-tab="replies">我的回复</button>'
-    + '    <button type="button" class="ov-tab" data-tab="mentions">我的@</button>'
-    + '  </nav>'
     + '  <div class="ov-body" id="ov-body"><div class="ov-loading">加载中…</div></div>'
+    + '  <nav class="ov-nav" id="ov-nav" aria-label="我的面板">'
+    + '    <button type="button" class="ov-nav-item is-active" data-tab="overview" aria-current="page">'
+    + '      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>'
+    + '      <span>我的概览</span></button>'
+    + '    <button type="button" class="ov-nav-item" data-tab="comments">'
+    + '      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/><path d="M8 11h8M8 15h5"/></svg>'
+    + '      <span>我的评论</span></button>'
+    + '    <button type="button" class="ov-nav-item" data-tab="account">'
+    + '      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>'
+    + '      <span>我的账户</span></button>'
+    + '  </nav>'
     + '</aside>';
   document.body.appendChild(drawer);
 
   var body = drawer.querySelector('#ov-body');
-  var tabs = drawer.querySelector('#ov-tabs');
+  var tabs = drawer.querySelector('#ov-nav');
   var mask = drawer.querySelector('.ov-mask');
   var currentTab = 'overview';
   var open = false;
+  var cmtFilter = 'all';
+
+  /* ── 头部标题：随 tab 切换（对应原站「概览 / 内容 / 我的」小标题） ── */
+  var TAB_META = {
+    overview: {
+      kicker: '概览', title: '我的概览', sub: '你在所有站点留下的评论足迹',
+      ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"/></svg>'
+    },
+    comments: {
+      kicker: '内容', title: '我的评论', sub: '查看你发表过的全部评论和收到的回复',
+      ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8z"/><path d="M8 11h8M8 15h5"/></svg>'
+    },
+    account: {
+      kicker: '我的', title: '我的账户', sub: '管理个人资料与登录状态',
+      ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>'
+    }
+  };
+
+  function setHead(tab) {
+    var meta = TAB_META[tab] || TAB_META.overview;
+    var ico = drawer.querySelector('#ov-head-ico');
+    var kicker = drawer.querySelector('#ov-head-kicker');
+    var title = drawer.querySelector('#ov-head-title');
+    var sub = drawer.querySelector('#ov-head-sub');
+    if (ico) ico.innerHTML = meta.ico;
+    if (kicker) kicker.textContent = meta.kicker;
+    if (title) title.textContent = meta.title;
+    if (sub) sub.textContent = meta.sub;
+  }
 
   /* ── 未读角标（铃铛 + 评论区入口） ── */
   function setBadges(n) {
@@ -59,29 +100,32 @@
 
   /* ── 渲染：待处理（待审核 + 未读通知合并成一块） ──
      两者都是「等你处理」的事，各自带标题会占两段留白，合成一个收件箱更紧凑；
-     按时间倒序混排，靠标签区分类型。 */
-  function renderInbox(pending, pendingCount, notifies) {
+     按时间倒序混排，靠标签区分类型。
+     博主与读者的数据源不同：博主 pending 是待审核评论（comment_id），
+     notifies 是 admin_notifications（id 才是通知 id）；读者 pending 来自个人概览。 */
+  function renderInbox(pending, pendingCount, notifies, unreadTotal) {
     var items = [];
     var pendingIds = {};
     (pending || []).forEach(function (it) {
-      pendingIds[int(it.id, 0)] = true;
+      var cid = int(it.comment_id != null ? it.comment_id : it.id, 0);
+      pendingIds[cid] = true;
       items.push({
         kind: 'pending',
         nid: 0,
         url: it.url || '#',
         time: it.created_at || '',
         tag: '待审核',
-        desc: '「' + esc(it.text) + '」' + (it.source_title ? ' · ' + esc(it.source_title) : '')
+        desc: '「' + esc(it.excerpt || it.text || '') + '」'
+          + ((it.label || it.source_title) ? ' · ' + esc(it.label || it.source_title) : '')
       });
     });
     var unread = 0;
     (notifies || []).forEach(function (it) {
       if (int(it.is_read, 0)) return;
-      // 博主视角的来源是待审核 / 新评论动态（comment_notify.admin_feed），
-      // 类型不止 reply / approved，标签和文案要按类型分开，不能都写成「回复」。
       var type = it.type || 'reply';
-      // admin_feed 的待审核项和「我的待审核」是同一条评论，取一次即可
-      if (type === 'pending' && pendingIds[int(it.id, 0)]) return;
+      var cid = int(it.comment_id != null ? it.comment_id : it.id, 0);
+      // 同一条待审核评论已经在上面的 pending 里，不再重复
+      if (type === 'pending' && pendingIds[cid]) return;
       unread += 1;
       var tag = type === 'approved' ? '已通过'
         : type === 'pending' ? '待审核'
@@ -89,7 +133,7 @@
       var desc;
       if (type === 'approved') desc = '你的评论「' + esc(it.excerpt) + '」已通过审核';
       else if (type === 'pending') desc = esc(it.from_author) + '：「' + esc(it.excerpt) + '」待审核';
-      else if (type === 'new') desc = esc(it.from_author) + ' 新评论：' + esc(it.excerpt);
+      else if (type === 'new') desc = esc(it.from_author) + ' 发表了新评论：' + esc(it.excerpt);
       else desc = esc(it.from_author) + ' 回复了你：' + esc(it.excerpt);
       items.push({
         kind: 'notify',
@@ -101,6 +145,8 @@
       });
     });
     pendingCount = int(pendingCount, 0);
+    // 未读总数可能大于本次返回的列表（接口只取 20 条），角标与标题用总数
+    unread = Math.max(unread, int(unreadTotal, 0));
     var total = pendingCount + unread;
     if (!total) return '';
     items.sort(function (a, b) { return String(b.time).localeCompare(String(a.time)); });
@@ -118,20 +164,30 @@
     if (pendingCount > (pending || []).length) {
       html += '<div class="ov-tip">还有 ' + (pendingCount - pending.length) + ' 条待审核未显示</div>';
     }
+    if (unread > (notifies || []).length) {
+      html += '<div class="ov-tip">还有 ' + (unread - (notifies || []).length) + ' 条通知未显示</div>';
+    }
     return html + '</div>';
   }
 
-  /* ── 渲染：统计格子 ── */
+  /* ── 渲染：统计格子（2×2，带图标） ── */
   function renderStats(stats) {
     var s = stats || {};
+    var ico = {
+      comment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+      active: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+      like: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
+      streak: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s5 5 5 9a5 5 0 0 1-10 0c0-4 5-9 5-9z"/><path d="M12 12s2 1.5 2 3a2 2 0 0 1-4 0c0-1.5 2-3 2-3z"/></svg>'
+    };
     var cells = [
-      { n: s.total || 0, t: '评论数' },
-      { n: s.active_30d || 0, t: '活跃30天' },
-      { n: s.likes || 0, t: '获赞' },
-      { n: s.streak || 0, t: '连续发言' }
+      { n: s.total || 0, t: '评论数', i: ico.comment },
+      { n: s.active_30d || 0, t: '活跃 30 天', i: ico.active },
+      { n: s.likes || 0, t: '获赞', i: ico.like },
+      { n: s.streak || 0, t: '连续发言', i: ico.streak }
     ];
     return '<div class="ov-stats">' + cells.map(function (c) {
-      return '<div class="ov-stat"><b>' + c.n + '</b><span>' + c.t + '</span></div>';
+      return '<div class="ov-stat"><span class="ov-stat-ico">' + c.i + '</span>'
+        + '<div class="ov-stat-txt"><b>' + c.n + '</b><span>' + c.t + '</span></div></div>';
     }).join('') + '</div>';
   }
 
@@ -139,9 +195,17 @@
   function renderHeatmap(heatmap) {
     if (!heatmap || !heatmap.length) return '';
     var levels = ['', ' ov-h1', ' ov-h2', ' ov-h3', ' ov-h4'];
+    var total = 0;
+    heatmap.forEach(function (week) {
+      week.forEach(function (cell) { total += int(cell.c, 0); });
+    });
     var html = '<div class="ov-section"><div class="ov-section-head"><span>活跃度</span>'
-      + '<span class="ov-section-sub">近 ' + heatmap.length + ' 周，颜色越深发言越多</span></div>'
-      + '<div class="ov-heat">';
+      + '<span class="ov-section-sub">近 ' + heatmap.length + ' 周 · 共 ' + total + ' 条</span></div>'
+      + '<div class="ov-heat-wrap"><div class="ov-heat-days">'
+      + ['一', '', '三', '', '五', '', '日'].map(function (d) {
+        return '<span>' + d + '</span>';
+      }).join('')
+      + '</div><div class="ov-heat">';
     heatmap.forEach(function (week) {
       html += '<div class="ov-heat-col">';
       week.forEach(function (cell) {
@@ -151,7 +215,7 @@
       });
       html += '</div>';
     });
-    html += '</div><div class="ov-heat-legend"><span>少</span>'
+    html += '</div></div><div class="ov-heat-legend"><span>少</span>'
       + levels.map(function (l) { return '<i class="ov-heat-cell' + l + '"></i>'; }).join('')
       + '<span>多</span></div></div>';
     return html;
@@ -166,10 +230,26 @@
       + '<span class="ov-section-sub">按星期统计的发言数量</span></div><div class="ov-weekly">';
     weekly.forEach(function (d) {
       var h = Math.max(4, Math.round(d.count / max * 60));
-      html += '<div class="ov-week-col"><div class="ov-week-bar-wrap"><div class="ov-week-bar" style="height:'
-        + h + 'px" title="' + d.count + ' 条"></div></div><span>' + esc(d.day) + '</span></div>';
+      html += '<div class="ov-week-col"><div class="ov-week-bar-wrap"><span class="ov-week-num">' + d.count + '</span>'
+        + '<div class="ov-week-bar" style="height:' + h + 'px" title="' + d.count + ' 条"></div></div>'
+        + '<span>' + esc(d.day) + '</span></div>';
     });
     return html + '</div></div>';
+  }
+
+  /* ── 渲染：最近发言（概览底部，复用 recent 数据） ── */
+  function renderRecent(items, hasMore, nextOffset) {
+    if (!items || !items.length) return '';
+    return '<div class="ov-section"><div class="ov-section-head"><span>最近发言</span>'
+      + '<span class="ov-section-sub">你最近的评论</span></div><div class="ov-recent-list">'
+      + items.map(function (it) {
+        var pending = (it.status || '') === 'pending';
+        return '<a class="ov-recent" href="' + esc(it.url || '#') + '">'
+          + '<p>' + esc(it.text) + '</p>'
+          + '<div class="ov-recent-foot"><span>' + esc(it.source_title)
+          + (pending ? ' · 审核中' : '') + '</span>'
+          + '<time>' + esc((it.created_at || '').slice(0, 16)) + '</time></div></a>';
+      }).join('') + '</div>' + (hasMore ? moreButton('overview', nextOffset) : '') + '</div>';
   }
 
   function renderOverview(d) {
@@ -188,7 +268,7 @@
       + (u.website ? '<a href="' + esc(u.website) + '" target="_blank" rel="noopener nofollow">' + esc(u.website) + '</a>' : '')
       + '</div></div>';
     html += renderStats(d.stats);
-    html += renderInbox(d.pending, d.pending_count, d.notifies || []);
+    html += renderInbox(d.pending, d.pending_count, d.notifies || [], d.unread_total);
     // 一条评论都没有时，热力图是 26 周空格子、一周分布是 7 根最小值柱，
     // 纯粹占高度；这种情况直接给一句空态，比摆两排空图有意义。
     var hasAny = int((d.stats || {}).total, 0) + int(d.pending_count, 0) > 0;
@@ -198,6 +278,8 @@
     } else {
       html += '<div class="ov-tip">还没有发言记录，参与讨论后这里会出现活跃度。</div>';
     }
+    // 最近发言放最后：概览先给待处理，再给趋势，最后才是明细
+    html += renderRecent(d.recent, d.recent_has_more, (d.recent || []).length);
     return html;
   }
 
@@ -205,51 +287,122 @@
     return '<button type="button" class="ov-more" data-ov-tab-more="' + tab + '" data-ov-more="' + int(nextOffset, 0) + '">加载更多</button>';
   }
 
-  function renderMyComments(items, hasMore, nextOffset) {
-    if (!items || !items.length) {
-      return '<div class="ov-empty"><div class="ov-empty-icon">📝</div><p>还没有已通过的评论</p>'
-        + '<span>审核中的评论在「概览」里单独列出。</span></div>';
-    }
-    return '<div class="ov-recent-list">' + items.map(function (it) {
-      return '<a class="ov-recent" href="' + esc(it.url || '#') + '">'
-        + '<p>' + esc(it.text) + '</p>'
-        + '<div class="ov-recent-foot"><span>' + esc(it.source_title) + '</span>'
-        + '<time>' + esc((it.created_at || '').slice(0, 16)) + '</time></div></a>';
-    }).join('') + '</div>' + (hasMore ? moreButton('comments', nextOffset) : '');
+  /* ── 渲染：我的评论（全部 / 提及 / 我的 / 待审） ── */
+  function commentCard(it) {
+    var pending = (it.status || '') === 'pending';
+    var lead = '';
+    // mentions 带 from_author（别人回复我）；my_replies 带 reply_to（我回复谁）
+    if (it.from_author) lead = '<div class="ov-recent-to">' + esc(it.from_author) + ' 回复了你</div>';
+    else if (it.reply_to) lead = '<div class="ov-recent-to">回复 @' + esc(it.reply_to) + '</div>';
+    var hay = [(it.text || ''), (it.source_title || ''), (it.from_author || ''), (it.reply_to || '')]
+      .join(' ').toLowerCase();
+    return '<a class="ov-recent" href="' + esc(it.url || '#') + '" data-s="' + esc(hay) + '">'
+      + lead
+      + '<p>' + esc(it.text) + '</p>'
+      + '<div class="ov-recent-foot"><span>' + esc(it.source_title || '')
+      + (pending ? ' · 审核中' : '') + '</span>'
+      + '<time>' + esc((it.created_at || '').slice(0, 16)) + '</time></div></a>';
   }
 
-  function renderReplies(items, hasMore, nextOffset) {
-    if (!items || !items.length) {
-      return '<div class="ov-empty"><div class="ov-empty-icon">↩</div><p>还没有回复</p>'
-        + '<span>你回复别人的评论会显示在这里。</span></div>';
-    }
-    return '<div class="ov-recent-list">' + items.map(function (it) {
-      return '<a class="ov-recent" href="' + esc(it.url || '#') + '">'
-        + (it.reply_to ? '<div class="ov-recent-to">回复 @' + esc(it.reply_to) + '</div>' : '')
-        + '<p>' + esc(it.text) + '</p>'
-        + '<div class="ov-recent-foot"><span>' + esc(it.source_title) + '</span>'
-        + '<time>' + esc((it.created_at || '').slice(0, 16)) + '</time></div></a>';
-    }).join('') + '</div>' + (hasMore ? moreButton('replies', nextOffset) : '');
+  function commentPool(d) {
+    var mine = ((d && d.my_comments) || []).concat((d && d.my_replies) || []);
+    var mentions = (d && d.mentions) || [];
+    var pending = (d && d.pending) || [];
+    if (cmtFilter === 'mention') return mentions;
+    if (cmtFilter === 'mine') return mine;
+    if (cmtFilter === 'pending') return pending;
+    var seen = {}, all = [];
+    mine.concat(mentions).forEach(function (it) {
+      var key = String(it.id || '') + '|' + String(it.text || '');
+      if (seen[key]) return;
+      seen[key] = 1;
+      all.push(it);
+    });
+    all.sort(function (a, b) {
+      return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+    });
+    return all;
   }
 
-  function renderMentions(items, hasMore, nextOffset) {
-    if (!items || !items.length) {
-      return '<div class="ov-empty"><div class="ov-empty-icon">@</div><p>还没有人提到你</p>'
-        + '<span>别人回复你的评论会显示在这里。</span></div>';
+  function renderCommentsTab(d) {
+    var filters = [
+      { k: 'all', t: '全部' },
+      { k: 'mention', t: '提及' },
+      { k: 'mine', t: '我的' },
+      { k: 'pending', t: '待审' }
+    ];
+    var pendingCount = int(d && d.pending_count, 0);
+    var html = '<div class="ov-tools">'
+      + '<label class="ov-search">'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
+      + '<input type="search" id="ov-search" placeholder="搜索关键字…" autocomplete="off"></label>'
+      + '<div class="ov-seg">' + filters.map(function (f) {
+        return '<button type="button" class="ov-seg-btn' + (f.k === cmtFilter ? ' is-active' : '') + '" data-cmt-filter="' + f.k + '">'
+          + f.t + (f.k === 'pending' && pendingCount ? '<em>' + pendingCount + '</em>' : '') + '</button>';
+      }).join('') + '</div></div>';
+
+    var pool = commentPool(d);
+    if (!pool.length) {
+      var emptyMap = {
+        all: ['📝', '还没有评论', '发布评论后，你和别人的互动都会出现在这里。'],
+        mention: ['@', '还没有人回复你', '别人回复你的评论后会显示在这里。'],
+        mine: ['📝', '还没有已通过的评论', '审核通过的评论会显示在这里。'],
+        pending: ['⏳', '没有待审评论', '新评论审核通过前会先放在这里。']
+      };
+      var e = emptyMap[cmtFilter] || emptyMap.all;
+      return html + '<div class="ov-empty"><div class="ov-empty-icon">' + e[0] + '</div><p>' + e[1] + '</p><span>' + e[2] + '</span></div>';
     }
-    return '<div class="ov-recent-list">' + items.map(function (it) {
-      return '<a class="ov-recent" href="' + esc(it.url || '#') + '">'
-        + '<div class="ov-recent-to">' + esc(it.from_author) + ' 回复了你</div>'
-        + '<p>' + esc(it.text) + '</p>'
-        + '<div class="ov-recent-foot"><span>' + esc(it.source_title) + '</span>'
-        + '<time>' + esc((it.created_at || '').slice(0, 16)) + '</time></div></a>';
-    }).join('') + '</div>' + (hasMore ? moreButton('mentions', nextOffset) : '');
+    return html + '<div class="ov-recent-list" id="ov-cmt-list">' + pool.map(commentCard).join('') + '</div>';
+  }
+
+  /* ── 渲染：我的账户（身份 / 登录入口） ── */
+  function renderAccount(d) {
+    if (!d || !d.identified) {
+      var canLogin = !!document.getElementById('cmt-login-open');
+      return '<div class="ov-acc">'
+        + '<div class="ov-acc-card"><div class="ov-acc-row">'
+        + '<span class="ov-acc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>'
+        + '<div class="ov-acc-txt"><b>访客身份</b><span>你正以访客身份浏览：登录后即可管理个人资料、密码与第三方登录，换台设备也能找回自己的评论。</span></div>'
+        + '</div>'
+        + (canLogin ? '<button type="button" class="ov-acc-btn" data-ov-login>登录</button>' : '')
+        + '</div>'
+        + '<p class="ov-tip">不登录也能评论，填写昵称和邮箱即可；登录只是为了让身份跨设备同步。</p>'
+        + '</div>';
+    }
+    var u = d.user || {};
+    var badge = d.identity_type === 'admin' ? '博主'
+      : d.identity_type === 'reader' ? '已验证' : d.identity_type === 'guest' ? '访客' : '';
+    var stats = d.stats || {};
+    var rows = [
+      { t: '昵称', v: u.name || '' },
+      { t: '邮箱', v: u.email || '' },
+      { t: '身份', v: badge },
+      { t: '评论总数', v: String(stats.total || 0) },
+      { t: '覆盖站点', v: u.sources != null ? String(u.sources) : '' },
+      { t: '首次发言', v: (u.first_at || '').slice(0, 10) }
+    ];
+    return '<div class="ov-acc">'
+      + '<div class="ov-user"><img class="ov-avatar" src="' + esc(u.avatar) + '" alt="">'
+      + '<div class="ov-user-info"><b>' + esc(u.name) + (badge ? ' <span class="ov-id-badge">' + badge + '</span>' : '') + '</b>'
+      + (u.email ? '<span class="ov-user-mail">' + esc(u.email) + '</span>' : '')
+      + '</div></div>'
+      + '<div class="ov-acc-card"><div class="ov-acc-list">' + rows.map(function (r) {
+        if (!r.v) return '';
+        return '<div class="ov-acc-item"><span>' + r.t + '</span><b>' + esc(r.v) + '</b></div>';
+      }).join('') + '</div></div>'
+      + '<p class="ov-tip">' + (d.identity_type === 'reader'
+        ? '当前为注册账号登录，身份与评论会自动同步。'
+        : d.identity_type === 'admin'
+          ? '当前为博主身份，评论与通知按博主视角展示。'
+          : '当前身份来自评论 Cookie（昵称 + 邮箱），换设备或清理 Cookie 后需要重新填写。')
+      + '</p></div>';
   }
 
   /* ── 加载数据 ── */
   function load(force, recentOffset) {
+    setHead(currentTab);
     body.innerHTML = '<div class="ov-loading">加载中…</div>';
-    var url = '/api/reader/overview?tab=' + encodeURIComponent(currentTab)
+    var url = '/api/reader/overview?tab=overview'
       + (recentOffset ? '&recent_offset=' + recentOffset : '') + (force ? '&_=' + Date.now() : '');
     fetch(url, { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : {}; })
@@ -259,6 +412,14 @@
           fetch('/api/comment/notifies', { credentials: 'same-origin' })
             .then(function (r) { return r.ok ? r.json() : { notifies: [] }; })
             .then(function (nd) {
+              // 博主与读者的待处理数据源不同：博主用接口返回的待审核列表，
+              // 读者继续用个人概览里的 pending（自己的审核中评论）
+              if (nd && nd.is_admin) {
+                d.pending = nd.pending || [];
+                d.pending_count = int(nd.pending_count, 0);
+                // 接口给的总数可能大于列表返回的条数，角标和标题都以总数为准
+                d.unread_total = Math.max(0, int(nd.count, 0) - int(nd.pending_count, 0));
+              }
               d.notifies = (nd && nd.notifies) || [];
               setBadges(nd && nd.count);
               body.innerHTML = renderOverview(d);
@@ -266,16 +427,81 @@
               bindTabMore();
             })
             .catch(function () { body.innerHTML = renderOverview(d); bindOverviewActions(); bindTabMore(); });
-        } else if (currentTab === 'replies') {
-          body.innerHTML = renderReplies(d && d.my_replies, d && d.replies_has_more, d && d.replies_next_offset);
-        } else if (currentTab === 'mentions') {
-          body.innerHTML = renderMentions(d && d.mentions, d && d.mentions_has_more, d && d.mentions_next_offset);
+        } else if (currentTab === 'account') {
+          body.innerHTML = renderAccount(d);
+          bindAccount(d);
         } else {
-          body.innerHTML = renderMyComments(d && d.my_comments, d && d.comments_has_more, d && d.comments_next_offset);
+          loadCommentsData(d);
         }
-        bindTabMore();
       })
       .catch(function () { body.innerHTML = '<div class="ov-empty"><p>加载失败，请重试</p></div>'; });
+  }
+
+  /* 我的评论：一次并行拉三类列表，筛选与搜索都在本地做，切换不闪 */
+  function loadCommentsData(base) {
+    var stamp = '&_=' + Date.now();
+    var urls = [
+      '/api/reader/overview?tab=comments' + stamp,
+      '/api/reader/overview?tab=replies' + stamp,
+      '/api/reader/overview?tab=mentions' + stamp
+    ];
+    Promise.all(urls.map(function (u) {
+      return fetch(u, { credentials: 'same-origin' }).then(function (r) { return r.ok ? r.json() : {}; });
+    })).then(function (arr) {
+      var d = {};
+      for (var k in base) if (Object.prototype.hasOwnProperty.call(base, k)) d[k] = base[k];
+      d.my_comments = (arr[0] && arr[0].my_comments) || [];
+      d.my_replies = (arr[1] && arr[1].my_replies) || [];
+      d.mentions = (arr[2] && arr[2].mentions) || [];
+      body.innerHTML = renderCommentsTab(d);
+      bindCommentsTab(d);
+    }).catch(function () {
+      body.innerHTML = renderCommentsTab(base);
+      bindCommentsTab(base);
+    });
+  }
+
+  function bindCommentsTab(d) {
+    Array.prototype.forEach.call(body.querySelectorAll('[data-cmt-filter]'), function (btn) {
+      btn.addEventListener('click', function () {
+        cmtFilter = btn.getAttribute('data-cmt-filter') || 'all';
+        body.innerHTML = renderCommentsTab(d);
+        bindCommentsTab(d);
+      });
+    });
+    var search = body.querySelector('#ov-search');
+    if (!search) return;
+    var apply = function () {
+      var q = String(search.value || '').trim().toLowerCase();
+      var list = body.querySelector('#ov-cmt-list');
+      if (!list) return;
+      var shown = 0;
+      Array.prototype.forEach.call(list.querySelectorAll('.ov-recent'), function (a) {
+        var hit = !q || String(a.getAttribute('data-s') || '').indexOf(q) >= 0;
+        a.style.display = hit ? '' : 'none';
+        if (hit) shown += 1;
+      });
+      var tip = list.querySelector('.ov-search-empty');
+      if (!shown && !tip) {
+        tip = document.createElement('div');
+        tip.className = 'ov-tip ov-search-empty';
+        tip.textContent = '没有匹配「' + q + '」的内容';
+        list.appendChild(tip);
+      } else if (shown && tip) {
+        tip.remove();
+      }
+    };
+    search.addEventListener('input', apply);
+  }
+
+  function bindAccount() {
+    var login = body.querySelector('[data-ov-login]');
+    if (!login) return;
+    login.addEventListener('click', function () {
+      closeDrawer();
+      var trigger = document.getElementById('cmt-login-open');
+      if (trigger) trigger.click();
+    });
   }
 
   function bindOverviewActions() {
@@ -290,7 +516,7 @@
       a.addEventListener('click', function () {
         var id = int(a.getAttribute('data-nid'), 0);
         if (id && a.className.indexOf('is-read') < 0) {
-          fetch('/api/comment/notifies/read?id=' + id, { method: 'POST', credentials: 'same-origin' })
+          fetch('/api/comment/notifies/read?id=' + id, { method: 'POST', credentials: 'same-origin', keepalive: true })
             .then(function () { loadCount(); })
             .catch(function () {});
         }
@@ -304,6 +530,7 @@
     if (tab === 'mentions') lead = '<div class="ov-recent-to">' + esc(it.from_author) + ' 回复了你</div>';
     return '<a class="ov-recent" href="' + esc(it.url || '#') + '">' + lead
       + '<p>' + esc(it.text) + '</p><div class="ov-recent-foot"><span>' + esc(it.source_title)
+      + (tab === 'overview' && (it.status || '') === 'pending' ? ' · 审核中' : '')
       + '</span><time>' + esc((it.created_at || '').slice(0, 16)) + '</time></div></a>';
   }
 
@@ -380,14 +607,19 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && open) closeDrawer(); });
   var refresh = drawer.querySelector('#ov-refresh');
   if (refresh) refresh.addEventListener('click', function () { load(true); });
-  Array.prototype.forEach.call(tabs.querySelectorAll('.ov-tab'), function (tab) {
+  Array.prototype.forEach.call(tabs.querySelectorAll('.ov-nav-item'), function (tab) {
     tab.addEventListener('click', function () {
-      Array.prototype.forEach.call(tabs.querySelectorAll('.ov-tab'), function (t) { t.classList.remove('is-active'); });
+      Array.prototype.forEach.call(tabs.querySelectorAll('.ov-nav-item'), function (t) {
+        t.classList.remove('is-active');
+        t.removeAttribute('aria-current');
+      });
       tab.classList.add('is-active');
-      currentTab = tab.getAttribute('data-tab');
+      tab.setAttribute('aria-current', 'page');
+      currentTab = tab.getAttribute('data-tab') || 'overview';
       load();
     });
   });
 
-  loadCount();
+  // 评论区 / 铃铛都不存在时不发请求（评论开关关闭时后台不再加载这个脚本）
+  if (bellBtn || document.querySelector('[data-notify-open]')) loadCount();
 })();

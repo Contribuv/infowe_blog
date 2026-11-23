@@ -693,7 +693,7 @@ def admin_comment_approve(comment_id: int):
     # 从「已拒绝」改回通过时，清掉旧的人工拒绝说明，避免状态列说反
     Comment.mark_manual(comment_id, "")
     _audit("comment.approve", f"#{comment_id}", str(previous.get("author") or "") if previous else "")
-    # 待审核 -> 通过时，补发「收到回复」邮件给被回复的访客
+    # 待审核 -> 通过时，补发「收到回复」/「已通过」站内通知 + 博主通知
     if previous and previous.get("status") != "approved":
         notify.notify_approved_reply(comment_id)
     flash("评论已通过", "success")
@@ -707,6 +707,11 @@ def admin_comment_reject(comment_id: int):
     previous = Comment.get(comment_id)
     # 拒绝时把人工说明写进 ai_meta，后台「状态」列直接可见（AI 转人工的失败原因仍保留）
     Comment.mark_manual(comment_id, "人工拒绝：前台不显示，记录保留在后台", "rejected")
+    try:
+        from services import comment_notify
+        comment_notify.remove_admin_for_comment([comment_id])
+    except Exception:
+        pass
     _audit("comment.reject", f"#{comment_id}", str(previous.get("author") or "") if previous else "")
     flash("评论已拒绝，前台不再显示（记录保留在后台可查）", "success")
     return _comments_back()
@@ -736,6 +741,11 @@ def admin_comments_bulk():
     if action == "reject":
         # 批量拒绝：置 rejected，后台留痕不删行；按规则拒绝不删图
         Comment.bulk(ids, "reject")
+        try:
+            from services import comment_notify
+            comment_notify.remove_admin_for_comment(ids)
+        except Exception:
+            pass
         _audit("comment.reject", f"批量 {len(ids)} 条")
         flash(f"已拒绝 {len(ids)} 条评论（前台不再显示，记录保留在后台）", "success")
         return _comments_back()
@@ -1173,7 +1183,7 @@ def _settings_view() -> dict:
         "smtp_pass": settings.get_str("smtp_pass", ""),
         "notify_email": settings.get_str("notify_email", ""),
         "smtp_sender_name": settings.get_str("smtp_sender_name", ""),
-        "comment_notify": settings.get_str("comment_notify", "0"),
+        "comment_notify": settings.get_str("comment_notify", "1"),
         "account_notify": settings.get_str("account_notify", "1"),
         "comment_image_upload": settings.get_str("comment_image_upload", "1"),
         "particles_enabled": settings.get_str("particles_enabled", "1"),

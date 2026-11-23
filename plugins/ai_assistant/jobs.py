@@ -391,6 +391,11 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
             if cur.rowcount == 0:
                 return
             _invalidate_page(comment)
+            # AI 自动通过也是「评论公开」，站内通知必须与人工审核一致
+            try:
+                notify.notify_approved_reply(cid)
+            except Exception:
+                pass
             if cfg.get("comment_reply") and reply and not _blocked_word(reply) and _in_reply_time_window(cfg):
                 profile = config.active_profile()
                 avatar = config.ai_avatar_url()

@@ -831,30 +831,37 @@ def _notify_identity():
 def comment_notifies():
     from services import comment_notify
 
-    # 博主视角：铃铛显示待审核评论动态
+    # 博主与读者彻底分流：博主看「待审核 + 新评论/被回复」，
+    # 读者只看自己的评论通知，两边不共用同一套已读状态。
     if auth.is_admin():
         return jsonify({
-            "count": comment_notify.admin_pending_count(),
-            "notifies": comment_notify.admin_feed(),
             "is_admin": True,
+            "count": comment_notify.admin_unread_count(),
+            "pending_count": comment_notify.admin_pending_count(),
+            "pending": comment_notify.admin_pending_list(),
+            "notifies": comment_notify.admin_feed(),
         })
     key_hash, _is_reader = _notify_identity()
     return jsonify({
-        "count": comment_notify.unread_count(key_hash),
-        "notifies": comment_notify.list_notifies(key_hash),
         "is_admin": False,
+        "count": comment_notify.unread_count(key_hash),
+        "pending_count": 0,
+        "pending": [],
+        "notifies": comment_notify.list_notifies(key_hash),
     })
 
 
 def comment_notifies_read():
     from services import comment_notify
 
-    if not comments_service.open_comments():
-        abort(403)
+    notify_id = request.values.get("id", 0, type=int) or 0
+    # 博主通知与读者通知分开标记；评论开关关闭时也要能清角标，不再 403
+    if auth.is_admin():
+        changed = comment_notify.admin_mark_read(notify_id)
+        return jsonify({"ok": True, "changed": changed, "count": comment_notify.admin_unread_count()})
     key_hash, _is_reader = _notify_identity()
     if not key_hash:
         return jsonify({"error": "未识别身份"}), 401
-    notify_id = request.values.get("id", 0, type=int) or 0
     changed = comment_notify.mark_read(key_hash, notify_id)
     return jsonify({"ok": True, "changed": changed, "count": comment_notify.unread_count(key_hash)})
 

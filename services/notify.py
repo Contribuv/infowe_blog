@@ -295,6 +295,10 @@ def notify_approved_reply(comment_id: int) -> None:
         from services import comment_notify
         if not int(comment.get("is_private") or 0):
             comment_notify.add_approved(comment)
+        # 被回复者的「收到回复」站内通知也推迟到这里，保证点开能看到已通过的评论
+        comment_notify.add_reply_for_comment(comment)
+        # 博主通知统一在这里补写：后台审核、AI 自动通过、AI 工具通过都走同一入口
+        comment_notify.add_admin_comment(comment)
     except Exception:
         pass
 

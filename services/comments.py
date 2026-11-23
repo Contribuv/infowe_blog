@@ -446,30 +446,23 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
     )
 
     # 站内通知：被回复者收到提醒（与邮件通知独立，不受 comment_notify 开关影响）
-    if parent_id and parent_row:
-        from services import comment_notify
+    # 待审核评论先不写：被回复者点开也看不到内容；审核通过后由 notify_approved_reply 补写
+    if parent_id and status == "approved":
+        try:
+            from services import comment_notify
 
-        recipient_hash = str(parent_row["email_hash"] or "")
-        parent_email = str(parent_row["email"] or "").strip().lower()
-        parent_private = bool(int(parent_row["is_private"] or 0))
-        parent_notify = bool(int(parent_row["notify"] if parent_row["notify"] is not None else 1))
-        _blogger_name, blogger_mails = _blogger_identity()
-        if (
-            recipient_hash
-            and parent_notify
-            and not parent_private
-            and not is_private
-            and recipient_hash != email_hash
-            and parent_email not in blogger_mails
-        ):
-            try:
-                comment_notify.add_reply(
-                    recipient_hash, comment_id, parent_id,
-                    None if is_project else target_id, target_id if is_project else None,
-                    author, content,
-                )
-            except Exception:
-                pass
+            comment_notify.add_reply_for_comment(Comment.get(comment_id))
+        except Exception:
+            pass
+
+    # 博主通知：评论公开后才写，待审核由后台 pending 实时查询，不复制一份
+    if status == "approved":
+        try:
+            from services import comment_notify as _cn
+
+            _cn.add_admin_comment(Comment.get(comment_id))
+        except Exception:
+            pass
 
     if not is_admin:
         _touch_cooldown("comment", ip)

@@ -343,6 +343,9 @@ def delete(comment_id: int) -> None:
                 ids.append(cid)
     marks = ",".join("?" * len(ids))
     db.execute(f"UPDATE comments SET deleted_at = ? WHERE id IN ({marks})", [db.now(), *ids])
+    # 通知跟着评论一起清理，避免铃铛指向已删除评论（读者通知与博主通知各一份）
+    db.execute(f"DELETE FROM admin_notifications WHERE comment_id IN ({marks})", ids)
+    db.execute(f"DELETE FROM comment_notifications WHERE comment_id IN ({marks})", ids)
 
 
 def set_status(comment_id: int, status: str) -> None:

@@ -456,7 +456,7 @@
             <div class="form-group">
                 <label class="switch-label">
                     <span class="switch">
-                        <input type="checkbox" name="comment_notify" value="1"{{ ' checked' if comment_notify|default('0') in ('1','on','true','yes') else '' }}>
+                        <input type="checkbox" name="comment_notify" value="1"{{ ' checked' if comment_notify|default('1') in ('1','on','true','yes') else '' }}>
                         <span class="slider"></span>
                     </span>
                     <span class="switch-text">访客评论会邮件提醒你；访客回复访客时，审核通过后再通知对方；你自己评论或回复不会给自己发信。</span>
