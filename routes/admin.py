@@ -1525,6 +1525,99 @@ def admin_settings_test_email():
     return jsonify({"ok": ok, "msg": message})
 
 
+@LOGIN
+def admin_owner_migrate():
+    """历史博主信息迁移：把旧邮箱下的评论归到当前博主邮箱。
+
+    博主身份按 email_hash 归属，改绑邮箱后旧评论仍记在旧哈希上；
+    这里把指定旧邮箱哈希的评论统一改成当前博主资料，旧邮箱的读者账号保持不动。
+    """
+    from services import avatar
+
+    contact = (settings.get_str("contact_email", "") or settings.get_str("notify_email", "")).strip()
+    author = settings.get_str("author", "").strip()
+    new_key = avatar.email_hash(contact) if contact else ""
+
+    # 候选：明确标记为博主的旧邮箱（is_owner=1 且不是当前邮箱）
+    candidates = [
+        dict(r)
+        for r in db.query(
+            "SELECT email, COUNT(*) AS n, MAX(created_at) AS last_at "
+            "FROM comments WHERE is_owner=1 AND deleted_at IS NULL "
+            "AND COALESCE(email, '') <> '' AND email_hash <> ? "
+            "GROUP BY email_hash ORDER BY n DESC LIMIT 30",
+            (new_key,),
+        )
+    ]
+
+    old_email = (request.values.get("old_email") or "").strip()
+    preview = None
+    if old_email:
+        if not contact:
+            flash("请先填写当前博主联系邮箱", "error")
+        elif old_email.lower() == contact.lower():
+            flash("旧邮箱与当前博主邮箱相同，无需迁移", "error")
+        else:
+            count = int(
+                db.scalar(
+                    "SELECT COUNT(*) FROM comments WHERE email_hash=? AND deleted_at IS NULL",
+                    (avatar.email_hash(old_email),),
+                    0,
+                )
+                or 0
+            )
+            preview = {"email": old_email, "count": count}
+
+    if request.method == "POST":
+        if not contact:
+            flash("请先填写当前博主联系邮箱", "error")
+        elif not old_email or old_email.lower() == contact.lower():
+            flash("请填写有效的旧博主邮箱", "error")
+        elif not request.form.get("confirm"):
+            flash("请先勾选确认再执行迁移", "error")
+        else:
+            old_key = avatar.email_hash(old_email)
+            count = int(
+                db.scalar(
+                    "SELECT COUNT(*) FROM comments WHERE email_hash=? AND deleted_at IS NULL",
+                    (old_key,),
+                    0,
+                )
+                or 0
+            )
+            if count <= 0:
+                flash(f"旧邮箱 {old_email} 下没有可迁移的评论", "error")
+            else:
+                db.execute(
+                    "UPDATE comments SET author=?, email=?, email_hash=?, is_owner=1 "
+                    "WHERE email_hash=? AND deleted_at IS NULL",
+                    (author or "博主", contact, new_key, old_key),
+                )
+                # 昵称统一表跟着合并：新哈希已存在时丢弃旧行，避免唯一键冲突
+                if db.one("SELECT 1 FROM comment_identities WHERE email_hash=?", (new_key,)):
+                    db.execute("DELETE FROM comment_identities WHERE email_hash=?", (old_key,))
+                else:
+                    db.execute(
+                        "UPDATE comment_identities SET email_hash=?, email=? WHERE email_hash=?",
+                        (new_key, contact, old_key),
+                    )
+                _audit("owner.migrate", old_email, f"迁移 {count} 条评论到 {contact}")
+                from services import page_cache
+
+                page_cache.clear_all()
+                flash(f"已把 {old_email} 的 {count} 条评论迁移到 {contact}", "success")
+                return redirect(url_for("admin_owner_migrate"))
+
+    return render_template(
+        "admin/owner_migrate.html",
+        contact_email=contact,
+        author=author,
+        candidates=candidates,
+        preview=preview,
+        old_email=old_email,
+    )
+
+
 # ── 数据管理 ──────────────────────────────────────────
 @LOGIN
 def admin_export():
@@ -1840,6 +1933,7 @@ def register(app) -> None:
         ("/admin/settings/save", "admin_settings_save", admin_settings_save, ["POST"]),
         ("/admin/settings/wm-refresh", "admin_settings_wm_refresh", admin_settings_wm_refresh, ["GET"]),
         ("/admin/settings/test-email", "admin_settings_test_email", admin_settings_test_email, ["POST"]),
+        ("/admin/settings/owner-migrate", "admin_owner_migrate", admin_owner_migrate, ["GET", "POST"]),
         ("/admin/export", "admin_export", admin_export, ["GET"]),
         ("/admin/cache/clear", "admin_cache_clear", admin_cache_clear, ["POST"]),
         ("/admin/export/db-backup", "admin_export_db_backup", admin_export_db_backup, ["POST"]),

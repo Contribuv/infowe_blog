@@ -53,6 +53,13 @@
                        value="{{ config.get('contact_email', '') }}"
                        placeholder="如: hello@yourdomain.com">
             </div>
+            <div class="form-group">
+                <label>历史博主信息迁移</label>
+                <p class="form-hint" style="margin:0 0 8px">
+                    改绑邮箱后，旧邮箱下发过的评论仍记在旧身份上。用迁移工具把它们归到当前博主邮箱。
+                </p>
+                <a class="btn btn-outline btn-sm" href="{{ url_for('admin_owner_migrate') }}">打开迁移工具</a>
+            </div>
         </div>
 
         <!-- 安全验证：OTP 双重验证（id 供 OTP 邮箱找回后定位跳转） -->

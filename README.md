@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.62-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.62)
+[![version](https://img.shields.io/badge/version-3.9.63-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.63)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.62**
+当前版本：**v3.9.63**
 
-> 最近一次更新完整展开；更早的 161 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 162 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.63
+
+- **历史博主信息迁移**：「博客设置 → 账号安全」新增迁移工具，把旧邮箱下的评论统一归到当前博主邮箱（作者名、邮箱、email_hash、博主标记一起改）
+- **旧邮箱怎么选**：下拉列出「曾以博主身份评论过」的历史邮箱（可直接选），同时允许手动输入，覆盖没被标记过的旧邮箱
+- **先预览再执行**：先显示命中的评论条数，勾选确认后才真正迁移；迁移写入审计（`owner.migrate`）
+- **旧邮箱仍是普通读者**：只迁移评论归属，不删除旧邮箱注册的读者账号；迁移后它的「我的评论」不再包含这些内容
+- **昵称统一表同步**：旧哈希的昵称记录合并到新哈希，避免之后改名出现两套身份
 
 ### v3.9.62
 
@@ -1037,7 +1045,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.61 及更早，共 161 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.62 及更早，共 162 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

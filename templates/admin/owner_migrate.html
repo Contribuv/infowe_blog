@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+{% block admin_title %}历史博主信息迁移{% endblock %}
+{% block admin_content %}
+<div class="page-header">
+    <h2>历史博主信息迁移</h2>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('admin_settings') }}">返回博客设置</a>
+</div>
+
+<div class="card" style="max-width:820px">
+    <div class="card-header"><h3>把旧邮箱的评论归到当前博主</h3></div>
+    <p class="form-hint" style="margin-top:0">
+        博主身份按邮箱哈希归属。以前用旧邮箱发过的评论，改绑后仍记在旧邮箱名下。
+        迁移会把旧邮箱下的评论作者名、邮箱、邮箱哈希统一改为当前博主资料，并打上博主标记；
+        旧邮箱本身注册的读者账号不会被删除，只是这些评论不再算它的。
+    </p>
+
+    <div class="form-group">
+        <label>当前博主</label>
+        <div class="input-text" style="display:flex;gap:10px;align-items:center">
+            <strong>{{ author or '未设置昵称' }}</strong>
+            <span class="cell-muted">{{ contact_email or '未设置联系邮箱' }}</span>
+        </div>
+        {% if not contact_email %}
+        <span class="form-hint">请先到「博客设置 → 账号安全」填写联系邮箱，再回来迁移。</span>
+        {% endif %}
+    </div>
+
+    <form method="GET" action="{{ url_for('admin_owner_migrate') }}">
+        <div class="form-group">
+            <label for="owner-old-email">旧博主邮箱</label>
+            <input class="input-text" id="owner-old-email" name="old_email" type="email"
+                   value="{{ old_email }}" list="owner-old-emails"
+                   placeholder="选择历史邮箱，或手动输入" autocomplete="off">
+            <datalist id="owner-old-emails">
+                {% for c in candidates %}
+                <option value="{{ c.email }}">{{ c.n }} 条 · {{ (c.last_at or '')[:10] }}</option>
+                {% endfor %}
+            </datalist>
+            <span class="form-hint">
+                下拉里是「曾以博主身份评论过」的邮箱；如果旧邮箱没被标记过，直接手动填写也可以。
+            </span>
+        </div>
+        <button type="submit" class="btn btn-outline">预览命中评论</button>
+    </form>
+
+    {% if preview %}
+    <hr style="margin:18px 0;border:0;border-top:1px solid var(--border)">
+    {% if preview.count %}
+    <div class="form-group">
+        <label>预览结果</label>
+        <p>旧邮箱 <code>{{ preview.email }}</code> 下有
+            <strong>{{ preview.count }}</strong> 条评论将被迁移到
+            <code>{{ contact_email }}</code>，同时作者名改为
+            <strong>{{ author or '博主' }}</strong>，并标记为博主评论。</p>
+    </div>
+    <form method="POST" action="{{ url_for('admin_owner_migrate') }}">
+        <input type="hidden" name="old_email" value="{{ preview.email }}">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <input type="checkbox" name="confirm" value="1" required>
+            <span>我确认迁移这 {{ preview.count }} 条评论，迁移后不可一键撤销</span>
+        </label>
+        <button type="submit" class="btn btn-primary">确认迁移</button>
+    </form>
+    {% else %}
+    <p class="cell-muted">这个邮箱下没有找到评论。换个邮箱，或确认它是否真的发过评论。</p>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
