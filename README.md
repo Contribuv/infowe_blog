@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.71-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.71)
+[![version](https://img.shields.io/badge/version-3.9.72-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.72)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.71**
+当前版本：**v3.9.72**
 
 > 最近一次更新完整展开；更早的 170 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.72
+
+- **全站头像统一为「自定义头像 > Gravatar > QQ 头像（仅保底）」**：评论列表、身份条、后台评论、读者页与邮件通知共用同一套优先级；`avatar.urls()` 改为 Gravatar 优先并携带 `?qq=`，头像代理在 Gravatar 确认不存在时 302 到 QQ 头像，再没有才回落默认图，前端无需 `onerror` 判断
+- **邮件头像与网站保持一致**：`mail_avatar()` 按 自定义头像 > 博主后台头像 > Gravatar（确认存在）> QQ 头像 > 首字母色块 生成，邮件里不再出现与站内不同的第三方头像
+- **邮件图片改为本站直连**：通知邮件里的评论图片走 `/comment-img/comment/...?local=1`，头像与其它图片统一用本站绝对地址，不再输出会过期的 OSS 签名地址（签名在邮件中无效，一直是裂图）
+- **`/comment-img` 新增 `local=1`**：强制读本地文件、不 302 到 OSS，供邮件等外部长期缓存的场景使用
+- **未登录访客身份条补查自定义头像**：此前只按邮箱算 Gravatar / QQ，注册用户上传过头像却仍显示第三方头像；现在与登录读者一致
+- **修复刷新页面自动跳到评论区**：`<details>` 的 `toggle` 事件会被浏览器恢复 `open` 状态触发，改为仅在 `pointerdown` / `keydown` 之后的 `toggle` 才滚动
 
 ### v3.9.71
 

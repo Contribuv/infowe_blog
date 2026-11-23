@@ -102,13 +102,32 @@ def _esc(value: object) -> str:
     return esc(value)
 
 
+def _image_src(src: str, site: str) -> str:
+    """邮件里的图片地址：绝对地址 + 站内直连。
+
+    评论图片必须走 /comment-img 审核中转：/uploads/comment/ 直链在站点里
+    固定 404（防止绕过审核），邮件里直接拼站点地址会得到一张裂图。
+    中转地址带 local=1，强制读本地文件、不 302 到对象存储：邮件客户端
+    跟随 302 的能力不可靠，签名地址一旦写进正文很快就会失效。
+    私有桶的代理前缀 /oss-media/uploads/ 与 /uploads/ 等价，统一还原。
+    """
+    path = str(src or "")
+    if path.startswith("/oss-media/"):
+        path = "/" + path[len("/oss-media/"):]
+    base = (site or "").rstrip("/")
+    if "/uploads/comment/" in path:
+        rel = path.split("/uploads/comment/", 1)[1].split("?", 1)[0].split("#", 1)[0]
+        return "%s/comment-img/comment/%s?local=1" % (base, rel)
+    return base + path
+
+
 def _content_html(text: str, site: str) -> str:
     safe = _esc(text)
 
     def repl(match: re.Match) -> str:
         src = match.group(1)
         return (
-            f'<img src="{site}{src}" alt="" '
+            f'<img src="{_image_src(src, site)}" alt="" '
             'style="display:block;max-width:100%;height:auto;border-radius:8px;margin:10px 0 6px;">'
         )
 

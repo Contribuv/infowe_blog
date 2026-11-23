@@ -72,10 +72,16 @@ def avatar_proxy(key: str, size: int):
         if not all(c in "0123456789abcdef" for c in digest.lower()):
             abort(404)
         size = max(1, min(size, 640))
-        sources = [
-            f"https://cravatar.cn/avatar/{digest}?s={size}&d=404",
-            f"https://weavatar.com/avatar/{digest}?s={size}&d=404",
-        ]
+        # Gravatar 优先；确认没有时落到 ?qq= 指定的 QQ 头像，最后才是默认图。
+        # 这样「自定义 > Gravatar > QQ > 默认」的回退在三端完全一致，
+        # 前端不需要再写 onerror 判断。
+        path = avatar.gravatar_file(digest, size)
+        if path is not None:
+            return send_file(path, max_age=604800, mimetype="image/png")
+        qq = request.args.get("qq", "").strip()
+        if qq.isdigit() and 5 <= len(qq) <= 12:
+            return redirect(f"/avatar/q{qq}/{avatar.qq_avatar_size(size)}.png")
+        return redirect(avatar.default_url())
     else:
         abort(404)
 

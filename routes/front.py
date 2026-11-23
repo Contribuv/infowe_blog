@@ -128,10 +128,15 @@ def _comments_context(post_id: int | None, project_id: int | None, page: int | N
     reader_user = reader_account.public_user(reader_row) if reader_row else None
     if reader_user:
         from services import avatar as avatar_svc
-        # 上传的自定义头像优先于 Gravatar / QQ 邮箱头像
+        # 上传的自定义头像 > Gravatar > QQ 头像（保底），与评论列表、邮件同一套规则
         custom_avatar = str((reader_row or {}).get("avatar_url") or "").strip()
+        reader_email = str((reader_row or {}).get("email") or "").strip()
         reader_user["avatar"] = custom_avatar or (
-            avatar_svc.urls(str((reader_row or {}).get("email_hash") or ""), "", 80)[0]
+            avatar_svc.urls(
+                str((reader_row or {}).get("email_hash") or ""),
+                avatar_svc.qq_from_email(reader_email),
+                80,
+            )[0]
             or avatar_svc.default_url()
         )
         # 已登录读者：用账号信息作为表单默认身份（昵称与 comment_identities 一致，不触发改名冲突）
@@ -139,7 +144,9 @@ def _comments_context(post_id: int | None, project_id: int | None, page: int | N
             key = "name" if field == "author" else field
             if reader_user.get(key):
                 commenter[field] = reader_user[key]
-    # 身份条头像：博主用后台头像，注册读者用账号头像，Cookie 访客按邮箱算 Gravatar / QQ 头像
+    # 身份条头像：博主用后台头像，注册读者用账号头像，Cookie 访客按同一套规则。
+    # 未登录访客也要查 reader_users：之前漏了自定义头像，导致「评论列表是自定义头像、
+    # 身份条却回退 Gravatar」的割裂。
     guest_avatar = ""
     if commenter.get("author") and not reader_user:
         from services import avatar as avatar_svc
@@ -147,7 +154,16 @@ def _comments_context(post_id: int | None, project_id: int | None, page: int | N
         guest_email = str(commenter.get("email") or "").strip()
         if not guest_hash and guest_email:
             guest_hash = avatar_svc.email_hash(guest_email)
-        guest_avatar = (avatar_svc.urls(guest_hash, "", 64)[0] if guest_hash else "") or avatar_svc.default_url()
+        guest_custom = avatar_svc.custom_url(guest_hash) if guest_hash else ""
+        if guest_custom:
+            guest_avatar = guest_custom
+        elif guest_hash:
+            guest_avatar = (
+                avatar_svc.urls(guest_hash, avatar_svc.qq_from_email(guest_email), 64)[0]
+                or avatar_svc.default_url()
+            )
+        else:
+            guest_avatar = avatar_svc.default_url()
     my_comments = commenter.get("my_comments") if isinstance(commenter.get("my_comments"), dict) else {}
     if enabled:
         comment_list, comment_total, comment_pager = _load_comments(
@@ -1178,7 +1194,10 @@ def comment_image(filename: str):
 
     # 通过审核：启用对象存储时优先 302 到 OSS（公有直链 / 私有现签），
     # 图片带宽不落回服务器；OSS 上没有对象时才用本地文件兜底。
-    if upload.remote_active() and upload.remote_exists(needle):
+    # local=1 强制读本地：邮件通知里的图片用它，邮件客户端跟随 302 不可靠，
+    # 预签名地址写进邮件正文又会过期。
+    force_local = request.args.get("local") == "1"
+    if not force_local and upload.remote_active() and upload.remote_exists(needle):
         remote = upload.remote_url(needle)
         if remote and remote != needle:
             response = redirect(remote, code=302)

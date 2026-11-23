@@ -215,12 +215,7 @@ def notify_comment(
     author_avatar = ""
     try:
         from services import avatar
-        if email:
-            h = avatar.email_hash(email)
-            qq = avatar.qq_from_email(email)
-            if h or qq:
-                a, _ = avatar.urls(h, qq)
-                author_avatar = site + a if a and a.startswith('/') else a
+        author_avatar = avatar.mail_avatar(email, site)
     except Exception:
         pass
 
@@ -332,14 +327,7 @@ def notify_approved_reply(comment_id: int) -> None:
     author_avatar = ""
     try:
         from services import avatar
-        cemail = str(comment.get("email") or "").strip()
-        if cemail:
-            h = avatar.email_hash(cemail)
-            qq = avatar.qq_from_email(cemail)
-            if h or qq:
-                a, _ = avatar.urls(h, qq)
-                base = site_url.base()
-                author_avatar = base + a if a and a.startswith('/') else a
+        author_avatar = avatar.mail_avatar(str(comment.get("email") or ""), site_url.base())
     except Exception:
         pass
     text, page = mail_template.reply_notice(

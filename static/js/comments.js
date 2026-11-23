@@ -640,10 +640,21 @@ window.initComments = function (root) {
 
   /* 滚动定位留白由 CSS 的 .cmt-form{scroll-margin:50px 0} 负责，不再内联注入 */
 
-  /* 点「写评论」展开 <details> 后：表单被截断才滚动到可见 */
+  /* 点「写评论」展开 <details> 后：表单被截断才滚动到可见。
+     注意：刷新页面时浏览器会恢复 <details> 的展开状态，并在解析后补发一次
+     toggle —— 那不是用户操作。早期版本直接对 toggle 滚动，导致「刷新后
+     视口自己跳到评论区」（长项目页/文章页尤其明显，游客登录态都会出现）。
+     这里只认紧跟在 pointerdown / keydown 之后的 toggle。 */
   var cmtBox = form.querySelector('.cmt-box');
   if (cmtBox) {
+    var cmtUserIntent = false;
+    var markCmtIntent = function () { cmtUserIntent = true; };
+    document.addEventListener('pointerdown', markCmtIntent, true);
+    document.addEventListener('keydown', markCmtIntent, true);
     cmtBox.addEventListener('toggle', function () {
+      var fromUser = cmtUserIntent;
+      cmtUserIntent = false;
+      if (!fromUser) return;          // 浏览器恢复的展开：不滚动
       if (cmtBox.open) scrollFormIntoView();
     });
 
