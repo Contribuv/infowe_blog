@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.55-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.55)
+[![version](https://img.shields.io/badge/version-3.9.56-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.56)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,14 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.55**
+当前版本：**v3.9.56**
 
-> 最近一次更新完整展开；更早的 154 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 155 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.56
+
+- **折叠条轻悬停**：鼠标移入时表单描边向主色靠一档（38% 混合），书写图标与占位文字同时变深；不做位移、投影或整块变色，既提示可点，又不喧宾夺主
+- **浮窗同步**：评论弹窗里的占位条悬停同样只提亮描边，保持与内嵌表单一致
 
 ### v3.9.55
 
@@ -982,7 +987,7 @@ chown -R www:www var
 - 其他：留存记录补 `user.review` / `user.review.queue` / `user.delete` 中文动作名，不再显示英文原码
 
 <details>
-<summary><b>历史版本（v3.9.54 及更早，共 154 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.55 及更早，共 155 个版本，点击展开）</b></summary>
 
 ### v3.9.49
 

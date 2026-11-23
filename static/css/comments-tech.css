@@ -817,9 +817,17 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt .cmt-page-btn:active { transform: none; }
 
 /* ═══ 悬停反馈：只给「真的能点」的元素，且即时变色、不做过渡 ═══
-   卡片空白处不响应；折叠条本身不做悬停变色（外层卡片已表明可点），
-   只有其中的「登录」按钮与其它操作按钮响应。 */
+   卡片空白处不响应；折叠条给一层很轻的反馈（描边提亮 + 图标/占位文字变深），
+   让人知道整条可以点，但不做位移、投影或整块变色。 */
 @media (hover:hover) and (pointer:fine){
+  .cmt .cmt-form:not(.is-inline):has(.cmt-box:not([open])):hover{
+    border-color:color-mix(in srgb,var(--c-accent) 38%,var(--card-border,var(--c-hairline)));
+  }
+  .cmt-pop-foot .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle{
+    border-color:color-mix(in srgb,var(--c-accent) 38%,var(--c-border-strong));
+  }
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-icon{color:var(--c-accent)}
+  .cmt-form:has(.cmt-box:not([open])):hover .cmt-toggle-placeholder{color:var(--c-text2)}
   .cmt-page-btn:not(.active):hover{border-color:var(--c-accent);color:var(--c-accent)}
   .cmt-authbar-btn:hover{border-color:var(--c-accent);color:var(--c-accent)}
   .cmt-authbar-link:hover{color:var(--c-accent);text-decoration:underline}
