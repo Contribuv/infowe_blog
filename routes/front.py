@@ -973,6 +973,11 @@ def reader_overview():
         from services import reader_account
         reader_row = reader_account.verify_token(request.cookies.get(reader_account.COOKIE_NAME, ""))
     custom_avatar = str((reader_row or {}).get("avatar_url") or "")
+    # 游客身份（昵称 + 邮箱）也能命中已注册账号的自定义头像：
+    # 评论区头像是按 email_hash 查 reader_users 的，这里若只认登录态的 reader_row，
+    # 同一个人就会在评论区显示自定义头像、在概览抽屉里显示 Gravatar / QQ / 默认图。
+    if not custom_avatar and key_hash:
+        custom_avatar = avatar.custom_url(key_hash)
     recent_offset = request.args.get("recent_offset", 0, type=int) or 0
     data = ov.overview(key_hash, key_hash, include_owner=is_admin,
                        custom_avatar=custom_avatar, recent_offset=recent_offset,

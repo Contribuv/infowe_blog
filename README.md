@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.79-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.79)
+[![version](https://img.shields.io/badge/version-3.9.80-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.80)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.79**
+当前版本：**v3.9.80**
 
-> 最近一次更新完整展开；更早的 178 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 179 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.80
+
+- **修复游客身份下自定义头像不同步**：邮箱已注册并上传过自定义头像、但未登录只用「昵称 + 邮箱」评论时，评论区头像已正确显示自定义头像，个人概览抽屉与侧栏最新评论却回落到 Gravatar / QQ / 默认图；现统一按 `email_hash` 查询 `reader_users`，同一人在全站各处显示同一张头像
+- **侧栏最新评论同步修好**：侧栏原先完全没读自定义头像，登录与游客身份都只按邮箱算 Gravatar / QQ，现与评论区使用同一优先级
+
+<details>
+<summary><b>历史版本（v3.9.79 及更早，共 179 个版本，点击展开）</b></summary>
 
 ### v3.9.79
 

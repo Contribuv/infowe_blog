@@ -48,7 +48,10 @@ def _comments(limit: int = 5) -> list[dict]:
     items = []
     for row in rows:
         item = dict(row)
-        url, _ = avatar.urls(str(item.get("email_hash") or ""), str(item.get("qq") or ""))
+        # 注册用户即使以游客身份留言，侧栏也要和评论区显示同一张自定义头像
+        key = str(item.get("email_hash") or "")
+        custom = avatar.custom_url(key) if key else ""
+        url = custom or avatar.urls(key, str(item.get("qq") or ""))[0]
         if item.get("post_id"):
             source_url = f"/post/{item['post_id']}#comment-{item['id']}"
             source_title = item.get("post_title") or "文章"
