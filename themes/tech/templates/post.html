@@ -27,7 +27,8 @@
         </div>
     </header>
 
-    <!-- 目录：≥1400px fixed 悬浮右侧；窄屏内联折叠框，显示在标题下方、正文之前 -->
+    <!-- 目录：≥1400px fixed 悬浮右侧；768~1399px 内联折叠框；
+         <768px 由 theme.js 接管为右下悬浮入口 + 底部抽屉浮窗 -->
     {% if toc %}
     <aside class="tech-toc-sidebar" aria-label="目录">
         <details class="tech-toc" open>

@@ -510,7 +510,9 @@ window.techHighlightCode = techHighlightCode;
     if (!target) return;
     e.preventDefault();
     var details = a.closest('details');
-    if (details) details.open = false;
+    // 移动端目录是底部抽屉（details.open 必须常开，靠面板类名控制显隐），
+    // 这里若把 open 置 false，抽屉内容会直接消失；桌面/平板仍保持点完即收起
+    if (details && !window.matchMedia('(max-width: 767px)').matches) details.open = false;
     // 先把待加载的图改成 eager，让页面高度尽快稳定
     Array.prototype.forEach.call(content.querySelectorAll('img'), function (img) {
       if (!img.complete) img.loading = 'eager';
@@ -566,6 +568,150 @@ window.techHighlightCode = techHighlightCode;
   headings.forEach(function (h) { io.observe(h); });
 
   // 项目页「反馈」按钮：监听由 base.html 末尾的内联脚本绑定（避开 theme.js IIFE 抛错时的副作用）
+})();
+
+/* ── 移动端目录浮窗（< 768px）：悬浮入口 + 底部抽屉 ──
+   结构由 JS 注入：入口按钮、遮罩、抽屉头部（把手 / 标题 / 节数 / 关闭）。
+   桌面与平板（768~1399px）保持原有内联折叠，≥1400px 固定侧栏不变；
+   只有 html.toc-sheet-ready 存在时 CSS 才接管移动端布局，JS 失效也不丢功能。 */
+(function () {
+  'use strict';
+  var aside = document.querySelector('.tech-toc-sidebar');
+  var details = aside && aside.querySelector('details.tech-toc');
+  var body = aside && aside.querySelector('.tech-toc-body');
+  if (!aside || !details || !body) return;
+  var links = body.querySelectorAll('a[href^="#"]');
+  if (!links.length) return;
+
+  /* 窄屏（768~1399）折叠摘要右侧的「共 N 节」：
+     摘要本身是 details/summary，节数无法用 CSS 统计，这里注入一次。
+     ≥1400 与 <768 都由 CSS 隐藏，不影响固定侧栏和抽屉头部。 */
+  var summary = details.querySelector('.tech-toc-summary');
+  if (summary && !summary.querySelector('.tech-toc-count')) {
+    var count = document.createElement('span');
+    count.className = 'tech-toc-count';
+    count.textContent = '共 ' + links.length + ' 节';
+    summary.appendChild(count);
+  }
+
+  var root = document.documentElement;
+  var mq = window.matchMedia('(max-width: 767px)');
+  var isOpen = false;
+  var lastFocus = null;
+
+  /* 抽屉头部：把手 + 标题 + 节数 + 关闭 */
+  var head = document.createElement('div');
+  head.className = 'tech-toc-sheet-head';
+  head.innerHTML =
+    '<span class="tech-toc-grip" aria-hidden="true"></span>' +
+    '<div class="tech-toc-sheet-bar">' +
+      '<span class="tech-toc-sheet-title">目录</span>' +
+      '<span class="tech-toc-sheet-count">共 ' + links.length + ' 节</span>' +
+      '<button type="button" class="tech-toc-close" aria-label="关闭目录">' +
+        '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+      '</button>' +
+    '</div>';
+  aside.insertBefore(head, aside.firstChild);
+  aside.id = 'tech-toc-sheet';
+  var closeBtn = head.querySelector('.tech-toc-close');
+
+  /* 入口条：插在 aside 之前（标题卡内、正文之前），不占屏幕角落，
+     与评论区浮窗按钮互不影响 */
+  var trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'tech-toc-trigger';
+  trigger.setAttribute('aria-label', '打开文章目录');
+  trigger.setAttribute('aria-controls', 'tech-toc-sheet');
+  trigger.setAttribute('aria-expanded', 'false');
+  trigger.innerHTML =
+    '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h16"/></svg>' +
+    '<span class="tech-toc-trigger-label">目录</span>' +
+    '<span class="tech-toc-trigger-count">共 ' + links.length + ' 节</span>' +
+    '<svg class="tech-toc-trigger-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  aside.parentNode.insertBefore(trigger, aside);
+
+  var scrim = document.createElement('div');
+  scrim.className = 'tech-toc-scrim';
+  document.body.appendChild(scrim);
+
+  /* 打开时把当前章节滚进可视区；只动抽屉容器，不带动整页 */
+  function revealActive() {
+    var a = body.querySelector('a.is-active');
+    if (!a || body.scrollHeight <= body.clientHeight + 1) return;
+    var ar = a.getBoundingClientRect();
+    var br = body.getBoundingClientRect();
+    if (ar.top < br.top + 8) body.scrollTop += ar.top - br.top - 8;
+    else if (ar.bottom > br.bottom - 8) body.scrollTop += ar.bottom - br.bottom + 8;
+  }
+
+  function openSheet() {
+    if (!mq.matches) return;
+    details.open = true;   // 抽屉内容不依赖原生折叠
+    isOpen = true;
+    lastFocus = document.activeElement;
+    aside.classList.add('is-open');
+    scrim.classList.add('is-open');
+    root.classList.add('toc-sheet-open');
+    trigger.setAttribute('aria-expanded', 'true');
+    aside.setAttribute('role', 'dialog');
+    aside.setAttribute('aria-modal', 'true');
+    revealActive();
+    try { closeBtn.focus({ preventScroll: true }); } catch (err) { closeBtn.focus(); }
+  }
+
+  function closeSheet() {
+    if (!isOpen) return;
+    isOpen = false;
+    aside.classList.remove('is-open');
+    scrim.classList.remove('is-open');
+    root.classList.remove('toc-sheet-open');
+    trigger.setAttribute('aria-expanded', 'false');
+    aside.removeAttribute('role');
+    aside.removeAttribute('aria-modal');
+    // 焦点还给打开前的元素；若当时焦点落在 body（程序化点击等），
+    // 退回入口条，避免焦点跑到文档根后键盘用户丢失位置
+    var back = (lastFocus && lastFocus.focus && lastFocus !== document.body) ? lastFocus : trigger;
+    try { back.focus({ preventScroll: true }); } catch (err) {}
+  }
+
+  trigger.addEventListener('click', openSheet);
+  scrim.addEventListener('click', closeSheet);
+  closeBtn.addEventListener('click', closeSheet);
+
+  /* 抽屉里点章节：滚动交给页面原有锚点逻辑（theme.js 上方），这里只负责收起 */
+  body.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('a[href^="#"]')) closeSheet();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (!isOpen) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeSheet();
+      return;
+    }
+    /* 焦点锁在抽屉内，避免 Tab 跑到被遮罩挡住的页面元素 */
+    if (e.key !== 'Tab') return;
+    var f = aside.querySelectorAll('a[href], button, [tabindex]:not([tabindex="-1"])');
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  function sync() {
+    if (mq.matches) {
+      root.classList.add('toc-sheet-ready');
+      details.open = true;   // 抽屉内容不依赖原生折叠
+    } else {
+      closeSheet();
+      root.classList.remove('toc-sheet-ready');
+      /* 768~1399 回到「内联折叠」的默认收起；≥1400 由页面内联脚本强制展开 */
+      if (!window.matchMedia('(min-width: 1400px)').matches) details.open = false;
+    }
+  }
+  sync();
+  mq.addEventListener('change', sync);
 })();
 
 /* ── 阅读进度条：页面存在 #readingProgress 时启用（文章页与项目页共用同一份逻辑） ──

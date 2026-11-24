@@ -1286,6 +1286,9 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   transform: rotate(45deg); transition: transform .2s; margin-top: -3px;
 }
 .tech-toc[open] .tech-toc-summary::after { transform: rotate(-135deg); margin-top: 3px; }
+/* 节数徽标只在窄屏折叠态出现（≥1400 的固定侧栏不显示）；
+   由 theme.js 注入到 summary 里，纯装饰，缺失时箭头自动顶上 */
+.tech-toc-count { display: none; }
 
 /* 目录面板：窄屏最多占 46vh，宽屏在下方单独放宽 */
 .tech-toc-body {
@@ -1337,46 +1340,77 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
    无目录（沿用标题线）：
      meta → 20px → 标题线 → 20px → 正文 */
 @media (max-width: 1399px) {
-  .tech-toc { border-bottom: 1px solid var(--border); }
+  /* 折叠目录改成一条「入口条」：描边 + 圆角 + 极淡底色。
+     原先是裸的「竖条 + 目录 + 远处箭头」，一行里只有左右两个元素，
+     中间大片空白，而且和正文 h2 的竖条标题撞语言，看着像正文小节。
+     现在有容器感，折叠时是 46px 的一条，展开后是带分隔线的卡片。
+     圆角不用 --card-radius(10px)：它是「控件」（一条可点开的工具条），
+     不是内容容器，比卡片更硬朗才不显软塌；8px 与全站按钮/输入框
+     的 8~9px 同档，仍在同一套圆角语言里。 */
+  .tech-toc {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--text) 2.5%, transparent);
+    overflow: hidden;
+  }
   /* 有目录时标题区保留一小段底部内距：标题区现在是色带，
      padding-bottom 归零会让 meta 贴着色块下沿，视觉上被「切掉」。
-     留 12px 与色带顶部的 --pad-y 呼应；到「目录」文字仍由
-     header margin + 摘要上内距凑够呼吸感 */
+     留 12px 与色带顶部的 --pad-y 呼应 */
   .tech-post-main:has(.tech-toc-sidebar) .tech-post-header {
     margin-bottom: 10px;
     padding-bottom: 12px;
     border-bottom: 0;
   }
-  /* 目录线 → 正文 20px，与无目录文章的「标题线 → 正文 20px」同一节奏 */
+  /* 目录卡 → 正文 20px，与无目录文章的「标题线 → 正文 20px」同一节奏 */
   .tech-toc-sidebar { margin: 0 0 20px; }
-  /* 窄屏/移动端目录标题：原 12px + 字间距的「小标签」在大号正文旁显得单薄，
-     改为与正文区块标题同一套语言（14px / 600 + 左侧主色条） */
   .tech-toc-summary {
     justify-content: flex-start;
-    gap: 8px;
-    /* 行盒 20 + 上下内距 10 = 40px，与原来 min-height:40 的触控高度一致，
-       但文字改成真正的上下居中（原来 10px 只加在底部，文字贴着行盒上沿） */
-    min-height: 0;
-    padding: 10px 0 10px 2px;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 14px;
     line-height: 20px;
-    /* 左内距 2px 只做视觉留白：竖条 4px + gap 8px 接手原来的 14px，
-       文字总左边距仍是 14px，与下方目录条目对齐 */
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0;
     color: var(--text);
+    transition: background-color .16s ease;
   }
-  /* 竖条改成 flex 子项：不再用 top 硬编码，交给父级 align-items:center
-     与文字行盒一起垂直居中（原先 absolute + top:14px 差 0.85px，肉眼可见） */
+  @media (hover: hover) and (pointer: fine) {
+    .tech-toc-summary:hover {
+      background: color-mix(in srgb, var(--text) 4%, transparent);
+    }
+  }
+  .tech-toc-summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  /* 汉堡图标（三条横线）：目录的通用符号。
+     替代原先的 4px 竖条——那根竖条与正文 h2「▎小节名」完全同款，
+     折叠时容易被误读成正文标题。 */
   .tech-toc-summary::before {
     content: "";
     flex: none;
-    width: 4px; height: 16px; border-radius: 2px;
-    background: var(--accent);
+    width: 16px; height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+    box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
+    opacity: .6;
   }
-  .tech-toc-summary::after { margin-left: auto; }
-  /* 目录末条到底部分隔线的空隙收紧（原 12px 在移动端读起来像漏了一行） */
-  .tech-toc-body { padding-bottom: 6px; }
+  /* 节数占据右侧，箭头紧跟其后，不再把箭头单独甩到最右 */
+  .tech-toc-count {
+    display: inline;
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .tech-toc-summary::after { margin-left: 8px; }
+  /* 展开：条目区用一条细线与入口条分隔，左右留内距 */
+  .tech-toc-body {
+    padding: 4px 12px 10px;
+    border-top: 1px solid var(--border);
+  }
   /* 窄屏条目收紧行高：40px 触控行在整页列表里显得太松，32px 仍足够可点 */
   .tech-toc-body a { min-height: 32px; padding: 4px 0 4px 12px; }
 }
@@ -1424,6 +1458,245 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   .tech-toc-body ul ul a { padding-left: 22px; font-size: 12.5px; }
   .tech-toc-body ul ul ul a { padding-left: 34px; font-size: 12px; }
   .tech-toc-body ul ul ul ul a { padding-left: 44px; }
+}
+
+/* ── 移动端目录浮窗（< 768px）：标题下入口条 + 底部抽屉 ──
+   只在 theme.js 初始化完成后（html.toc-sheet-ready）接管布局；
+   JS 不可用时退回上方「窄屏内联折叠」的原有形态，不会丢功能。
+   层级：抽屉 320 > 遮罩 310 > 评论 FAB 300 > 回到顶部 150。
+   入口条留在文档流里（标题下方、正文之前），不占屏幕角落，
+   与评论区浮窗按钮（右下角）彻底分开，两者可同时开启。
+   抽屉与遮罩均由 JS 创建，默认 display:none，桌面/平板完全不受影响。 */
+.tech-toc-trigger,
+.tech-toc-scrim,
+.tech-toc-sheet-head { display: none; }
+
+@media (max-width: 767px) {
+  /* 入口：标题卡内的一条轻量按钮，44px 触控高度。
+     圆角 8px 与 768~1399 的折叠入口条保持同一档（控件比卡片硬朗） */
+  html.toc-sheet-ready .tech-toc-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    margin: 0 0 18px;
+    padding: 0 12px 0 13px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--text) 3%, transparent);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color .16s ease, border-color .16s ease;
+  }
+  html.toc-sheet-ready .tech-toc-trigger:active {
+    background: var(--bg-subtle);
+  }
+  html.toc-sheet-ready .tech-toc-trigger svg {
+    flex: none;
+    color: var(--text-secondary);
+  }
+  .tech-toc-trigger-label { flex: none; }
+  .tech-toc-trigger-count {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .tech-toc-trigger-chevron { transition: transform .2s ease; }
+  html.toc-sheet-ready .tech-toc-trigger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* 遮罩：点按关闭；不抢面板手势 */
+  html.toc-sheet-ready .tech-toc-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 310;
+    background: rgba(10, 15, 24, .46);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .26s ease;
+  }
+  html.toc-sheet-ready .tech-toc-scrim.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 抽屉：贴底、圆角 20、内容不足时高度自适应，目录过长时内部滚动。
+     宽度用 100vw 而不是 left/right:0 —— 站点在 html 上开了
+     scrollbar-gutter: stable，left/right:0 会停在内容区右缘，
+     右侧漏出一条滚动条槽的底色；100vw 直接盖满整条视口。
+     visibility 的过渡必须是「打开立即可见、关闭延迟隐藏」：
+     若用 visibility .32s 过渡，打开瞬间元素仍是 hidden，
+     JS 随即执行的 closeBtn.focus() 会静默失败，焦点留在入口条上。 */
+  html.toc-sheet-ready .tech-toc-sidebar {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 320;
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    max-width: 100vw;
+    max-height: min(78vh, 640px);          /* 旧浏览器回退 */
+    max-height: min(78dvh, 640px);
+    margin: 0;
+    padding: 0 18px calc(10px + env(safe-area-inset-bottom));
+    background: var(--bg);
+    border: 0;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -14px 44px rgba(8, 15, 28, .22);
+    transform: translate3d(0, 104%, 0);
+    visibility: hidden;
+    transition: transform .32s cubic-bezier(.32, .72, 0, 1), visibility 0s linear .32s;
+    will-change: transform;
+  }
+  html.toc-sheet-ready .tech-toc-sidebar.is-open {
+    transform: none;
+    visibility: visible;
+    transition: transform .32s cubic-bezier(.32, .72, 0, 1), visibility 0s linear 0s;
+  }
+
+  /* 抽屉头部（JS 注入）：把手 + 标题 + 节数 + 关闭 */
+  html.toc-sheet-ready .tech-toc-sheet-head {
+    display: block;
+    flex: none;
+    padding-top: 8px;
+  }
+  .tech-toc-grip {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 10px;
+    border-radius: 2px;
+    background: var(--border-strong);
+    opacity: .75;
+  }
+  .tech-toc-sheet-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tech-toc-sheet-title {
+    display: inline-flex;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .tech-toc-sheet-title::before {
+    content: "";
+    width: 3px;
+    height: 14px;
+    margin-right: 8px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .tech-toc-sheet-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .tech-toc-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    margin-right: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color .16s ease, color .16s ease;
+  }
+  .tech-toc-close:active {
+    background: var(--bg-subtle);
+    color: var(--text);
+  }
+  .tech-toc-close:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  /* 移动端标题行由抽屉头部接管，原折叠摘要隐藏 */
+  html.toc-sheet-ready .tech-toc-summary { display: none; }
+  html.toc-sheet-ready .tech-toc {
+    display: block;
+    min-height: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    overflow: visible;
+  }
+  /* 高度必须显式封顶：Chromium 131+ 把 details 内容包进 ::details-content，
+     .tech-toc-body 不再是 details 的 flex 子项，flex 收缩不生效，
+     长目录会整条溢出面板。这里直接按「面板上限 - 头部 - 底部安全区」限高 */
+  html.toc-sheet-ready .tech-toc-body {
+    min-height: 0;
+    max-height: calc(min(78vh, 640px) - 88px - env(safe-area-inset-bottom));
+    max-height: calc(min(78dvh, 640px) - 88px - env(safe-area-inset-bottom));
+    padding: 4px 0 2px;
+    /* 平板折叠态给条目区加了上分隔线，抽屉里头部已有分隔线，这里去掉避免双线 */
+    border-top: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 抽屉内触控行 44px：比内联折叠的 32px 更适合单手点按 */
+  html.toc-sheet-ready .tech-toc-body a {
+    min-height: 44px;
+    padding: 10px 0 10px 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  html.toc-sheet-ready .tech-toc-body ul ul a { padding-left: 24px; font-size: 13.5px; }
+  html.toc-sheet-ready .tech-toc-body ul ul ul a { padding-left: 34px; font-size: 13px; }
+  html.toc-sheet-ready .tech-toc-body ul ul ul ul a { padding-left: 44px; font-size: 12.5px; }
+  html.toc-sheet-ready .tech-toc-body a.is-active { font-weight: 600; }
+  html.toc-sheet-ready .tech-toc-body a:active { background: var(--bg-subtle); }
+
+  /* 目录不再占文档流：标题区恢复默认间距与底色分隔，不再为折叠框让位 */
+  html.toc-sheet-ready .tech-post-main:has(.tech-toc-sidebar) .tech-post-header {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 0;
+  }
+  html.toc-sheet-ready .tech-toc-sidebar + .tech-post-body { margin-top: 0; }
+
+  /* 抽屉打开时，页面其余浮钮一起让位（opacity/visibility 需压过 .show / .hide） */
+  html.toc-sheet-open,
+  html.toc-sheet-open body { overflow: hidden; }
+  html.toc-sheet-open .tech-top,
+  html.toc-sheet-open .cmt-fab,
+  html.toc-sheet-open .tech-mobile-toggle {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.toc-sheet-ready .tech-toc-sidebar,
+  html.toc-sheet-ready .tech-toc-scrim,
+  html.toc-sheet-ready .tech-toc-trigger { transition: none; }
 }
 
 /* 文章头部收进阅读卡：标题 + meta 与正文同处一张卡。

@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.78-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.78)
+[![version](https://img.shields.io/badge/version-3.9.79-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.79)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.78**
+当前版本：**v3.9.79**
 
-> 最近一次更新完整展开；更早的 177 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 178 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.79
+
+- **窄屏目录改为「入口条」**：768~1399px 折叠态原本是裸的「竖条 + 目录 + 远处箭头」，一行只有左右两个元素、中间大片空白，而且竖条与正文 h2 撞语言，看着像正文小节；现改为描边 + 极淡底色的入口条，左侧换汉堡图标、右侧补「共 N 节」与箭头，展开后成为带分隔线的卡片，当前章节仍高亮
+- **圆角与全站统一后进一步收硬**：入口条不再自定 12px，先对齐全站卡片圆角变量，再按「控件比容器硬朗」收到 8px（与全站按钮/输入框同档），移动端入口条同步为 8px
+- **桌面端不受影响**：≥1400px 的右侧固定玻璃索引保持原样，节数徽标仅窄屏显示
+
+<details>
+<summary><b>历史版本（v3.9.78 及更早，共 178 个版本，点击展开）</b></summary>
 
 ### v3.9.78
 
