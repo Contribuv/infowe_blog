@@ -667,7 +667,10 @@ html[data-theme-mode="dark"] .icon-auto { display: none; }
   to { opacity: 1; }
 }
 html.page-enter .tech-main {
-  animation: tech-page-enter 140ms ease-out both;
+  /* 不要保留填充：fill 为 both/forwards 时动画结束后 <main> 仍处于合成层，
+     会在主内容上留下一个层叠上下文，把 z-index 更高的目录抽屉困在里面，
+     反而被 body 上的遮罩盖住（表现为目录点不动、刷新一下才好）。 */
+  animation: tech-page-enter 140ms ease-out;
 }
 /* 居中极简 Hero 页面（首页/搜索/标签结果）：main 自身不垫顶部，留白交给 page-head 统一，保证上下对称 */
 .tech-main:has(.tech-page-head--center),
@@ -1684,6 +1687,10 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   /* 抽屉打开时，页面其余浮钮一起让位（opacity/visibility 需压过 .show / .hide） */
   html.toc-sheet-open,
   html.toc-sheet-open body { overflow: hidden; }
+  /* 兜底：主内容的进入动画（含 fill 残留的合成层）会形成层叠上下文，
+     导致抽屉的 z-index 只在 main 内比较、被 body 上的遮罩压住点不到。
+     抽屉打开期间直接停掉该动画，保证遮罩永远在抽屉之下。 */
+  html.toc-sheet-open .tech-main { animation: none !important; }
   html.toc-sheet-open .tech-top,
   html.toc-sheet-open .cmt-fab,
   html.toc-sheet-open .tech-mobile-toggle {

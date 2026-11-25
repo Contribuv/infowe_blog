@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.81-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.81)
+[![version](https://img.shields.io/badge/version-3.9.82-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.82)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,18 +925,25 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.81**
+当前版本：**v3.9.82**
 
-> 最近一次更新完整展开；更早的 180 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 181 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.82
+
+- **修复窄屏目录浮窗整体点不动（文章页与项目页）**：站内跳转时 `html` 会被加上 `page-enter` 类，`<main>` 上的淡入动画带着 `animation-fill-mode: both` 常驻，使主内容长期停留在合成层、形成层叠上下文；目录抽屉虽然 `position: fixed` 且 `z-index: 320`，但它的层叠只在 `main` 内部比较，而遮罩挂在 `body` 上（`z-index: 310`），实际压在抽屉上方——点目录项全部落在遮罩上，表现为只关抽屉不跳转
+- **为什么刷新就好**：刷新时页面跳转脚本会跳过 `page-enter`，`main` 没有动画和层叠上下文，抽屉自然在最上层；从首页、列表页点进文章就必现
+- **三层修复**：淡入动画不再保留填充值；动画播完立即摘掉 `page-enter` 标记；抽屉打开期间对 `main` 强制 `animation: none !important` 兜底，即使动画残留也不会再压住抽屉
+- **实测**：从首页站内跳转进入文章页与项目页，目录浮窗第 0 / 100 / 169 项点击后目标均停在视口顶部 60px，目标所在 `<details>` 自动展开；强行保留 `page-enter` 时同样可点
+
+<details>
+<summary><b>历史版本（v3.9.81 及更早，共 181 个版本，点击展开）</b></summary>
 
 ### v3.9.81
 
 - **修复窄屏目录浮窗点锚点不到目标**：项目页 README 的折叠块 `<details>` 收起时内容不占布局高度，`window.scrollTo` 最多滚到页面底部，看起来就是「点了没反应」，只能刷新让浏览器按 `#hash` 原生定位；现在点击目录项会先展开目标所在的所有祖先 `<details>`，再逐帧对齐到顶部 60px
 - **桌面临时折叠逻辑不受影响**：展开的是目标元素所在折叠块，不改变目录本身的开合与抽屉状态；移动端点击后抽屉照常收起
 - **实测**：170 节目录分别点第 20 / 150 / 169 项，目标标题最终都停在视口顶部 60px，文档高度从 15.6k 自动撑到 60.8k
-
-<details>
-<summary><b>历史版本（v3.9.80 及更早，共 180 个版本，点击展开）</b></summary>
 
 ### v3.9.80
 

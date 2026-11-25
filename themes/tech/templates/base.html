@@ -38,6 +38,15 @@
           var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
           if (nav && nav.type === 'reload') return;
           document.documentElement.classList.add('page-enter');
+          /* 动画播完就摘掉标记。若一直保留，animation-fill-mode 会让 <main>
+             长期停在合成层、形成层叠上下文，移动端目录抽屉的 z-index 只在
+             main 内部生效，会被 body 上的遮罩盖住，目录项点不动。 */
+          var onEnterEnd = function (e) {
+            if (e.animationName !== 'tech-page-enter') return;
+            document.documentElement.classList.remove('page-enter');
+            document.removeEventListener('animationend', onEnterEnd, true);
+          };
+          document.addEventListener('animationend', onEnterEnd, true);
         } catch (e) {}
       })();
     </script>
