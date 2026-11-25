@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.83-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.83)
+[![version](https://img.shields.io/badge/version-3.9.84-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.84)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,16 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.83**
+当前版本：**v3.9.84**
 
-> 最近一次更新完整展开；更早的 182 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 183 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.84
+
+- **章节标题上距再收一档**：文章正文 `h2` 上边距由 32px 调整为 28px（约 0.97 个正文行高），导语与第一章节之间更连贯，长文章节节奏更紧；仍是段落间距的约 1.7 倍，图片图注后的小标题不至于和上文黏住；移动端维持 18px 不变
+
+<details>
+<summary><b>历史版本（v3.9.83 及更早，共 183 个版本，点击展开）</b></summary>
 
 ### v3.9.83
 
