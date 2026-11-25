@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.82-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.82)
+[![version](https://img.shields.io/badge/version-3.9.83-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.83)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,18 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.82**
+当前版本：**v3.9.83**
 
-> 最近一次更新完整展开；更早的 181 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 182 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.83
+
+- **AI 助手消息支持单条复制**：每条消息气泡旁新增复制按钮（用户消息在气泡左侧、AI 回复在右侧），桌面 hover 浮现、触屏常驻，点击后变绿色对勾并在 1.5 秒后还原；只复制气泡正文，自动排除模型名 / 耗时 / token、「执行 / 取消」按钮和推理过程
+- **复制实现细节**：按钮由 JS 统一注入并用事件委托处理，覆盖模板渲染的历史消息和动态追加的新消息；流式回复期间不显示按钮；剪贴板优先 `navigator.clipboard`，失败回退隐藏 textarea + `execCommand`，兼容窗口未聚焦等场景
+- **正文章节标题上距收紧**：文章正文 `h2` 的上边距由 36px 调整为 32px（8px 栅格），导语与第一章节之间不再显空；仍是段落间距的约 1.9 倍，章节感不变；移动端维持 18px
+
+<details>
+<summary><b>历史版本（v3.9.82 及更早，共 182 个版本，点击展开）</b></summary>
 
 ### v3.9.82
 

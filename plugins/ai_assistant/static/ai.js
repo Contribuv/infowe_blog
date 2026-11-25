@@ -24,6 +24,132 @@
     return box.scrollHeight - box.scrollTop - box.clientHeight < 80;
   }
 
+  /* ── 单条消息复制 ──
+     历史消息由模板渲染、新消息由本文件动态追加，所以按钮统一由 JS 注入，
+     并用事件委托处理点击，避免漏掉任何一条。 */
+  var COPY_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>';
+  var COPIED_ICON = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
+
+  function legacyCopy(text) {
+    // 非 HTTPS 后台环境没有 Clipboard API，或 API 因权限 / 窗口未聚焦被拒时走这里
+    return new Promise(function (resolve, reject) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:0;left:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      ok ? resolve() : reject(new Error('copy failed'));
+    });
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+      // 写失败（权限、窗口未聚焦等）时不能就此报失败，再试一次老办法
+      return navigator.clipboard.writeText(text).catch(function () {
+        return legacyCopy(text);
+      });
+    }
+    return legacyCopy(text);
+  }
+
+  function messageText(row) {
+    var bubble = row.querySelector('.ai-bubble');
+    if (!bubble) return '';
+    var clone = bubble.cloneNode(true);
+    // 待确认气泡里的「执行 / 取消」不是消息正文；推理过程在 row 上，本来就不在气泡内
+    var junk = clone.querySelectorAll('.ai-pending-actions, .ai-status, .ai-dots, .ai-wait');
+    for (var i = 0; i < junk.length; i++) {
+      if (junk[i].parentNode) junk[i].parentNode.removeChild(junk[i]);
+    }
+    return clone.textContent.replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function makeCopyButton() {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ai-copy';
+    btn.setAttribute('aria-label', '复制这条消息');
+    btn.title = '复制这条消息';
+    btn.innerHTML = COPY_ICON;
+    return btn;
+  }
+
+  function decorate(row) {
+    if (!row || !row.classList || !row.classList.contains('ai-row')) return;
+    if (row.querySelector('.ai-copy')) return;
+    var bubble = row.querySelector('.ai-bubble');
+    // 流式输出期间不显示按钮，避免复制到半截回复
+    if (!bubble || row.classList.contains('ai-live') || bubble.classList.contains('ai-bubble-live')) return;
+    var line = document.createElement('div');
+    line.className = 'ai-line';
+    row.insertBefore(line, bubble);
+    var btn = makeCopyButton();
+    if (row.classList.contains('ai-row-user')) {
+      // 用户气泡靠右，按钮放气泡左侧
+      line.appendChild(btn);
+      line.appendChild(bubble);
+    } else {
+      // AI 气泡靠左，按钮放气泡右侧
+      line.appendChild(bubble);
+      line.appendChild(btn);
+    }
+  }
+
+  // 流式回复结束：摘掉 live 标记（同时清掉打字光标），再补上复制按钮
+  function finishLive(row) {
+    if (!row || !row.parentNode) return;
+    row.classList.remove('ai-live');
+    var bubble = row.querySelector('.ai-bubble-live');
+    if (bubble) bubble.classList.remove('ai-bubble-live');
+    decorate(row);
+  }
+
+  box.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest ? e.target.closest('.ai-copy') : null;
+    if (!btn || !box.contains(btn)) return;
+    var row = btn.closest('.ai-row');
+    var text = row ? messageText(row) : '';
+    if (!text) return;
+    copyToClipboard(text).then(function () {
+      btn.innerHTML = COPIED_ICON;
+      btn.className = 'ai-copy is-copied';
+      btn.setAttribute('aria-label', '已复制');
+      btn.title = '已复制';
+      setTimeout(function () {
+        btn.innerHTML = COPY_ICON;
+        btn.className = 'ai-copy';
+        btn.setAttribute('aria-label', '复制这条消息');
+        btn.title = '复制这条消息';
+      }, 1500);
+    }).catch(function () {
+      btn.title = '复制失败，请手动选择文本';
+      btn.setAttribute('aria-label', '复制失败，请手动选择文本');
+      setTimeout(function () {
+        btn.title = '复制这条消息';
+        btn.setAttribute('aria-label', '复制这条消息');
+      }, 2000);
+    });
+  });
+
+  var rows = box.querySelectorAll('.ai-row');
+  for (var ri = 0; ri < rows.length; ri++) decorate(rows[ri]);
+  if (window.MutationObserver) {
+    var copyObserver = new MutationObserver(function (records) {
+      records.forEach(function (rec) {
+        rec.addedNodes.forEach(function (node) {
+          if (node.nodeType === 1 && node.classList && node.classList.contains('ai-row')) {
+            decorate(node);
+          }
+        });
+      });
+    });
+    copyObserver.observe(box, { childList: true });
+  }
+
   function makeRow(role) {
     var row = document.createElement('div');
     row.className = 'ai-row ai-row-' + role;
@@ -74,7 +200,7 @@
     var row = makeRow('assistant');
     addReasoning(row, meta && meta.reasoning);
     var bubble = document.createElement('div');
-    bubble.className = 'ai-bubble ai-bubble-assistant';
+    bubble.className = 'ai-bubble ai-bubble-assistant ai-bubble-live';
     row.appendChild(bubble);
     box.appendChild(row);
 
@@ -88,6 +214,7 @@
       if (i >= full.length) {
         clearInterval(timer);
         bubble.textContent = full;
+        finishLive(row);
         var line = metaText(meta);
         if (line) {
           var metaRow = document.createElement('div');
@@ -294,6 +421,7 @@
         state.row.appendChild(metaRow);
       }
       scroll();
+      finishLive(state.row);
     };
     state.fail = function (message) {
       state.stop();
@@ -301,6 +429,7 @@
       state.bubble.style.display = '';
       state.bubble.textContent = message;
       scroll();
+      finishLive(state.row);
     };
     return state;
   }

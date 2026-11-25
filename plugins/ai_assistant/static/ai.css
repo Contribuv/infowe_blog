@@ -196,6 +196,29 @@
 .ai-bubble-user { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
 [data-theme="dark"] .ai-bubble-user { color: #0f1117; }
 .ai-bubble-assistant { background: var(--bg-surface-2); border-bottom-left-radius: 4px; }
+/* 消息正文与「复制」按钮横向排成一行。不用给 .ai-row 加 position:relative：
+   气泡是 fit-content，按钮贴着气泡走，长短回复之间才不会左右跳动。
+   .ai-line 保持 100% 宽，气泡的 max-width:76% 仍以整行宽度计算。 */
+.ai-line { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; }
+.ai-row-user .ai-line { justify-content: flex-end; }
+.ai-copy {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0;
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--bg-surface); color: var(--text-secondary);
+  cursor: pointer; opacity: 0;
+  transition: opacity .15s ease, color .15s ease, border-color .15s ease, background-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 触屏没有 hover，常驻一个淡一点的按钮，否则按钮永远点不到 */
+@media (hover: none) { .ai-copy { opacity: .55; } }
+.ai-row:hover .ai-copy,
+.ai-copy:focus-visible,
+.ai-copy.is-copied { opacity: 1; }
+.ai-copy:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-weak); }
+.ai-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ai-copy.is-copied { color: #2e9b6f; border-color: #2e9b6f; }
 .ai-meta-row {
   margin-top: 5px;
   font-size: 11.5px;
@@ -313,6 +336,8 @@
   .ai-conv { min-width: 132px; max-width: 180px; flex: none; }
   .ai-messages { padding: 12px; gap: 12px; }
   .ai-bubble { max-width: 88%; }
+  /* 手机上复制按钮常驻，且给到 30px 触控区 */
+  .ai-copy { width: 30px; height: 30px; opacity: .55; }
   .ai-form { padding: 8px; gap: 8px; }
   .ai-form button { min-width: 60px; }
   .ai-actions { padding: 12px; }

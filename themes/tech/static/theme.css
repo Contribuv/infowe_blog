@@ -1823,11 +1823,11 @@ body:has(.cmt-fab) .tech-top--comments { display: none; }
   font-size: 21px; padding-bottom: 0; border-bottom: 0;
 }
 /* 正文排版修复：h2 22px / 600，上距 18、下距 8 保持不动；
-   字号略拉大、字重收轻，标题层级更明显但不压过 28px 的文章标题 */
+   字号略拉大、字重收轻，标题层级更明显但不压过 28px 的文章标题；上距已收到 32px */
 .tech-post-body h2, .tech-post-body.markdown-body h2 {
   position: relative; padding-left: 14px;
   font-size: 22px; font-weight: 600; padding-bottom: 8px;
-  margin: 36px 0 18px;
+  margin: 32px 0 18px;
   border-bottom: 1px solid var(--border);
 }
 /* 正文二级标题前置蓝色竖条，提升长文分节辨识度；与关于页区块标题同一套语言。
