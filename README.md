@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.80-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.80)
+[![version](https://img.shields.io/badge/version-3.9.81-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.81)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,15 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.80**
+当前版本：**v3.9.81**
 
 > 最近一次更新完整展开；更早的 179 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.81
+
+- **修复窄屏目录浮窗点锚点不到目标**：项目页 README 的折叠块 `<details>` 收起时内容不占布局高度，`window.scrollTo` 最多滚到页面底部，看起来就是「点了没反应」，只能刷新让浏览器按 `#hash` 原生定位；现在点击目录项会先展开目标所在的所有祖先 `<details>`，再逐帧对齐到顶部 60px
+- **桌面临时折叠逻辑不受影响**：展开的是目标元素所在折叠块，不改变目录本身的开合与抽屉状态；移动端点击后抽屉照常收起
+- **实测**：170 节目录分别点第 20 / 150 / 169 项，目标标题最终都停在视口顶部 60px，文档高度从 15.6k 自动撑到 60.8k
 
 ### v3.9.80
 

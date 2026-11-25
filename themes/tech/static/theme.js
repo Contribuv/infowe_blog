@@ -509,6 +509,13 @@ window.techHighlightCode = techHighlightCode;
     var target = id && findTarget(id);
     if (!target) return;
     e.preventDefault();
+    // 目标可能藏在 README 的折叠块 <details> 里：收起状态下内容不占布局高度，
+    // window.scrollTo 最多滚到页面底部，看起来就是「点了没反应」。先把目标的
+    // 所有祖先 details 展开，再逐帧对齐。浏览器原生 #hash 跳转会自动展开，
+    // 所以表现为「刷新一下就能点」，这里手动补齐同样的行为。
+    for (var node = target; node; node = node.parentElement) {
+      if (node.tagName === 'DETAILS' && !node.open) node.open = true;
+    }
     var details = a.closest('details');
     // 移动端目录是底部抽屉（details.open 必须常开，靠面板类名控制显隐），
     // 这里若把 open 置 false，抽屉内容会直接消失；桌面/平板仍保持点完即收起
