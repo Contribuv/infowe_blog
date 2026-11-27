@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import html as html_lib
 import json
 import re
 import time
@@ -274,6 +275,9 @@ def localize_readme_images(html: str, repo: str, branch: str) -> str:
 
     def repl(match: re.Match) -> str:
         attr, src = match.group(1), match.group(2)
+        # Markdown 转 HTML 时 URL 里的 & 会被转义成 &amp;，先还原再判断/代理，
+        # 否则 shields 的 ?label=x&amp;color=y 会让 color 参数失效。
+        src = html_lib.unescape(src)
         if src.startswith(("data:", "/uploads/", "/readme-img", "#")):
             return match.group(0)
         if src.startswith(("http://", "https://")):

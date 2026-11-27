@@ -970,17 +970,33 @@ def admin_orphan_clean():
             continue
         pending.append(rel)
 
-    if pending:
+    # 本地存在的走 delete_rel（会连带删 OSS 原图与预览副本）；
+    # 仅存于 OSS 的（例如原图已删、只剩 previews/ 派生对象）本地没有文件可删，
+    # delete_rel 还会把 previews 当保护目录拒绝，必须交给 OSS 插件按 key 删除。
+    local_pending: list[str] = []
+    remote_pending: list[str] = []
+    for rel in pending:
+        clean = upload.unquote(str(rel or "")).replace("\\", "/").lstrip("/")
+        parts = clean.split("/")
+        if not clean or ".." in parts or parts[0].startswith(".") or re.match(r"^[A-Za-z]:", clean):
+            failed += 1
+            results.append({"rel": rel, "ok": False, "reason": "非法路径"})
+            continue
+        local = upload.resolve(rel)
+        if local is not None and local.is_file():
+            local_pending.append(rel)
+        else:
+            remote_pending.append(rel)
+
+    if local_pending:
         # 删除前把本地文件复制到 backups/orphans/<时间>/ 留一份底：孤儿判定以后若有变化，
         # 还能按原相对路径手动放回 uploads。OSS 对象删除不可逆，页面会单独提示。
         import shutil
         from datetime import datetime
 
         trash = Path(BACKUPS_DIR) / "orphans" / datetime.now().strftime("%Y%m%d_%H%M%S")
-        for rel in pending:
+        for rel in local_pending:
             src = Path(UPLOADS_DIR) / rel
-            if not src.is_file():
-                continue
             dest = trash / rel
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
@@ -997,13 +1013,51 @@ def admin_orphan_clean():
                 return rel, upload.delete_rel(rel)
 
         with ThreadPoolExecutor(max_workers=4) as pool:
-            for rel, reason in pool.map(_work, pending):
+            for rel, reason in pool.map(_work, local_pending):
                 if reason:
                     failed += 1
                     results.append({"rel": rel, "ok": False, "reason": reason})
                 else:
                     deleted += 1
                     results.append({"rel": rel, "ok": True})
+
+    if remote_pending:
+        try:
+            from plugins.oss import storage as oss_storage
+
+            cfg = oss_storage.get_cfg()
+            keys = {
+                rel: cfg.key_of("/" + upload.unquote(str(rel or "")).replace("\\", "/").lstrip("/"))
+                for rel in remote_pending
+            } if cfg else {}
+            outcome = oss_storage.delete_orphans(list(keys.values())) if cfg else {"error": "对象存储未启用"}
+            error = str(outcome.get("error") or "")
+            if error:
+                for rel in remote_pending:
+                    failed += 1
+                    results.append({"rel": rel, "ok": False, "reason": error})
+            else:
+                skipped = {
+                    str(item.get("key") or ""): str(item.get("reason") or "已跳过")
+                    for item in outcome.get("skipped", [])
+                }
+                failed_map = {
+                    str(item.get("key") or ""): str(item.get("error") or "删除失败")
+                    for item in outcome.get("failed", [])
+                }
+                for rel in remote_pending:
+                    key = keys.get(rel, "")
+                    reason = failed_map.get(key) or skipped.get(key)
+                    if reason:
+                        failed += 1
+                        results.append({"rel": rel, "ok": False, "reason": reason})
+                    else:
+                        deleted += 1
+                        results.append({"rel": rel, "ok": True})
+        except Exception as exc:  # noqa: BLE001
+            for rel in remote_pending:
+                failed += 1
+                results.append({"rel": rel, "ok": False, "reason": f"OSS 删除失败：{exc}"})
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"deleted": deleted, "failed": failed, "results": results})
     if deleted:

@@ -928,8 +928,9 @@ def scan_orphans(limit: int = 500) -> list[dict]:
             continue
         rel = key[len(prefix) + 1:]
         # 头像 / AI 头像 / 项目文件由各自的入口管理，不当孤儿。
-        # uploads/previews/ 是旧版预览副本路径（新版在顶层 previews/），
-        # 代码已不再引用，按普通孤儿列出让用户清理。
+        # previews/ 是原图的派生副本：原图仍被引用时上面已按 preview_of_key 跳过，
+        # 能走到这里的都是原图已不存在/无引用的残留孤儿。后台对仅 OSS 的条目
+        # 会按完整对象 key 删除，不走 upload.delete_rel（它会把 previews 当保护目录）。
         if rel.startswith(("avatar/", "ai-avatar/", "projects/", "reader/")):
             continue
         local = Path(UPLOADS_DIR) / rel

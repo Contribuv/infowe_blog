@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.84-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.84)
+[![version](https://img.shields.io/badge/version-3.9.85-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.85)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -925,9 +925,17 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.84**
+当前版本：**v3.9.85**
 
-> 最近一次更新完整展开；更早的 183 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 184 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.85
+
+- **修复 README 徽标参数丢失与长期停在旧版本**：Markdown 转 HTML 会把图片 URL 里的 `&` 转成 `&amp;`，本地化时未还原，导致 shields 徽标的 `color` 参数失效（显示默认蓝），且代理按错误 URL 永久缓存了旧版本号；现在先反转义再生成代理地址，徽章类对象按 5 分钟 TTL 回源刷新，不再停在旧版本
+- **修复仅存于 OSS 的孤儿附件无法清理**：原图已删除、只剩 `previews/` 派生预览副本时，本地没有文件可走 `delete_rel`，而它会把 `previews` 当保护目录拒绝；现在按来源分流，仅 OSS 的条目改用对象存储插件按完整 key 删除，删除前重新校验引用与原图，避免误删仍在使用的内容；本地文件仍走原流程并保留备份
+
+<details>
+<summary><b>历史版本（v3.9.84 及更早，共 184 个版本，点击展开）</b></summary>
 
 ### v3.9.84
 

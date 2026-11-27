@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import time
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -108,6 +109,10 @@ _ALLOWED_README_HOSTS = {
     "img.shields.io", "shields.io", "badgen.net", "img.badgesize.io",
 }
 
+# 徽章内容会随上游版本/统计变化，不能像普通图片一样永久缓存。
+_BADGE_README_HOSTS = {"img.shields.io", "shields.io", "badgen.net", "img.badgesize.io"}
+_BADGE_CACHE_TTL = 300
+
 
 _README_PLACEHOLDER = (
     b'<svg xmlns="http://www.w3.org/2000/svg" width="160" height="48" viewBox="0 0 160 48">'
@@ -145,7 +150,15 @@ def readme_image():
 
     key = hashlib.sha1(raw.encode()).hexdigest()
     candidates = list(cache_dir.glob(key + ".*"))
-    if not candidates:
+    is_badge = parsed.hostname in _BADGE_README_HOSTS
+    ttl = _BADGE_CACHE_TTL if is_badge else 86400
+    fresh = False
+    if candidates:
+        try:
+            fresh = (time.time() - candidates[0].stat().st_mtime) < ttl
+        except OSError:
+            fresh = False
+    if not fresh:
         try:
             resp = requests.get(raw, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
             final_host = urlparse(resp.url or "").hostname
@@ -170,7 +183,8 @@ def readme_image():
                 cachefs.cap(cache_dir, 3000)
                 candidates = [path]
         except requests.RequestException:
-            candidates = []
+            # 回源失败时保留旧缓存，比直接给占位图好
+            pass
     if not candidates:
         return Response(_README_PLACEHOLDER, mimetype="image/svg+xml", status=200)
 
@@ -178,7 +192,12 @@ def readme_image():
     import mimetypes
 
     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    response = send_file(path, mimetype=mime, max_age=86400, conditional=True)
+    response = send_file(
+        path,
+        mimetype=mime,
+        max_age=_BADGE_CACHE_TTL if is_badge else 86400,
+        conditional=True,
+    )
     if mime == "image/svg+xml":
         # SVG 作为独立文档时禁止脚本，仅允许内联样式（徽章）
         response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
