@@ -74,7 +74,9 @@ def fetch_repo(repo: str, timeout: int = 10) -> dict | None:
                 "topics": data.get("topics") or [],
                 "languages": _lang_list(languages),
             }
-    except requests.RequestException:
+    except (requests.RequestException, ValueError, TypeError, AttributeError, KeyError):
+        # 兼容接口可能返回结构异常（stars="N/A"、languages 是数组等），
+        # 这类解析错误也要走 Gitee 兜底，不能让整个抓取失败。
         pass
 
     try:
@@ -111,6 +113,7 @@ def fetch_readme(repo: str, timeout: int = 10) -> tuple[str, str]:
     """返回 (markdown 文本, 分支)。"""
     owner, _, name = repo.partition("/")
     headers = _headers()
+    failures: list[str] = []
     try:
         resp = requests.get(
             f"https://api.github.com/repos/{owner}/{name}/readme",
@@ -128,8 +131,10 @@ def fetch_readme(repo: str, timeout: int = 10) -> tuple[str, str]:
             except Exception:
                 pass
             return resp.text, branch
-    except requests.RequestException:
-        pass
+        if resp.status_code != 404:
+            failures.append(f"GitHub HTTP {resp.status_code}")
+    except requests.RequestException as exc:
+        failures.append(f"GitHub 请求失败：{exc}")
 
     try:
         resp = requests.get(
@@ -142,8 +147,15 @@ def fetch_readme(repo: str, timeout: int = 10) -> tuple[str, str]:
 
             content = base64.b64decode(data.get("content") or "").decode("utf-8", "replace")
             return content, data.get("branch") or "master"
-    except (requests.RequestException, ValueError):
-        pass
+        if resp.status_code != 404:
+            failures.append(f"Gitee HTTP {resp.status_code}")
+    except (requests.RequestException, ValueError) as exc:
+        failures.append(f"Gitee 请求失败：{exc}")
+
+    # 明确 404（确实没有 README）返回空串；其它失败必须抛异常，
+    # 让 fetch_and_cache 保留旧缓存，而不是把空 README 当成"成功"写进去。
+    if failures:
+        raise RuntimeError("README 获取失败：" + "; ".join(failures[:2]))
     return "", "main"
 
 
@@ -162,7 +174,14 @@ def load_cache(repo: str) -> dict | None:
 
 
 def save_cache(repo: str, payload: dict) -> None:
-    cache_path(repo).write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    # 原子写：手动同步与定时同步可能并发刷新同一仓库，
+    # 直接 write_text 会先截断文件，并发读可能拿到半截 JSON。
+    import os
+
+    path = cache_path(repo)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, path)
 
 
 _README_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".avif"}

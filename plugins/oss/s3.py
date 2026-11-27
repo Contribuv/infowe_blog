@@ -217,8 +217,12 @@ def _presign(cfg: S3Config, method: str, rel: str, expires: int = 900) -> str:
     """
     expires = max(1, min(int(expires or 900), 604800))
     key = cfg.key_of(rel)
+    # 签名路径始终是 /{bucket}/{key}（S3 path-style），与 key_of 一一对应。
     path = _encode_path(f"/{cfg.bucket.strip('/')}/{key}")
-    host = urlsplit(cfg.endpoint).netloc
+    # URL 基址必须用浏览器实际访问的地址：public_base 就是为私有桶反向代理
+    # 准备的。过去用 endpoint 生成 URL，代理场景下浏览器拿到内网地址必然 404。
+    root = cfg.public_root.rstrip("/")
+    host = urlsplit(root).netloc or urlsplit(cfg.endpoint).netloc
 
     window = min(300, max(0, expires // 3))
     stamp = int(datetime.now(timezone.utc).timestamp())
@@ -257,7 +261,7 @@ def _presign(cfg: S3Config, method: str, rel: str, expires: int = 900) -> str:
         hashlib.sha256,
     ).hexdigest()
     return (
-        f"{cfg.endpoint.rstrip('/')}{path}?{canonical_query}"
+        f"{root}/{_encode_path(key)}?{canonical_query}"
         f"&X-Amz-Signature={signature}"
     )
 

@@ -437,7 +437,7 @@ def _apply_commenter_cookie(response, data: dict | None):
     if data:
         response.set_cookie(
             "blog_commenter",
-            json.dumps(data, ensure_ascii=False),
+            comments_service.sign_commenter(data),
             max_age=30 * 24 * 3600,
             path="/",
             httponly=True,
@@ -618,7 +618,7 @@ def reader_send_code():
     if error:
         return jsonify({"error": error}), 429
     blog = settings.get_str("blog_name", "博客").strip() or "博客"
-    text, page = mail_template.verify_code_notice(
+    text, page = mail_template.register_code_notice(
         blog_name=blog,
         site=site_url.base(),
         code=code,
@@ -776,7 +776,9 @@ def reader_captcha():
     from services import captcha
     import secrets as _secrets
 
-    question = captcha.current_question()
+    # 点「刷新验证码」必须换一道新题；否则只重画干扰线，题干还是旧的。
+    refresh = request.args.get("refresh") == "1"
+    question = "" if refresh else captcha.current_question()
     if not question:
         question = captcha.new_question()
     # 手绘风 SVG：随机抖动 + 干扰线，答案本身是算术题不易被 OCR 直接读取
@@ -880,7 +882,9 @@ def reader_avatar_upload():
 # ── 站内通知：双身份（登录读者 Cookie / 评论 Cookie） ──
 def _notify_identity():
     """解析身份，返回 (email_hash, identity_type)。
-    优先级：①博主(admin session→博主邮箱hash) ②注册登录(reader) ③Cookie访客(guest) ④query邮箱 ⑤空。
+    优先级：①博主(admin session→博主邮箱hash) ②注册登录(reader) ③签名 Cookie 访客(guest) ④空。
+    只信任服务端签发的凭证；绝不接受 query/form 传入的邮箱，
+    否则任何人都能带 ?email= 读取他人通知与概览。
     """
     from services import avatar, reader_account, settings
 
@@ -897,8 +901,8 @@ def _notify_identity():
     if reader_row:
         return str(reader_row.get("email_hash") or ""), "reader"
 
-    # ③ Cookie 访客：优先 cookie 里的 email_hash，没有则用 email 现算
-    commenter = comments_service.commenter()
+    # ③ Cookie 访客：只认服务端签发的 cookie
+    commenter = comments_service.signed_commenter()
     cookie_hash = str(commenter.get("email_hash") or "")
     if cookie_hash:
         return cookie_hash, "guest"
@@ -910,11 +914,6 @@ def _notify_identity():
     fallback_hash = comments_service.commenter_hash()
     if fallback_hash:
         return fallback_hash, "guest"
-
-    # ④ query/form 邮箱
-    email = (request.values.get("email") or "").strip()
-    if email:
-        return avatar.email_hash(email), "email"
     return "", "new"
 
 

@@ -139,7 +139,8 @@ def issue_code(email: str, new_author: str, ip: str = "") -> tuple[str, str]:
     now = db.now()
     # 同一邮箱只保留最新一条未使用验证码
     db.execute(
-        "DELETE FROM email_codes WHERE email_hash=? AND used_at=''", (key,)
+        "DELETE FROM email_codes WHERE email_hash=? AND purpose=? AND used_at=''",
+        (key, PURPOSE),
     )
     db.insert(
         "INSERT INTO email_codes "

@@ -13,9 +13,53 @@ from flask import (
     current_app, flash, jsonify, redirect, render_template, request, session, url_for,
 )
 
+import db
 from models import User
-from services import auth, hooks, notify, otp, settings
+from services import auth, avatar as avatar_service, hooks, notify, otp, settings
 from services.comments import request_ip
+
+_RECOVER_TTL = 600
+_RECOVER_MAX_ATTEMPTS = 5
+
+
+def _recover_hash(key: str, code: str) -> str:
+    return hashlib.sha256(f"{key}:{code}".encode("utf-8")).hexdigest()
+
+
+def _store_recovery_code(purpose: str, email: str, code: str, flow: str) -> None:
+    """验证码只存服务端；session/cookie 里只放随机 flow 标识。"""
+    key = avatar_service.email_hash(email)
+    db.execute(
+        "DELETE FROM email_codes WHERE email_hash=? AND purpose=? AND used_at=''",
+        (key, purpose),
+    )
+    db.insert(
+        "INSERT INTO email_codes "
+        "(email_hash, email, code_hash, new_author, purpose, expires_at, ip, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        (key, email, _recover_hash(key, code), flow, purpose,
+         int(time.time()) + _RECOVER_TTL, request_ip(), db.now()),
+    )
+
+
+def _check_recovery_code(purpose: str, email: str, code: str, flow: str) -> bool:
+    key = avatar_service.email_hash(email)
+    if not key or not flow:
+        return False
+    row = db.one(
+        "SELECT * FROM email_codes WHERE email_hash=? AND purpose=? AND new_author=? "
+        "AND used_at='' AND expires_at>? ORDER BY id DESC LIMIT 1",
+        (key, purpose, flow, int(time.time())),
+    )
+    if not row or int(row["attempts"] or 0) >= _RECOVER_MAX_ATTEMPTS:
+        return False
+    if not secrets.compare_digest(
+        str(row["code_hash"]), _recover_hash(key, (code or "").strip())
+    ):
+        db.execute("UPDATE email_codes SET attempts=attempts+1 WHERE id=?", (row["id"],))
+        return False
+    db.execute("UPDATE email_codes SET used_at=? WHERE id=?", (db.now(), row["id"]))
+    return True
 
 
 def _captcha_sign(nonce: str, answer: int) -> str:
@@ -209,7 +253,9 @@ def admin_otp_recover():
                         f"你的博客后台 OTP 双重验证已丢失，验证码：{code}\n10 分钟内有效。",
                     )
                     if ok:
-                        session["_otp_mail_code"] = code
+                        flow = secrets.token_hex(16)
+                        _store_recovery_code("admin_otp_recover", target, code, flow)
+                        session["_otp_mail_flow"] = flow
                         session["_otp_mail_ts"] = int(time.time())
                         sent, step = True, "verify"
                     else:
@@ -217,15 +263,15 @@ def admin_otp_recover():
         elif action == "verify":
             step = "verify"
             code = (request.form.get("mail_code") or "").strip()
-            issued = str(session.get("_otp_mail_code") or "")
+            flow = str(session.get("_otp_mail_flow") or "")
             issued_ts = int(session.get("_otp_mail_ts") or 0)
-            if not issued or time.time() - issued_ts > 600:
+            if not flow or time.time() - issued_ts > _RECOVER_TTL:
                 error, step = "验证码已过期，请重新发送", "send"
-            elif code != issued:
+            elif not _check_recovery_code("admin_otp_recover", target, code, flow):
                 auth.register_failure(request_ip())
                 error = "验证码错误"
             else:
-                session.pop("_otp_mail_code", None)
+                session.pop("_otp_mail_flow", None)
                 session.pop("_otp_mail_ts", None)
                 otp.reset()
                 auth.finish_otp()
@@ -275,7 +321,9 @@ def admin_forgot():
                         f"重置后台账号「{sole['username']}」密码的验证码：{code}\n10 分钟内有效。",
                     )
                     if ok:
-                        session["_fp_code"] = code
+                        flow = secrets.token_hex(16)
+                        _store_recovery_code("admin_recover", target, code, flow)
+                        session["_fp_flow"] = flow
                         session["_fp_ts"] = int(time.time())
                         session["_fp_user"] = sole["username"]
                         session.pop("_fp_ok", None)
@@ -285,20 +333,29 @@ def admin_forgot():
         elif action == "verify":
             step = "verify"
             code = (request.form.get("mail_code") or "").strip()
-            issued = str(session.get("_fp_code") or "")
+            flow = str(session.get("_fp_flow") or "")
             issued_ts = int(session.get("_fp_ts") or 0)
-            if not issued or time.time() - issued_ts > 600:
+            if not flow or time.time() - issued_ts > _RECOVER_TTL:
                 error, step = "验证码已过期，请重新发送", "send"
-            elif code != issued:
+            elif not _check_recovery_code("admin_recover", target, code, flow):
                 auth.register_failure(request_ip())
                 error = "验证码错误"
             else:
                 session["_fp_ok"] = True
                 step = "newpass"
         elif action == "newpass":
-            session_ok = session.get("_fp_ok") and session.get("_fp_code")
+            flow = str(session.get("_fp_flow") or "")
             issued_ts = int(session.get("_fp_ts") or 0)
-            if not session_ok or time.time() - issued_ts > 600:
+            # _fp_ok 只在验证码校验通过（服务端已消费）后写入签名 session；
+            # 再核对 DB 中已消费的记录，防止旧 cookie 重放
+            consumed = None
+            if flow and target:
+                consumed = db.one(
+                    "SELECT id FROM email_codes WHERE email_hash=? AND purpose=? "
+                    "AND new_author=? AND used_at!='' ORDER BY id DESC LIMIT 1",
+                    (avatar_service.email_hash(target), "admin_recover", flow),
+                )
+            if not (session.get("_fp_ok") and consumed) or time.time() - issued_ts > _RECOVER_TTL:
                 error, step = "操作已超时，请重新走找回流程", "send"
             else:
                 pwd = request.form.get("new_password", "")
@@ -313,7 +370,7 @@ def admin_forgot():
                         error, step = "账号不存在，无法重置", "newpass"
                     else:
                         User.update_password(int(user["id"]), pwd)
-                        for key in ("_fp_code", "_fp_ts", "_fp_ok", "_fp_user"):
+                        for key in ("_fp_code", "_fp_ts", "_fp_ok", "_fp_user", "_fp_flow"):
                             session.pop(key, None)
                         flash("密码已重置，请使用新密码登录", "success")
                         return redirect(url_for("admin_login"))

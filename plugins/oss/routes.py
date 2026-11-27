@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from flask import abort, jsonify, redirect, render_template, request, send_file, url_for
+from urllib.parse import urlsplit
+
+import time
+
+from flask import abort, flash, jsonify, redirect, render_template, request, send_file, url_for
 
 from services import auth
 from services import plugins as plugins_service
@@ -54,6 +58,18 @@ def _form_config() -> dict:
     }
 
 
+_MEDIA_REF_CACHE: dict = {"ts": 0.0, "keys": set()}
+
+
+def _referenced_object_keys() -> set:
+    """引用集合每 60 秒重算一次，避免每个代理请求都全库扫描。"""
+    now = time.time()
+    if now - _MEDIA_REF_CACHE["ts"] > 60 or not _MEDIA_REF_CACHE["keys"]:
+        _MEDIA_REF_CACHE["keys"] = storage.referenced_keys()
+        _MEDIA_REF_CACHE["ts"] = now
+    return _MEDIA_REF_CACHE["keys"]
+
+
 def oss_media(filename: str):
     """图片代理：浏览器不能直连私有对象时，由站点读本地副本（必要时回源 OSS）。
 
@@ -64,13 +80,23 @@ def oss_media(filename: str):
     if not storage.is_enabled():
         abort(404)
     rel = str(filename or "").lstrip("/")
-    if not rel.startswith("uploads/"):
+    # 评论图片必须走 /comment-img 做审核状态校验，不能从这里绕过
+    if not rel.startswith("uploads/") or rel.startswith("uploads/comment/"):
         abort(404)
-    # 本地有副本直接返回；没有就带签名从 OSS 回源并缓存
+    cfg = storage.get_cfg()
+    private = bool(cfg and storage.bucket_policy() == "private")
+    if private:
+        # 私有桶只允许代理被有效内容引用的 key，否则等于开了一个
+        # "猜到 key 就能带签名读取私有对象" 的公开后门
+        if cfg.key_of("/" + rel) not in _referenced_object_keys():
+            abort(404)
     path = storage.ensure_local("/" + rel)
     if path is None or not path.is_file():
         abort(404)
-    return send_file(path, conditional=True, max_age=604800)
+    response = send_file(path, conditional=True, max_age=300 if private else 604800)
+    if private:
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 def register(app) -> None:
@@ -99,6 +125,11 @@ def register(app) -> None:
     def oss_save():
         old = storage.raw_config()
         data = _form_config()
+        # S3 签名路径固定为 /{bucket}/{key}；endpoint 再带路径会让实际请求路径
+        # 与签名路径不一致（SignatureDoesNotMatch），直接在配置层拦住。
+        if urlsplit(data["endpoint"]).path.strip("/"):
+            flash("Endpoint 不能包含路径（如 /s3），请只填协议、域名和端口", "error")
+            return redirect(url_for("admin_plugin_oss_config"))
         # 密钥留空表示「不修改」，避免后台回显掩码时把真密钥覆盖成 ****
         if not data["secret_key"]:
             if old.get("access_key") and old["access_key"] != data["access_key"]:
@@ -114,11 +145,24 @@ def register(app) -> None:
             data["public_base_prev"] = old["public_base"]
         elif old.get("public_base_prev"):
             data["public_base_prev"] = old["public_base_prev"]
-        # 桶策略由「测试连接」探测后写入，保存表单时不覆盖
-        data["policy"] = str(old.get("policy") or "public")
-        # 继承自动探测出的签名模式，避免保存配置时把它丢掉
-        if old.get("sign_host") is not None:
-            data["sign_host"] = old["sign_host"]
+        # 保存时基于本次表单配置现场探测桶策略与签名模式，
+        # 不再依赖「测试连接」把探测结果偷偷写回旧配置。
+        probe_cfg = s3.S3Config(
+            endpoint=data["endpoint"], bucket=data["bucket"],
+            access_key=data["access_key"], secret_key=data["secret_key"],
+            region=data["region"], public_base=data["public_base"], prefix=data["prefix"],
+        )
+        try:
+            probe = s3.healthcheck(probe_cfg)
+            data["policy"] = "private" if not probe["public_read"] else "public"
+            if probe["sign_host"]:
+                data.pop("sign_host", None)
+            else:
+                data["sign_host"] = False
+        except Exception:  # noqa: BLE001
+            data["policy"] = str(old.get("policy") or "public")
+            if old.get("sign_host") is not None:
+                data["sign_host"] = old["sign_host"]
         data["migrated_at"] = str(old.get("migrated_at") or "")
         plugins_service.save_config(KEY, data)
         return redirect(url_for("admin_plugin_oss_config"))
@@ -126,6 +170,8 @@ def register(app) -> None:
     @auth.admin_required
     def oss_test():
         data = _form_config()
+        if urlsplit(data["endpoint"]).path.strip("/"):
+            return jsonify({"ok": False, "error": "Endpoint 不能包含路径，请只填协议、域名和端口"}), 400
         if not data["secret_key"]:
             data["secret_key"] = str(storage.raw_config().get("secret_key") or "")
         if not data["access_key"]:
@@ -147,29 +193,15 @@ def register(app) -> None:
             return jsonify({"ok": False, "error": _friendly(exc)}), 400
         except Exception as exc:  # noqa: BLE001
             return jsonify({"ok": False, "error": f"测试失败：{exc}"}), 400
+        # 测试只读：绝不把探测结果写回已保存配置。
+        # 否则换一套 endpoint 测试后不保存，库里会变成"旧地址 + 新策略"的错配状态。
         if not result["public_read"]:
-            policy = "private"
-            old = storage.raw_config()
-            policy_changed = old.get("policy") != policy
-            old["policy"] = policy
-            plugins_service.save_config(KEY, old)
-            message = "上传、删除通过；桶是私有策略，页面将使用预签名直链，浏览器直接访问 OSS"
+            message = "上传、删除通过；桶是私有策略，保存配置后页面将使用预签名直链"
         else:
-            old = storage.raw_config()
-            policy_changed = old.get("policy") == "private"
-            if old.get("policy") != "public":
-                old["policy"] = "public"
-                plugins_service.save_config(KEY, old)
             message = "上传、匿名读取、删除三步均通过（桶为公共读）"
-        if policy_changed:
-            message += "；桶策略已变化，页面输出会自动切换地址，无需回写；若历史内容仍是旧地址，可点「归一化为本地路径」修复"
         if not result["sign_host"]:
-            # 记住探测结果：之后的上传直接走兼容模式，不再先失败一次
-            old = storage.raw_config()
-            if old.get("sign_host") is not False:
-                old["sign_host"] = False
-                plugins_service.save_config(KEY, old)
-            message += "；检测到反向代理改写了 Host，已自动切换为兼容签名模式"
+            message += "；检测到反向代理改写了 Host，保存配置后将自动启用兼容签名模式"
+        message += "；以上结果仅在点击「保存配置」后生效"
         public_base = data["public_base"].rstrip("/")
         if public_base and not public_base.endswith("/" + data["bucket"]):
             message += f"；注意：公网基址似乎缺少桶名，正常应为 {public_base}/{data['bucket']}"

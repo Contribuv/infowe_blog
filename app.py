@@ -693,9 +693,14 @@ def _start_orphan_scheduler(app: Flask) -> None:
                                 due = True
                                 if last:
                                     try:
-                                        at = datetime.strptime(last[:19], "%Y-%m-%d %H:%M:%S").timestamp()
+                                        # orphan_last_run 存的是 JSON（含 at/deleted/freed），
+                                        # 过去按纯时间字符串解析必然失败，导致每小时都清理一次。
+                                        payload = json.loads(last)
+                                        at = datetime.strptime(
+                                            str(payload.get("at") or "")[:19], "%Y-%m-%d %H:%M:%S"
+                                        ).timestamp()
                                         due = time.time() - at >= 86400
-                                    except ValueError:
+                                    except (ValueError, TypeError, AttributeError):
                                         due = True
                                 if due:
                                     days = settings.get_int("orphan_retention_days", 7)

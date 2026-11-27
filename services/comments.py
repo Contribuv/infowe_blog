@@ -8,7 +8,8 @@ import time
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from flask import request
+from flask import current_app, request
+from itsdangerous import BadSignature, URLSafeSerializer
 from markupsafe import Markup
 
 import db
@@ -222,16 +223,40 @@ def is_blogger_identity(data: dict | None) -> bool:
     return bool(email and email in emails)
 
 
-def commenter() -> dict:
-    raw = request.cookies.get("blog_commenter", "")
+def _commenter_serializer() -> URLSafeSerializer:
+    return URLSafeSerializer(current_app.secret_key, salt="blog-commenter-cookie")
+
+
+def sign_commenter(data: dict) -> str:
+    """签发访客身份 cookie；身份归集只认签名后的版本。"""
+    return _commenter_serializer().dumps(data)
+
+
+def load_commenter(raw: str, require_signed: bool = False) -> dict:
     if not raw:
         return {}
+    try:
+        value = _commenter_serializer().loads(raw)
+        if isinstance(value, dict):
+            return value
+    except (BadSignature, ValueError, TypeError):
+        pass
+    if require_signed:
+        return {}
+    # 旧版无签名 cookie 只用于表单回显，不参与身份归集
     try:
         value = json.loads(raw)
     except (ValueError, TypeError):
         return {}
-    if not isinstance(value, dict):
-        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def signed_commenter() -> dict:
+    return load_commenter(request.cookies.get("blog_commenter", ""), require_signed=True)
+
+
+def commenter() -> dict:
+    value = load_commenter(request.cookies.get("blog_commenter", ""))
     # 博主身份不外泄：旧版本以博主身份评论时，会把博主昵称与联系邮箱写进这个 cookie，
     # 退出登录后前台评论表单仍回显博主资料。非管理员身份下直接剔除该身份，
     # 只保留「我发过的评论」记录（待审核时仍能标记为「仅你可见」）。
@@ -250,15 +275,7 @@ def commenter_hash() -> str:
     这里只取邮箱哈希做归集，不返回昵称、邮箱，也不参与表单回显，
     安全边界与 commenter() 一致。
     """
-    raw = request.cookies.get("blog_commenter", "")
-    if not raw:
-        return ""
-    try:
-        value = json.loads(raw)
-    except (ValueError, TypeError):
-        return ""
-    if not isinstance(value, dict):
-        return ""
+    value = load_commenter(request.cookies.get("blog_commenter", ""), require_signed=True)
     stored = str(value.get("email_hash") or "").strip()
     if stored:
         return stored
@@ -296,9 +313,18 @@ def request_ip() -> str:
     remote = request.remote_addr or ""
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded and _is_private(remote):
-        candidate = forwarded.split(",")[0].strip()
-        if re.fullmatch(r"[0-9a-fA-F:.]+", candidate or ""):
-            return candidate
+        # 反向代理会把地址追加到 XFF 右侧。从右往左取第一个非内网地址，
+        # 而不是轻信最左侧（最容易被客户端伪造）那一段，否则 IP 冷却/限流可随意绕过。
+        parts = [p.strip() for p in forwarded.split(",")]
+        for candidate in reversed(parts):
+            if not re.fullmatch(r"[0-9a-fA-F:.]+", candidate or ""):
+                continue
+            if not _is_private(candidate):
+                return candidate
+        # 整条链都是内网地址时，取最右一跳（代理链里最可信的一跳）
+        right = parts[-1] if parts else ""
+        if re.fullmatch(r"[0-9a-fA-F:.]+", right or ""):
+            return right
     return remote
 
 
@@ -423,7 +449,7 @@ def submit(post: dict | None = None, project: dict | None = None, form=None) -> 
 
         parent_row = db.one(
             f"SELECT id, email_hash, email, notify, is_private FROM comments "
-            f"WHERE id = ? AND {column} = ? AND deleted_at IS NULL",
+            f"WHERE id = ? AND {column} = ? AND deleted_at IS NULL AND status = 'approved'",
             (int(parent_raw), target_id),
         )
         if parent_row:

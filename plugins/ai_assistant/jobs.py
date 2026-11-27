@@ -194,6 +194,16 @@ def _invalidate_page(comment: dict) -> None:
         pass
 
 
+def _invalidate_links_page() -> None:
+    """后台线程改动友链状态后清 /links 页面缓存（无请求上下文，不会被全局兜底覆盖）。"""
+    try:
+        from services import page_cache
+
+        page_cache.invalidate_path("/links")
+    except Exception:
+        pass
+
+
 def sync_ai_identity() -> None:
     """把所有 AI 评论的昵称与头像对齐到当前配置。
 
@@ -476,9 +486,9 @@ def on_link(payload: dict) -> None:
         '<div style="font-size:15px;line-height:1.8;color:#1f2a33;">'
         '已收到你的友链申请。请先在贵站添加本站友链，添加后系统会自动审核。</div>'
         '<div style="padding:14px 0 0 0;font-size:14px;line-height:1.9;color:#5c6b78;">'
-        '站点名称：%s<br>站点地址：%s<br>你提交的地址：%s</div>'
+        '你提交的站点：%s<br>你提交的地址：%s<br>本站地址：%s</div>'
         '<div style="padding:10px 0 0 0;font-size:13px;color:#8a97a4;">审核通过后会再发一封邮件通知。</div>'
-    ) % (mail_template.esc(blog), mail_template.esc(site), mail_template.esc(url))
+    ) % (mail_template.esc(name or "（未填写）"), mail_template.esc(url), mail_template.esc(site))
     text, page = mail_template.generic_notice(
         blog_name=blog,
         site=site,
@@ -510,20 +520,37 @@ def _safe_url(url: str) -> bool:
 
 
 def _fetch(url: str, timeout: int = 8) -> tuple[str, str]:
-    if not _safe_url(url):
-        return "", "地址不可访问或不合规"
-    try:
-        resp = requests.get(
-            url, timeout=timeout, stream=True,
-            headers={"User-Agent": "infowe-link-check/1.0"},
-            allow_redirects=True,
-        )
-        if resp.status_code >= 400:
-            return "", f"站点返回 HTTP {resp.status_code}"
-        chunk = resp.raw.read(2 * 1024 * 1024, decode_content=True) or b""
-        return chunk.decode("utf-8", "ignore"), ""
-    except requests.RequestException:
+    # 每一跳都重新校验；requests 的自动跟随只在首跳前检查一次，
+    # 攻击者可先返回合法地址再 302 到内网/元数据地址造成 SSRF。
+    current = url
+    resp = None
+    for _hop in range(5):
+        if not _safe_url(current):
+            return "", "地址不可访问或不合规"
+        try:
+            resp = requests.get(
+                current, timeout=timeout, stream=True,
+                headers={"User-Agent": "infowe-link-check/1.0"},
+                allow_redirects=False,
+            )
+        except requests.RequestException:
+            return "", "站点无法访问"
+        if resp.status_code in (301, 302, 303, 307, 308) and resp.headers.get("Location"):
+            nxt = urljoin(current, resp.headers["Location"])
+            resp.close()
+            if not _safe_url(nxt):
+                return "", "跳转目标不可访问或不合规"
+            current = nxt
+            continue
+        break
+    if resp is None:
         return "", "站点无法访问"
+    if resp.status_code >= 400:
+        resp.close()
+        return "", f"站点返回 HTTP {resp.status_code}"
+    chunk = resp.raw.read(2 * 1024 * 1024, decode_content=True) or b""
+    resp.close()
+    return chunk.decode("utf-8", "ignore"), ""
 
 
 class _PageParser(HTMLParser):
@@ -748,6 +775,7 @@ def check_pending_links() -> None:
                 "UPDATE links SET status='approved', ai_state='done', ai_meta=? WHERE id=?",
                 (json.dumps(meta, ensure_ascii=False), link["id"]),
             )
+            _invalidate_links_page()
             email = str(link.get("email") or "").strip()
             if email:
                 link_body = (
@@ -845,6 +873,7 @@ def check_approved_links() -> None:
                 "UPDATE links SET status='pending', ai_state='review', ai_meta=? WHERE id=?",
                 (json.dumps(meta, ensure_ascii=False), link["id"]),
             )
+            _invalidate_links_page()
             flagged.append((str(link.get("name") or ""), report["reasons"][:2]))
         else:
             db.execute(

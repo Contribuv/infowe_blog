@@ -627,7 +627,8 @@
             paintUploadProgress(sum / totalBytes, finished, accepted.length);
         }
         showUploadProgress(accepted.length);
-        return Promise.all(accepted.map(function (f, idx) {
+        // 用 allSettled：单个文件失败不能让已成功上传的文件也不插入编辑器
+        return Promise.allSettled(accepted.map(function (f, idx) {
             var onBytes = function (bytes) { loaded[idx] = bytes; paint(); };
             return resolve(f, onBytes).then(function (r) {
                 finished++;
@@ -635,16 +636,22 @@
                 paint();
                 return r;
             });
-        })).then(function (results) {
+        })).then(function (settled) {
+            var results = [];
+            var failedNames = [];
+            settled.forEach(function (item, i) {
+                if (item.status === 'fulfilled') results.push(item.value);
+                else failedNames.push(accepted[i].name);
+            });
             // 等插入完成再收起进度浮窗：插入要等 Vditor 解析，否则用户会看到内容「晚一拍」出现
             return Promise.all(results.map(function (r) { return insertUploaded(r); })).then(function () {
-                paintUploadProgress(1, accepted.length, accepted.length);
+                paintUploadProgress(1, results.length, accepted.length);
                 hideUploadProgress();
+                if (failedNames.length) {
+                    alert('以下文件上传失败，请重试：\n' + failedNames.join('\n'));
+                }
                 return results;
             });
-        }).catch(function (err) {
-            hideUploadProgress();
-            throw err;
         });
     }
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import mimetypes
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
@@ -124,7 +125,16 @@ def url_for(rel: str) -> str:
 
     私有桶不再走站点代理——那会把 OSS 的流量绕回服务器，
     既拖带宽又失去对象存储的意义。
+
+    站点头像例外：后台头像按设计不进对象存储（见 publish），OSS 上不会有这个对象，
+    生成签名地址必然 404，所以本地存在时直接返回规范路径。读者头像不在例外内。
     """
+    clean = str(rel or "").lstrip("/")
+    # 站点头像按设计不进 OSS；读者头像虽走 OSS，但上传是异步的，对象可能还没到。
+    # 本地文件在、远端没有时用本地地址，避免上传时序造成死链。
+    if clean.startswith(("uploads/avatar/", "uploads/reader/avatar/")) and _local_exists(clean):
+        if clean.startswith("uploads/avatar/") or not _remote_exists(clean):
+            return "/" + clean
     cfg = get_cfg()
     if cfg is None:
         return rel
@@ -173,10 +183,15 @@ def rewrite_html(html: str) -> str:
         def _sign(text: str) -> str:
             def _one(match: re.Match) -> str:
                 raw = match.group(0)
-                # 首页 / 关于页的博主头像带 local=1：这两处固定走本地
-                if "local=1" in raw:
+                raw_path = unquote(raw.split("?", 1)[0])
+                # 本地有、远端没有的头像用本地地址，避免异步上传时序造成 404
+                if "local=1" in raw or (
+                    raw_path.startswith(("/uploads/avatar/", "/uploads/reader/avatar/"))
+                    and _local_exists(raw_path)
+                    and (raw_path.startswith("/uploads/avatar/") or not _remote_exists(raw_path))
+                ):
                     return raw
-                rel = unquote(raw.split("?", 1)[0])
+                rel = raw_path
                 return s3.presign(cfg, rel, expires)
 
             return _REL_RE.sub(_one, text)
@@ -187,10 +202,15 @@ def rewrite_html(html: str) -> str:
     def _sub(text: str) -> str:
         def _one(match: re.Match) -> str:
             raw = match.group(0)
-            # 首页 / 关于页的博主头像带 local=1：这两处固定走本地
-            if "local=1" in raw:
+            raw_path = unquote(raw.split("?", 1)[0])
+            # 本地有、远端没有的头像用本地地址，避免异步上传时序造成 404
+            if "local=1" in raw or (
+                raw_path.startswith(("/uploads/avatar/", "/uploads/reader/avatar/"))
+                and _local_exists(raw_path)
+                and (raw_path.startswith("/uploads/avatar/") or not _remote_exists(raw_path))
+            ):
                 return raw
-            rel = unquote(raw.split("?", 1)[0])
+            rel = raw_path
             return cfg.url_of(rel)
 
         return _REL_RE.sub(_one, text)
@@ -291,6 +311,7 @@ def publish(local_path: str | Path, rel_url: str) -> str:
         logger.warning("OSS 上传失败 %s：%s", rel_url, exc)
         return ""
     _record_object(cfg.key_of(rel_url), len(data))
+    _invalidate_head(rel_url)
     return url_for(rel_url)
 
 
@@ -452,6 +473,7 @@ def delete_remote(rel_url: str) -> None:
         try:
             s3.delete(cfg, target)
             _forget_object(cfg.key_of(target))
+            _invalidate_head(target)
         except Exception as exc:  # noqa: BLE001
             logger.warning("OSS 删除失败 %s：%s", target, exc)
 
@@ -471,13 +493,20 @@ def _local_exists(rel: str) -> bool:
 
 
 # HEAD 结果缓存：回写时同一对象可能被多篇文章引用，避免重复请求 OSS
-_head_cache: dict[str, bool] = {}
+_HEAD_TTL = 300
+_head_cache: dict[str, tuple[float, bool]] = {}
+
+
+def _invalidate_head(rel: str) -> None:
+    """对象上传/删除后清除存在性缓存，避免头像判断长期停在旧状态。"""
+    _head_cache.pop(str(rel or "").lstrip("/"), None)
 
 
 def _remote_exists(rel: str) -> bool:
     key = str(rel or "").lstrip("/")
-    if key in _head_cache:
-        return _head_cache[key]
+    cached = _head_cache.get(key)
+    if cached and time.time() - cached[0] < _HEAD_TTL:
+        return cached[1]
     cfg = get_cfg()
     if cfg is None:
         return False
@@ -485,7 +514,7 @@ def _remote_exists(rel: str) -> bool:
         ok = s3.head(cfg, key)
     except Exception:  # noqa: BLE001
         ok = False
-    _head_cache[key] = ok
+    _head_cache[key] = (time.time(), ok)
     return ok
 
 
@@ -928,7 +957,8 @@ def scan_orphans(limit: int = 500) -> list[dict]:
             continue
         rel = key[len(prefix) + 1:]
         # 头像 / AI 头像 / 项目文件由各自的入口管理，不当孤儿。
-        # previews/ 是原图的派生副本：原图仍被引用时上面已按 preview_of_key 跳过，
+        # uploads/previews/ 是旧版派生副本路径（新版顶层 previews/ 不在本扫描的
+        # 枚举前缀内，不会被列出）；原图仍被引用时上面已按 preview_of_key 跳过，
         # 能走到这里的都是原图已不存在/无引用的残留孤儿。后台对仅 OSS 的条目
         # 会按完整对象 key 删除，不走 upload.delete_rel（它会把 previews 当保护目录）。
         if rel.startswith(("avatar/", "ai-avatar/", "projects/", "reader/")):
@@ -995,10 +1025,19 @@ def delete_orphans(keys: list[str]) -> dict:
             continue
         candidates.append(key)
 
+    from flask import current_app, has_app_context
+
+    app = current_app._get_current_object() if has_app_context() else None
+
     def _one(key: str) -> tuple[str, str]:
         try:
-            s3.delete(cfg, key)
-            _forget_object(key)
+            if app is not None:
+                # _forget_object 要写数据库；线程池里没有请求上下文，必须显式带上
+                with app.app_context():
+                    s3.delete(cfg, key)
+                    _forget_object(key)
+            else:
+                s3.delete(cfg, key)
             return key, ""
         except Exception as exc:  # noqa: BLE001
             return key, str(exc)[:160]

@@ -322,7 +322,14 @@ def _sanitize_post_html(html: str) -> str:
         return html
     html = _DANGEROUS_TAGS.sub("", html)
     html = re.sub(r"<\s*(script|style|object|embed|form|iframe)\b[^>]*/?>", "", html, flags=re.I)
-    html = re.sub(r"\son[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", "", html, flags=re.I)
+    # 属性分隔符除了空白，HTML 还允许 "/"：<img/onerror=...> 过去会被漏掉。
+    # 用 lookbehind 保留边界字符本身。
+    html = re.sub(
+        r"(?<=[\s/])on[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)",
+        "",
+        html,
+        flags=re.I,
+    )
     html = re.sub(
         r"""\b(href|src)\s*=\s*(["'])\s*(?:javascript|vbscript|data:text/html)[^"']*\2""",
         r'\1="#"',

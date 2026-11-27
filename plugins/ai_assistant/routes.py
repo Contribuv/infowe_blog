@@ -15,6 +15,14 @@ from . import ai_client, config, tools
 KEY = "ai_assistant"
 
 
+def _as_int(value, default: int = 0) -> int:
+    """畸形 JSON 字段不应让后台接口 500。"""
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return default
+
+
 def _save_ai_avatar(file) -> tuple[str, str]:
     """上传 AI 头像：居中裁方并缩到 144px，存 var/uploads/ai-avatar/。
 
@@ -289,7 +297,7 @@ def register(app) -> None:
         cfg = config.get()
         if _daily_calls() >= int(cfg.get("daily_call_limit") or 300):
             return jsonify({"error": "已达到今日 AI 调用上限，请到配置页调整"}), 429
-        conv_id = int(data.get("conversation_id") or 0)
+        conv_id = _as_int(data.get("conversation_id"))
 
         def sse(event: str, payload: dict) -> str:
             return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
@@ -398,7 +406,7 @@ def register(app) -> None:
         cfg = config.get()
         if _daily_calls() >= int(cfg.get("daily_call_limit") or 300):
             return jsonify({"error": "已达到今日 AI 调用上限，请到配置页调整"}), 429
-        conv_id = int(data.get("conversation_id") or 0)
+        conv_id = _as_int(data.get("conversation_id"))
         if not conv_id:
             conv_id = _new_conversation(message)
         _add_message(conv_id, "user", message)
@@ -463,7 +471,7 @@ def register(app) -> None:
     @auth.admin_required
     def ai_api_confirm():
         data = request.get_json(silent=True) or {}
-        mid = int(data.get("id") or 0)
+        mid = _as_int(data.get("id"))
         row = db.one("SELECT * FROM ai_messages WHERE id=? AND role='pending'", (mid,))
         if not row:
             return jsonify({"error": "待确认操作不存在或已执行"}), 404
@@ -488,7 +496,7 @@ def register(app) -> None:
     @auth.admin_required
     def ai_api_conversation_delete():
         data = request.get_json(silent=True) or {}
-        cid = int(data.get("id") or 0)
+        cid = _as_int(data.get("id"))
         if cid:
             db.execute("DELETE FROM ai_messages WHERE conversation_id=?", (cid,))
             db.execute("DELETE FROM ai_conversations WHERE id=?", (cid,))

@@ -323,14 +323,28 @@ def start(source=None) -> tuple[bool, str]:
     return True, "升级任务已启动"
 
 
+def _cancel_requested() -> bool:
+    return bool(_read_state().get("cancel_requested"))
+
+
+def _finish_cancelled(stage: str) -> None:
+    _write_state({
+        "state": "canceled", "percent": 100,
+        "label": "升级已取消", "summary": f"已在「{stage}」阶段取消，未继续后续步骤",
+        "finished": time.time(), "cancel_requested": False,
+    })
+
+
 def _run(meta: dict) -> None:
     base = Path(config.BASE_DIR)
     remote = meta["remote"]
-    _write_state({
+    state = _read_state()
+    state.update({
         "state": "running", "percent": 5,
         "label": f"拉取最新代码（{meta['label']}）", "started": time.time(),
         "source": meta["key"], "source_label": meta["label"],
     })
+    _write_state(state)
     try:
         ensure = _ensure_remote(base, remote)
         if ensure is not None and ensure.returncode != 0:
@@ -350,6 +364,9 @@ def _run(meta: dict) -> None:
                 "finished": time.time(),
             })
             return
+        if _cancel_requested():
+            _finish_cancelled("拉取代码前")
+            return
         proc = _git(base, "pull", "--ff-only", remote, head, timeout=180)
         if proc.returncode != 0:
             _write_state({
@@ -357,6 +374,9 @@ def _run(meta: dict) -> None:
                 "summary": (proc.stderr or proc.stdout or "").strip()[:500],
                 "finished": time.time(),
             })
+            return
+        if _cancel_requested():
+            _finish_cancelled("安装依赖前")
             return
         _write_state({"state": "running", "percent": 55, "label": "安装依赖", "started": time.time()})
         venv_pip = base / ".venv" / "bin" / "pip"
@@ -382,6 +402,9 @@ def _run(meta: dict) -> None:
                 ),
                 "finished": time.time(),
             })
+            return
+        if _cancel_requested():
+            _finish_cancelled("写入完成状态前")
             return
         _write_state({
             "state": "done", "percent": 100,

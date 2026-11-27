@@ -409,11 +409,12 @@
                         var box = row.querySelector('.row-check');
                         if (box) box.checked = false;
                     }
-                });
-                rows = rows.filter(function (row) { return document.body.contains(row); });
             } catch (e) {
                 failed += chunk.length;
-                chunk.forEach(function (row) { row.classList.add('row-failed'); });
+                chunk.forEach(function (row) {
+                    row.classList.add('row-failed');
+                    row.title = '请求失败：' + ((e && e.message) || '网络错误');
+                });
             }
             progress.textContent = '正在删除 ' + (done + failed) + ' / ' + total + '…';
             // 让出主线程，行移除动画与进度文字能立即绘制
@@ -424,7 +425,11 @@
         if (done) notify('已清理 ' + done + ' 个孤儿文件，释放 ' + fmtSize(freed) + (failed ? '，' + failed + ' 个删除失败' : ''), !failed);
         else if (failed) notify(failed + ' 个文件删除失败', false);
 
-        if (!rows.length) {
+        // 成功行的移除有 280ms 动画；等动画结束再按实际 DOM 判断完成态，
+        // 否则最后一批成功行还没 remove，空状态永远不会显示。
+        await new Promise(function (r) { setTimeout(r, 300); });
+        var remaining = rows.filter(function (row) { return document.body.contains(row); });
+        if (!remaining.length) {
             /* 一个不剩：隐藏筛选区与卡片，显示完成态 */
             var bar = document.querySelector('.orphan-filter-bar');
             if (bar) bar.style.display = 'none';
@@ -433,6 +438,7 @@
             var card = deleteBtn.closest('.card');
             if (card) card.style.display = 'none';
         } else {
+            rows = remaining;
             applyFilter();
         }
 

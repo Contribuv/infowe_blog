@@ -208,7 +208,12 @@ def admin_post_restore(post_id: int):
 
 @LOGIN
 def admin_post_purge(post_id: int):
-    post = db.one("SELECT title FROM posts WHERE id = ?", (post_id,))
+    post = db.one(
+        "SELECT title FROM posts WHERE id = ? AND deleted_at IS NOT NULL", (post_id,)
+    )
+    if not post:
+        flash("文章不在回收站中，不能彻底删除", "error")
+        return redirect(url_for("admin_posts_trash"))
     removed = Post.purge(post_id)
     if post:
         _audit("post.purge", post["title"] or f"#{post_id}")
@@ -978,9 +983,13 @@ def admin_orphan_clean():
     for rel in pending:
         clean = upload.unquote(str(rel or "")).replace("\\", "/").lstrip("/")
         parts = clean.split("/")
-        if not clean or ".." in parts or parts[0].startswith(".") or re.match(r"^[A-Za-z]:", clean):
+        if (
+            not clean or ".." in parts or parts[0].startswith(".")
+            or re.match(r"^[A-Za-z]:", clean)
+            or parts[0] in {"avatar", "ai-avatar", "projects", "reader"}
+        ):
             failed += 1
-            results.append({"rel": rel, "ok": False, "reason": "非法路径"})
+            results.append({"rel": rel, "ok": False, "reason": "非法路径或保留目录，已跳过"})
             continue
         local = upload.resolve(rel)
         if local is not None and local.is_file():
@@ -1022,6 +1031,13 @@ def admin_orphan_clean():
                     results.append({"rel": rel, "ok": True})
 
     if remote_pending:
+        # delete_orphans 单次只处理 200 个；超出的必须显式报失败，
+        # 否则会被结果映射当成"已删除"，误导用户
+        over_limit = remote_pending[200:]
+        remote_pending = remote_pending[:200]
+        for rel in over_limit:
+            failed += 1
+            results.append({"rel": rel, "ok": False, "reason": "超出单次删除上限（200 个），请分批操作"})
         try:
             from plugins.oss import storage as oss_storage
 
@@ -1642,8 +1658,12 @@ def _save_avatar(file) -> None:
         settings.set_value("avatar", rel)
         if "/uploads/avatar/" in old:
             old_name = old.split("/uploads/avatar/", 1)[1].split("?", 1)[0]
-            if old_name and old_name != name:
-                (folder / old_name).unlink(missing_ok=True)
+            # 只删本函数生成过的文件名。数据库里的 avatar 值可被后台表单篡改，
+            # 绝不能直接拼进删除路径（../../../config.py 会删掉任意文件）。
+            if re.fullmatch(r"avatar_\d+\.jpg", old_name) and old_name != name:
+                target = (folder / old_name).resolve()
+                if target.parent == folder.resolve():
+                    target.unlink(missing_ok=True)
         flash("头像已更新", "success")
     except Exception:
         flash("头像不是有效的图片", "error")

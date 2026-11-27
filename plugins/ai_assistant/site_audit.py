@@ -20,7 +20,7 @@ import re
 import socket
 import time
 from html.parser import HTMLParser
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -190,32 +190,55 @@ def fetch(url: str, timeout: float = 8.0, max_bytes: int = 2 * 1024 * 1024):
     except OSError:
         metrics["dns_ms"] = -1
 
-    try:
-        resp = requests.get(
-            url,
-            timeout=timeout,
-            stream=True,
-            allow_redirects=True,
-            headers={"User-Agent": "infowe-link-check/1.0"},
-        )
-        metrics["ttfb_ms"] = int((time.perf_counter() - started) * 1000)
-        metrics["status"] = resp.status_code
-        metrics["final_url"] = resp.url or url
-        final_host = (urlparse(resp.url or url).hostname or "").lower()
-        if final_host and final_host.removeprefix("www.") != host.removeprefix("www."):
-            metrics["redirect_host"] = final_host
-        if resp.status_code >= 400:
-            return "", f"站点返回 HTTP {resp.status_code}", metrics
-        chunk = resp.raw.read(max_bytes + 1, decode_content=True) or b""
-        metrics["bytes"] = len(chunk)
-        metrics["total_ms"] = int((time.perf_counter() - started) * 1000)
-        return _decode(chunk), "", metrics
-    except requests.Timeout:
-        metrics["total_ms"] = int((time.perf_counter() - started) * 1000)
-        return "", "访问超时", metrics
-    except requests.RequestException:
-        metrics["total_ms"] = int((time.perf_counter() - started) * 1000)
+    # 手动跟随重定向：每一跳都重新校验，避免"先合法再 302 到 169.254.169.254"
+    # 的绕过。requests 自带的 allow_redirects=True 只在首跳前校验过一次。
+    current = url
+    resp = None
+    for _hop in range(5):
+        if not is_safe_url(current):
+            return "", "地址不可访问或不合规", metrics
+        try:
+            resp = requests.get(
+                current,
+                timeout=timeout,
+                stream=True,
+                allow_redirects=False,
+                headers={"User-Agent": "infowe-link-check/1.0"},
+            )
+        except requests.Timeout:
+            metrics["total_ms"] = int((time.perf_counter() - started) * 1000)
+            return "", "访问超时", metrics
+        except requests.RequestException:
+            metrics["total_ms"] = int((time.perf_counter() - started) * 1000)
+            return "", "站点无法访问", metrics
+        if resp.status_code in (301, 302, 303, 307, 308) and resp.headers.get("Location"):
+            nxt = urljoin(current, resp.headers["Location"])
+            if not is_safe_url(nxt):
+                resp.close()
+                return "", "跳转目标不可访问或不合规", metrics
+            next_host = (urlparse(nxt).hostname or "").lower()
+            if next_host.removeprefix("www.") != host.removeprefix("www."):
+                metrics["redirect_host"] = next_host
+            resp.close()
+            current = nxt
+            continue
+        break
+    if resp is None:
         return "", "站点无法访问", metrics
+    metrics["ttfb_ms"] = int((time.perf_counter() - started) * 1000)
+    metrics["status"] = resp.status_code
+    metrics["final_url"] = current
+    final_host = (urlparse(current).hostname or "").lower()
+    if final_host and final_host.removeprefix("www.") != host.removeprefix("www."):
+        metrics["redirect_host"] = final_host
+    if resp.status_code >= 400:
+        resp.close()
+        return "", f"站点返回 HTTP {resp.status_code}", metrics
+    chunk = resp.raw.read(max_bytes + 1, decode_content=True) or b""
+    resp.close()
+    metrics["bytes"] = len(chunk)
+    metrics["total_ms"] = int((time.perf_counter() - started) * 1000)
+    return _decode(chunk), "", metrics
 
 
 def _host_verdict(url: str) -> list[str]:

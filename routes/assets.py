@@ -149,7 +149,10 @@ def readme_image():
     import hashlib
 
     key = hashlib.sha1(raw.encode()).hexdigest()
-    candidates = list(cache_dir.glob(key + ".*"))
+    # glob 顺序不确定；按 mtime 取最新的，避免多后缀残留时选中陈旧文件
+    candidates = sorted(
+        cache_dir.glob(key + ".*"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
     is_badge = parsed.hostname in _BADGE_README_HOSTS
     ttl = _BADGE_CACHE_TTL if is_badge else 86400
     fresh = False
@@ -180,6 +183,11 @@ def readme_image():
                         suffix = ".jpg"
                 path = cache_dir / (key + suffix)
                 path.write_bytes(resp.content)
+                # 同一 key 可能留下不同后缀的旧文件（上游 Content-Type 变化），
+                # 刷新成功后清掉，避免下次选中陈旧候选
+                for stale in cache_dir.glob(key + ".*"):
+                    if stale != path:
+                        stale.unlink(missing_ok=True)
                 cachefs.cap(cache_dir, 3000)
                 candidates = [path]
         except requests.RequestException:

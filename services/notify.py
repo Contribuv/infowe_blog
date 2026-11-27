@@ -152,11 +152,27 @@ def _dispatch(jobs: list[dict]) -> None:
         # 线程没有请求上下文，必须显式推入应用上下文才能读取 settings
         with app.app_context():
             for job in jobs:
+                builder = job.get("builder")
+                if builder:
+                    # 头像探测要串行请求外网（可能几秒），放在发送线程里，
+                    # 不阻塞提交评论 / 审核的请求。
+                    av = ""
+                    if job.get("avatar_email"):
+                        try:
+                            from services import avatar
+                            av = avatar.mail_avatar(
+                                job["avatar_email"], job.get("site", "")
+                            )
+                        except Exception:
+                            pass
+                    text, page = builder(av)
+                else:
+                    text, page = job.get("text", ""), job.get("html")
                 send(
                     job["to"],
                     job["subject"],
-                    job["text"],
-                    job.get("html"),
+                    text,
+                    page,
                     job.get("reply_to", ""),
                 )
 
@@ -230,38 +246,34 @@ def notify_comment(
     # 否则他只能从一堆「收到新评论」里猜，评审通过后更是完全收不到第二封。
     reply_is_blogger = bool(reply_lower) and reply_lower in _blogger_emails()
 
-    author_avatar = ""
-    try:
-        from services import avatar
-        author_avatar = avatar.mail_avatar(email, site)
-    except Exception:
-        pass
+    # 头像探测放到 _dispatch 的发送线程里（见 builder），不阻塞评论提交
+    avatar_email = str(email or "").strip()
 
     # 1) 博主提醒：博主自己发言不再发给自己。
     #    被回复者就是博主、且评论已公开时，这一封让给下面的「收到回复」：
     #    同一件事发两封内容近似的邮件没有意义。
     if admin_to and not from_blogger and not (reply_is_blogger and status == "approved"):
-        text, page = mail_template.comment_notice(
-            blog_name=blog,
-            site=site,
-            label=label,
-            title=title,
-            url=url,
-            author=author,
-            content=_mail_content(content, status),
-            when=when,
-            status=status,
-            parent_author=parent_author,
-            parent_content=parent_content,
-            author_avatar=author_avatar,
-        )
         review = "待审核" if status != "approved" else "已通过"
         jobs.append(
             {
                 "to": admin_to,
                 "subject": f"[{blog}] {label}《{title}》收到新评论（{review}）{_subject_ref(comment_id)}",
-                "text": text,
-                "html": page,
+                "avatar_email": avatar_email,
+                "site": site,
+                "builder": lambda av: mail_template.comment_notice(
+                    blog_name=blog,
+                    site=site,
+                    label=label,
+                    title=title,
+                    url=url,
+                    author=author,
+                    content=_mail_content(content, status),
+                    when=when,
+                    status=status,
+                    parent_author=parent_author,
+                    parent_content=parent_content,
+                    author_avatar=av,
+                ),
                 "reply_to": commenter,
             }
         )
@@ -271,26 +283,26 @@ def notify_comment(
     #    被回复者是博主时同样要发：博主评论更多，更应该明确知道哪条是回复。
     if status == "approved" and reply_email and reply_notify and not reply_private and not is_private:
         if reply_lower != commenter.lower():
-            text, page = mail_template.reply_notice(
-                blog_name=blog,
-                site=site,
-                label=label,
-                title=title,
-                url=url,
-                author=author,
-                content=_mail_content(content, status),
-                when=when,
-                parent_author=parent_author,
-                parent_content=parent_content,
-                author_avatar=author_avatar,
-                reader_url=reply_reader_url,
-            )
             jobs.append(
                 {
                     "to": reply_email,
                     "subject": f"[{blog}] 你的评论收到了回复：{title}{_subject_ref(comment_id)}",
-                    "text": text,
-                    "html": page,
+                    "avatar_email": avatar_email,
+                    "site": site,
+                    "builder": lambda av: mail_template.reply_notice(
+                        blog_name=blog,
+                        site=site,
+                        label=label,
+                        title=title,
+                        url=url,
+                        author=author,
+                        content=_mail_content(content, status),
+                        when=when,
+                        parent_author=parent_author,
+                        parent_content=parent_content,
+                        author_avatar=av,
+                        reader_url=reply_reader_url,
+                    ),
                 }
             )
 
@@ -343,37 +355,41 @@ def notify_approved_reply(comment_id: int) -> None:
     label, title, detail_path = _comment_title(
         comment.get("project_id"), comment.get("post_id")
     )
-    author_avatar = ""
-    try:
-        from services import avatar
-        author_avatar = avatar.mail_avatar(str(comment.get("email") or ""), site_url.base())
-    except Exception:
-        pass
-    text, page = mail_template.reply_notice(
-        blog_name=blog,
-        site=site_url.base(),
-        label=label,
-        title=title,
-        url=_detail_url(detail_path, int(comment_id)),
-        author=str(comment.get("author") or ""),
-        content=_mail_content(str(comment.get("content") or ""), "approved"),
-        when=str(comment.get("created_at") or ""),
-        parent_author=str(parent.get("author") or ""),
-        parent_content=_mail_content(
-            str(parent.get("content") or ""), str(parent.get("status") or "")
-        ),
-        author_avatar=author_avatar,
-        reader_url=_reader_url(
-            str(parent.get("email_hash") or ""), str(parent.get("author") or "")
-        ),
+    # 头像探测移到发送线程；正文在线程里用探测结果重新生成
+    avatar_email = str(comment.get("email") or "").strip()
+    site = site_url.base()
+    detail_url = _detail_url(detail_path, int(comment_id))
+    comment_content = _mail_content(str(comment.get("content") or ""), "approved")
+    parent_content = _mail_content(
+        str(parent.get("content") or ""), str(parent.get("status") or "")
     )
+    reader_url = _reader_url(
+        str(parent.get("email_hash") or ""), str(parent.get("author") or "")
+    )
+    author_name = str(comment.get("author") or "")
+    parent_name = str(parent.get("author") or "")
+    comment_when = str(comment.get("created_at") or "")
     _dispatch(
         [
             {
                 "to": reply_email,
                 "subject": f"[{blog}] 你的评论收到了回复：{title}{_subject_ref(int(comment_id))}",
-                "text": text,
-                "html": page,
+                "avatar_email": avatar_email,
+                "site": site,
+                "builder": lambda av: mail_template.reply_notice(
+                    blog_name=blog,
+                    site=site,
+                    label=label,
+                    title=title,
+                    url=detail_url,
+                    author=author_name,
+                    content=comment_content,
+                    when=comment_when,
+                    parent_author=parent_name,
+                    parent_content=parent_content,
+                    author_avatar=av,
+                    reader_url=reader_url,
+                ),
             }
         ]
     )

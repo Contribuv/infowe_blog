@@ -298,10 +298,16 @@ def _serializer() -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(current_app.secret_key, salt="reader-session")
 
 
+def _pw_fingerprint(password_hash: str) -> str:
+    """登录 token 绑定密码指纹：改密后旧 token 自动失效。"""
+    return hashlib.sha256(str(password_hash or "").encode("utf-8")).hexdigest()[:12]
+
+
 def issue_token(row: dict) -> str:
     return _serializer().dumps({
         "h": str(row.get("email_hash") or ""),
         "n": str(row.get("name") or ""),
+        "p": _pw_fingerprint(str(row.get("password_hash") or "")),
     })
 
 
@@ -322,6 +328,9 @@ def verify_token(token: str) -> dict | None:
     # 审核未通过的账号不应继续持有登录态：否则「拒绝」只挡住下一次密码登录，
     # 已登录的人靠 30 天 token 照旧能用账号身份、改昵称、看个人中心，等于没拒绝。
     if str(row.get("review_status") or REVIEW_APPROVED) != REVIEW_APPROVED:
+        return None
+    # 旧 token（无指纹）或改密前的 token 一律拒绝
+    if str(data.get("p") or "") != _pw_fingerprint(str(row.get("password_hash") or "")):
         return None
     # 昵称以 comment_identities 的统一昵称为准
     identity = comment_identity.get_row(str(row.get("email") or ""))
@@ -474,8 +483,24 @@ def update_email(row: dict, new_email: str, code: str) -> tuple[dict | None, str
         # 迁移各表 email_hash
         for table in ("comments", "comment_identities", "comment_notifications", "comment_likes"):
             if table == "comment_likes":
-                continue  # 点赞按 voter_hash，不对应用户邮箱，不迁移
+                # 点赞按 voter_hash 归属，必须一起迁移，否则旧赞无法取消、新 hash 可重复投票。
+                # 先删掉与目标 hash 重复的旧赞，避免撞唯一约束。
+                conn.execute(
+                    "DELETE FROM comment_likes WHERE voter_hash=? AND comment_id IN "
+                    "(SELECT comment_id FROM comment_likes WHERE voter_hash=?)",
+                    (old_key, new_key),
+                )
+                conn.execute(
+                    "UPDATE comment_likes SET voter_hash=? WHERE voter_hash=?",
+                    (new_key, old_key),
+                )
+                continue
             conn.execute(f"UPDATE {table} SET email_hash=? WHERE email_hash=?", (new_key, old_key))
+        # 身份表的 email 字段仍留着旧地址，会导致展示与账号不一致
+        conn.execute(
+            "UPDATE comment_identities SET email=? WHERE email_hash=?",
+            (normalize_email(new_email), new_key),
+        )
         conn.execute(
             "UPDATE reader_users SET email=?, email_hash=?, verified_at=?, updated_at=? WHERE email_hash=?",
             (normalize_email(new_email), new_key, db.now(), db.now(), old_key),

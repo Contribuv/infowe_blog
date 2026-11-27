@@ -1068,6 +1068,7 @@ def share_thumb(filename: str) -> Path | None:
     out = cache_dir / (hashlib.sha1(unquote(filename).encode()).hexdigest() + ".jpg")
     if out.is_file() and out.stat().st_mtime >= src.stat().st_mtime:
         return out
+    tmp = out.with_name(out.name + ".tmp")
     try:
         from PIL import Image
         with Image.open(src) as img:
@@ -1085,11 +1086,14 @@ def share_thumb(filename: str) -> Path | None:
                 sh = round(width / target)
                 sx, sy = 0, round((height - sh) / 2)
             dst = img.crop((sx, sy, sx + sw, sy + sh)).resize((tw, th), Image.LANCZOS)
-            dst.save(out, "JPEG", quality=82, optimize=True)
+            dst.save(tmp, "JPEG", quality=82, optimize=True)
+        tmp.replace(out)  # 原子替换，避免并发首次请求拿到半截 JPEG
         return out
     except Exception:
         # 非位图（SVG 等）不生成分享图，避免以图片 MIME 返回可执行内容
         return None
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 def _normalize_upload_path(url: str) -> str:

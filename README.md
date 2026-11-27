@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.85-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.85)
+[![version](https://img.shields.io/badge/version-3.9.86-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.86)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -455,11 +455,15 @@ location / {
     if ($request_method !~ ^(GET|HEAD)$) { set $blog_skip_cache 1; }
 
     # 后台、登录、接口、评论、动态图片不缓存
+    # 若后台入口改成别的路径（如 /manage），必须把新路径加入下面的列表，
+    # 否则登录态页面会被 proxy_cache 缓存并分享给匿名访客！
     # 注意：不要写 upload，否则 /uploads/ 图片也会命中，变成 BYPASS
     if ($request_uri ~* "^/(admin|login|logout|api|comments|share-thumb|avatar|readme-img|status)(/|$|\?)") { set $blog_skip_cache 1; }
 
-    # 管理员 / 评论者带 Cookie 时直接回源，避免看到别人的缓存
-    if ($http_cookie ~* "(^|;\s*)(session|blog_commenter)=") { set $blog_skip_cache 1; }
+    # 管理员 / 评论者 / 读者带 Cookie 时直接回源，避免看到别人的缓存
+    # 注意：Flask 的会话 cookie 名是 blog_session（不是 session），
+    # 读者登录 cookie 是 blog_reader_session，三者都必须跳过缓存。
+    if ($http_cookie ~* "(^|;\s*)(blog_session|blog_reader_session|blog_commenter)=") { set $blog_skip_cache 1; }
 
     # 手动绕过：?nocache=1
     if ($arg_nocache) { set $blog_skip_cache 1; }
@@ -925,9 +929,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.85**
+当前版本：**v3.9.86**
 
-> 最近一次更新完整展开；更早的 184 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 185 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.86
+
+- **安全加固（多项）**：找回密码 / OTP 验证码改为服务端存储，避免从客户端 cookie 解出验证码直接重置管理员密码；删除 `?email=` 身份兜底并给访客 cookie 加签名，堵住读取他人通知的越权通道；后台头像旧文件删除加文件名白名单与目录校验，防止构造路径删除任意文件；`/oss-media` 拒绝评论图片路径并限制私有桶只代理被引用对象；Markdown 净化的 `on*` 属性剥离支持 `/` 分隔符；友链体检逐步校验重定向目标，避免 SSRF
+- **OSS 与头像**：私有桶预签名改用 `public_base`（反代场景不再返回内网地址），配置层禁止 endpoint 带路径；读者头像上传后回显不再追加查询参数（fnos-oss 会校验全部参数，加 `?t=` 会导致签名失效）；头像远端存在性缓存加 TTL 并在上传 / 删除后失效；孤儿清理增加保护目录黑名单与单次 200 个上限提示
+- **评论与账号**：`X-Forwarded-For` 从右往左取公网 IP，IP 限流不再可伪造绕过；图形验证码改为服务端一次性令牌，不能重放；父评论校验仅允许已审核的评论；读者改密后旧登录 token 失效；换绑邮箱同步迁移点赞与身份邮箱
+- **稳定性与体验**：升级任务的「取消」现在真正生效；批量上传改用 `allSettled`，单个失败不再丢弃已成功文件；孤儿清理页空状态与失败原因可见；README 拉取失败保留旧缓存、GitHub 解析异常继续走 Gitee 兜底；缓存写入改为原子替换；邮件头像探测移入后台线程，不再阻塞评论提交；Nginx 部署示例补齐 cookie 名单与自定义后台路径提醒
+
+<details>
+<summary><b>历史版本（v3.9.85 及更早，共 185 个版本，点击展开）</b></summary>
 
 ### v3.9.85
 

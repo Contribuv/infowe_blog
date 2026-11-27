@@ -381,6 +381,38 @@ def verify_code_notice(*, blog_name: str, site: str, code: str, ttl_minutes: int
     return text, page
 
 
+def register_code_notice(*, blog_name: str, site: str, code: str, ttl_minutes: int = 10) -> tuple[str, str]:
+    """注册 / 换绑邮箱验证码邮件；与「修改昵称」的文案分开，避免误导。"""
+    body = (
+        '<p style="margin:0 0 14px 0;font-size:15px;line-height:1.85;color:%s;">'
+        '你正在注册或验证 %s 的读者账号邮箱，请输入下面的验证码：</p>'
+        '<div style="margin:0 0 14px 0;padding:16px 0;border:1px solid %s;border-radius:8px;'
+        'background:%s;text-align:center;font-size:30px;line-height:1.2;font-weight:700;'
+        'letter-spacing:8px;color:%s;font-family:Consolas,Menlo,monospace;">%s</div>'
+        '<p style="margin:0 0 6px 0;font-size:13px;line-height:1.8;color:%s;">'
+        '验证码 %d 分钟内有效，请勿转发给他人。</p>'
+        '<p style="margin:0;font-size:13px;line-height:1.8;color:%s;">'
+        '如果这不是你本人的操作，请忽略本邮件。</p>'
+    ) % (_BODY, _esc(blog_name), _BORDER, _CARD_BG, _TEXT, _esc(code),
+         _META, int(ttl_minutes), _MUTED)
+    text = (
+        f"你正在注册或验证读者账号邮箱，验证码：{code}\n"
+        f"{ttl_minutes} 分钟内有效，请勿转发给他人。\n"
+        "如果这不是你本人的操作，请忽略本邮件。"
+    )
+    page = _shell(
+        headline="验证你的邮箱",
+        meta_html="",
+        body=body,
+        foot_note=(
+            '<p style="margin:0;">此邮件由 %s 自动发送，请勿直接回复。</p>'
+            '<p style="margin:0;"><a href="%s" style="color:#6b7a88;text-decoration:none;">%s</a></p>'
+            % (_esc(blog_name), _esc(site), _esc(sender_name()))
+        ),
+    )
+    return text, page
+
+
 def reset_code_notice(*, blog_name: str, site: str, code: str, ttl_minutes: int = 10) -> tuple[str, str]:
     """重置密码验证码邮件：与注册/改资料验证码分开写，避免文案误导。"""
     body = (

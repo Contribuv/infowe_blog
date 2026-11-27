@@ -33,13 +33,13 @@ window.initComments = function (root) {
     var fallback = img.getAttribute('data-fallback') || '';
     var def = img.getAttribute('data-default') || '';
     img.addEventListener('error', function () {
-      if (img.src === def) return;
+      if (img.getAttribute('src') === def) return;
       if (fallback && !img.dataset.fb) { img.dataset.fb = '1'; img.src = fallback; }
       else if (def) { img.src = def; }
     });
     // 挂起兜底：图片进入视口后仍未完成加载（被墙/超时）→ 切本地默认头像
     var hangCheck = function () {
-      if (img.naturalWidth === 0 && !img.complete && def && img.src !== def) {
+      if (img.naturalWidth === 0 && !img.complete && def && img.getAttribute('src') !== def) {
         img.src = def;
       }
     };
@@ -337,7 +337,7 @@ window.initComments = function (root) {
     setLoginTip('');
   }
   function refreshCaptcha() {
-    if (loginCaptchaImg) loginCaptchaImg.src = '/api/reader/captcha?t=' + Date.now();
+    if (loginCaptchaImg) loginCaptchaImg.src = '/api/reader/captcha?refresh=1&t=' + Date.now();
     if (loginCaptcha) loginCaptcha.value = '';
   }
   /* 登录 / 注册是两个独立入口：点哪个就进对应模式，不再让用户先点开再切 tab */
@@ -565,7 +565,11 @@ window.initComments = function (root) {
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.error) { setAccountTip(d.error, 'error'); return; }
-        if (accountAvatarPreview && d.avatar) accountAvatarPreview.src = d.avatar + '?t=' + Date.now();
+        // 预签名 URL 本身每次都重新签发，天然不会命中缓存；而且 fnos-oss
+        // 会校验全部查询参数，额外拼 ?t= / &t= 会直接导致签名失效（图片 404）。
+        if (accountAvatarPreview && d.avatar) {
+          accountAvatarPreview.src = d.avatar;
+        }
         setAccountTip('头像已更新', 'ok');
       })
       .catch(function () { setAccountTip('上传失败', 'error'); });

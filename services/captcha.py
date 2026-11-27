@@ -10,8 +10,11 @@ import hashlib
 import hmac
 import random
 import secrets
+import time
 
 from flask import current_app, session
+
+import db
 
 SESSION_NONCE = "reader_captcha_nonce"
 SESSION_SIG = "reader_captcha_sig"
@@ -31,6 +34,13 @@ def new_question() -> str:
     session[SESSION_NONCE] = nonce
     session[SESSION_SIG] = _sign(nonce, a + b)
     session[SESSION_Q] = question
+    # 服务端登记一次性令牌，过期记录顺手清掉
+    now = int(time.time())
+    db.execute("DELETE FROM captcha_tokens WHERE expires_at < ?", (now,))
+    db.execute(
+        "INSERT INTO captcha_tokens (nonce, expires_at) VALUES (?, ?)",
+        (nonce, now + 300),
+    )
     return question
 
 
@@ -44,13 +54,26 @@ def verify(answer: str) -> bool:
     clear()
     if not nonce or not sig:
         return False
+    # 服务端一次性校验：旧 cookie 重放时 nonce 已消费，直接拒绝
+    row = db.one(
+        "SELECT nonce FROM captcha_tokens WHERE nonce=? AND used_at='' AND expires_at>?",
+        (str(nonce), int(time.time())),
+    )
+    if not row:
+        return False
     text = str(answer or "").strip()
     if not text.isdigit():
         return False
     try:
-        return hmac.compare_digest(_sign(str(nonce), int(text)), str(sig))
+        ok = hmac.compare_digest(_sign(str(nonce), int(text)), str(sig))
     except (ValueError, TypeError):
-        return False
+        ok = False
+    if ok:
+        db.execute(
+            "UPDATE captcha_tokens SET used_at=? WHERE nonce=?",
+            (db.now(), str(nonce)),
+        )
+    return ok
 
 
 def clear() -> None:

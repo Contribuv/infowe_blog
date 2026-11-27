@@ -309,3 +309,13 @@ CREATE TABLE IF NOT EXISTS comment_likes (
 );
 CREATE INDEX IF NOT EXISTS idx_like_comment ON comment_likes (comment_id);
 CREATE INDEX IF NOT EXISTS idx_like_voter ON comment_likes (voter_hash);
+
+-- 图形验证码一次性令牌：session cookie 只是签名可读，答案可重放，
+-- 必须在服务端记录使用状态；过期记录顺手清理。
+CREATE TABLE IF NOT EXISTS captcha_tokens (
+    nonce TEXT PRIMARY KEY,
+    used_at TEXT DEFAULT '',
+    expires_at INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_captcha_expiry ON captcha_tokens (expires_at);
