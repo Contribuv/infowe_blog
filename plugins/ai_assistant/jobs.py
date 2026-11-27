@@ -393,6 +393,27 @@ def _process_comment(app, cid: int, raw_content: str = "") -> None:
                 )
                 return
 
+            # 默认强制人工复核：AI 的 approve 只是建议，不直接公开评论。
+            # 带图评论上面已经转人工，这里只处理纯文本。
+            auto_approve = str(cfg.get("comment_auto_approve", False)).lower() in {
+                "1", "true", "on", "yes"
+            }
+            if not auto_approve:
+                meta = json.dumps(
+                    {
+                        "decision": "approve",
+                        "reason": "AI 建议通过，待人工复核"
+                        + (("；AI 理由：" + reason) if reason else ""),
+                    },
+                    ensure_ascii=False,
+                )
+                db.execute(
+                    "UPDATE comments SET ai_state='review', ai_meta=? "
+                    "WHERE id=? AND status='pending' AND ai_state='running'",
+                    (meta, cid),
+                )
+                return
+
             cur = db.execute(
                 "UPDATE comments SET status='approved', ai_state='done', ai_meta=? "
                 "WHERE id=? AND status='pending' AND ai_state='running'",

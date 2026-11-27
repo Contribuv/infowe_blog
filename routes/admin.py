@@ -983,10 +983,14 @@ def admin_orphan_clean():
     for rel in pending:
         clean = upload.unquote(str(rel or "")).replace("\\", "/").lstrip("/")
         parts = clean.split("/")
+        protected = parts[0] in {"avatar", "ai-avatar", "projects", "reader"}
+        # reader/avatar/ 的历史残留允许清理；其它 reader/ 内容仍受保护
+        if clean.startswith("reader/avatar/"):
+            protected = False
         if (
             not clean or ".." in parts or parts[0].startswith(".")
             or re.match(r"^[A-Za-z]:", clean)
-            or parts[0] in {"avatar", "ai-avatar", "projects", "reader"}
+            or protected
         ):
             failed += 1
             results.append({"rel": rel, "ok": False, "reason": "非法路径或保留目录，已跳过"})
@@ -1940,9 +1944,15 @@ def admin_users():
     if page > total_pages:
         page = total_pages
         rows, total = reader_account.admin_list(page, per_page, status, keyword)
+    pending = {}
+    for row in rows:
+        avatar_review = reader_account.pending_avatar(int(row["id"]))
+        if avatar_review:
+            pending[int(row["id"])] = avatar_review
     return render_template(
         "admin/users.html",
         users=rows,
+        pending_avatars=pending,
         total=total,
         page=page,
         total_pages=total_pages,
@@ -1992,6 +2002,36 @@ def admin_user_review(user_id: int):
         flash("已通过审核，该昵称即刻生效，账号可以登录了", "success")
     else:
         flash("已拒绝该昵称，账号将无法登录（记录保留在留存记录里）", "success")
+    return _users_back()
+
+
+@LOGIN
+def admin_user_avatar_review(review_id: int):
+    from services import reader_account
+
+    action = request.form.get("action", "")
+    if action not in {"approve", "reject"}:
+        flash("无效的审核操作", "error")
+        return _users_back()
+    operator = ""
+    uid = session.get("admin_id")
+    if uid:
+        admin_user = User.get(int(uid))
+        if admin_user:
+            operator = str(admin_user.get("username") or "")
+    ok, msg = reader_account.review_avatar(
+        review_id, action == "approve", operator, request.form.get("reason", "")
+    )
+    if not ok:
+        flash(msg or "头像审核失败", "error")
+        return _users_back()
+    review = db.one("SELECT user_id, email FROM reader_avatar_reviews WHERE id=?", (review_id,))
+    _audit(
+        "user.avatar_review",
+        f"#{review['user_id'] if review else review_id}",
+        f"头像{'通过' if action == 'approve' else '拒绝'} {request.form.get('reason', '')}".strip()[:500],
+    )
+    flash("头像审核已处理", "success")
     return _users_back()
 
 
@@ -2073,6 +2113,7 @@ def register(app) -> None:
         ("/admin/comments/bulk", "admin_comments_bulk", admin_comments_bulk, ["POST"]),
         ("/admin/users", "admin_users", admin_users, ["GET"]),
         ("/admin/users/<int:user_id>/review", "admin_user_review", admin_user_review, ["POST"]),
+        ("/admin/users/avatar/<int:review_id>/review", "admin_user_avatar_review", admin_user_avatar_review, ["POST"]),
         ("/admin/users/<int:user_id>/delete", "admin_user_delete", admin_user_delete, ["POST"]),
         ("/admin/upload/image", "admin_upload_image", admin_upload_image, ["POST"]),
         ("/admin/upload/media", "admin_upload_media", admin_upload_media, ["POST"]),

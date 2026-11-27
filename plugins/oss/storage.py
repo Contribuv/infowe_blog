@@ -470,6 +470,8 @@ def delete_remote(rel_url: str) -> None:
     if cfg is None:
         return
     for target in (rel_url, preview_rel(rel_url)):
+        if not target:  # .webp 源不生成预览副本，preview_rel 会返回空串
+            continue
         try:
             s3.delete(cfg, target)
             _forget_object(cfg.key_of(target))
@@ -957,12 +959,15 @@ def scan_orphans(limit: int = 500) -> list[dict]:
             continue
         rel = key[len(prefix) + 1:]
         # 头像 / AI 头像 / 项目文件由各自的入口管理，不当孤儿。
-        # uploads/previews/ 是旧版派生副本路径（新版顶层 previews/ 不在本扫描的
-        # 枚举前缀内，不会被列出）；原图仍被引用时上面已按 preview_of_key 跳过，
+        # reader/ 下只把 reader/avatar/ 交给孤儿清理（历史换头像的残留），
+        # 其它读者内容仍由各自入口管理；被引用的头像上面 referenced 已保护。
+        if rel.startswith(("avatar/", "ai-avatar/", "projects/")):
+            continue
+        if rel.startswith("reader/") and not rel.startswith("reader/avatar/"):
+            continue
+        # previews/ 是原图的派生副本：原图仍被引用时上面已按 preview_of_key 跳过，
         # 能走到这里的都是原图已不存在/无引用的残留孤儿。后台对仅 OSS 的条目
         # 会按完整对象 key 删除，不走 upload.delete_rel（它会把 previews 当保护目录）。
-        if rel.startswith(("avatar/", "ai-avatar/", "projects/", "reader/")):
-            continue
         local = Path(UPLOADS_DIR) / rel
         name = key.rsplit("/", 1)[-1]
         ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""

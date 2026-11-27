@@ -29,6 +29,7 @@
             <input type="number" name="orphan_retention_days" class="input-text" min="1" max="365" step="1" value="{{ orphan_cfg.retention_days }}" title="上传超过该天数、且无内容引用的孤儿才会被自动清理">
         </label>
         <button type="submit" class="btn btn-sm">保存设置</button>
+        <button type="button" class="btn btn-sm" id="orphanRescanBtn" title="重新遍历本地 uploads 与对象存储桶">重新扫描</button>
     </form>
     <p class="form-hint orphan-auto-hint">
         开启后每天自动清理一次：上传超过保留天数、且无内容引用的本地孤儿会被删除（连同 OSS 副本），删前备份到 <b>var/backups/orphans/</b>，可按原路径找回。仅存于 OSS、本地已没有的对象需手动清理。
@@ -175,6 +176,13 @@
 <script>
 (function () {
     'use strict';
+    var rescanBtn = document.getElementById('orphanRescanBtn');
+    if (rescanBtn) rescanBtn.addEventListener('click', function () {
+      rescanBtn.classList.add('btn-loading');
+      // 页面每次加载都会实时扫描本地与 OSS；这里强制重新加载一次，
+      // 避免浏览器/Nginx 层缓存让人误以为"没检测到"。
+      window.location.href = location.pathname + '?nocache=1&t=' + Date.now();
+    });
     var form = document.getElementById('orphanForm');
     if (!form) return;
 
@@ -409,6 +417,7 @@
                         var box = row.querySelector('.row-check');
                         if (box) box.checked = false;
                     }
+                });
             } catch (e) {
                 failed += chunk.length;
                 chunk.forEach(function (row) {

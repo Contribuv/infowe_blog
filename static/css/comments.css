@@ -343,6 +343,8 @@ a.cmt-author{color:var(--c-text);text-decoration:none}
 .cmt-idbtn:hover{border-color:var(--c-accent);color:var(--c-accent)}
 .cmt-idbtn--primary{background:var(--c-accent);border-color:var(--c-accent);color:#fff}
 .cmt-idbtn--primary:hover{color:#fff;filter:brightness(.94)}
+.cmt-idbtn--danger{background:transparent;border-color:#d94b4b;color:#d94b4b}
+.cmt-idbtn--danger:hover{background:#d94b4b;color:#fff}
 .cmt-idbtn:disabled{opacity:.55;cursor:not-allowed}
 .cmt-idverify{margin-top:4px}
 .cmt-idrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}

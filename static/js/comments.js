@@ -570,7 +570,7 @@ window.initComments = function (root) {
         if (accountAvatarPreview && d.avatar) {
           accountAvatarPreview.src = d.avatar;
         }
-        setAccountTip('头像已更新', 'ok');
+        setAccountTip(d.pending ? '头像已上传，等待管理员审核后生效' : '头像已更新', 'ok');
       })
       .catch(function () { setAccountTip('上传失败', 'error'); });
   });
@@ -587,6 +587,46 @@ window.initComments = function (root) {
       var op = byId('cmt-account-oldpwd'), np = byId('cmt-account-newpwd');
       if (op) op.value = ''; if (np) np.value = '';
     }).catch(function () { accountPwdSave.disabled = false; setAccountTip('网络错误', 'error'); });
+  });
+
+  var accountDeleteCodeBtn = byId('cmt-account-delete-code-btn');
+  if (accountDeleteCodeBtn) accountDeleteCodeBtn.addEventListener('click', function () {
+    accountDeleteCodeBtn.disabled = true;
+    fetch('/api/reader/delete-code', { method: 'POST', credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { setAccountTip(d.error, 'error'); return; }
+        setAccountTip('验证码已发送到邮箱，请查收', 'ok');
+        var input = byId('cmt-account-delete-code');
+        if (input) input.focus();
+      })
+      .catch(function () { setAccountTip('网络错误', 'error'); })
+      .then(function () { accountDeleteCodeBtn.disabled = false; });
+  });
+
+  var accountDeleteBtn = byId('cmt-account-delete');
+  if (accountDeleteBtn) accountDeleteBtn.addEventListener('click', function () {
+    // 不用原生 confirm：注销是不可逆操作，统一走「邮箱验证码 + 浮窗内提示」确认
+    var codeInput = byId('cmt-account-delete-code');
+    var code = codeInput ? codeInput.value.trim() : '';
+    if (!code) { setAccountTip('请先获取并填写邮箱验证码', 'error'); return; }
+    accountDeleteBtn.disabled = true;
+    fetch('/api/reader/delete', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code })
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+    }).then(function (x) {
+      if (!x.ok || (x.d && x.d.error)) {
+        accountDeleteBtn.disabled = false;
+        setAccountTip((x.d && x.d.error) || '注销失败', 'error');
+        return;
+      }
+      window.location.reload();
+    }).catch(function () {
+      accountDeleteBtn.disabled = false;
+      setAccountTip('网络错误', 'error');
+    });
   });
 
   /* ── 0.8 点赞 / 不喜欢：root 级委托（翻页替换列表后仍有效）

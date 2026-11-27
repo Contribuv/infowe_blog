@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+import threading
 import time
 
 from flask import current_app
@@ -26,6 +27,7 @@ CODE_TTL = 600              # 验证码 10 分钟
 MAX_ATTEMPTS = 5
 PURPOSE = "register"
 RESET_PURPOSE = "reset"
+DELETE_PURPOSE = "delete_account"
 COOKIE_NAME = "blog_reader_session"
 
 # 昵称审核状态：approved 正常可用；manual 待人工审核（禁止登录）；
@@ -420,18 +422,130 @@ def update_name(row: dict, new_name: str) -> tuple[bool, str]:
         return False, f"修改失败：{exc}"
 
 
+def _remove_avatar_file(url: str) -> None:
+    """按规范路径删除读者头像的本地文件与 OSS 对象（含预览副本）。"""
+    import re
+    from pathlib import Path
+
+    from config import UPLOADS_DIR
+
+    match = re.search(
+        r"/uploads/reader/avatar/([0-9a-f]{16,64}\.(?:webp|png|jpg|jpeg|gif|avif))",
+        str(url or ""),
+    )
+    if not match:
+        return
+    name = match.group(1)
+    try:
+        local = Path(UPLOADS_DIR) / "reader" / "avatar" / name
+        if local.is_file():
+            local.unlink(missing_ok=True)
+        from services import upload
+        upload.delete_remote("/uploads/reader/avatar/" + name)
+    except Exception:
+        pass
+
+
+def submit_avatar(row: dict, url: str) -> tuple[bool, str]:
+    """头像上传后进入待审核队列，不立即对外展示。"""
+    user_id = int(row.get("id") or 0)
+    key = str(row.get("email_hash") or "")
+    if not user_id or not key:
+        return False, "用户不存在"
+    previous = db.one(
+        "SELECT url FROM reader_avatar_reviews WHERE user_id=? AND status='pending' "
+        "ORDER BY id DESC LIMIT 1", (user_id,),
+    )
+    if previous:
+        # 换一张就清掉上一张未审核的，避免队列里堆积图片
+        _remove_avatar_file(str(previous["url"] or ""))
+    db.execute(
+        "UPDATE reader_avatar_reviews SET status='replaced', reviewed_at=? "
+        "WHERE user_id=? AND status='pending'",
+        (db.now(), user_id),
+    )
+    db.insert(
+        "INSERT INTO reader_avatar_reviews "
+        "(user_id, email_hash, email, url, status, created_at) VALUES (?,?,?,?, 'pending', ?)",
+        (user_id, key, str(row.get("email") or ""), str(url or ""), db.now()),
+    )
+    return True, ""
+
+
+def pending_avatar(user_id: int) -> dict | None:
+    row = db.one(
+        "SELECT * FROM reader_avatar_reviews WHERE user_id=? AND status='pending' "
+        "ORDER BY id DESC LIMIT 1", (user_id,),
+    )
+    return dict(row) if row else None
+
+
+def review_avatar(review_id: int, approved: bool, operator: str = "", reason: str = "") -> tuple[bool, str]:
+    """管理员审核头像：通过则真正生效并删除旧头像，拒绝则删除待审图片。"""
+    row = db.one(
+        "SELECT * FROM reader_avatar_reviews WHERE id=? AND status='pending'", (review_id,)
+    )
+    if not row:
+        return False, "审核记录不存在或已处理"
+    if approved:
+        user = db.one("SELECT * FROM reader_users WHERE id=?", (row["user_id"],))
+        if not user:
+            return False, "用户已不存在"
+        ok, err = update_avatar(dict(user), str(row["url"] or ""))
+        if not ok:
+            return False, err
+        db.execute(
+            "UPDATE reader_avatar_reviews SET status='approved', operator=?, reviewed_at=? WHERE id=?",
+            (operator, db.now(), review_id),
+        )
+    else:
+        _remove_avatar_file(str(row["url"] or ""))
+        db.execute(
+            "UPDATE reader_avatar_reviews SET status='rejected', operator=?, reason=?, reviewed_at=? WHERE id=?",
+            (operator, str(reason or "")[:200], db.now(), review_id),
+        )
+    # 审核结果必须反馈到读者通知抽屉，否则用户完全不知道发生了什么
+    from services import comment_notify
+    comment_notify.add_avatar_review(
+        str(row["email_hash"] or ""), approved,
+        "" if approved else (str(reason or "").strip() or "头像内容不符合要求"),
+    )
+    return True, ""
+
+
 def delete_user(user_id: int) -> tuple[bool, str]:
     """删除读者账号（只删 reader_users 一行）。
 
     评论、评论身份、站内通知、审核留存都不动：删除账号是「这个邮箱不能再登录」，
     不是抹掉历史；评论正文与审核轨迹仍能在「留存记录」里追溯，
     这样误删之后也能凭邮箱哈希找回上下文。
+    头像文件不属于历史记录，随账号一起删除，避免注销后永久残留。
     """
-    row = db.one("SELECT id FROM reader_users WHERE id = ?", (user_id,))
+    row = db.one("SELECT avatar_url FROM reader_users WHERE id = ?", (user_id,))
     if not row:
         return False, "账号不存在或已被删除"
+    avatar_url = str(row["avatar_url"] or "")
+    pending = pending_avatar(user_id)
+    if pending:
+        _remove_avatar_file(str(pending["url"] or ""))
+    db.execute(
+        "UPDATE reader_avatar_reviews SET status='replaced', reviewed_at=? "
+        "WHERE user_id=? AND status='pending'",
+        (db.now(), user_id),
+    )
     db.execute("DELETE FROM reader_users WHERE id = ?", (user_id,))
+    _remove_avatar_file(avatar_url)
     return True, ""
+
+
+_AVATAR_LOCKS: dict[str, threading.Lock] = {}
+_AVATAR_LOCK_GUARD = threading.Lock()
+
+
+def _avatar_lock(key: str) -> threading.Lock:
+    """同一用户的换头像操作串行化，避免并发请求各自删旧后留下多余对象。"""
+    with _AVATAR_LOCK_GUARD:
+        return _AVATAR_LOCKS.setdefault(key, threading.Lock())
 
 
 def update_avatar(row: dict, url: str) -> tuple[bool, str]:
@@ -441,8 +555,14 @@ def update_avatar(row: dict, url: str) -> tuple[bool, str]:
         return False, "用户不存在"
     if value and not (value.startswith("/uploads/") or value.startswith("https://") or value.startswith("http://")):
         return False, "头像地址无效"
-    db.execute("UPDATE reader_users SET avatar_url=?, updated_at=? WHERE email_hash=?",
-               (value, db.now(), key))
+    with _avatar_lock(key):
+        # 基于库里的最新值判断，不要用过期的 row（并发时可能已换过头像）
+        fresh = db.scalar("SELECT avatar_url FROM reader_users WHERE email_hash=?", (key,), "")
+        old = str(fresh or "") if fresh is not None else str(row.get("avatar_url") or "")
+        if old and old != value:
+            _remove_avatar_file(old)
+        db.execute("UPDATE reader_users SET avatar_url=?, updated_at=? WHERE email_hash=?",
+                   (value, db.now(), key))
     _log_account_change(row, "avatar", "已更新" if value else "已移除")
     return True, ""
 

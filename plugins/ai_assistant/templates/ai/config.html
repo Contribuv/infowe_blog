@@ -102,6 +102,10 @@
                     <span><strong>新评论自动审核</strong><small>判断广告、辱骂、灌水；低置信度转人工</small></span>
                 </label>
                 <label class="ai-switch">
+                    <input type="checkbox" name="comment_auto_approve" {% if cfg.comment_auto_approve %}checked{% endif %}>
+                    <span><strong>AI 判通过直接公开</strong><small>默认关闭：AI 认为正常的评论也先转人工复核；带图评论无论开关如何都必须人工审核</small></span>
+                </label>
+                <label class="ai-switch">
                     <input type="checkbox" name="user_name_moderation" {% if cfg.user_name_moderation %}checked{% endif %}>
                     <span><strong>注册昵称机审</strong><small>注册 / 改昵称时判断是否违规；违规昵称转人工审核，未通过前无法登录。记录写入「留存记录 → 审核留存」，账号状态在「用户管理」查看；关闭 AI 判断后仍保留本地敏感词兜底</small></span>
                 </label>

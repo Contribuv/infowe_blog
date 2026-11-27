@@ -87,6 +87,9 @@ DEFAULTS: dict = {
     # AI 评论头像：自定义图片 URL；留空用内置卡通机器人默认头像
     "ai_avatar": "",
     "comment_moderation": True,
+    # 评论自动通过：默认关闭。AI 判 approve 也只给建议，仍转人工复核；
+    # 想让 AI 直接放行再打开（带图评论始终转人工，不受此开关影响）。
+    "comment_auto_approve": False,
     # 注册 / 改名昵称机审：判违规的转人工审核（账号禁止登录），并写留存记录
     "user_name_moderation": True,
     "comment_reply": True,

@@ -319,3 +319,27 @@ CREATE TABLE IF NOT EXISTS captcha_tokens (
     created_at TEXT DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_captcha_expiry ON captcha_tokens (expires_at);
+
+-- 读者头像上传次数（按用户 + 自然日），防止循环换头像刷 OSS 请求
+CREATE TABLE IF NOT EXISTS reader_avatar_usage (
+    user_hash TEXT NOT NULL,
+    day TEXT NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_hash, day)
+);
+
+-- 头像内容人工审核：上传先进队列，管理员通过后才会真正展示
+CREATE TABLE IF NOT EXISTS reader_avatar_reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL DEFAULT 0,
+    email_hash TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    operator TEXT NOT NULL DEFAULT '',
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    reviewed_at TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_avatar_reviews_status ON reader_avatar_reviews (status, id DESC);
+CREATE INDEX IF NOT EXISTS idx_avatar_reviews_user ON reader_avatar_reviews (user_id, status);

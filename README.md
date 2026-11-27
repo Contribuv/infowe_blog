@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.86-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.86)
+[![version](https://img.shields.io/badge/version-3.9.87-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.87)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -929,9 +929,20 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.86**
+当前版本：**v3.9.87**
 
-> 最近一次更新完整展开；更早的 185 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 186 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.87
+
+- **读者头像人工审核**：上传头像不再立即生效，先进入待审核队列；管理员在「用户管理」查看大图后通过或拒绝，结果通过站内通知反馈给读者。换头像会自动清理上一张未审图，账号注销也会清理
+- **防存储滥用**：头像上传每日 10 次 + IP 每分钟 3 次限流；孤儿清理恢复 24 小时保护；换头像同步删除 OSS 旧对象（含预览副本），不再无限累积
+- **注销安全**：前台「管理账号」新增注销入口，必须邮箱验证码校验通过才能销号；全程浮窗内提示，不使用浏览器原生弹窗
+- **评论审核加严**：新增「AI 判通过直接公开」开关，默认关闭 —— AI 认为正常的评论也先转人工复核；带图评论始终转人工
+- **后台体验**：头像审核卡片支持点击大图预览（复用评论图片弹窗样式）、移动端整行自适应、深浅主题适配；孤儿页新增「重新扫描」按钮；README 徽标不再懒加载，与正文一起显示
+
+<details>
+<summary><b>历史版本（v3.9.86 及更早，共 186 个版本，点击展开）</b></summary>
 
 ### v3.9.86
 

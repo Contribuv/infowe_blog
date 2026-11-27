@@ -188,7 +188,7 @@ def register(app) -> None:
                     data[key] = float(request.form.get(key)) if key == "temperature" else int(request.form.get(key))
                 except (TypeError, ValueError):
                     pass
-        for key in ("comment_moderation", "user_name_moderation", "comment_reply", "comment_reply_notify",
+        for key in ("comment_moderation", "comment_auto_approve", "user_name_moderation", "comment_reply", "comment_reply_notify",
                     "link_moderation", "link_ai_audit", "link_auto_approve", "link_recheck_enabled",
                     "auto_execute"):
             data[key] = str(request.form.get(key, "")).lower() in {"1", "on", "true", "yes"}

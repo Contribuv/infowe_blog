@@ -1184,10 +1184,12 @@ def orphans(protect_hours: int = 24) -> list[dict]:
         parts = rel.split("/")
         if not parts or parts[0].startswith("."):
             continue
-        # 跳过保留目录（头像 / AI 头像 / 用户头像 / 项目文件 / 派生预览）与隐藏目录。
-        # 不再要求至少两级路径：uploads 根下直接放置的文件同样可能是孤儿，
-        # 之前 len(parts) < 2 的过滤会让它们永远不显示、也永远清理不到。
-        if parts[0] in {"avatar", "ai-avatar", "projects", "reader", "previews"}:
+        # 跳过保留目录（头像 / AI 头像 / 项目文件 / 派生预览）与隐藏目录。
+        # reader/ 下只把 reader/avatar/ 放开给孤儿清理（历史换头像残留），
+        # 其它读者内容仍由各自入口管理。引用检查在下面照常进行。
+        if parts[0] in {"avatar", "ai-avatar", "projects", "previews"}:
+            continue
+        if parts[0] == "reader" and (len(parts) < 2 or parts[1] != "avatar"):
             continue
         url = "/uploads/" + rel
         if url in referenced:
@@ -1214,7 +1216,14 @@ def orphans(protect_hours: int = 24) -> list[dict]:
 def delete_rel(rel: str) -> str:
     rel = unquote(str(rel or "")).replace("\\", "/").lstrip("/")
     parts = rel.split("/")
-    if not rel or ".." in parts or parts[0].startswith(".") or parts[0] in {"avatar", "ai-avatar", "projects", "reader", "previews"}:
+    if not rel or ".." in parts or parts[0].startswith("."):
+        return "非法路径"
+    # reader/avatar/ 的历史残留允许按普通孤儿删除（引用已在清理入口处校验）；
+    # 其它 reader/ 内容仍受保护。
+    if parts[0] == "reader":
+        if len(parts) < 2 or parts[1] != "avatar":
+            return "非法路径"
+    elif parts[0] in {"avatar", "ai-avatar", "projects", "previews"}:
         return "非法路径"
     path = root() / rel
     existed = path.is_file()

@@ -140,10 +140,15 @@
       if (type === 'pending' && pendingIds[cid]) return;
       unread += 1;
       var tag = type === 'approved' ? '已通过'
-        : type === 'pending' ? '待审核'
-          : type === 'new' ? '新评论' : '回复';
+        : type === 'avatar_approved' ? '头像已通过'
+          : type === 'avatar_rejected' ? '头像未通过'
+            : type === 'pending' ? '待审核'
+              : type === 'new' ? '新评论' : '回复';
       var desc;
       if (type === 'approved') desc = '你的评论「' + esc(it.excerpt) + '」已通过审核';
+      else if (type === 'avatar_approved') desc = '你的新头像已通过审核，现已生效';
+      else if (type === 'avatar_rejected') desc = '你的新头像未通过审核'
+        + (it.excerpt ? '：' + esc(it.excerpt) : '') + '，当前头像保持不变';
       else if (type === 'pending') desc = esc(it.from_author) + '：「' + esc(it.excerpt) + '」待审核';
       else if (type === 'new') desc = esc(it.from_author) + ' 发表了新评论：' + esc(it.excerpt);
       else desc = esc(it.from_author) + ' 回复了你：' + esc(it.excerpt);

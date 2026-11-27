@@ -56,6 +56,18 @@ def add_approved(comment: dict) -> int:
     )
 
 
+def add_avatar_review(email_hash: str, approved: bool, reason: str = "") -> int:
+    """头像人工审核结果写进读者站内通知（通知抽屉可见）。"""
+    if not email_hash:
+        return 0
+    return db.insert(
+        "INSERT INTO comment_notifications "
+        "(email_hash, type, excerpt, created_at) VALUES (?,?,?,?)",
+        (email_hash, "avatar_approved" if approved else "avatar_rejected",
+         _plain(str(reason or ""), 120), db.now()),
+    )
+
+
 def add_reply_for_comment(comment: dict) -> int:
     """按评论记录给被回复者写站内通知，条件不满足则跳过。
 

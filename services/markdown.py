@@ -425,7 +425,13 @@ def toc_from_html(html: str) -> str:
 def _optimize_images(html: str) -> str:
     def repl(match: re.Match) -> str:
         tag = match.group(0)
-        if "loading=" not in tag:
+        # 徽标是小 SVG，懒加载会让它们等页面渲染完才慢慢浮现；
+        # 让徽标和正文一起加载，打开页面即可见。
+        is_badge = any(
+            host in tag.lower()
+            for host in ("img.shields.io", "shields.io", "badgen.net", "img.badgesize.io")
+        )
+        if "loading=" not in tag and not is_badge:
             tag = tag.replace("<img", '<img loading="lazy"', 1)
         if "decoding=" not in tag:
             tag = tag.replace("<img", '<img decoding="async"', 1)

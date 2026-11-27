@@ -734,6 +734,56 @@ def reader_logout():
     return response
 
 
+def reader_delete_code():
+    """注销前先向本人邮箱发送验证码，不能只点一下就销号。"""
+    from services import mail_template, notify, reader_account, settings
+
+    row = _require_reader()
+    if not row:
+        return jsonify({"error": "请先登录"}), 401
+    email = str(row.get("email") or "").strip()
+    code, error = reader_account.issue_code(
+        email, comments_service.request_ip(), reader_account.DELETE_PURPOSE
+    )
+    if error:
+        return jsonify({"error": error}), 400
+    blog = settings.get_str("blog_name", "博客").strip() or "博客"
+    text, page = mail_template.delete_account_code_notice(
+        blog_name=blog, site=site_url.base(), code=code,
+        ttl_minutes=reader_account.CODE_TTL // 60,
+    )
+    ok, msg = notify.send(email, f"[{blog}] 注销账号验证码", text, page)
+    if not ok:
+        return jsonify({"error": msg or "验证码发送失败"}), 500
+    return jsonify({"ok": True})
+
+
+def reader_delete_account():
+    """读者自助注销：邮箱验证码校验通过后删账号与头像，评论/审核留存保留。"""
+    from services import reader_account
+
+    row = _require_reader()
+    if not row:
+        return jsonify({"error": "请先登录"}), 401
+    data = request.get_json(silent=True) or {}
+    code = str(data.get("code") or request.form.get("code") or "").strip()
+    if not code:
+        return jsonify({"error": "请输入邮箱验证码"}), 400
+    error = reader_account.verify_code(
+        str(row.get("email") or ""), code, reader_account.DELETE_PURPOSE
+    )
+    if error:
+        return jsonify({"error": error}), 400
+    ok, error = reader_account.delete_user(int(row["id"]))
+    if not ok:
+        return jsonify({"error": error or "注销失败"}), 400
+    response = jsonify({"ok": True})
+    response.delete_cookie(reader_account.COOKIE_NAME, path="/")
+    response.delete_cookie("blog_commenter", path="/")
+    session.clear()
+    return response
+
+
 def clear_identity():
     """清除前台全部身份 Cookie（GET，便于浏览器直接访问清理）：
     blog_reader_session（注册登录）+ blog_commenter（昵称+邮箱访客）+ Flask session。
@@ -855,11 +905,35 @@ def reader_update_email():
 
 
 def reader_avatar_upload():
-    from services import reader_account, upload
+    from datetime import datetime
+
+    import db
+    from services import reader_account, upload, ratelimit
 
     row = _require_reader()
     if not row:
         return jsonify({"error": "请先登录"}), 401
+    # 防滥用：IP 短窗口 + 用户每日次数。头像虽会自动删旧对象，
+    # 但循环调用仍会产生大量 S3 请求与带宽消耗。
+    key = str(row.get("email_hash") or "")
+    ip = comments_service.request_ip()
+    if not ratelimit.allow("avatar_ip", ip, 60, 3):
+        return jsonify({"error": "上传过于频繁，请稍后再试"}), 429
+    day = datetime.now().strftime("%Y-%m-%d")
+    used = int(
+        db.scalar(
+            "SELECT count FROM reader_avatar_usage WHERE user_hash=? AND day=?",
+            (key, day), 0,
+        ) or 0
+    )
+    if used >= 10:
+        return jsonify({"error": "今日头像更换次数已用完（10 次），请明天再试"}), 429
+    db.execute(
+        "INSERT INTO reader_avatar_usage (user_hash, day, count) VALUES (?,?,1) "
+        "ON CONFLICT(user_hash, day) DO UPDATE SET count=count+1",
+        (key, day),
+    )
+    ratelimit.touch("avatar_ip", ip)
     file = request.files.get("avatar")
     if not file or not file.filename:
         return jsonify({"error": "请选择图片"}), 400
@@ -872,11 +946,15 @@ def reader_avatar_upload():
     )
     if error:
         return jsonify({"error": error}), 400
-    ok, error = reader_account.update_avatar(row, url)
+    ok, error = reader_account.submit_avatar(row, url)
     if not ok:
         return jsonify({"error": error}), 400
-    # 数据库存规范路径；返回给前端的预览地址按当前存储策略走 OSS（不可用时回退本地）
-    return jsonify({"ok": True, "avatar": upload.remote_url(url) or url})
+    # 头像先进人工审核队列，不立即生效；返回当前已生效的地址（可能为空）
+    return jsonify({
+        "ok": True,
+        "avatar": str(row.get("avatar_url") or ""),
+        "pending": True,
+    })
 
 
 # ── 站内通知：双身份（登录读者 Cookie / 评论 Cookie） ──
@@ -1435,6 +1513,14 @@ def project_detail(project_id: int):
     gh["age_text"] = _age_text(float(gh.get("ts") or 0))
     # README 缓存里写死的是 /uploads/...，启用对象存储后在这里补一次转换
     gh["readme"] = github.resolve_readme_urls(str(gh.get("readme") or ""))
+    # 徽标必须和正文一起出现。旧缓存里可能还带 loading="lazy"，
+    # 导致整页都渲染完了徽标才慢悠悠加载；输出时统一去掉（只针对徽标，不影响大图）。
+    import re
+    badge_hosts = ("shields.io", "badgen.net", "badgesize.io")
+    def _strip_badge_lazy(match):
+        tag = match.group(0)
+        return tag.replace(' loading="lazy"', '') if any(h in tag for h in badge_hosts) else tag
+    gh["readme"] = re.sub(r'<img\b[^>]*>', _strip_badge_lazy, gh["readme"], flags=re.I)
     toc = markdown.toc_from_html(str(gh.get("readme") or ""))
 
     return render_template(
@@ -1614,6 +1700,8 @@ def register(app) -> None:
         ("/api/reader/register", "reader_register", reader_register, ["POST"]),
         ("/api/reader/login", "reader_login", reader_login, ["POST"]),
         ("/api/reader/logout", "reader_logout", reader_logout, ["POST"]),
+        ("/api/reader/delete", "reader_delete_account", reader_delete_account, ["POST"]),
+        ("/api/reader/delete-code", "reader_delete_code", reader_delete_code, ["POST"]),
         ("/api/reader/me", "reader_me", reader_me, ["GET"]),
         ("/api/identity", "identity_state", identity_state, ["GET"]),
         ("/api/reader/clear-identity", "clear_identity", clear_identity, ["GET"]),

@@ -400,6 +400,17 @@
                     <button type="button" class="cmt-idbtn" id="cmt-account-pwd-save">修改密码</button>
                 </div>
             </div>
+            <div class="cmt-account-section cmt-account-danger">
+                <label>注销账号</label>
+                <p class="cmt-idtip">注销后账号与头像会被删除，已发布的评论会保留。需通过邮箱验证码确认。</p>
+                <div class="cmt-idrow">
+                    <input type="text" id="cmt-account-delete-code" inputmode="numeric" maxlength="6" placeholder="邮箱验证码">
+                </div>
+                <div class="cmt-idrow cmt-idrow--end">
+                    <button type="button" class="cmt-idbtn" id="cmt-account-delete-code-btn">发送验证码</button>
+                    <button type="button" class="cmt-idbtn cmt-idbtn--danger" id="cmt-account-delete">确认注销</button>
+                </div>
+            </div>
             <p class="cmt-idtip" id="cmt-account-tip" aria-live="polite"></p>
         </div>
     </div>
