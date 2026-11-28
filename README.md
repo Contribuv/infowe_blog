@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.89-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.89)
+[![version](https://img.shields.io/badge/version-3.9.90-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.90)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -929,9 +929,13 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.89**
+当前版本：**v3.9.90**
 
-> 最近一次更新完整展开；更早的 188 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 189 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.90
+
+- **登录态性能**：排查并修复登录后页面加载缓慢 —— 插件配置改为请求级缓存，单请求中数千次重复读取同一条 OSS 配置降为一次，登录态响应从约 145ms 降至约 95ms；保存配置时同步失效，即时生效不受影响
 
 ### v3.9.89
 
@@ -945,7 +949,7 @@ chown -R www:www var
 - **移动端回归**：390 / 768 / 1044 / 1280 四档实测，管理页无横向溢出、表格字段标签完整、页头按钮不越界
 
 <details>
-<summary><b>历史版本（v3.9.88 及更早，共 188 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.89 及更早，共 189 个版本，点击展开）</b></summary>
 
 ### v3.9.87
 

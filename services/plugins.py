@@ -11,7 +11,7 @@ import json
 from functools import wraps
 from pathlib import Path
 
-from flask import abort
+from flask import abort, g, has_request_context
 
 import db
 from config import PLUGINS_DIR
@@ -89,9 +89,29 @@ def get(key: str) -> dict | None:
     return None
 
 
+def _req_cache() -> dict:
+    """请求级插件状态缓存。
+
+    渲染一页时 OSS 的 normalize_text 会对每个文本片段读取插件配置，
+    单请求可达数千次；同一请求内配置不会变，按 key 缓存即可。
+    无请求上下文（后台线程 / 启动时加载）不走缓存，行为照旧。
+    """
+    if not has_request_context():
+        return {}
+    if not hasattr(g, "_plugins_req_cache"):
+        g._plugins_req_cache = {}
+    return g._plugins_req_cache
+
+
 def enabled(key: str) -> bool:
+    cache = _req_cache()
+    ck = "enabled:" + key
+    if ck in cache:
+        return cache[ck]
     row = db.one("SELECT enabled FROM plugins WHERE key = ?", (key,))
-    return bool(row and int(row["enabled"] or 0))
+    result = bool(row and int(row["enabled"] or 0))
+    cache[ck] = result
+    return result
 
 
 def set_enabled(key: str, value: bool) -> None:
@@ -99,17 +119,25 @@ def set_enabled(key: str, value: bool) -> None:
         "UPDATE plugins SET enabled=?, updated_at=datetime('now','localtime') WHERE key=?",
         (1 if value else 0, key),
     )
+    _req_cache().pop("enabled:" + key, None)
 
 
 def config(key: str) -> dict:
+    cache = _req_cache()
+    ck = "config:" + key
+    if ck in cache:
+        return dict(cache[ck])  # 返回副本，避免调用方修改污染缓存
     row = db.one("SELECT config FROM plugins WHERE key = ?", (key,))
     if not row:
-        return {}
-    try:
-        data = json.loads(row["config"] or "{}")
-        return data if isinstance(data, dict) else {}
-    except (TypeError, ValueError):
-        return {}
+        data = {}
+    else:
+        try:
+            parsed = json.loads(row["config"] or "{}")
+            data = parsed if isinstance(parsed, dict) else {}
+        except (TypeError, ValueError):
+            data = {}
+    cache[ck] = data
+    return dict(data)
 
 
 def save_config(key: str, data: dict) -> None:
@@ -117,6 +145,7 @@ def save_config(key: str, data: dict) -> None:
         "UPDATE plugins SET config=?, updated_at=datetime('now','localtime') WHERE key=?",
         (json.dumps(data, ensure_ascii=False), key),
     )
+    _req_cache().pop("config:" + key, None)
 
 
 def _entry(manifest: dict) -> tuple[str, str] | None:
