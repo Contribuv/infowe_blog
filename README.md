@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.88-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.88)
+[![version](https://img.shields.io/badge/version-3.9.89-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.89)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -929,9 +929,13 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.88**
+当前版本：**v3.9.89**
 
-> 最近一次更新完整展开；更早的 187 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 188 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.89
+
+- **评论说明弹窗修复**：修复评论管理页「详情」按钮点击无反应 —— 补上按钮与弹窗的交互绑定，点击后正确显示身份 / AI 审核 / 人工审核的完整说明，支持 × / Esc / 点遮罩关闭，移动端同步适配
 
 ### v3.9.88
 
@@ -941,7 +945,7 @@ chown -R www:www var
 - **移动端回归**：390 / 768 / 1044 / 1280 四档实测，管理页无横向溢出、表格字段标签完整、页头按钮不越界
 
 <details>
-<summary><b>历史版本（v3.9.87 及更早，共 187 个版本，点击展开）</b></summary>
+<summary><b>历史版本（v3.9.88 及更早，共 188 个版本，点击展开）</b></summary>
 
 ### v3.9.87
 

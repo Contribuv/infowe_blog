@@ -191,4 +191,36 @@
 {% endblock %}
 
 {% block admin_scripts %}
+<script>
+(function () {
+    var dialog = document.getElementById('commentDetailDialog');
+    var body = document.getElementById('commentDetailBody');
+    var title = document.getElementById('commentDetailTitle');
+    if (!dialog || !body || !title) return;
+
+    function open(btn) {
+        title.textContent = btn.getAttribute('data-detail-title') || '说明';
+        var textEl = btn.querySelector('.cell-sub-text');
+        body.textContent = textEl ? textEl.textContent : btn.textContent.trim();
+        if (dialog.open) return;   // 已打开时只更新内容，避免重复 showModal 抛错
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', ''); // 老浏览器兜底
+    }
+    function close() {
+        if (typeof dialog.close === 'function') dialog.close();
+        else dialog.removeAttribute('open');
+    }
+
+    document.querySelectorAll('.cell-sub-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { open(btn); });
+    });
+
+    var closeBtn = dialog.querySelector('[data-detail-close]');
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    // 点遮罩关闭；Esc 由 <dialog>.showModal() 原生支持
+    dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) close();
+    });
+})();
+</script>
 {% endblock %}
