@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import threading
 import time
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -121,6 +123,127 @@ _README_PLACEHOLDER = (
     b'text-anchor="middle">image unavailable</text></svg>'
 )
 
+# 过期图片后台刷新（stale-while-revalidate）：
+# 磁盘里已有旧副本时先返回旧图，再起线程回源，访客不再为上游的 3~10 秒买单。
+# 同一 key 同时只刷一次，并限制总并发，防止上游抽风时线程暴涨。
+_REFRESHING: set[str] = set()
+_REFRESH_LOCK = threading.Lock()
+_REFRESH_MAX = 8
+
+
+def _fetch_readme_image(
+    raw: str, cache_dir: Path, key: str, suffix: str, timeout: float
+) -> Path | None:
+    """回源并落盘，返回实际缓存文件；失败返回 None。同步与后台线程共用。"""
+    try:
+        resp = requests.get(raw, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+        final_host = urlparse(resp.url or "").hostname
+        if final_host not in _ALLOWED_README_HOSTS:
+            # 防止白名单域名 302 到内网/任意地址
+            raise requests.RequestException("redirect host not allowed")
+        if not (resp.status_code == 200 and resp.content and len(resp.content) <= 8 * 1024 * 1024):
+            return None
+        ctype = (resp.headers.get("Content-Type") or "").lower()
+        if not suffix:
+            if "svg" in ctype:
+                suffix = ".svg"
+            elif "png" in ctype:
+                suffix = ".png"
+            elif "gif" in ctype:
+                suffix = ".gif"
+            elif "webp" in ctype:
+                suffix = ".webp"
+            elif "jpeg" in ctype or "jpg" in ctype:
+                suffix = ".jpg"
+        path = cache_dir / (key + suffix)
+        # 原子替换：后台刷新与 send_file 并发时，绝不能读到写了一半的文件。
+        # Windows 下目标被读句柄占用会失败（Linux rename 不受影响），
+        # 短暂重试几次；仍失败就保留旧图，等下一轮再刷。
+        tmp = path.with_name(path.name + ".tmp")
+        try:
+            tmp.write_bytes(resp.content)
+            for attempt in range(3):
+                try:
+                    os.replace(tmp, path)
+                    break
+                except OSError:
+                    if attempt == 2:
+                        tmp.unlink(missing_ok=True)
+                        return None
+                    time.sleep(0.2)
+        except OSError:
+            tmp.unlink(missing_ok=True)
+            return None
+        # 同一 key 可能留下不同后缀的旧文件（上游 Content-Type 变化），
+        # 刷新成功后清掉，避免下次选中陈旧候选
+        for stale in cache_dir.glob(key + ".*"):
+            if stale != path:
+                try:
+                    stale.unlink()
+                except OSError:
+                    continue
+        cachefs.cap(cache_dir, 3000)
+        return path
+    except (requests.RequestException, OSError):
+        return None
+
+
+def _refresh_readme_image_async(
+    raw: str, cache_dir: Path, key: str, suffix: str, timeout: float
+) -> None:
+    with _REFRESH_LOCK:
+        if key in _REFRESHING or len(_REFRESHING) >= _REFRESH_MAX:
+            return
+        _REFRESHING.add(key)
+
+    def run():
+        try:
+            _fetch_readme_image(raw, cache_dir, key, suffix, timeout)
+        finally:
+            with _REFRESH_LOCK:
+                _REFRESHING.discard(key)
+
+    threading.Thread(target=run, daemon=True, name="readme-image-refresh").start()
+
+
+def warm_readme_images_from_html(html: str) -> None:
+    """页面渲染时顺手预热 README 图片缓存。
+
+    页面 HTML 本身有 10 分钟缓存，但图片是独立子请求。页面刚生成（或刚
+    过期）时图片缓存往往也是冷的，这里在后台先抓一遍，等浏览器发出 img
+    请求时通常已经落盘，首访不必再为上游的几秒买单。
+    """
+    if not html or "/readme-img?" not in html:
+        return
+    import re
+
+    cache_dir = Path(CACHE_DIR) / "readme_images"
+    seen: set[str] = set()
+    for match in re.finditer(r'/readme-img\?url=([^"\']+)', html):
+        raw = unquote(match.group(1))
+        if not raw or raw in seen:
+            continue
+        seen.add(raw)
+        parsed = urlparse(raw)
+        if parsed.scheme not in {"http", "https"} or parsed.hostname not in _ALLOWED_README_HOSTS:
+            continue
+        is_badge = parsed.hostname in _BADGE_README_HOSTS
+        ttl = _BADGE_CACHE_TTL if is_badge else 86400
+        key = hashlib.sha1(raw.encode()).hexdigest()
+        suffix = Path(parsed.path).suffix.lower()
+        if suffix not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif"}:
+            suffix = ""
+        fresh = False
+        try:
+            mtimes = [p.stat().st_mtime for p in cache_dir.glob(key + ".*")]
+            if mtimes:
+                fresh = (time.time() - max(mtimes)) < ttl
+        except OSError:
+            fresh = False
+        if fresh:
+            continue
+        _refresh_readme_image_async(raw, cache_dir, key, suffix, 6 if is_badge else 10)
+
 
 def readme_image():
     raw = request.args.get("url", "").strip()
@@ -146,15 +269,18 @@ def readme_image():
     if suffix not in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".avif"}:
         suffix = ""
 
-    import hashlib
-
     key = hashlib.sha1(raw.encode()).hexdigest()
     # glob 顺序不确定；按 mtime 取最新的，避免多后缀残留时选中陈旧文件
+    # （.tmp 是原子替换的中间文件，绝不能当成候选）
     candidates = sorted(
-        cache_dir.glob(key + ".*"), key=lambda p: p.stat().st_mtime, reverse=True
+        (p for p in cache_dir.glob(key + ".*") if not p.name.endswith(".tmp")),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
     )
     is_badge = parsed.hostname in _BADGE_README_HOSTS
     ttl = _BADGE_CACHE_TTL if is_badge else 86400
+    # 徽标必须快：上游偶尔要 10 秒，超时就当失败，别把访客挂住
+    timeout = 6 if is_badge else 10
     fresh = False
     if candidates:
         try:
@@ -162,37 +288,14 @@ def readme_image():
         except OSError:
             fresh = False
     if not fresh:
-        try:
-            resp = requests.get(raw, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
-            final_host = urlparse(resp.url or "").hostname
-            if final_host not in _ALLOWED_README_HOSTS:
-                # 防止白名单域名 302 到内网/任意地址
-                raise requests.RequestException("redirect host not allowed")
-            if resp.status_code == 200 and resp.content and len(resp.content) <= 8 * 1024 * 1024:
-                ctype = (resp.headers.get("Content-Type") or "").lower()
-                if not suffix:
-                    if "svg" in ctype:
-                        suffix = ".svg"
-                    elif "png" in ctype:
-                        suffix = ".png"
-                    elif "gif" in ctype:
-                        suffix = ".gif"
-                    elif "webp" in ctype:
-                        suffix = ".webp"
-                    elif "jpeg" in ctype or "jpg" in ctype:
-                        suffix = ".jpg"
-                path = cache_dir / (key + suffix)
-                path.write_bytes(resp.content)
-                # 同一 key 可能留下不同后缀的旧文件（上游 Content-Type 变化），
-                # 刷新成功后清掉，避免下次选中陈旧候选
-                for stale in cache_dir.glob(key + ".*"):
-                    if stale != path:
-                        stale.unlink(missing_ok=True)
-                cachefs.cap(cache_dir, 3000)
-                candidates = [path]
-        except requests.RequestException:
-            # 回源失败时保留旧缓存，比直接给占位图好
-            pass
+        if candidates:
+            # 有旧图就先给旧图，后台再刷新：访客不再等上游
+            _refresh_readme_image_async(raw, cache_dir, key, suffix, timeout)
+        else:
+            # 完全没缓存（首次访问）只能同步回源；失败则给占位图
+            stored = _fetch_readme_image(raw, cache_dir, key, suffix, timeout)
+            if stored is not None:
+                candidates = [stored]
     if not candidates:
         return Response(_README_PLACEHOLDER, mimetype="image/svg+xml", status=200)
 

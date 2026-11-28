@@ -172,9 +172,46 @@ def create_app(test_config: dict | None = None) -> Flask:
     if not app.config.get("TESTING"):
         _start_status_scheduler(app)
         _start_orphan_scheduler(app)
+        _start_readme_warm_scheduler(app)
         from services import feeds as feeds_service
         feeds_service.start_scheduler(app)
     return app
+
+
+def _start_readme_warm_scheduler(app: Flask) -> None:
+    """定期预热 README 徽标缓存。
+
+    徽标是独立图片子请求，上游 shields 偶尔要 3~5 秒；页面 HTML 有 10 分钟
+    缓存，但图片 TTL 只有 5 分钟，过期后第一批访客仍要干等。这里在 TTL
+    到期前提前刷新，让访问几乎总是命中本地文件。
+    """
+    import threading
+    import time
+
+    def loop():
+        # 启动后先让位给初始化，再开始预热
+        time.sleep(20)
+        while True:
+            try:
+                with app.app_context():
+                    from models import Project
+                    from routes import assets
+                    from services import github
+
+                    for project in Project.load():
+                        repo = (project.get("github_repo") or "").strip() or (
+                            github.parse_repo(project.get("url", "")) or ""
+                        )
+                        if not repo:
+                            continue
+                        snap = github.snapshot(repo)
+                        if snap and snap.get("readme"):
+                            assets.warm_readme_images_from_html(str(snap["readme"]))
+            except Exception:  # noqa: BLE001
+                app.logger.exception("readme warm scheduler failed")
+            time.sleep(240)
+
+    threading.Thread(target=loop, daemon=True, name="readme-warm").start()
 
 
 def _register_hooks(app: Flask) -> None:

@@ -1521,6 +1521,14 @@ def project_detail(project_id: int):
         tag = match.group(0)
         return tag.replace(' loading="lazy"', '') if any(h in tag for h in badge_hosts) else tag
     gh["readme"] = re.sub(r'<img\b[^>]*>', _strip_badge_lazy, gh["readme"], flags=re.I)
+    # 页面刚生成时图片缓存可能还是冷的：后台先抓一遍，浏览器发 img 请求时
+    # 通常已经落盘。失败不影响页面（/readme-img 自己还会兜底）。
+    try:
+        from routes import assets as assets_routes
+
+        assets_routes.warm_readme_images_from_html(str(gh.get("readme") or ""))
+    except Exception:  # noqa: BLE001
+        pass
     toc = markdown.toc_from_html(str(gh.get("readme") or ""))
 
     return render_template(
