@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.90-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.90)
+[![version](https://img.shields.io/badge/version-3.9.91-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.91)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -929,9 +929,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.90**
+当前版本：**v3.9.91**
 
-> 最近一次更新完整展开；更早的 189 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 190 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.91
+
+- **README 徽标加载提速**：项目详情页的 shields 徽标原来缓存 5 分钟一过期，第一批访客要同步等上游回源（实测单个 3 秒、5 个累计 16 秒）。现在过期也先返回旧图，后台线程再刷新（stale-while-revalidate），单个响应降到 0.1 秒内
+- **两级预热**：页面渲染时顺手在后台抓取该 README 的徽标；另有每 4 分钟的定时预热，比 5 分钟 TTL 更早刷新，缓存不再变冷，服务器重启后的首批访问也直接命中
+- **防半截文件**：后台刷新改为写临时文件 + 原子替换，避免与 `send_file` 并发时读到写了一半的图片；Windows 下目标被占用会短暂重试，失败则保留旧图等下一轮
+- **超时收紧**：徽标回源超时从 10 秒降到 6 秒，上游卡住时尽快给出结果，不把访客挂住
+
+<details>
+<summary><b>历史版本（v3.9.90 及更早，共 190 个版本，点击展开）</b></summary>
 
 ### v3.9.90
 
@@ -947,9 +957,6 @@ chown -R www:www var
 - **脚本归位**：批量全选 / 半选 / 计数 / 危险确认合并进 `admin.js`，7 个列表页删除内联脚本；分段 Tab 改为通用绑定，不再硬编码页面 ID
 - **样式归位**：头像审核、孤儿清理、主题配置等内联样式迁入 `admin.css`；断点统一为 4 档并写明约定，表格卡片化后去掉横向滚动
 - **移动端回归**：390 / 768 / 1044 / 1280 四档实测，管理页无横向溢出、表格字段标签完整、页头按钮不越界
-
-<details>
-<summary><b>历史版本（v3.9.89 及更早，共 189 个版本，点击展开）</b></summary>
 
 ### v3.9.87
 
