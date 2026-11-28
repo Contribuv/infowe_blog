@@ -1,20 +1,18 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}回收站{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('trash-2', 20) | safe }} 回收站 <span class="badge">{{ trash_count }}</span></h2>
-    <div class="page-actions">
-        {% if posts %}
-        <form method="POST" action="{{ url_for('admin_posts_empty_trash') }}" class="inline-form"
-              onsubmit="return confirm('确定清空回收站？这将彻底删除全部 {{ trash_count }} 篇文章及其未被引用的上传文件，不可恢复！')">
-            <button type="submit" class="btn btn-danger btn-sm">清空回收站</button>
-        </form>
-        {% endif %}
-        <a href="{{ url_for('admin_posts') }}" class="btn btn-secondary btn-sm">{{ icon('arrow-left', 14, 'icon-sm') | safe }} 返回文章列表</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header("回收站", "trash-2", trash_count) %}
+    {% if posts %}
+    <form method="POST" action="{{ url_for('admin_posts_empty_trash') }}" class="inline-form"
+          onsubmit="return confirm('确定清空回收站？这将彻底删除全部 {{ trash_count }} 篇文章及其未被引用的上传文件，不可恢复！')">
+        <button type="submit" class="btn btn-danger btn-sm">清空回收站</button>
+    </form>
+    {% endif %}
+    <a href="{{ url_for('admin_posts') }}" class="btn btn-secondary btn-sm">{{ icon('arrow-left', 14, 'icon-sm') | safe }} 返回文章列表</a>
+{% endcall %}
 
-<p class="text-muted" style="margin-bottom:14px;">这里的文章已从前台和后台列表移除，但内容仍在库中。点「恢复」可撤销删除，点「彻底删除」才会真正抹掉（不可恢复）。</p>
+<p class="text-muted">这里的文章已从前台和后台列表移除，但内容仍在库中。点「恢复」可撤销删除，点「彻底删除」才会真正抹掉（不可恢复）。</p>
 
 <div class="card">
     <form method="POST" action="{{ url_for('admin_posts_trash_bulk') }}" id="bulkTrash">
@@ -25,7 +23,7 @@
             </label>
             <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
             <button type="submit" class="btn btn-sm btn-success" data-action="restore">批量恢复</button>
-            <button type="submit" class="btn btn-sm btn-danger" data-action="purge">批量彻底删除</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="purge" data-confirm="确定彻底删除选中的 {n} 篇文章？此操作不可恢复！">批量彻底删除</button>
         </div>
         <div class="table-wrap">
         <table class="table">
@@ -79,42 +77,4 @@
 {% endblock %}
 
 {% block admin_scripts %}
-<script>
-(function () {
-    'use strict';
-    var form = document.getElementById('bulkTrash');
-    if (!form) return;
-    var checkAll = document.getElementById('checkAll');
-    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
-    var count = document.getElementById('bulkCount');
-
-    function update() {
-        var n = document.querySelectorAll('.row-check:checked').length;
-        count.textContent = n;
-        if (checkAll) {
-            checkAll.checked = boxes.length > 0 && n === boxes.length;
-            checkAll.indeterminate = n > 0 && n < boxes.length;
-        }
-    }
-    if (checkAll) {
-        checkAll.addEventListener('change', function () {
-            boxes.forEach(function (b) { b.checked = checkAll.checked; });
-            update();
-        });
-    }
-    boxes.forEach(function (b) { b.addEventListener('change', update); });
-
-    form.addEventListener('submit', function (e) {
-        var btn = e.submitter;
-        var action = btn && btn.getAttribute('data-action');
-        if (!action) return;
-        var n = document.querySelectorAll('.row-check:checked').length;
-        if (!n) { e.preventDefault(); alert('请先勾选要操作的文章'); return; }
-        if (action === 'purge' && !confirm('确定彻底删除选中的 ' + n + ' 篇文章？此操作不可恢复！')) { e.preventDefault(); return; }
-        document.getElementById('bulkAction').value = action;
-    });
-
-    update();
-})();
-</script>
 {% endblock %}

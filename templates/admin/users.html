@@ -1,38 +1,8 @@
-﻿{% extends "admin/base.html" %}
+{% extends "admin/base.html" %}
 {% block admin_title %}用户管理{% endblock %}
 {% block admin_content %}
-<style>
-/* 头像审核块：卡片顶部标明属于哪个用户，内容左对齐；
-   移动端覆盖表格 td 的 space-between/右对齐，避免被拆散成居中的碎片。 */
-.avatar-review { width:100%; box-sizing:border-box; margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:var(--r-sm); background:var(--bg-surface-2); }
-.avatar-review-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:2px 12px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
-.avatar-review-title { color:var(--text); font-size:var(--fz-md); }
-.avatar-review-mail { font-size:var(--fz-xs); color:var(--text-tertiary); }
-.avatar-review-body { display:flex; align-items:center; gap:12px; text-align:left; }
-.avatar-review-body img { width:56px; height:56px; flex:none; border-radius:50%; object-fit:cover; border:1px solid var(--border-strong); cursor:zoom-in; }
-.avatar-review-meta { display:flex; flex-direction:column; gap:2px; min-width:0; text-align:left; }
-.avatar-review-label { font-size:var(--fz-xs); color:var(--text-tertiary); }
-.avatar-review-value { color:var(--text-secondary); overflow-wrap:anywhere; word-break:break-word; }
-.avatar-review-hint { font-size:var(--fz-xs); color:var(--text-tertiary); }
-.avatar-review-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-/* 独立审核行：PC 紧贴上方用户行；移动端卡片化后左对齐、去掉 data-label */
-.avatar-review-row td { padding-top:0; }
-@media (max-width:768px) {
-  .avatar-review-row { padding-top:0; border-top:0; }
-  .avatar-review-row td { display:block !important; width:100% !important; justify-content:flex-start !important; text-align:left !important; padding:0 0 4px; }
-  .avatar-review-row td::before { content:none !important; }
-  .avatar-review { width:100%; margin-top:0; }
-}
-
-/* 本页筛选条在窄屏允许换行，避免搜索框被挤出屏幕 */
-@media (max-width:768px) {
-  .filter-bar { flex-wrap:wrap; }
-  .filter-bar .filter-search { flex:1 1 200px; max-width:none; width:auto; }
-}
-</style>
-<div class="page-header">
-    <h2>{{ icon('user', 20) | safe }} 用户管理 <span class="badge">{{ total }}</span></h2>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{{ ui.page_header("用户管理", "user", total) }}
 
 <div class="filter-bar">
     <div class="filter-tabs">
@@ -68,7 +38,7 @@
         <tr>
             <td class="main-td" data-label="昵称">
                 <strong>{{ u.name }}</strong>
-                {% if u.link %}<div class="muted" style="font-size:12px"><a href="{{ u.link }}" target="_blank" rel="noopener nofollow">{{ u.link[:40] }}</a></div>{% endif %}
+                {% if u.link %}<div class="text-muted text-xs"><a href="{{ u.link }}" target="_blank" rel="noopener nofollow">{{ u.link[:40] }}</a></div>{% endif %}
             </td>
             <td data-label="邮箱">{{ u.email }}</td>
             <td data-label="状态">
@@ -102,7 +72,7 @@
         </tr>
         {% if pending_avatars.get(u.id) %}
         <tr class="avatar-review-row">
-            <td colspan="7">
+            <td colspan="7" class="cell-span">
                 <div class="avatar-review">
                     <div class="avatar-review-head">
                         <strong class="avatar-review-title">{{ u.name }} 的新头像待审核</strong>

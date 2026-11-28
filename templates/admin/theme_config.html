@@ -1,14 +1,12 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}主题配置{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>主题配置 · Tech</h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_themes') }}" class="btn btn-outline">返回主题管理</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header("主题配置 · Tech") %}
+    <a href="{{ url_for('admin_themes') }}" class="btn btn-outline">返回主题管理</a>
+{% endcall %}
 
-<form method="POST" class="theme-config-form" style="display:flex;flex-direction:column;gap:var(--sp-4);">
+<form method="POST" class="theme-config-form">
     <div class="card">
         <div class="card-header">
             <h3>首页报头显示</h3>
@@ -106,7 +104,7 @@
             <span class="form-hint">只在「多栏」布局下出现</span>
         </div>
         <div class="theme-config-body">
-            <div class="form-group" style="margin:0;">
+            <div class="form-group form-group--flush">
                 <label class="switch-label">
                     <span class="switch">
                         <input type="checkbox" name="sidebar_comments" value="1"
@@ -116,7 +114,7 @@
                     <span class="switch-text">显示「最新评论」卡片</span>
                 </label>
             </div>
-            <div class="form-group" style="margin-top:var(--sp-3);max-width:320px;">
+            <div class="form-group form-group--narrow">
                 <label class="form-label" for="sidebar-comments-count">显示条数</label>
                 <input type="number" id="sidebar-comments-count" name="sidebar_comments_count"
                        value="{{ sidebar_comments_count or '5' }}" min="1" max="20" step="1" class="form-input">
@@ -145,7 +143,7 @@
                 {% endfor %}
             </div>
             <p class="form-hint theme-config-tip">项目卡片会自动等高；窄屏按 2 列 / 1 列递减。</p>
-            <div class="form-group" style="margin-top:var(--sp-3);max-width:320px;">
+            <div class="form-group form-group--narrow">
                 <label class="form-label" for="projects-per-page">每页显示条数</label>
                 <input type="number" id="projects-per-page" name="projects_per_page"
                        value="{{ projects_per_page }}" min="0" max="100" step="1" class="form-input">

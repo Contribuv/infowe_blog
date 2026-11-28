@@ -4,96 +4,97 @@
 {% block admin_head %}{% endblock %}
 
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('zap', 20) | safe }} 服务时效</h2>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{{ ui.page_header("服务时效", "zap") }}
 
 <form method="POST" class="status-form">
     <!-- 云资源时效 -->
     <div class="card">
         <div class="card-header"><h3>{{ icon('database', 18) | safe }} 云资源到期时间</h3></div>
-        <div class="form-group">
-            <label>阿里云 AccessKey ID</label>
-            <input type="text" name="aliyun_access_key" class="input-text"
-                   value="{{ config.get('aliyun_access_key', '') }}" placeholder="仅用于查询到期时间，请使用只读权限的 RAM 子账号">
-        </div>
-        <div class="form-group">
-            <label>阿里云 AccessKey Secret</label>
-            <div class="pwd-wrap">
-                <input type="password" name="aliyun_access_secret" id="aliyun-access-secret" class="input-text"
-                       value="{{ config.get('aliyun_access_secret', '') }}" placeholder="AccessKey Secret" autocomplete="off">
-                <button type="button" class="pwd-toggle" data-pwd-toggle="aliyun-access-secret" aria-label="显示/隐藏密钥" tabindex="-1">
-                    <span class="pwd-icon-show">{{ icon('eye', 16) | safe }}</span>
-                    <span class="pwd-icon-hide hidden">{{ icon('eye-off', 16) | safe }}</span>
-                </button>
+        <div class="card-body">
+            <div class="form-group">
+                <label>阿里云 AccessKey ID</label>
+                <input type="text" name="aliyun_access_key" class="input-text"
+                       value="{{ config.get('aliyun_access_key', '') }}" placeholder="仅用于查询到期时间，请使用只读权限的 RAM 子账号">
             </div>
-        </div>
-        <div class="form-group">
-            <label>服务器类型</label>
-            <select name="aliyun_server_type" class="input-text">
-                <option value="swas" {% if config.get('aliyun_server_type', 'swas') == 'swas' %}selected{% endif %}>轻量应用服务器</option>
-                <option value="ecs" {% if config.get('aliyun_server_type') == 'ecs' %}selected{% endif %}>云服务器 ECS</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>阿里云地域 Region</label>
-            <input type="text" name="aliyun_region" class="input-text"
-                   value="{{ config.get('aliyun_region', 'cn-hangzhou') }}" placeholder="如 cn-hangzhou">
-        </div>
-        <div class="form-group">
-            <label>轻量实例 ID（可选，精确定位）</label>
-            <input type="text" name="aliyun_instance_id" class="input-text"
-                   value="{{ config.get('aliyun_instance_id', '') }}" placeholder="留空则取第一个实例">
-        </div>
-        <div class="form-group">
-            <label>手动兜底到期日期（API 查询失败时使用）</label>
-            <input type="date" name="expiry_aliyun" class="input-text"
-                   value="{{ config.get('expiry_aliyun', '') }}">
-            <span class="form-hint" id="aliyun-result">
-                当前：{% if expiry.aliyun.expiry %}{{ expiry.aliyun.expiry }}
-                （剩余 {{ expiry.aliyun.days if expiry.aliyun.days is not none else '?' }} 天，{{ expiry.aliyun.note }}）{% else %}未配置{% endif %}</span>
-        </div>
-        <div class="test-row">
-            <input type="hidden" name="aliyun_expiry_api" id="aliyun-expiry-api" value="">
-            <button type="button" class="btn btn-outline btn-sm" data-test-cloud="aliyun">{{ icon('history', 14) | safe }} 同步阿里云到期时间</button>
-            <span class="button-tip">同步仅预览，点「保存全部配置」后生效</span>
-        </div>
-
-        <hr class="divider">
-
-        <div class="form-group">
-            <label>腾讯云 SecretId</label>
-            <input type="text" name="tencent_secret_id" class="input-text"
-                   value="{{ config.get('tencent_secret_id', '') }}" placeholder="仅用于查询域名到期时间">
-        </div>
-        <div class="form-group">
-            <label>腾讯云 SecretKey</label>
-            <div class="pwd-wrap">
-                <input type="password" name="tencent_secret_key" id="tencent-secret-key" class="input-text"
-                       value="{{ config.get('tencent_secret_key', '') }}" placeholder="SecretKey" autocomplete="off">
-                <button type="button" class="pwd-toggle" data-pwd-toggle="tencent-secret-key" aria-label="显示/隐藏密钥" tabindex="-1">
-                    <span class="pwd-icon-show">{{ icon('eye', 16) | safe }}</span>
-                    <span class="pwd-icon-hide hidden">{{ icon('eye-off', 16) | safe }}</span>
-                </button>
+            <div class="form-group">
+                <label>阿里云 AccessKey Secret</label>
+                <div class="pwd-wrap">
+                    <input type="password" name="aliyun_access_secret" id="aliyun-access-secret" class="input-text"
+                           value="{{ config.get('aliyun_access_secret', '') }}" placeholder="AccessKey Secret" autocomplete="off">
+                    <button type="button" class="pwd-toggle" data-pwd-toggle="aliyun-access-secret" aria-label="显示/隐藏密钥" tabindex="-1">
+                        <span class="pwd-icon-show">{{ icon('eye', 16) | safe }}</span>
+                        <span class="pwd-icon-hide hidden">{{ icon('eye-off', 16) | safe }}</span>
+                    </button>
+                </div>
             </div>
-        </div>
-        <div class="form-group">
-            <label>域名（可选，精确匹配）</label>
-            <input type="text" name="tencent_domain" class="input-text"
-                   value="{{ config.get('tencent_domain', '') }}" placeholder="如 example.com">
-        </div>
-        <div class="form-group">
-            <label>手动兜底到期日期（API 查询失败时使用）</label>
-            <input type="date" name="expiry_tencent" class="input-text"
-                   value="{{ config.get('expiry_tencent', '') }}">
-            <span class="form-hint" id="tencent-result">
-                当前：{% if expiry.tencent.expiry %}{{ expiry.tencent.expiry }}
-                （剩余 {{ expiry.tencent.days if expiry.tencent.days is not none else '?' }} 天，{{ expiry.tencent.note }}）{% else %}未配置{% endif %}</span>
-        </div>
-        <div class="test-row">
-            <input type="hidden" name="tencent_expiry_api" id="tencent-expiry-api" value="">
-            <button type="button" class="btn btn-outline btn-sm" data-test-cloud="tencent">{{ icon('history', 14) | safe }} 同步腾讯云到期时间</button>
-            <span class="form-hint">同步仅预览，点「保存全部配置」后生效</span>
+            <div class="form-group">
+                <label>服务器类型</label>
+                <select name="aliyun_server_type" class="input-text">
+                    <option value="swas" {% if config.get('aliyun_server_type', 'swas') == 'swas' %}selected{% endif %}>轻量应用服务器</option>
+                    <option value="ecs" {% if config.get('aliyun_server_type') == 'ecs' %}selected{% endif %}>云服务器 ECS</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>阿里云地域 Region</label>
+                <input type="text" name="aliyun_region" class="input-text"
+                       value="{{ config.get('aliyun_region', 'cn-hangzhou') }}" placeholder="如 cn-hangzhou">
+            </div>
+            <div class="form-group">
+                <label>轻量实例 ID（可选，精确定位）</label>
+                <input type="text" name="aliyun_instance_id" class="input-text"
+                       value="{{ config.get('aliyun_instance_id', '') }}" placeholder="留空则取第一个实例">
+            </div>
+            <div class="form-group">
+                <label>手动兜底到期日期（API 查询失败时使用）</label>
+                <input type="date" name="expiry_aliyun" class="input-text"
+                       value="{{ config.get('expiry_aliyun', '') }}">
+                <span class="form-hint" id="aliyun-result">
+                    当前：{% if expiry.aliyun.expiry %}{{ expiry.aliyun.expiry }}
+                    （剩余 {{ expiry.aliyun.days if expiry.aliyun.days is not none else '?' }} 天，{{ expiry.aliyun.note }}）{% else %}未配置{% endif %}</span>
+            </div>
+            <div class="test-row">
+                <input type="hidden" name="aliyun_expiry_api" id="aliyun-expiry-api" value="">
+                <button type="button" class="btn btn-outline btn-sm" data-test-cloud="aliyun">{{ icon('history', 14) | safe }} 同步阿里云到期时间</button>
+                <span class="button-tip">同步仅预览，点「保存全部配置」后生效</span>
+            </div>
+
+            <hr class="divider">
+
+            <div class="form-group">
+                <label>腾讯云 SecretId</label>
+                <input type="text" name="tencent_secret_id" class="input-text"
+                       value="{{ config.get('tencent_secret_id', '') }}" placeholder="仅用于查询域名到期时间">
+            </div>
+            <div class="form-group">
+                <label>腾讯云 SecretKey</label>
+                <div class="pwd-wrap">
+                    <input type="password" name="tencent_secret_key" id="tencent-secret-key" class="input-text"
+                           value="{{ config.get('tencent_secret_key', '') }}" placeholder="SecretKey" autocomplete="off">
+                    <button type="button" class="pwd-toggle" data-pwd-toggle="tencent-secret-key" aria-label="显示/隐藏密钥" tabindex="-1">
+                        <span class="pwd-icon-show">{{ icon('eye', 16) | safe }}</span>
+                        <span class="pwd-icon-hide hidden">{{ icon('eye-off', 16) | safe }}</span>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>域名（可选，精确匹配）</label>
+                <input type="text" name="tencent_domain" class="input-text"
+                       value="{{ config.get('tencent_domain', '') }}" placeholder="如 example.com">
+            </div>
+            <div class="form-group">
+                <label>手动兜底到期日期（API 查询失败时使用）</label>
+                <input type="date" name="expiry_tencent" class="input-text"
+                       value="{{ config.get('expiry_tencent', '') }}">
+                <span class="form-hint" id="tencent-result">
+                    当前：{% if expiry.tencent.expiry %}{{ expiry.tencent.expiry }}
+                    （剩余 {{ expiry.tencent.days if expiry.tencent.days is not none else '?' }} 天，{{ expiry.tencent.note }}）{% else %}未配置{% endif %}</span>
+            </div>
+            <div class="test-row">
+                <input type="hidden" name="tencent_expiry_api" id="tencent-expiry-api" value="">
+                <button type="button" class="btn btn-outline btn-sm" data-test-cloud="tencent">{{ icon('history', 14) | safe }} 同步腾讯云到期时间</button>
+                <span class="form-hint">同步仅预览，点「保存全部配置」后生效</span>
+            </div>
         </div>
     </div>
 
@@ -137,8 +138,10 @@
             </tbody>
         </table>
         </div>
-        <div class="quick-actions">
-            <button type="button" class="btn btn-outline btn-sm" id="add-svc">{{ icon('plus', 14) | safe }} 添加服务</button>
+        <div class="card-body">
+            <div class="quick-actions">
+                <button type="button" class="btn btn-outline btn-sm" id="add-svc">{{ icon('plus', 14) | safe }} 添加服务</button>
+            </div>
         </div>
     </div>
 

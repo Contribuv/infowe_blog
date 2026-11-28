@@ -1,12 +1,12 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}仪表盘{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('layout-dashboard', 20) | safe }} 仪表盘</h2>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header("仪表盘", "layout-dashboard") %}
     <button type="button" class="btn btn-secondary" id="upgrade-check-btn" title="检查是否有新版本">
-        {{ icon('history', 16, 'icon-sm') | safe }} 检查更新
-    </button>
-</div>
+            {{ icon('history', 16, 'icon-sm') | safe }} 检查更新
+        </button>
+{% endcall %}
 
 {# 只有检测到新版本时才显示；无更新 / 检测失败都不占版面 #}
 <div class="upgrade-banner" id="upgrade-status" hidden>

@@ -1,0 +1,30 @@
+{# ==========================================================
+   后台通用 UI 宏（唯一入口）
+   目的：页头 / 空状态只写一次，模板不再各拼一份 <h2> + <span class="badge">
+   约定：
+     - 页头标题用 <h1>（每个后台页面应有且仅有一个 h1）
+     - 计数用 .page-count（中性灰胶囊），状态用 .badge（彩色徽章）
+     - 右侧操作放进 {% call %} 里，宏负责包 .page-actions
+   ========================================================== #}
+
+{# 统一页头：标题 + 图标 + 计数 + 说明 + 右侧操作 #}
+{% macro page_header(title, icon_name=None, count=None, desc=None) -%}
+<div class="page-header">
+    <div class="page-title">
+        <h1>
+            {%- if icon_name %}{{ icon(icon_name, 20) | safe }} {% endif -%}
+            <span>{{ title }}</span>
+            {%- if count is not none %} <span class="page-count">{{ count }}</span>{% endif -%}
+        </h1>
+        {%- if desc %}<p class="page-desc">{{ desc }}</p>{% endif -%}
+    </div>
+    <div class="page-actions">{{ caller() if caller is defined else '' }}</div>
+</div>
+{%- endmacro %}
+
+{# 空状态行：跨列整块居中，移动端卡片化后不生成字段名 #}
+{% macro empty_row(colspan, text, icon_name='inbox') -%}
+<tr><td colspan="{{ colspan }}" class="cell-empty">
+    <div class="empty-state">{{ icon(icon_name, 22) | safe }}<span>{{ text }}</span></div>
+</td></tr>
+{%- endmacro %}

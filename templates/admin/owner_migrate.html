@@ -1,10 +1,10 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}历史博主信息迁移{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>历史博主信息迁移</h2>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header("历史博主信息迁移") %}
     <a class="btn btn-outline btn-sm" href="{{ url_for('admin_settings') }}">返回博客设置</a>
-</div>
+{% endcall %}
 
 <div class="card owner-migrate">
     <div class="card-header"><h3>把旧邮箱的评论归到当前博主</h3></div>

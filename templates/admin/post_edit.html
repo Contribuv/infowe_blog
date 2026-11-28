@@ -4,10 +4,10 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/vditor/index.css') }}">
 {% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{% if post %}{{ icon('pencil', 20) | safe }} 编辑文章{% else %}{{ icon('file-text', 20) | safe }} 新建文章{% endif %}</h2>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header('编辑文章' if post else '新建文章', 'pencil' if post else 'file-text') %}
     <a href="{{ url_for('admin_posts') }}" class="btn btn-secondary">{{ icon('arrow-left', 16, 'icon-sm') | safe }} 返回列表</a>
-</div>
+{% endcall %}
 
 <form method="POST" class="post-edit-form" id="post-form">
     <div class="edit-layout">
@@ -28,75 +28,79 @@
         <aside class="edit-sidebar">
             <div class="card sidebar-card">
                 <div class="card-header"><h4>发布设置</h4></div>
-                <div class="form-group">
-                    <label>状态</label>
-                    <select name="status" class="input-select">
-                        <option value="published" {% if post and post.status == 'published' %}selected{% endif %}>发布</option>
-                        <option value="draft" {% if post and post.status == 'draft' %}selected{% endif %}>草稿</option>
-<option value="hidden" {% if post and post.status == 'hidden' %}selected{% endif %}>隐藏（仅链接可访问）</option>
-                    </select>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select name="status" class="input-select">
+                            <option value="published" {% if post and post.status == 'published' %}selected{% endif %}>发布</option>
+                            <option value="draft" {% if post and post.status == 'draft' %}selected{% endif %}>草稿</option>
+    <option value="hidden" {% if post and post.status == 'hidden' %}selected{% endif %}>隐藏（仅链接可访问）</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>发布日期</label>
+                        <input type="datetime-local" name="created_at" id="created_at" class="input-text"
+                               value="{{ post.created_at [:16] | replace(' ', 'T') if post and post.created_at else '' }}">
+                        <small class="form-hint">留空则使用当前日期时间</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="is_featured" value="1" {% if post and post.is_featured %}checked{% endif %}>
+                            设为精选文章
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">{{ icon('save', 16, 'icon-sm') | safe }} 保存文章</button>
                 </div>
-                <div class="form-group">
-                    <label>发布日期</label>
-                    <input type="datetime-local" name="created_at" id="created_at" class="input-text"
-                           value="{{ post.created_at [:16] | replace(' ', 'T') if post and post.created_at else '' }}">
-                    <small class="form-hint">留空则使用当前日期时间</small>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="is_featured" value="1" {% if post and post.is_featured %}checked{% endif %}>
-                        设为精选文章
-                    </label>
-                </div>
-                <button type="submit" class="btn btn-primary btn-full">{{ icon('save', 16, 'icon-sm') | safe }} 保存文章</button>
             </div>
 
             <div class="card sidebar-card">
                 <div class="card-header"><h4>文章信息</h4></div>
-                <div class="form-group">
-                    <label>分类 <span class="req">*</span></label>
-                    <select name="category_id" class="input-select" required
-                            oninvalid="this.setCustomValidity('请选择文章分类')"
-                            onchange="this.setCustomValidity('')">
-                        {% if post %}
-                        <option value="">未分类</option>
-                        {% endif %}
-                        {% for cat in categories %}
-                        <option value="{{ cat.id }}" {% if (not post and loop.first) or (post and post.category_id == cat.id) %}selected{% endif %}>{{ cat.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>自定义 Slug</label>
-                    <input type="text" name="slug" class="input-text" id="slug-input"
-                           value="{{ post.slug if post else '' }}"
-                           placeholder="留空则自动生成">
-                    <small class="form-hint" id="slug-preview"></small>
-                </div>
-                <div class="form-group">
-                    <label>标签（逗号分隔）</label>
-                    <input type="text" name="tags" class="input-text" id="tags-input"
-                           value="{{ post.tags|join(', ') if post else '' }}"
-                           placeholder="Python, 教程, Web开发"
-                           autocomplete="off" list="tags-datalist">
-                    <datalist id="tags-datalist"></datalist>
-                    <div class="tag-suggest" id="tags-suggest">
-                        <div class="tag-suggest-group" id="tags-auto" hidden>
-                            <span class="tag-suggest-label">自动识别</span><span class="tag-chips"></span>
-                        </div>
-                        <div class="tag-suggest-group" hidden>
-                            <span class="tag-suggest-label">常用</span><span class="tag-chips" id="tags-common"></span>
-                        </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label>分类 <span class="req">*</span></label>
+                        <select name="category_id" class="input-select" required
+                                oninvalid="this.setCustomValidity('请选择文章分类')"
+                                onchange="this.setCustomValidity('')">
+                            {% if post %}
+                            <option value="">未分类</option>
+                            {% endif %}
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if (not post and loop.first) or (post and post.category_id == cat.id) %}selected{% endif %}>{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <small class="form-hint">标签会根据标题与正文自动填入，可在下方点击补充，也可手动输入修改</small>
-                </div>
-                <div class="form-group">
-                    <label>摘要</label>
-                    <textarea name="excerpt" class="textarea-sm" rows="3"
-                              id="excerpt-input"
-                              placeholder="文章简短摘要...">{{ post.excerpt if post else '' }}</textarea>
-                    <input type="hidden" name="excerpt_manual" id="excerpt-manual" value="0">
-                    <small class="form-hint"><button type="button" class="btn-link" id="excerpt-auto-btn">从正文自动获取</button></small>
+                    <div class="form-group">
+                        <label>自定义 Slug</label>
+                        <input type="text" name="slug" class="input-text" id="slug-input"
+                               value="{{ post.slug if post else '' }}"
+                               placeholder="留空则自动生成">
+                        <small class="form-hint" id="slug-preview"></small>
+                    </div>
+                    <div class="form-group">
+                        <label>标签（逗号分隔）</label>
+                        <input type="text" name="tags" class="input-text" id="tags-input"
+                               value="{{ post.tags|join(', ') if post else '' }}"
+                               placeholder="Python, 教程, Web开发"
+                               autocomplete="off" list="tags-datalist">
+                        <datalist id="tags-datalist"></datalist>
+                        <div class="tag-suggest" id="tags-suggest">
+                            <div class="tag-suggest-group" id="tags-auto" hidden>
+                                <span class="tag-suggest-label">自动识别</span><span class="tag-chips"></span>
+                            </div>
+                            <div class="tag-suggest-group" hidden>
+                                <span class="tag-suggest-label">常用</span><span class="tag-chips" id="tags-common"></span>
+                            </div>
+                        </div>
+                        <small class="form-hint">标签会根据标题与正文自动填入，可在下方点击补充，也可手动输入修改</small>
+                    </div>
+                    <div class="form-group">
+                        <label>摘要</label>
+                        <textarea name="excerpt" class="textarea-sm" rows="3"
+                                  id="excerpt-input"
+                                  placeholder="文章简短摘要...">{{ post.excerpt if post else '' }}</textarea>
+                        <input type="hidden" name="excerpt_manual" id="excerpt-manual" value="0">
+                        <small class="form-hint"><button type="button" class="btn-link" id="excerpt-auto-btn">从正文自动获取</button></small>
+                    </div>
                 </div>
             </div>
 

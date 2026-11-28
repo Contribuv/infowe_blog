@@ -172,6 +172,86 @@
     sync();
   })();
 
+  /* ─── 批量表单：全选 / 半选 / 计数 / 提交校验（原 8 份内联脚本合并于此） ───
+     约定：form[id^="bulk"] 或 form.bulk-form；
+           内部 .row-check、.bulk-checkall | #checkAll、.bulk-count-num | #bulkCount；
+           提交按钮用 data-action + data-confirm（{n} 会替换成选中数量）。 */
+  (function bindBulkForms() {
+    var forms = document.querySelectorAll('form[id^="bulk"], form.bulk-form');
+    Array.prototype.forEach.call(forms, function (form) {
+      var boxes = Array.prototype.slice.call(form.querySelectorAll('.row-check'));
+      if (!boxes.length) return;
+      var checkAll = form.querySelector('.bulk-checkall, #checkAll');
+      var countEl = form.querySelector('.bulk-count-num, #bulkCount');
+      var actionInput = form.querySelector('input[name="action"]');
+
+      function selected() {
+        var n = 0;
+        boxes.forEach(function (b) { if (b.checked) n++; });
+        return n;
+      }
+      function update() {
+        var n = selected();
+        if (countEl) countEl.textContent = n;
+        if (checkAll) {
+          checkAll.checked = n === boxes.length;
+          checkAll.indeterminate = n > 0 && n < boxes.length;
+        }
+      }
+
+      if (checkAll) {
+        checkAll.addEventListener('change', function () {
+          boxes.forEach(function (b) { b.checked = checkAll.checked; });
+          update();
+        });
+      }
+      boxes.forEach(function (b) { b.addEventListener('change', update); });
+
+      form.addEventListener('submit', function (e) {
+        var btn = e.submitter;
+        var action = btn && btn.getAttribute('data-action');
+        if (!action) return;
+        var n = selected();
+        if (!n) {
+          e.preventDefault();
+          alert('请先勾选要操作的项');
+          return;
+        }
+        var tpl = btn.getAttribute('data-confirm');
+        if (tpl && !window.confirm(tpl.replace('{n}', n))) {
+          e.preventDefault();
+          return;
+        }
+        if (actionInput) actionInput.value = action;
+      });
+
+      update();
+    });
+  })();
+
+  /* ─── 分段 Tab：.tabs 内的 radio 与 .tab-panel 按 DOM 顺序一一对应 ───
+     不再硬编码 #tab-sqlite / #tab-sql，任何页面都能复用同一套结构。 */
+  (function bindTabs() {
+    Array.prototype.forEach.call(document.querySelectorAll('.tabs'), function (tabs) {
+      var radios = Array.prototype.slice.call(tabs.querySelectorAll('input[type="radio"]'));
+      var panels = Array.prototype.slice.call(tabs.querySelectorAll('.tab-panel'));
+      if (!radios.length || !panels.length) return;
+
+      function apply() {
+        radios.forEach(function (r, i) {
+          if (panels[i]) panels[i].hidden = !r.checked;
+          if (!r.id) return;
+          var label = tabs.querySelector('label[for="' + r.id + '"]');
+          if (label) label.classList.toggle('is-active', r.checked);
+        });
+      }
+
+      radios.forEach(function (r) { r.addEventListener('change', apply); });
+      tabs.classList.add('tabs-ready');
+      apply();
+    });
+  })();
+
   /* ─── 键盘快捷键：Ctrl+S 保存文章 ─── */
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {

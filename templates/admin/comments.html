@@ -7,9 +7,8 @@
 </button>
 {%- endmacro %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('message-circle', 20) | safe }} 评论管理 <span class="badge">{{ total }}</span></h2>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{{ ui.page_header("评论管理", "message-circle", total) }}
 
 {% if comments %}
 <div class="card" id="pending-comments">
@@ -25,7 +24,7 @@
         <button type="submit" class="btn btn-sm btn-success" data-action="approve">批量通过</button>
         {# 批量拒绝：置 rejected，前台不显示、后台留记录 #}
         <button type="submit" class="btn btn-sm btn-danger" data-action="reject">批量拒绝</button>
-        <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+        <button type="submit" class="btn btn-sm btn-danger" data-action="delete" data-confirm="确定删除选中的 {n} 条评论？其全部回复将一并删除。">批量删除</button>
     </div>
     <div class="table-wrap">
         <table class="table">
@@ -192,80 +191,4 @@
 {% endblock %}
 
 {% block admin_scripts %}
-<script>
-(function () {
-    'use strict';
-    var form = document.getElementById('bulkForm');
-    if (!form) return;
-    var checkAll = document.getElementById('checkAll');
-    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
-    var count = document.getElementById('bulkCount');
-
-    function update() {
-        var n = document.querySelectorAll('.row-check:checked').length;
-        count.textContent = n;
-        if (checkAll) {
-            checkAll.checked = boxes.length > 0 && n === boxes.length;
-            checkAll.indeterminate = n > 0 && n < boxes.length;
-        }
-    }
-
-    if (checkAll) {
-        checkAll.addEventListener('change', function () {
-            boxes.forEach(function (b) { b.checked = checkAll.checked; });
-            update();
-        });
-    }
-    boxes.forEach(function (b) { b.addEventListener('change', update); });
-
-    form.addEventListener('submit', function (e) {
-        var btn = e.submitter;
-        var action = btn && btn.getAttribute('data-action');
-        if (!action) return;
-        var n = document.querySelectorAll('.row-check:checked').length;
-        if (!n) {
-            e.preventDefault();
-            alert('请先勾选要操作的评论');
-            return;
-        }
-        if (action === 'delete' && !confirm('确定删除选中的 ' + n + ' 条评论？其全部回复将一并删除')) {
-            e.preventDefault();
-            return;
-        }
-        document.getElementById('bulkAction').value = action;
-    });
-
-    update();
-})();
-
-/* 评论状态列的 AI / 人工说明：点击整行文字，弹窗查看全文 */
-(function () {
-    'use strict';
-    var dlg = document.getElementById('commentDetailDialog');
-    if (!dlg) return;
-    var titleEl = document.getElementById('commentDetailTitle');
-    var bodyEl = document.getElementById('commentDetailBody');
-    function close() {
-        if (dlg.open && dlg.close) dlg.close();
-        else dlg.removeAttribute('open');
-    }
-    document.addEventListener('click', function (e) {
-        var btn = e.target.closest && e.target.closest('.cell-sub-btn');
-        if (!btn) return;
-        var textEl = btn.querySelector('.cell-sub-text') || btn;
-        titleEl.textContent = btn.getAttribute('data-detail-title') || '说明';
-        bodyEl.textContent = textEl.textContent.trim();
-        if (dlg.showModal) dlg.showModal();
-        else dlg.setAttribute('open', '');
-    });
-    dlg.addEventListener('click', function (e) {
-        if (e.target === dlg) close();
-    });
-    var closeBtn = dlg.querySelector('[data-detail-close]');
-    if (closeBtn) closeBtn.addEventListener('click', close);
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && dlg.open) close();
-    });
-})();
-</script>
 {% endblock %}

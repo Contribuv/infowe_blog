@@ -3,7 +3,14 @@
    infowe Admin v4 · 后台设计系统（完全重写）
    结构契约：admin-app > admin-sidebar + admin-main(topbar/content/footer)
    主题机制：暗色默认，html[data-theme="light"] 切亮色
-   断点：<1024px 侧栏变抽屉；<768px 单列紧凑；表格一律横向滚动
+   断点（统一 4 档 + 2 个专用，不要再新增散点）：
+     < 640px   小屏手机（顶栏精简、主题网格单列）
+     < 768px   单列紧凑 + 表格卡片化（td 用 data-label 生成字段名）
+     < 1024px  侧栏变抽屉（汉堡按钮）
+     ≥ 1200px  统计卡六列 / 宽屏布局
+     640px     补丁区专用（插件列表、评论弹窗、图片灯箱）
+     900px     登录页两栏（独立骨架，不依赖 base 布局）
+   注意：Windows 经典滚动条占 15px，1023.98 / 1024 的实际切换点约 1039px。
    ========================================================== */
 
 /* ─────────── 1. 设计令牌 ─────────── */
@@ -104,6 +111,7 @@ svg { vertical-align: -3px; flex: none; }
 
 /* 工具类（模板保留使用） */
 .text-muted { color: var(--text-tertiary); }
+.text-xs { font-size: var(--fz-xs); }
 .text-center { text-align: center; }
 .w-100 { width: 100%; }
 .text-start { text-align: left; }
@@ -617,6 +625,15 @@ body.bulk-on .table th.col-check, body.bulk-on .table td.col-check { display: ta
 .slug-code { background: none; border: none; padding: 0; color: var(--text-secondary); }
 .table-fixed { table-layout: fixed; }
 
+/* 整行详情（colspan 跨列的自定义内容，如头像审核块）：
+   不参与移动端「td 变字段行」的卡片化，保持块级、左对齐、无 data-label 前缀。
+   页面用 class 表达结构，不再用 !important 反向压制全局规则。 */
+.table td.cell-span { display: block; text-align: left; }
+/* 空状态行：卡片化后仍整块居中，不生成字段名 */
+.table td.cell-empty { padding: 0; border: 0; }
+/* 长错误文本列：限宽换行，替代模板里的 style="max-width:280px" */
+.cell-error { max-width: 280px; word-break: break-word; }
+
 /* 行内操作列 */
 .actions-cell { white-space: nowrap; }
 .actions-cell form { display: inline; }
@@ -766,11 +783,12 @@ input[type="checkbox"], input[type="radio"] {
 .filter-search .cell-muted { align-self: center; }
 .filter-search input { flex: 1; }
 
-/* ─────────── 12.1 分段 Tab（同卡片内互斥面板；radio 驱动，纯 CSS 无 JS） ─────────── */
+/* ─────────── 12.1 分段 Tab（同卡片内互斥面板；radio 驱动 + admin.js 通用绑定） ─────────── */
 /* .tabs 取代了原先「表单直接放 card 内」的位置，由它承担 card-body 的内边距；
    否则第 23 节的 .card > xxx 补偿选择器不再命中，表单会贴到卡片边缘 */
 .tabs { padding: var(--sp-5); }
-.tabs > input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+.tabs > input[type="radio"],
+.tab-radio { position: absolute; opacity: 0; width: 0; height: 0; }
 .tab-nav { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--sp-4); }
 .tab-btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -785,17 +803,18 @@ input[type="checkbox"], input[type="radio"] {
 }
 @media (hover: hover) and (pointer: fine) { .tab-btn:hover { border-color: var(--accent); color: var(--accent); } }
 .tab-btn svg { width: 15px; height: 15px; }
-.tab-panel { display: none; }
-/* 选中态：input[value=x]:checked 与面板的静态属性一一对应，无需脚本 */
-#tab-sqlite:checked ~ .tab-nav label[for="tab-sqlite"],
-#tab-sql:checked ~ .tab-nav label[for="tab-sql"] {
+/* 选中态由 admin.js 按 DOM 顺序写入 .is-active，不再硬编码页面 id */
+.tab-btn.is-active {
   background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600;
 }
-#tab-sqlite:checked ~ .tab-panel[data-tab-panel="sqlite"],
-#tab-sql:checked ~ .tab-panel[data-tab-panel="sql"] { display: block; }
+.tab-panel { display: block; }
+.tab-panel[hidden] { display: none; }
+/* 无脚本兜底：只显示第一个面板，避免两个表单同时铺开。
+   不能用 :first-of-type（tab-nav 也是 div，会把它误当成第一个面板）。 */
+.tabs:not(.tabs-ready) .tab-panel ~ .tab-panel { display: none; }
 /* 键盘切换时给出可见焦点（radio 本体不可见） */
-#tab-sqlite:focus-visible ~ .tab-nav label[for="tab-sqlite"],
-#tab-sql:focus-visible ~ .tab-nav label[for="tab-sql"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tab-radio:focus-visible + .tab-btn,
+.tab-radio:focus-visible ~ .tab-nav label[for] { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ─────────── 13. 批量操作条（统一放 card 顶部 / 表格上方；默认隐藏，批量模式显示） ─────────── */
 .bulk-bar {
@@ -944,6 +963,41 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
 .admin-section-title h3 {
   display: flex; align-items: center; gap: var(--sp-2);
   font-size: var(--fz-md); font-weight: 600; color: var(--text);
+}
+
+/* ─────────── 17.1 头像审核卡（users 页，跨列详情） ───────────
+   原为 users.html 内联 <style>；块级内容左对齐，窄屏不再被 td 的
+   space-between / 右对齐拆成居中碎片。 */
+.avatar-review {
+  width: 100%; box-sizing: border-box;
+  margin-top: 10px; padding: 12px;
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--bg-surface-2);
+}
+.avatar-review-head {
+  display: flex; flex-wrap: wrap; justify-content: space-between;
+  gap: 2px 12px; margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.avatar-review-title { color: var(--text); font-size: var(--fz-md); }
+.avatar-review-mail { font-size: var(--fz-xs); color: var(--text-tertiary); }
+.avatar-review-body { display: flex; align-items: center; gap: 12px; text-align: left; }
+.avatar-review-body img {
+  width: 56px; height: 56px; flex: none;
+  border-radius: 50%; object-fit: cover;
+  border: 1px solid var(--border-strong); cursor: zoom-in;
+}
+.avatar-review-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
+.avatar-review-label { font-size: var(--fz-xs); color: var(--text-tertiary); }
+.avatar-review-value { color: var(--text-secondary); overflow-wrap: anywhere; word-break: break-word; }
+.avatar-review-hint { font-size: var(--fz-xs); color: var(--text-tertiary); }
+.avatar-review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+/* 审核行紧贴上方用户行：桌面只去上内边距；窄屏由 .cell-span 统一处理 */
+.avatar-review-row td { padding-top: 0; }
+@media (max-width: 767.98px) {
+  .avatar-review-row { padding-top: 0; border-top: 0; }
+  .avatar-review-row td.cell-span { padding: 0 0 6px; }
+  .avatar-review { width: 100%; margin-top: 0; }
 }
 
 /* ─────────── 18. dashboard 升级横幅 ─────────── */
@@ -1245,12 +1299,12 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
 .themes-help-list li::before { content: ''; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 
 /* ─────────── 22. upgrade 升级页 ─────────── */
-.upgrade-help { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-5); }
+.upgrade-help { display: flex; flex-direction: column; gap: var(--sp-3); }
 .upgrade-help li { font-size: var(--fz-sm); color: var(--text-secondary); line-height: 1.7; padding-left: 14px; position: relative; }
 .upgrade-help li::before { content: ''; position: absolute; left: 0; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 /* 升级页「发布于 … · 来源 …」行：上下各留一档，不再贴着上面的更新源行与下面的更新内容 */
-.card > p.upgrade-published { padding: var(--sp-5) var(--sp-5) 0; }
-.upgrade-notes { padding: var(--sp-4) var(--sp-5) 0; }
+.upgrade-published { font-size: var(--fz-sm); color: var(--text-tertiary); }
+.upgrade-notes { padding: var(--sp-4) 0 0; }
 .upgrade-notes h4 { font-size: var(--fz-md); font-weight: 600; color: var(--text); margin-bottom: var(--sp-2); }
 .upgrade-notes .text-muted { font-size: var(--fz-sm); color: var(--text-tertiary); margin-bottom: var(--sp-2); }
 .upgrade-body {
@@ -1275,32 +1329,17 @@ button.tag-chip { cursor: pointer; transition: all var(--transition); }
   display: inline-flex; align-items: center; gap: 6px;
   color: var(--text-secondary); cursor: pointer;
 }
-.upgrade-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-4) var(--sp-5) var(--sp-5); }
+.upgrade-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-4) 0 0; }
 
-/* ─────────── 23. 卡片裸内容补偿（form-group / p / 按钮直接放 card 内） ─────────── */
-.card > .edit-form { padding: var(--sp-5); }
-.card > .form-group { margin-bottom: 0; padding: 10px var(--sp-5); }
-.card > .form-group:first-of-type { padding-top: var(--sp-4); }
-.card > .form-group:last-of-type { padding-bottom: var(--sp-4); }
-.card > p { padding: var(--sp-4) var(--sp-5) 0; font-size: var(--fz-sm); color: var(--text-secondary); }
-/* p 是卡片最后一个子元素时（如升级页「检查中」状态）补底部留白，避免文字贴卡底 */
-.card > p:last-child { padding-bottom: var(--sp-4); }
-.card > .btn, .card > a.btn { margin: var(--sp-4) var(--sp-5) var(--sp-5); }
-/* 全宽按钮（卡直接子级）：width:100% 按父内容盒计算不扣 margin，与上面水平 margin
-   叠加导致溢出 21px。且 <button> 的 width:auto 是 shrink-to-fit（按内容收缩），
-   不能用 auto 填满。用显式 calc：宽 = 父宽 - 两侧 margin，实测精确贴合卡内
-   （279px，右缘 1788 ≤ 卡右缘 1808），并保持与 .card > .form-group 相同缩进 */
-.card > .btn.btn-full, .card > a.btn.btn-full { width: calc(100% - var(--sp-5) * 2); display: flex; }
-/* 裸按钮紧跟最后一个字段时，字段的 padding-bottom(16) 与按钮 margin-top(16) 叠加成 32px，
-   上大下小显得断层；压掉字段底部 padding，让按钮上下留白一致（≈20px） */
-.card > .form-group:has(+ .btn.btn-full) { padding-bottom: var(--sp-1); }
-.card > hr.divider { margin: var(--sp-4) var(--sp-5); border: none; border-top: 1px solid var(--border); }
-.card > .test-row { padding: 0 var(--sp-5) var(--sp-4); }
-.card > .quick-actions { padding: var(--sp-3) var(--sp-5) var(--sp-4); }
-/* SMTP 双列行：与裸 form-group 同 padding 体系，保证左右缩进与上下间距和其他字段一致 */
-.card > .smtp-row { padding: 6px var(--sp-5); }
-/* 裸放卡底的提示文字：补左右缩进与底部留白，不贴边框 */
-.card > .form-hint { padding: 6px var(--sp-5) var(--sp-4); }
+/* ─────────── 23. 卡片内容容器（card-body 是唯一入口） ───────────
+   表单、说明文字、按钮一律放进 .card-body，由它统一提供 var(--sp-5)
+   内边距；不再用 .card > xxx 逐类补偿，避免「谁贴边、谁缩进」靠选择器猜测。
+   这里只留组件进入容器后仍需的排版微调。 */
+.card-body > .btn.btn-full { width: 100%; display: flex; }
+/* 全宽按钮紧跟最后一个字段时，压掉字段下边距，让按钮上下留白一致 */
+.card-body > .form-group:has(+ .btn.btn-full) { margin-bottom: var(--sp-1); }
+.card-body > hr.divider { margin: var(--sp-4) 0; border: none; border-top: 1px solid var(--border); }
+.card-body > .smtp-row { margin: var(--sp-2) 0 var(--sp-4); }
 
 /* ─────────── 24. form 包裹多卡片：间距统一（admin-content gap 不穿透 form） ─────────── */
 .settings-form, .status-form, .themes-page {
@@ -1490,7 +1529,7 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
 .topbar-brand { display: inline-flex; }
 .topbar-home { display: inline-flex; }
 @media (min-width: 1024px) { .topbar-brand { display: none; } }
-@media (max-width: 575.98px) { .topbar-home { display: none; } }
+@media (max-width: 639.98px) { .topbar-home { display: none; } }
 
 /* ≥1024：设置页流式双栏（CSS columns 瀑布流：卡片按内容高度依次填列；
    form-actions 跨全列通栏，避免被折进某一列内部） */
@@ -1538,6 +1577,8 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
   .page-header h1, .page-header h2 { font-size: 18px; }
   .page-actions { width: 100%; }
   .page-actions .btn { flex: 1; }
+  /* 卡片化后表格不再横向滚动：保留 overflow-x 会让轻微横滑带动整块抖动 */
+  .table-wrap { overflow: visible; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
   .stat-card { padding: var(--sp-3); gap: 10px; }
   .stat-icon { width: 38px; height: 38px; }
@@ -1671,6 +1712,15 @@ html[data-theme-mode="light"] .login-theme-toggle .icon-moon { display: none; }
   border-bottom: 1px solid var(--border);
 }
 
+/* 自动清理条（原 orphans.html 内联样式）：页顶一条带分隔线的工具行 */
+.orphan-auto-bar { padding: 0 0 12px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.orphan-auto-form { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.orphan-auto-days { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fz-sm); color: var(--text-secondary); }
+.orphan-auto-days input { width: 64px; padding: 4px 8px; font-size: var(--fz-sm); border-radius: var(--r-sm); }
+.orphan-auto-hint { margin: 8px 0 0; padding: 0; }
+/* 空状态去边框与缩进，与上方工具条同一左缘、同一页宽 */
+.orphan-empty { background: transparent; border: 0; padding: var(--sp-4) 0; align-items: flex-start; text-align: left; }
+
 /* 预览列固定窄宽 */
 .col-preview { width: 56px; white-space: nowrap; }
 
@@ -1783,7 +1833,7 @@ body.bulk-on #orphanTable tbody tr { cursor: pointer; }
 
 /* ── 设置页：紧急禁用告警 ── */
 .otp-emergency {
-  margin: var(--sp-3) var(--sp-5) var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-2);
   padding: 10px 14px;
   font-size: var(--fz-sm);
   color: var(--danger);
@@ -1804,7 +1854,7 @@ body.bulk-on #orphanTable tbody tr { cursor: pointer; }
 
 /* ── 设置页：绑定区（已开启的重绑 / 未开启的首次绑定统一外观） ── */
 .otp-bind {
-  margin: var(--sp-3) var(--sp-5) var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-2);
   padding: var(--sp-4);
   background: color-mix(in srgb, var(--bg-surface-2) 55%, transparent);
   border: 1px dashed var(--border-strong);
@@ -1845,7 +1895,7 @@ body.bulk-on #orphanTable tbody tr { cursor: pointer; }
 
 /* ── 设置页：已启用信息区 ── */
 .otp-enabled {
-  margin: var(--sp-3) var(--sp-5) var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-2);
   display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   font-size: var(--fz-sm); color: var(--text-secondary);
   line-height: 1.6;
@@ -1872,12 +1922,12 @@ body.bulk-on #orphanTable tbody tr { cursor: pointer; }
 /* ── 设置页：恢复码一次性展示卡片 ── */
 .otp-codes-card .card-header { border-bottom: none; }
 .otp-codes-card .form-hint, .otp-codes-card > p {
-  margin: 0 var(--sp-5) var(--sp-3);
+  margin: 0 0 var(--sp-3);
   font-size: var(--fz-sm); color: var(--text-secondary);
 }
 .otp-codes-list {
   list-style: none;
-  margin: 0 var(--sp-5) var(--sp-4);
+  margin: 0 0 var(--sp-4);
   padding: 0;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 8px;
@@ -1892,7 +1942,7 @@ body.bulk-on #orphanTable tbody tr { cursor: pointer; }
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
 }
-.otp-codes-card .btn { margin: 0 var(--sp-5) var(--sp-5); }
+.otp-codes-card .btn { margin: 0; }
 
 /* ── 验证页 / 找回页：提示行（覆盖登录页 .login-hint 桌面端隐藏规则） ── */
 /* 单栏认证页（/admin/otp、/admin/otp/recover）：无品牌侧区，
@@ -1997,7 +2047,7 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
 }
 @media (hover: hover) and (pointer: fine) { .pwd-toggle:hover { color: var(--text); background: var(--bg-hover); } }
 /* 移动端：监控表走全局卡片化；td 竖排（标签在上、内容在下），输入框撑满 */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   #svc-table td { flex-direction: column; align-items: stretch; text-align: left; gap: 4px; }
   #svc-table td .input-text { width: 100%; }
 }
@@ -2083,6 +2133,13 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
 .theme-config-link:hover { color: var(--accent-hover); }
 .theme-config-body { padding: var(--sp-4) var(--sp-5) var(--sp-5); }
 .card-header + .theme-config-body { padding-top: var(--sp-4); }
+/* 表单容器与字段变体（原 theme_config.html 内联 style） */
+.theme-config-form { display: flex; flex-direction: column; gap: var(--sp-4); }
+.theme-config-body > .form-group:last-child { margin-bottom: 0; }
+/* 开关行：只有一行控件，不要表单默认的下边距 */
+.form-group--flush { margin: 0; }
+/* 窄字段：数字/短文本输入，限宽避免在大屏上拉成整行 */
+.form-group--narrow { margin-top: var(--sp-3); max-width: 320px; }
 .layout-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2138,7 +2195,7 @@ button.link-plain { background: none; border: none; cursor: pointer; color: inhe
 .layout-preview--multi i:first-child { grid-row: span 3; }
 .theme-config-tip { margin: var(--sp-4) 0 0; }
 .theme-config-actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-4); }
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
   .layout-options { grid-template-columns: 1fr; }
   .layout-preview { height: 64px; }
 }

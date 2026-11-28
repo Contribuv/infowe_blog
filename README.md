@@ -1,6 +1,6 @@
 # Python Blog（Flask + SQLite）
 
-[![version](https://img.shields.io/badge/version-3.9.87-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.87)
+[![version](https://img.shields.io/badge/version-3.9.88-blue)](https://github.com/Contribuv/infowe_blog/releases/tag/v3.9.88)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Flask](https://img.shields.io/badge/Flask-3.x-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
@@ -929,9 +929,19 @@ chown -R www:www var
 
 ## 更新日志
 
-当前版本：**v3.9.87**
+当前版本：**v3.9.88**
 
-> 最近一次更新完整展开；更早的 186 个版本压缩为摘要，统一收在下方折叠区。
+> 最近一次更新完整展开；更早的 187 个版本压缩为摘要，统一收在下方折叠区。
+
+### v3.9.88
+
+- **后台组件化**：新增统一页头 / 空状态宏，所有管理页共用一套标题、计数、操作区；卡片内容统一走 `.card-body`，移除 20 条 `.card > xxx` 补丁选择器
+- **脚本归位**：批量全选 / 半选 / 计数 / 危险确认合并进 `admin.js`，7 个列表页删除内联脚本；分段 Tab 改为通用绑定，不再硬编码页面 ID
+- **样式归位**：头像审核、孤儿清理、主题配置等内联样式迁入 `admin.css`；断点统一为 4 档并写明约定，表格卡片化后去掉横向滚动
+- **移动端回归**：390 / 768 / 1044 / 1280 四档实测，管理页无横向溢出、表格字段标签完整、页头按钮不越界
+
+<details>
+<summary><b>历史版本（v3.9.87 及更早，共 187 个版本，点击展开）</b></summary>
 
 ### v3.9.87
 
@@ -940,9 +950,6 @@ chown -R www:www var
 - **注销安全**：前台「管理账号」新增注销入口，必须邮箱验证码校验通过才能销号；全程浮窗内提示，不使用浏览器原生弹窗
 - **评论审核加严**：新增「AI 判通过直接公开」开关，默认关闭 —— AI 认为正常的评论也先转人工复核；带图评论始终转人工
 - **后台体验**：头像审核卡片支持点击大图预览（复用评论图片弹窗样式）、移动端整行自适应、深浅主题适配；孤儿页新增「重新扫描」按钮；README 徽标不再懒加载，与正文一起显示
-
-<details>
-<summary><b>历史版本（v3.9.86 及更早，共 186 个版本，点击展开）</b></summary>
 
 ### v3.9.86
 

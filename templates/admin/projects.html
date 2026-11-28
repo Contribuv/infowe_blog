@@ -1,14 +1,12 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}开源项目{% endblock %}
 {% block admin_content %}
+{% import "admin/_ui.html" as ui with context %}
 
-<div class="page-header">
-    <h2>{{ icon('github', 20) | safe }} 开源项目 <span class="badge">{{ projects|length }}</span></h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加项目</a>
-        <button type="button" id="syncAllBtn" class="btn btn-sm btn-secondary" data-sync-url="{{ url_for('admin_projects_sync_all') }}" title="从 GitHub 同步全部项目（重复仓库自动跳过）">{{ icon('refresh-cw', 14, 'icon-sm') | safe }} 一键同步全部</button>
-    </div>
-</div>
+{% call ui.page_header("开源项目", "github", projects|length) %}
+    <a href="{{ url_for('admin_project_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加项目</a>
+    <button type="button" id="syncAllBtn" class="btn btn-sm btn-secondary" data-sync-url="{{ url_for('admin_projects_sync_all') }}" title="从 GitHub 同步全部项目（重复仓库自动跳过）">{{ icon('refresh-cw', 14, 'icon-sm') | safe }} 一键同步全部</button>
+{% endcall %}
 
 <div id="syncStatusBar" class="flash-msg info hidden">
     <div id="syncStatusText"></div>
@@ -23,7 +21,7 @@
                 <input type="checkbox" id="checkAll"> 全选
             </label>
             <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
-            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete" data-confirm="确定删除选中的 {n} 个项目？此操作不可恢复。">批量删除</button>
         </div>
     <div class="table-wrap">
     <table class="table table-fixed">
@@ -104,44 +102,6 @@
 <script>
 (function () {
     'use strict';
-    // 批量操作：全选 / 计数 / 删除确认
-    // 注意：项目为空时 bulkProjects 表单不渲染，此处不能直接 return，
-    // 否则下面「一键同步全部」的绑定也会被一起跳过。
-    var form = document.getElementById('bulkProjects');
-    if (form) {
-    var checkAll = document.getElementById('checkAll');
-    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
-    var count = document.getElementById('bulkCount');
-
-    function update() {
-        var n = document.querySelectorAll('.row-check:checked').length;
-        count.textContent = n;
-        if (checkAll) {
-            checkAll.checked = boxes.length > 0 && n === boxes.length;
-            checkAll.indeterminate = n > 0 && n < boxes.length;
-        }
-    }
-    if (checkAll) {
-        checkAll.addEventListener('change', function () {
-            boxes.forEach(function (b) { b.checked = checkAll.checked; });
-            update();
-        });
-    }
-    boxes.forEach(function (b) { b.addEventListener('change', update); });
-
-    form.addEventListener('submit', function (e) {
-        var btn = e.submitter;
-        var action = btn && btn.getAttribute('data-action');
-        if (!action) return;
-        var n = document.querySelectorAll('.row-check:checked').length;
-        if (!n) { e.preventDefault(); alert('请先勾选要删除的项目'); return; }
-        if (!confirm('确定删除选中的 ' + n + ' 个项目？此操作不可恢复。')) { e.preventDefault(); return; }
-        document.getElementById('bulkAction').value = action;
-    });
-
-    update(); // 初始化计数：严格模式下 update 声明在 if 块内，只能在块内调用
-    }
-
     // ── 后台同步：AJAX 提交 + 原地轮询进度 ──
     // 同步（含 README 图片本地化）在后台线程执行，POST 立即返回 JSON（不跳转），
     // 这里每 2 秒查一次 /admin/projects/sync-status 更新进度条；完成显示结果并刷新一次。

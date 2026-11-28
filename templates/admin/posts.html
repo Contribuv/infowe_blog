@@ -1,13 +1,11 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}文章管理{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('file-text', 20) | safe }} 文章管理 <span class="badge">{{ total }}</span></h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_posts_trash') }}" class="btn btn-secondary btn-sm">{{ icon('trash-2', 14, 'icon-sm') | safe }} 回收站{% if trash_count %} <span class="badge">{{ trash_count }}</span>{% endif %}</a>
-        <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary btn-sm">{{ icon('pencil', 14, 'icon-sm') | safe }} 新建文章</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header("文章管理", "file-text", total) %}
+    <a href="{{ url_for('admin_posts_trash') }}" class="btn btn-secondary btn-sm">{{ icon('trash-2', 14, 'icon-sm') | safe }} 回收站{% if trash_count %} <span class="badge">{{ trash_count }}</span>{% endif %}</a>
+    <a href="{{ url_for('admin_post_new') }}" class="btn btn-primary btn-sm">{{ icon('pencil', 14, 'icon-sm') | safe }} 新建文章</a>
+{% endcall %}
 
 <!-- 搜索 + 筛选 -->
 <div class="filter-bar">
@@ -36,7 +34,7 @@
             <button type="submit" class="btn btn-sm btn-success" data-action="publish">批量发布</button>
             <button type="submit" class="btn btn-sm" data-action="unpublish">批量下线</button>
             <button type="submit" class="btn btn-sm" data-action="hide">批量隐藏</button>
-            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">移入回收站</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete" data-confirm="确定把选中的 {n} 篇文章移入回收站？之后可在回收站恢复或彻底删除。">移入回收站</button>
         </div>
         <div class="table-wrap">
         <table class="table">
@@ -118,42 +116,4 @@
 {% endblock %}
 
 {% block admin_scripts %}
-<script>
-(function () {
-    'use strict';
-    var form = document.getElementById('bulkPosts');
-    if (!form) return;
-    var checkAll = document.getElementById('checkAll');
-    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
-    var count = document.getElementById('bulkCount');
-
-    function update() {
-        var n = document.querySelectorAll('.row-check:checked').length;
-        count.textContent = n;
-        if (checkAll) {
-            checkAll.checked = boxes.length > 0 && n === boxes.length;
-            checkAll.indeterminate = n > 0 && n < boxes.length;
-        }
-    }
-    if (checkAll) {
-        checkAll.addEventListener('change', function () {
-            boxes.forEach(function (b) { b.checked = checkAll.checked; });
-            update();
-        });
-    }
-    boxes.forEach(function (b) { b.addEventListener('change', update); });
-
-    form.addEventListener('submit', function (e) {
-        var btn = e.submitter;
-        var action = btn && btn.getAttribute('data-action');
-        if (!action) return;
-        var n = document.querySelectorAll('.row-check:checked').length;
-        if (!n) { e.preventDefault(); alert('请先勾选要操作的文章'); return; }
-        if (action === 'delete' && !confirm('确定把选中的 ' + n + ' 篇文章移入回收站？之后可在回收站恢复或彻底删除。')) { e.preventDefault(); return; }
-        document.getElementById('bulkAction').value = action;
-    });
-
-    update();
-})();
-</script>
 {% endblock %}

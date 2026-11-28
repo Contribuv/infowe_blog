@@ -1,15 +1,13 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}{% if item %}编辑历程{% else %}添加历程{% endif %}{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('calendar', 20) | safe }} {% if item %}编辑历程{% else %}添加博客历程{% endif %}</h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_timeline') }}" class="btn btn-secondary">返回列表</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header('编辑历程' if item else '添加博客历程', 'calendar') %}
+    <a href="{{ url_for('admin_timeline') }}" class="btn btn-secondary">返回列表</a>
+{% endcall %}
 
 <div class="card">
-    <form method="POST" class="edit-form">
+    <form method="POST" class="edit-form card-body">
         <div class="form-group">
             <label>日期 <span class="required">*</span></label>
             <input type="text" name="date" value="{{ item.date if item else '' }}" required class="form-input" placeholder="如: 2026.07">

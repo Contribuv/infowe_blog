@@ -2,17 +2,15 @@
 {% block admin_title %}圈子管理{% endblock %}
 
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('zap', 20) | safe }} 圈子管理</h2>
-    <div class="page-actions">
-        <form method="POST" action="{{ url_for('admin_circle_refresh') }}">
-            <button type="submit" class="btn btn-primary">刷新全部</button>
-        </form>
-        <a href="/circle" target="_blank" rel="noopener" class="btn btn-secondary">打开前台</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header("圈子管理", "zap") %}
+    <form method="POST" action="{{ url_for('admin_circle_refresh') }}">
+        <button type="submit" class="btn btn-primary">刷新全部</button>
+    </form>
+    <a href="/circle" target="_blank" rel="noopener" class="btn btn-secondary">打开前台</a>
+{% endcall %}
 
-<p class="form-hint" style="margin-bottom:16px;">
+<p class="form-hint">
     RSS 地址在「友情链接」里填写，只有审核通过（approved）的友链才会进入圈子。保存后会自动抓取一次，之后每 30 分钟刷新。
 </p>
 
@@ -37,17 +35,17 @@
             <tbody>
                 {% for s in sources %}
                 <tr>
-                    <td><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a></td>
-                    <td class="cell-mono"><a href="{{ s.rss }}" target="_blank" rel="noopener">{{ s.rss }}</a></td>
-                    <td>
+                    <td data-label="站点"><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.name }}</a></td>
+                    <td data-label="RSS" class="cell-mono"><a href="{{ s.rss }}" target="_blank" rel="noopener">{{ s.rss }}</a></td>
+                    <td data-label="状态">
                         {% if s.feed_state == 'ok' %}<span class="badge badge-available">正常</span>
-                        {% elif s.feed_state == 'error' %}<span class="badge" style="color:var(--danger)">失败</span>
+                        {% elif s.feed_state == 'error' %}<span class="badge badge-danger">失败</span>
                         {% else %}<span class="badge">未抓取</span>{% endif %}
                     </td>
-                    <td>{{ s.feed_count or 0 }}</td>
-                    <td>{{ s.checked_text or '—' }}</td>
-                    <td style="max-width:280px;">{{ s.feed_error or '' }}</td>
-                    <td>
+                    <td data-label="条目">{{ s.feed_count or 0 }}</td>
+                    <td data-label="最近抓取">{{ s.checked_text or '—' }}</td>
+                    <td data-label="错误" class="cell-error">{{ s.feed_error or '' }}</td>
+                    <td data-label="操作" class="actions-cell">
                         <form method="POST" action="{{ url_for('admin_circle_refresh') }}">
                             <input type="hidden" name="id" value="{{ s.id }}">
                             <button type="submit" class="btn btn-secondary btn-sm">刷新</button>
@@ -55,7 +53,9 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7" class="form-hint">还没有填写 RSS 的友链。</td></tr>
+                <tr><td colspan="7" class="cell-empty">
+                    <div class="empty-state">{{ icon('rss', 22) | safe }}<span>还没有填写 RSS 的友链。</span></div>
+                </td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -1,15 +1,13 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}{% if link %}编辑链接{% else %}添加链接{% endif %}{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('link', 20) | safe }} {% if link %}编辑链接{% else %}添加友情链接{% endif %}</h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_links') }}" class="btn btn-secondary">返回列表</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header('编辑链接' if link else '添加友情链接', 'link') %}
+    <a href="{{ url_for('admin_links') }}" class="btn btn-secondary">返回列表</a>
+{% endcall %}
 
 <div class="card">
-    <form method="POST" class="edit-form">
+    <form method="POST" class="edit-form card-body">
         <div class="form-group">
             <label>站点名称 <span class="required">*</span></label>
             <input type="text" name="name" value="{{ link.name if link else '' }}" required class="form-input">

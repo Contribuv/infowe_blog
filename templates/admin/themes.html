@@ -1,11 +1,9 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}外观与主题{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>主题管理</h2>
-    <span class="page-desc">选择一套主题应用到前台，保存后立即生效，无需重启服务。
-        当前使用：<strong>{{ active_theme }}</strong></span>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{{ ui.page_header("主题管理", None, None, "选择一套主题应用到前台，保存后立即生效，无需重启服务。
+        当前使用：<strong>{{ active_theme }}</strong>") }}
 
 <form method="POST" class="themes-page">
     <div class="theme-grid theme-grid-lg">

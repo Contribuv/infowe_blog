@@ -1,24 +1,13 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}文件清理{% endblock %}
 {% block admin_content %}
+{% import "admin/_ui.html" as ui with context %}
 {% set image_exts = ('jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'avif', 'ico') %}
-<div class="page-header">
-    <h2>{{ icon('trash-2', 20) | safe }} 孤儿文件清理 <span class="badge">{{ orphans|length }}</span></h2>
-</div>
+{{ ui.page_header("孤儿文件清理", "trash-2", orphans|length) }}
 
 <!-- 操作结果提示（AJAX 删除后动态插入） -->
 <div id="orphanNotice"></div>
 
-<style>
-/* 设置条：不做独立卡片，作为页面顶部一条带分隔线的工具行，与下方内容连成一体 */
-.orphan-auto-bar { padding: 0 0 12px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
-.orphan-auto-form { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-.orphan-auto-days { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fz-sm); color: var(--text-secondary); }
-.orphan-auto-days input { width: 64px; padding: 4px 8px; font-size: var(--fz-sm); border-radius: var(--r-sm); }
-.orphan-auto-hint { margin: 8px 0 0; padding: 0; }
-/* 空状态去掉虚线盒子、改左对齐，与上方设置条提示同一左边缘，整页更整齐 */
-.orphan-empty { background: transparent; border: 0; padding: var(--sp-4) 0; align-items: flex-start; text-align: left; }
-</style>
 <div class="orphan-auto-bar">
     <form action="{{ url_for('admin_orphan_settings_save') }}" method="post" class="orphan-auto-form">
         <label class="checkbox-label">

@@ -2,11 +2,10 @@
 {% block admin_title %}插件管理{% endblock %}
 
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('zap', 20) | safe }} 插件管理</h2>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{{ ui.page_header("插件管理", "zap") }}
 
-<p class="form-hint" style="margin-bottom:16px;">
+<p class="form-hint">
     插件只加载仓库自带的内置模块，不支持后台上传代码。启用或停用后即时生效，无需重启服务。
 </p>
 

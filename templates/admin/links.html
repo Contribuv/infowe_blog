@@ -1,12 +1,10 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}友情链接{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('link', 20) | safe }} 友情链接 <span class="badge">{{ links|length }}</span></h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_link_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加链接</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header("友情链接", "link", links|length) %}
+    <a href="{{ url_for('admin_link_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 添加链接</a>
+{% endcall %}
 
 {% if pending %}
 <div class="admin-section-title" id="pending-links">
@@ -22,7 +20,7 @@
             <span class="bulk-count">已选 <b class="bulk-count-num">0</b> 条</span>
             <button type="submit" class="btn btn-sm btn-success" data-action="approve">批量通过</button>
             <button type="submit" class="btn btn-sm btn-danger" data-action="reject">批量拒绝</button>
-            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete" data-confirm="确定删除选中的 {n} 条链接？">批量删除</button>
         </div>
         <div class="table-wrap">
         <table class="table">
@@ -62,10 +60,10 @@
                     <span class="badge badge-info">待检</span>
                     {% endif %}
                     {% if l.audit_ttfb is not none %}
-                    <span class="muted" style="font-size:12px;white-space:nowrap">{{ (l.audit_ttfb / 1000)|round(1) }}s</span>
+                    <span class="text-muted text-xs">{{ (l.audit_ttfb / 1000)|round(1) }}s</span>
                     {% endif %}
                     {% if l.review_reason %}
-                    <div class="muted" style="font-size:12px;margin-top:2px">{{ l.review_reason[:36] }}</div>
+                    <div class="text-muted text-xs">{{ l.review_reason[:36] }}</div>
                     {% endif %}
                 </td>
                 <td class="desc-cell" data-label="描述">{{ l.description[:60] }}</td>
@@ -100,7 +98,7 @@
                 <input type="checkbox" class="bulk-checkall"> 全选
             </label>
             <span class="bulk-count">已选 <b class="bulk-count-num">0</b> 条</span>
-            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete" data-confirm="确定删除选中的 {n} 条链接？">批量删除</button>
         </div>
         <div class="table-wrap">
         <table class="table">
@@ -137,7 +135,7 @@
                     {% else %}
                     <span class="muted">未检</span>
                     {% endif %}
-                    {% if l.recheck_at %}<div class="muted" style="font-size:12px;margin-top:2px">{{ l.recheck_at }}</div>{% endif %}
+                    {% if l.recheck_at %}<div class="text-muted text-xs">{{ l.recheck_at }}</div>{% endif %}
                 </td>
                 <td class="actions-cell" data-label="操作">
                     <a href="{{ url_for('admin_link_edit', link_id=l.id) }}" class="btn btn-sm">编辑</a>
@@ -163,41 +161,4 @@
 {% endblock %}
 
 {% block admin_scripts %}
-<script>
-(function () {
-    'use strict';
-    // 友链页有「待审核」「已通过」两个批量表单，逐个初始化
-    var forms = document.querySelectorAll('.bulk-form');
-    Array.prototype.forEach.call(forms, function (form) {
-        var boxes = Array.prototype.slice.call(form.querySelectorAll('.row-check'));
-        var checkAll = form.querySelector('.bulk-checkall');
-        var count = form.querySelector('.bulk-count-num');
-        function update() {
-            var n = form.querySelectorAll('.row-check:checked').length;
-            count.textContent = n;
-            if (checkAll) {
-                checkAll.checked = boxes.length > 0 && n === boxes.length;
-                checkAll.indeterminate = n > 0 && n < boxes.length;
-            }
-        }
-        if (checkAll) {
-            checkAll.addEventListener('change', function () {
-                boxes.forEach(function (b) { b.checked = checkAll.checked; });
-                update();
-            });
-        }
-        boxes.forEach(function (b) { b.addEventListener('change', update); });
-        form.addEventListener('submit', function (e) {
-            var btn = e.submitter;
-            var action = btn && btn.getAttribute('data-action');
-            if (!action) return;
-            var n = form.querySelectorAll('.row-check:checked').length;
-            if (!n) { e.preventDefault(); alert('请先勾选要操作的链接'); return; }
-            if (action === 'delete' && !confirm('确定删除选中的 ' + n + ' 条链接？')) { e.preventDefault(); return; }
-            form.querySelector('input[name=action]').value = action;
-        });
-        update();
-    });
-})();
-</script>
 {% endblock %}

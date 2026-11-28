@@ -1,13 +1,11 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}文章分类管理{% endblock %}
 {% block admin_content %}
+{% import "admin/_ui.html" as ui with context %}
 
-<div class="page-header">
-    <h2>{{ icon('folder', 20) | safe }} 文章分类 <span class="badge">{{ categories|length }}</span></h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_category_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 新建分类</a>
-    </div>
-</div>
+{% call ui.page_header("文章分类", "folder", categories|length) %}
+    <a href="{{ url_for('admin_category_new') }}" class="btn btn-primary btn-sm">{{ icon('plus', 14, 'icon-sm') | safe }} 新建分类</a>
+{% endcall %}
 
 {% if categories %}
 <div class="card">
@@ -18,7 +16,7 @@
                 <input type="checkbox" id="checkAll"> 全选
             </label>
             <span class="bulk-count">已选 <b id="bulkCount">0</b> 条</span>
-            <button type="submit" class="btn btn-sm btn-danger" data-action="delete">批量删除</button>
+            <button type="submit" class="btn btn-sm btn-danger" data-action="delete" data-confirm="确定删除选中的 {n} 个分类？该分类下文章将变为未分类。">批量删除</button>
         </div>
         <div class="table-wrap">
         <table class="table">
@@ -71,39 +69,4 @@
 {% endblock %}
 
 {% block admin_scripts %}
-<script>
-(function () {
-    'use strict';
-    var form = document.getElementById('bulkCats');
-    if (!form) return;
-    var checkAll = document.getElementById('checkAll');
-    var boxes = Array.prototype.slice.call(document.querySelectorAll('.row-check'));
-    var count = document.getElementById('bulkCount');
-    function update() {
-        var n = document.querySelectorAll('.row-check:checked').length;
-        count.textContent = n;
-        if (checkAll) {
-            checkAll.checked = boxes.length > 0 && n === boxes.length;
-            checkAll.indeterminate = n > 0 && n < boxes.length;
-        }
-    }
-    if (checkAll) {
-        checkAll.addEventListener('change', function () {
-            boxes.forEach(function (b) { b.checked = checkAll.checked; });
-            update();
-        });
-    }
-    boxes.forEach(function (b) { b.addEventListener('change', update); });
-    form.addEventListener('submit', function (e) {
-        var btn = e.submitter;
-        var action = btn && btn.getAttribute('data-action');
-        if (!action) return;
-        var n = document.querySelectorAll('.row-check:checked').length;
-        if (!n) { e.preventDefault(); alert('请先勾选要删除的分类'); return; }
-        if (!confirm('确定删除选中的 ' + n + ' 个分类？该分类下文章将变为未分类。')) { e.preventDefault(); return; }
-        document.getElementById('bulkAction').value = action;
-    });
-    update();
-})();
-</script>
 {% endblock %}

@@ -1,15 +1,13 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}{% if project %}编辑项目{% else %}添加项目{% endif %}{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('folder', 20) | safe }} {% if project %}编辑项目{% else %}添加新项目{% endif %}</h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_projects') }}" class="btn btn-secondary">返回列表</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header('编辑项目' if project else '添加新项目', 'folder') %}
+    <a href="{{ url_for('admin_projects') }}" class="btn btn-secondary">返回列表</a>
+{% endcall %}
 
 <div class="card">
-    <form method="POST" class="edit-form">
+    <form method="POST" class="edit-form card-body">
         <div class="form-group">
             <label>项目名称（自定义显示名）</label>
             <input type="text" name="name" value="{{ project.name if project else '' }}" class="form-input" placeholder="如：飞牛文件收集器（留空则用 GitHub 仓库名）">

@@ -1,15 +1,13 @@
 {% extends "admin/base.html" %}
 {% block admin_title %}{{ '编辑分类' if category else '新建分类' }}{% endblock %}
 {% block admin_content %}
-<div class="page-header">
-    <h2>{{ icon('tag', 20) | safe }} {{ '编辑分类' if category else '新建分类' }}</h2>
-    <div class="page-actions">
-        <a href="{{ url_for('admin_categories') }}" class="btn btn-secondary">返回列表</a>
-    </div>
-</div>
+{% import "admin/_ui.html" as ui with context %}
+{% call ui.page_header('编辑分类' if category else '新建分类', "tag") %}
+    <a href="{{ url_for('admin_categories') }}" class="btn btn-secondary">返回列表</a>
+{% endcall %}
 
 <div class="card">
-    <form method="POST" class="edit-form">
+    <form method="POST" class="edit-form card-body">
         <div class="form-group">
             <label for="name">分类名称 <span class="req">*</span></label>
             <input type="text" id="name" name="name" value="{{ category.name if category else '' }}"
